@@ -180,6 +180,38 @@
         const hideModal = () => DOM.modal.classList.add('hidden');
         DOM.modalCancelBtn.onclick = hideModal;
 
+        async function startSession(submissionId) {
+            showLoader('Đang tải dữ liệu bài làm...');
+            try {
+                currentSubmissionId = submissionId;
+                const submissionRef = doc(db, 'submissions', currentSubmissionId);
+                const submissionSnap = await getDoc(submissionRef);
+                if (!submissionSnap.exists()) throw new Error("Mã không hợp lệ.");
+                
+                const submissionData = submissionSnap.data();
+                DOM.studentNameDisplay.textContent = `Thí sinh: ${submissionData.studentName}`;
+                currentTest = await fetchTest(submissionData.testId);
+
+                if (currentTest.isLocked && submissionData.status !== 'submitted') {
+                    throw new Error("Đề thi này đã bị khóa. Vui lòng liên hệ giáo viên.");
+                }
+
+                if (submissionData.status === 'submitted') {
+                    displayResults(submissionData, currentTest);
+                } else {
+                    renderTest(currentTest, submissionData.answers || {});
+                    setupTestEnvironment(currentTest, submissionData);
+                    DOM.loginScreen.classList.add('hidden');
+                    DOM.testContainer.classList.remove('hidden');
+                }
+            } catch (error) {
+                 showModal('Lỗi', error.message, null, false);
+                 DOM.notMeBtn.click(); // Reset login view
+            } finally {
+                hideLoader();
+            }
+        }
+
         // Login Logic
         const inputs = DOM.codeInputs.querySelectorAll('input');
         DOM.codeInputs.addEventListener('input', (e) => {
@@ -243,30 +275,7 @@
             inputs[0].focus();
         });
 
-        DOM.continueBtn.addEventListener('click', async () => {
-            showLoader('Đang tải dữ liệu bài làm...');
-            try {
-                const submissionRef = doc(db, 'submissions', currentSubmissionId);
-                const submissionSnap = await getDoc(submissionRef);
-                const submissionData = submissionSnap.data();
-                
-                DOM.studentNameDisplay.textContent = `Thí sinh: ${submissionData.studentName}`;
-                currentTest = await fetchTest(submissionData.testId);
-
-                if (submissionData.status === 'submitted') {
-                    displayResults(submissionData, currentTest);
-                } else {
-                    renderTest(currentTest, submissionData.answers || {});
-                    setupTestEnvironment(currentTest, submissionData);
-                    DOM.loginScreen.classList.add('hidden');
-                    DOM.testContainer.classList.remove('hidden');
-                }
-            } catch (error) {
-                 showModal('Lỗi', error.message, null, false);
-            } finally {
-                hideLoader();
-            }
-        });
+        DOM.continueBtn.addEventListener('click', () => startSession(currentSubmissionId));
 
         async function fetchTest(testId) {
             if (!testId) throw new Error("Không tìm thấy Test ID trong dữ liệu bài nộp.");
@@ -429,6 +438,12 @@
             DOM.scoreText.textContent = `${score} / ${totalPoints}`;
             DOM.feedbackSummary.textContent = `Bạn đã trả lời đúng ${score} trên tổng số ${totalPoints} điểm.`;
 
+            DOM.reviewContainer.innerHTML = '';
+            if (!testData.answersPublished) {
+                 DOM.reviewContainer.innerHTML = '<p class="text-center text-gray-600 mt-8">Giáo viên chưa công bố đáp án chi tiết. Vui lòng quay lại sau.</p>';
+                 return;
+            }
+
             DOM.reviewContainer.innerHTML = '<h2 class="section-title">Xem lại bài làm và giải thích</h2>';
             testData.questions.forEach((q, index) => {
                 const studentAnswer = submissionData.answers[index];
@@ -483,6 +498,15 @@
             }
         });
         DOM.submitBtn.addEventListener('click', () => showModal('Xác nhận nộp bài', 'Bạn có chắc chắn muốn nộp bài không?', () => submitTest(), true));
+
+        // Check for submission_id in URL on page load
+        window.addEventListener('load', () => {
+            const params = new URLSearchParams(window.location.search);
+            const submissionId = params.get('submission_id');
+            if (submissionId) {
+                startSession(submissionId);
+            }
+        });
 
     </script>
 </body>
