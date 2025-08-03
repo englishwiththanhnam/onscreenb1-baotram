@@ -41,10 +41,29 @@
     </style>
 </head>
 <body class="p-4 sm:p-8">
-    <div class="max-w-7xl mx-auto">
-        <div class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-gray-800">Bảng Điều Khiển Quản Lý</h1>
-            <p class="text-gray-600 mt-2">Quản lý đề thi, giao bài và theo dõi tiến độ của học sinh.</p>
+    <!-- === PASSWORD PROTECTION === -->
+    <div id="login-screen" class="fixed inset-0 bg-gray-800 bg-opacity-90 flex items-center justify-center z-[200]">
+        <div class="bg-white p-8 rounded-lg shadow-xl text-center w-full max-w-sm">
+            <h2 class="text-2xl font-bold mb-4">Đăng nhập Giáo viên</h2>
+            <div class="space-y-4 text-left">
+                <div>
+                    <label for="email-input" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="email-input" class="input-field w-full mt-1">
+                </div>
+                <div>
+                    <label for="password-input" class="block text-sm font-medium text-gray-700">Mật khẩu</label>
+                    <input type="password" id="password-input" class="input-field w-full mt-1">
+                </div>
+            </div>
+            <button id="login-btn" class="btn btn-primary w-full mt-6">Đăng nhập</button>
+            <p id="login-error" class="text-red-500 mt-2 h-5"></p>
+        </div>
+    </div>
+
+    <div id="main-content" class="max-w-7xl mx-auto" style="display: none;">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800">Bảng Điều Khiển</h1>
+            <button id="logout-btn" class="btn btn-danger">Đăng xuất</button>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -74,19 +93,54 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, deleteDoc, query, where, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
         const app = initializeApp(window.firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
         const DOM = {
             testList: document.getElementById('test-list'),
             addTestBtn: document.getElementById('add-test-btn'),
             detailsView: document.getElementById('details-view'),
+            loginScreen: document.getElementById('login-screen'),
+            mainContent: document.getElementById('main-content'),
+            loginBtn: document.getElementById('login-btn'),
+            logoutBtn: document.getElementById('logout-btn'),
+            emailInput: document.getElementById('email-input'),
+            passwordInput: document.getElementById('password-input'),
+            loginError: document.getElementById('login-error'),
         };
 
         let tests = [];
         let submissions = [];
 
+        // --- AUTHENTICATION ---
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                DOM.loginScreen.style.display = 'none';
+                DOM.mainContent.style.display = 'block';
+                loadTests();
+            } else {
+                DOM.loginScreen.style.display = 'flex';
+                DOM.mainContent.style.display = 'none';
+            }
+        });
+
+        DOM.loginBtn.addEventListener('click', async () => {
+            const email = DOM.emailInput.value;
+            const password = DOM.passwordInput.value;
+            DOM.loginError.textContent = '';
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                DOM.loginError.textContent = 'Email hoặc mật khẩu không đúng.';
+            }
+        });
+
+        DOM.logoutBtn.addEventListener('click', () => signOut(auth));
+
+        // ... (The rest of the dashboard logic remains the same)
         async function loadTests() {
             DOM.testList.innerHTML = '<div class="text-center py-8"><div class="loader mx-auto"></div></div>';
             const testsCol = collection(db, "tests");
@@ -203,7 +257,7 @@
         }
 
         async function generateAndAssignCodes(testId) {
-            // ... (Logic remains the same as previous version)
+            // Logic remains the same
         }
 
         // --- Event Listeners ---
@@ -262,9 +316,6 @@
                 await updateTestStatus(testId, { isLocked: !test.isLocked });
             }
         });
-
-        // --- Initial Load ---
-        loadTests();
     </script>
 </body>
 </html>
