@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trình Soạn Thảo Đề Thi v4 (Hỗ trợ Template)</title>
+    <title>Trình Soạn Thảo Đề Thi</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -111,25 +111,71 @@
              <button id="upload-btn" class="btn btn-primary text-lg w-full md:w-1/2"><i class="fas fa-cloud-upload-alt mr-2"></i>Tải Đề Thi Lên Firebase</button>
              <p id="upload-log" class="text-green-600 font-semibold mt-2"></p>
         </div>
+
+        <!-- GIAO BÀI -->
+        <div class="bg-white p-6 rounded-lg shadow-md mt-8">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4">3. Giao bài và Tạo mã truy cập</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="student-list" class="block text-sm font-medium text-gray-700">Dán danh sách học sinh (mỗi tên một dòng)</label>
+                    <textarea id="student-list" class="input-field mt-1" rows="5" placeholder="Nguyễn Văn An&#10;Trần Thị Bình&#10;Lê Văn Cường"></textarea>
+                </div>
+                <button id="generate-codes-btn" class="btn btn-primary w-full"><i class="fas fa-key mr-2"></i>Tạo mã cho học sinh</button>
+            </div>
+            <div id="codes-output" class="hidden mt-4">
+                <h3 class="text-lg font-bold">Mã truy cập đã tạo:</h3>
+                <table class="w-full mt-2 text-left border-collapse">
+                    <thead>
+                        <tr>
+                            <th class="border-b p-2">Tên học sinh</th>
+                            <th class="border-b p-2">Mã truy cập</th>
+                        </tr>
+                    </thead>
+                    <tbody id="codes-table-body"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <!-- MODAL SOẠN THẢO CÂU HỎI -->
     <div id="question-editor-modal" class="modal">
-        <!-- Modal content remains the same -->
+        <div class="modal-content">
+            <h3 id="modal-title" class="text-2xl font-bold text-gray-800 mb-4">Soạn thảo câu hỏi</h3>
+            <div class="space-y-4">
+                <select id="question-type" class="input-field">
+                    <option value="multiple-choice">Trắc nghiệm (Multiple Choice)</option>
+                    <option value="multi-select">Trắc nghiệm (Multi-Select)</option>
+                    <option value="true-false">Đúng/Sai (True/False)</option>
+                    <option value="cloze-test">Điền từ (Cloze Test)</option>
+                </select>
+                <textarea id="question-text" class="input-field" rows="3" placeholder="Nội dung câu hỏi..."></textarea>
+                <div id="options-container" class="space-y-2"></div>
+                <textarea id="explanation-text" class="input-field" rows="2" placeholder="Giải thích đáp án..."></textarea>
+            </div>
+            <div class="mt-6 flex justify-end gap-4">
+                <button id="cancel-btn" class="btn btn-secondary">Hủy</button>
+                <button id="save-question-btn" class="btn btn-primary">Lưu câu hỏi</button>
+            </div>
+        </div>
     </div>
 
     <!-- MODAL NHẬP HÀNG LOẠT -->
     <div id="batch-import-modal" class="modal">
-        <!-- Modal content remains the same -->
+        <div class="modal-content">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">Nhập hàng loạt từ Template</h3>
+            <p class="text-sm text-gray-600 mb-4">Dán toàn bộ nội dung từ file Word (theo template ClassIn) vào ô dưới đây.</p>
+            <textarea id="batch-content" class="input-field w-full" rows="15"></textarea>
+            <div class="mt-6 flex justify-end gap-4">
+                <button id="batch-cancel-btn" class="btn btn-secondary">Hủy</button>
+                <button id="batch-process-btn" class="btn btn-primary">Xử lý & Nhập</button>
+            </div>
+        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, serverTimestamp, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-
-        // QUAN TRỌNG: Thay đổi mật khẩu này để bảo vệ công cụ của bạn!
-        const TEACHER_PASSWORD = "GIAOVIEN2024";
 
         const app = initializeApp(window.firebaseConfig);
         const db = getFirestore(app);
@@ -138,7 +184,15 @@
         let editingQuestionIndex = -1;
 
         const DOM = {
-            // ... (DOM elements remain the same as the management dashboard)
+            addQuestionBtn: document.getElementById('add-question-btn'),
+            batchImportBtn: document.getElementById('batch-import-btn'),
+            questionListContainer: document.getElementById('question-list-container'),
+            uploadBtn: document.getElementById('upload-btn'),
+            uploadLog: document.getElementById('upload-log'),
+            generateCodesBtn: document.getElementById('generate-codes-btn'),
+            codesOutput: document.getElementById('codes-output'),
+            codesTableBody: document.getElementById('codes-table-body'),
+            // Login
             loginScreen: document.getElementById('login-screen'),
             mainContent: document.getElementById('main-content'),
             loginBtn: document.getElementById('login-btn'),
@@ -146,7 +200,20 @@
             emailInput: document.getElementById('email-input'),
             passwordInput: document.getElementById('password-input'),
             loginError: document.getElementById('login-error'),
-            // ... (rest of the DOM elements)
+            // Editor Modal
+            editorModal: document.getElementById('question-editor-modal'),
+            modalTitle: document.getElementById('modal-title'),
+            questionType: document.getElementById('question-type'),
+            questionText: document.getElementById('question-text'),
+            optionsContainer: document.getElementById('options-container'),
+            explanationText: document.getElementById('explanation-text'),
+            cancelBtn: document.getElementById('cancel-btn'),
+            saveQuestionBtn: document.getElementById('save-question-btn'),
+            // Batch Modal
+            batchModal: document.getElementById('batch-import-modal'),
+            batchContent: document.getElementById('batch-content'),
+            batchCancelBtn: document.getElementById('batch-cancel-btn'),
+            batchProcessBtn: document.getElementById('batch-process-btn'),
         };
 
         // --- AUTHENTICATION ---
@@ -173,9 +240,315 @@
 
         DOM.logoutBtn.addEventListener('click', () => signOut(auth));
 
-        // ... (The rest of the creator tool logic remains the same)
+        function renderQuestionList() {
+            DOM.questionListContainer.innerHTML = '';
+            if (questions.length === 0) {
+                DOM.questionListContainer.innerHTML = '<p class="text-gray-500 text-center py-4">Chưa có câu hỏi nào.</p>';
+                return;
+            }
+            questions.forEach((q, index) => {
+                const item = document.createElement('div');
+                item.className = 'p-4 border rounded-lg flex justify-between items-center';
+                item.innerHTML = `
+                    <div class="flex-grow mr-4">
+                        <span class="font-bold mr-2">${index + 1}.</span>
+                        <span class="text-gray-800">${q.text.substring(0, 80)}...</span>
+                        <span class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full ml-2">${q.type}</span>
+                    </div>
+                    <div class="flex gap-2 flex-shrink-0">
+                        <button class="btn-edit btn btn-secondary btn-sm" data-index="${index}"><i class="fas fa-edit"></i></button>
+                        <button class="btn-delete btn btn-danger btn-sm" data-index="${index}"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+                DOM.questionListContainer.appendChild(item);
+            });
+        }
+
+        function openModal(questionIndex = -1) {
+            editingQuestionIndex = questionIndex;
+            const q = questionIndex > -1 ? questions[questionIndex] : {};
+            
+            DOM.modalTitle.textContent = questionIndex > -1 ? 'Chỉnh sửa câu hỏi' : 'Thêm câu hỏi mới';
+            DOM.questionType.value = q.type || 'multiple-choice';
+            DOM.questionText.value = q.text || '';
+            DOM.explanationText.value = q.explanation || '';
+            
+            renderOptionsUI(q.type || 'multiple-choice', q);
+            DOM.editorModal.style.display = 'block';
+        }
+
+        function renderOptionsUI(type, q = {}) {
+            DOM.optionsContainer.innerHTML = '';
+            switch (type) {
+                case 'multiple-choice':
+                case 'multi-select':
+                    const options = q.options || { A: '', B: '', C: '', D: '' };
+                    Object.keys(options).forEach(key => {
+                        const isChecked = Array.isArray(q.answer) ? q.answer.includes(key) : q.answer === key;
+                        DOM.optionsContainer.innerHTML += `
+                            <div class="flex items-center gap-2">
+                                <label class="font-bold">${key}.</label>
+                                <input type="text" value="${options[key]}" data-key="${key}" class="input-field option-input flex-grow">
+                                <input type="${type === 'multi-select' ? 'checkbox' : 'radio'}" name="answer" value="${key}" class="h-5 w-5 answer-input" ${isChecked ? 'checked' : ''}>
+                            </div>
+                        `;
+                    });
+                    break;
+                case 'true-false':
+                    DOM.optionsContainer.innerHTML = `
+                        <label class="flex items-center gap-2"><input type="radio" name="answer" value="True" class="h-5 w-5 answer-input" ${q.answer === 'True' ? 'checked' : ''}> True</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="answer" value="False" class="h-5 w-5 answer-input" ${q.answer === 'False' ? 'checked' : ''}> False</label>
+                    `;
+                    break;
+                case 'cloze-test':
+                     const answers = q.answers || {};
+                     const blanks = (q.text || "").match(/\(\d+\)/g) || [];
+                     blanks.forEach(blank => {
+                         const number = blank.replace(/[()]/g, '');
+                         const answerValue = (answers[number] || []).join(' / ');
+                         DOM.optionsContainer.innerHTML += `
+                            <div class="flex items-center gap-2">
+                                <label class="font-bold">Chỗ trống (${number}):</label>
+                                <input type="text" value="${answerValue}" data-blank-number="${number}" class="input-field cloze-answer-input flex-grow" placeholder="Các đáp án cách nhau bởi dấu /">
+                            </div>
+                         `;
+                     });
+                    break;
+            }
+        }
+
+        function saveQuestion() {
+            try {
+                const type = DOM.questionType.value;
+                const newQuestion = {
+                    type: type,
+                    text: DOM.questionText.value.trim(),
+                    explanation: DOM.explanationText.value.trim(),
+                };
+
+                switch (type) {
+                    case 'multiple-choice':
+                    case 'multi-select':
+                        newQuestion.options = {};
+                        document.querySelectorAll('.option-input').forEach(input => {
+                            newQuestion.options[input.dataset.key] = input.value.trim();
+                        });
+                        const checked = Array.from(document.querySelectorAll('.answer-input:checked')).map(el => el.value);
+                        if (checked.length === 0) throw new Error("Vui lòng chọn ít nhất một đáp án.");
+                        newQuestion.answer = type === 'multiple-choice' ? checked[0] : checked;
+                        break;
+                    case 'true-false':
+                        const tfAnswer = document.querySelector('.answer-input:checked');
+                        if (!tfAnswer) throw new Error("Vui lòng chọn True hoặc False.");
+                        newQuestion.answer = tfAnswer.value;
+                        break;
+                    case 'cloze-test':
+                        newQuestion.answers = {};
+                        document.querySelectorAll('.cloze-answer-input').forEach(input => {
+                            const number = input.dataset.blankNumber;
+                            newQuestion.answers[number] = input.value.split('/').map(s => s.trim()).filter(s => s);
+                        });
+                        break;
+                }
+                
+                if (editingQuestionIndex > -1) {
+                    questions[editingQuestionIndex] = newQuestion;
+                } else {
+                    questions.push(newQuestion);
+                }
+                renderQuestionList();
+                DOM.editorModal.style.display = 'none';
+            } catch (error) {
+                alert(`Lỗi: ${error.message}`);
+            }
+        }
+        
+        function parseBatchContent(text) {
+            const questionBlocks = text.split(/\n\s*(?=\d+\.|\d+-\d+\.|\s*\[)/).filter(b => b.trim());
+            const parsedQuestions = [];
+
+            questionBlocks.forEach(block => {
+                const lines = block.split('\n').map(l => l.trim()).filter(l => l);
+                if (lines.length === 0) return;
+
+                let q = {};
+                const firstLine = lines[0];
+                const answerLine = lines.find(l => l.startsWith('Answer:')) || '';
+
+                if (firstLine.startsWith('[Fill in the blanks]') || /^\d+-\d+\./.test(firstLine) || answerLine.includes('|')) {
+                    q.type = 'cloze-test';
+                    if (firstLine.startsWith('[Fill in the blanks]')) lines.shift();
+                    
+                    const answerIndex = lines.findIndex(l => l.startsWith('Answer:'));
+                    if (answerIndex === -1) return;
+
+                    q.text = lines.slice(0, answerIndex).join(' ');
+                    
+                    const answerString = answerLine.replace('Answer:', '').trim();
+                    const answerGroups = answerString.split('|').map(group => group.split('/').map(answer => answer.trim()));
+                    
+                    const placeholders = q.text.match(/\(\d+\)/g) || [];
+                    q.answers = {};
+                    placeholders.forEach((placeholder, i) => {
+                        const number = placeholder.replace(/[()]/g, '');
+                        if (answerGroups[i]) {
+                            q.answers[number] = answerGroups[i];
+                        }
+                    });
+                    
+                    const explanationIndex = lines.findIndex(l => l.startsWith('Explanation:'));
+                    q.explanation = (explanationIndex > -1) ? lines[explanationIndex].replace('Explanation:', '').trim() : '';
+
+                } else { // Handle MC, MS, T/F
+                    q.options = {};
+                    q.text = lines.shift()?.replace(/^\d+\.\s*/, '');
+                    
+                    const answerIndex = lines.findIndex(l => l.startsWith('Answer:'));
+                    if (answerIndex === -1) return;
+
+                    const explanationIndex = lines.findIndex(l => l.startsWith('Explanation:'));
+                    q.answer = answerLine.replace('Answer:', '').trim();
+                    q.explanation = (explanationIndex > -1) ? lines[explanationIndex].replace('Explanation:', '').trim() : '';
+                    
+                    const optionLines = lines.slice(0, answerIndex);
+                    optionLines.forEach(line => {
+                        const match = line.match(/^([A-Z])\.\s*(.*)/);
+                        if (match) q.options[match[1]] = match[2];
+                    });
+
+                    if (Object.keys(q.options).length > 0) {
+                        q.type = (q.answer && q.answer.length > 1) ? 'multi-select' : 'multiple-choice';
+                    } else {
+                        const answerLower = q.answer ? q.answer.toLowerCase() : "";
+                        q.type = (answerLower === 'true' || answerLower === 'false') ? 'q-a' : 'q-a';
+                    }
+                }
+                
+                if(q.text && (q.answer || (q.answers && Object.keys(q.answers).length > 0))) parsedQuestions.push(q);
+            });
+            return parsedQuestions;
+        }
+
+        async function uploadToFirebase() {
+            const testId = document.getElementById('test-id').value.trim();
+            const title = document.getElementById('test-title').value.trim();
+            const type = document.getElementById('assignment-type').value;
+            const duration = parseInt(document.getElementById('test-duration').value, 10) || 0;
+
+            if (!testId || !title || questions.length === 0) {
+                alert("Vui lòng nhập đầy đủ Test ID, Tiêu đề và thêm ít nhất một câu hỏi.");
+                return;
+            }
+
+            DOM.uploadBtn.disabled = true;
+            DOM.uploadLog.textContent = 'Đang tải lên...';
+
+            try {
+                await setDoc(doc(db, "tests", testId), { title, type, duration, questions });
+                DOM.uploadLog.textContent = `THÀNH CÔNG! Đã tải đề thi với ID "${testId}" lên Firestore.`;
+                DOM.uploadLog.classList.add('text-green-600');
+            } catch (error) {
+                DOM.uploadLog.textContent = `LỖI: ${error.message}`;
+                DOM.uploadLog.classList.add('text-red-600');
+            } finally {
+                DOM.uploadBtn.disabled = false;
+            }
+        }
+        
+        async function generateAndAssignCodes() {
+            const testId = document.getElementById('test-id').value.trim();
+            const studentList = document.getElementById('student-list').value.trim().split('\n').filter(name => name.trim() !== '');
+
+            if (!testId) {
+                alert("Vui lòng nhập Test ID ở mục 1 trước khi giao bài.");
+                return;
+            }
+            if (studentList.length === 0) {
+                alert("Vui lòng nhập danh sách học sinh.");
+                return;
+            }
+
+            DOM.generateCodesBtn.disabled = true;
+            DOM.codesTableBody.innerHTML = '<tr><td colspan="2" class="p-2 text-center">Đang kiểm tra và tạo mã...</td></tr>';
+            DOM.codesOutput.classList.remove('hidden');
+
+            const submissionsCol = collection(db, "submissions");
+            const snapshot = await getDocs(submissionsCol);
+            const existingCodes = new Set(snapshot.docs.map(d => d.id));
+
+            DOM.codesTableBody.innerHTML = '';
+
+            for (const studentName of studentList) {
+                let code;
+                do {
+                    code = Math.random().toString().substr(2, 6);
+                } while (existingCodes.has(code));
+                
+                existingCodes.add(code);
+                
+                const submissionRef = doc(db, "submissions", code);
+                const submissionData = {
+                    studentName: studentName.trim(),
+                    testId: testId,
+                    status: 'not-started',
+                    startTime: serverTimestamp(),
+                    answers: {},
+                    score: 0,
+                    totalPoints: 0
+                };
+
+                try {
+                    await setDoc(submissionRef, submissionData);
+                    const row = `<tr>
+                        <td class="border-b p-2">${studentName.trim()}</td>
+                        <td class="border-b p-2 font-mono font-bold">${code}</td>
+                    </tr>`;
+                    DOM.codesTableBody.innerHTML += row;
+                } catch (error) {
+                    const row = `<tr>
+                        <td class="border-b p-2">${studentName.trim()}</td>
+                        <td class="border-b p-2 text-red-500">Lỗi: ${error.message}</td>
+                    </tr>`;
+                    DOM.codesTableBody.innerHTML += row;
+                }
+            }
+            DOM.generateCodesBtn.disabled = false;
+        }
+
+        // --- EVENT LISTENERS ---
+        DOM.addQuestionBtn.addEventListener('click', () => openModal());
+        DOM.cancelBtn.addEventListener('click', () => DOM.editorModal.style.display = 'none');
+        DOM.saveQuestionBtn.addEventListener('click', saveQuestion);
+        DOM.uploadBtn.addEventListener('click', uploadToFirebase);
+        DOM.generateCodesBtn.addEventListener('click', generateAndAssignCodes);
+        DOM.questionType.addEventListener('change', (e) => renderOptionsUI(e.target.value, { text: DOM.questionText.value }));
+        
+        DOM.batchImportBtn.addEventListener('click', () => DOM.batchModal.style.display = 'block');
+        DOM.batchCancelBtn.addEventListener('click', () => DOM.batchModal.style.display = 'none');
+        DOM.batchProcessBtn.addEventListener('click', () => {
+            const parsed = parseBatchContent(DOM.batchContent.value);
+            if(parsed.length > 0) {
+                questions.push(...parsed);
+                renderQuestionList();
+            }
+            DOM.batchModal.style.display = 'none';
+            DOM.batchContent.value = '';
+        });
+        
+        DOM.questionListContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const index = parseInt(btn.dataset.index, 10);
+            if (btn.classList.contains('btn-edit')) openModal(index);
+            if (btn.classList.contains('btn-delete')) {
+                if (confirm(`Bạn có chắc chắn muốn xóa câu hỏi ${index + 1}?`)) {
+                    questions.splice(index, 1);
+                    renderQuestionList();
+                }
+            }
+        });
+
+        renderQuestionList();
     </script>
 </body>
 </html>
-```
-
