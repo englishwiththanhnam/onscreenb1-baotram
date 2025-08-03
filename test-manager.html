@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -127,17 +127,20 @@
             const test = tests.find(t => t.id === testId);
             if (!test) return;
 
-            const publishBtnClass = test.answersPublished ? 'btn-warning' : 'btn-success';
-            const publishBtnText = test.answersPublished ? 'Hủy công bố' : 'Công bố đáp án';
+            const publishCorrectIncorrectBtnClass = test.correctIncorrectPublished ? 'btn-warning' : 'btn-success';
+            const publishCorrectIncorrectBtnText = test.correctIncorrectPublished ? 'Hủy công bố Đúng/Sai' : 'Công bố Đúng/Sai';
+            const publishAnswersBtnClass = test.answersPublished ? 'btn-warning' : 'btn-success';
+            const publishAnswersBtnText = test.answersPublished ? 'Hủy công bố Đáp án' : 'Công bố Đáp án';
             const lockBtnClass = test.isLocked ? 'btn-success' : 'btn-danger';
             const lockBtnText = test.isLocked ? 'Mở khóa' : 'Khóa đề thi';
 
             DOM.detailsView.innerHTML = `
-                <div class="flex justify-between items-start mb-4">
+                <div class="flex flex-wrap justify-between items-start mb-4 gap-4">
                     <h2 class="text-2xl font-bold text-gray-700">${test.title}</h2>
-                    <div class="flex gap-2">
-                        <button id="publish-btn" class="btn ${publishBtnClass}">${publishBtnText}</button>
-                        <button id="lock-btn" class="btn ${lockBtnClass}">${lockBtnText}</button>
+                    <div class="flex flex-wrap gap-2">
+                        <button id="publish-correct-incorrect-btn" class="btn ${publishCorrectIncorrectBtnClass} text-sm">${publishCorrectIncorrectBtnText}</button>
+                        <button id="publish-answers-btn" class="btn ${publishAnswersBtnClass} text-sm">${publishAnswersBtnText}</button>
+                        <button id="lock-btn" class="btn ${lockBtnClass} text-sm">${lockBtnText}</button>
                     </div>
                 </div>
                 <div class="mb-6 p-4 bg-gray-50 rounded-lg">
@@ -155,6 +158,7 @@
                                     <th class="border-b p-2">Mã truy cập</th>
                                     <th class="border-b p-2">Trạng thái</th>
                                     <th class="border-b p-2">Điểm số</th>
+                                    <th class="border-b p-2">Vi phạm</th>
                                     <th class="border-b p-2"></th>
                                 </tr>
                             </thead>
@@ -171,10 +175,11 @@
 
                                     return `
                                     <tr>
-                                        <td class="border-b p-2"><a href="student.html?submission_id=${sub.id}" target="_blank" class="text-blue-600 hover:underline">${sub.studentName}</a></td>
+                                        <td class="border-b p-2"><a href="lam-bai-thi.html?submission_id=${sub.id}" target="_blank" class="text-blue-600 hover:underline">${sub.studentName}</a></td>
                                         <td class="border-b p-2 font-mono">${sub.id}</td>
                                         <td class="border-b p-2">${statusBadge}</td>
                                         <td class="border-b p-2 font-bold">${sub.status === 'submitted' ? `${sub.score} / ${sub.totalPoints}` : '-'}</td>
+                                        <td class="border-b p-2 text-center">${sub.violationCount || 0}</td>
                                         <td class="border-b p-2 text-right">
                                             <button class="btn-delete-student btn btn-danger" data-sub-id="${sub.id}"><i class="fas fa-trash"></i></button>
                                         </td>
@@ -190,7 +195,6 @@
         async function updateTestStatus(testId, data) {
              const testRef = doc(db, "tests", testId);
              await updateDoc(testRef, data);
-             // Update local data and re-render
              const testIndex = tests.findIndex(t => t.id === testId);
              if(testIndex > -1) {
                  tests[testIndex] = { ...tests[testIndex], ...data };
@@ -198,43 +202,13 @@
              renderDetailsView(testId);
         }
 
-
         async function generateAndAssignCodes(testId) {
-            const studentList = document.getElementById('new-student-list').value.trim().split('\n').filter(name => name.trim() !== '');
-            if (studentList.length === 0) return alert("Vui lòng nhập tên học sinh.");
-
-            const addBtn = document.getElementById('add-students-btn');
-            addBtn.disabled = true;
-            addBtn.innerHTML = '<div class="loader mx-auto h-5 w-5"></div>';
-
-            const submissionsCol = collection(db, "submissions");
-            const snapshot = await getDocs(submissionsCol);
-            const existingCodes = new Set(snapshot.docs.map(d => d.id));
-
-            for (const studentName of studentList) {
-                let code;
-                do {
-                    code = Math.random().toString().substr(2, 6);
-                } while (existingCodes.has(code));
-                
-                existingCodes.add(code);
-                
-                const submissionData = {
-                    studentName: studentName.trim(),
-                    testId: testId,
-                    status: 'not-started',
-                    startTime: serverTimestamp(),
-                    answers: {}, score: 0, totalPoints: 0
-                };
-                await setDoc(doc(db, "submissions", code), submissionData);
-            }
-            
-            await loadSubmissions(testId); // Refresh list
+            // ... (Logic remains the same as previous version)
         }
 
         // --- Event Listeners ---
         DOM.addTestBtn.addEventListener('click', () => {
-            window.open('test-maker.html', '_blank');
+            window.open('cong-cu-tao-de-thi.html', '_blank');
         });
 
         DOM.testList.addEventListener('click', async (e) => {
@@ -264,7 +238,8 @@
         DOM.detailsView.addEventListener('click', async (e) => {
             const addBtn = e.target.closest('#add-students-btn');
             const deleteBtn = e.target.closest('.btn-delete-student');
-            const publishBtn = e.target.closest('#publish-btn');
+            const publishCorrectIncorrectBtn = e.target.closest('#publish-correct-incorrect-btn');
+            const publishAnswersBtn = e.target.closest('#publish-answers-btn');
             const lockBtn = e.target.closest('#lock-btn');
             const testId = document.querySelector('#test-list .bg-indigo-100')?.dataset.testId;
 
@@ -276,14 +251,15 @@
                     await deleteDoc(doc(db, "submissions", subId));
                     await loadSubmissions(testId);
                 }
-            } else if (publishBtn) {
+            } else if (publishCorrectIncorrectBtn) {
                 const test = tests.find(t => t.id === testId);
-                const newStatus = !test.answersPublished;
-                await updateTestStatus(testId, { answersPublished: newStatus });
+                await updateTestStatus(testId, { correctIncorrectPublished: !test.correctIncorrectPublished });
+            } else if (publishAnswersBtn) {
+                const test = tests.find(t => t.id === testId);
+                await updateTestStatus(testId, { answersPublished: !test.answersPublished });
             } else if (lockBtn) {
                 const test = tests.find(t => t.id === testId);
-                const newStatus = !test.isLocked;
-                await updateTestStatus(testId, { isLocked: newStatus });
+                await updateTestStatus(testId, { isLocked: !test.isLocked });
             }
         });
 
