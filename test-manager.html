@@ -140,7 +140,6 @@
 
         DOM.logoutBtn.addEventListener('click', () => signOut(auth));
 
-        // ... (The rest of the dashboard logic remains the same)
         async function loadTests() {
             DOM.testList.innerHTML = '<div class="text-center py-8"><div class="loader mx-auto"></div></div>';
             const testsCol = collection(db, "tests");
@@ -229,7 +228,7 @@
 
                                     return `
                                     <tr>
-                                        <td class="border-b p-2"><a href="student.html?submission_id=${sub.id}" target="_blank" class="text-blue-600 hover:underline">${sub.studentName}</a></td>
+                                        <td class="border-b p-2"><a href="lam-bai-thi.html?submission_id=${sub.id}" target="_blank" class="text-blue-600 hover:underline">${sub.studentName}</a></td>
                                         <td class="border-b p-2 font-mono">${sub.id}</td>
                                         <td class="border-b p-2">${statusBadge}</td>
                                         <td class="border-b p-2 font-bold">${sub.status === 'submitted' ? `${sub.score} / ${sub.totalPoints}` : '-'}</td>
@@ -257,12 +256,41 @@
         }
 
         async function generateAndAssignCodes(testId) {
-            // Logic remains the same
+            const studentList = document.getElementById('new-student-list').value.trim().split('\n').filter(name => name.trim() !== '');
+            if (studentList.length === 0) return alert("Vui lòng nhập tên học sinh.");
+
+            const addBtn = document.getElementById('add-students-btn');
+            addBtn.disabled = true;
+            addBtn.innerHTML = '<div class="loader mx-auto h-5 w-5"></div>';
+
+            const submissionsCol = collection(db, "submissions");
+            const snapshot = await getDocs(submissionsCol);
+            const existingCodes = new Set(snapshot.docs.map(d => d.id));
+
+            for (const studentName of studentList) {
+                let code;
+                do {
+                    code = Math.random().toString().substr(2, 6);
+                } while (existingCodes.has(code));
+                
+                existingCodes.add(code);
+                
+                const submissionData = {
+                    studentName: studentName.trim(),
+                    testId: testId,
+                    status: 'not-started',
+                    startTime: serverTimestamp(),
+                    answers: {}, score: 0, totalPoints: 0
+                };
+                await setDoc(doc(db, "submissions", code), submissionData);
+            }
+            
+            await loadSubmissions(testId); // Refresh list
         }
 
         // --- Event Listeners ---
         DOM.addTestBtn.addEventListener('click', () => {
-            window.open('test-maker.html', '_blank');
+            window.open('cong-cu-tao-de-thi.html', '_blank');
         });
 
         DOM.testList.addEventListener('click', async (e) => {
