@@ -39,31 +39,28 @@
         .code-input { width: 40px; height: 50px; text-align: center; font-size: 1.5rem; border: 2px solid #d1d5db; border-radius: 8px; margin: 0 4px; transition: border-color 0.2s; }
         .code-input:focus { outline: none; border-color: #4f46e5; }
         
-        /* Navigation Panel Styles */
-        #navigation-panel {
-            position: sticky;
-            top: 100px; /* Dưới thanh timer */
-            max-height: calc(100vh - 120px);
-            overflow-y: auto;
-        }
-        .nav-btn {
-            width: 40px;
-            height: 40px;
-            border: 1px solid #d1d5db;
-            transition: all 0.2s;
-        }
-        .nav-btn.answered {
-            background-color: #4f46e5;
-            color: white;
-            border-color: #4f46e5;
-        }
-        .nav-btn.current {
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 2px #4f46e5;
+        #navigation-panel { position: sticky; top: 100px; max-height: calc(100vh - 120px); overflow-y: auto; }
+        .nav-btn { width: 40px; height: 40px; border: 1px solid #d1d5db; transition: all 0.2s; }
+        .nav-btn.answered { background-color: #4f46e5; color: white; border-color: #4f46e5; }
+        .nav-btn.current { border-color: #4f46e5; box-shadow: 0 0 0 2px #4f46e5; }
+        
+        /* Security Overlay */
+        #security-overlay {
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
     </style>
 </head>
-<body class="p-4 sm:p-6 md:p-8">
+<body oncontextmenu="return false;">
+
+    <!-- === SECURITY OVERLAY === -->
+    <div id="security-overlay" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[200]">
+        <div class="text-center text-white">
+            <i class="fas fa-eye-slash text-6xl"></i>
+            <h2 class="text-3xl font-bold mt-4">NỘI DUNG ĐANG ĐƯỢC BẢO VỆ</h2>
+            <p class="mt-2">Vui lòng quay lại màn hình làm bài.</p>
+        </div>
+    </div>
 
     <!-- === MÀN HÌNH ĐĂNG NHẬP === -->
     <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen text-center p-4">
@@ -166,6 +163,9 @@
         let currentSubmissionId = null;
         let currentTest = null;
         let timerInterval;
+        let violationCount = 0;
+        const MAX_VIOLATIONS = 10;
+        let proctoringEnabled = false;
 
         const DOM = {
             loginScreen: document.getElementById('login-screen'),
@@ -196,6 +196,7 @@
             modalMessage: document.getElementById('modal-message'),
             modalConfirmBtn: document.getElementById('modal-confirm-btn'),
             modalCancelBtn: document.getElementById('modal-cancel-btn'),
+            securityOverlay: document.getElementById('security-overlay'),
         };
 
         const showLoader = (text = 'Đang tải...') => { DOM.loaderText.textContent = text; DOM.loaderOverlay.classList.remove('hidden'); };
@@ -209,6 +210,64 @@
         };
         const hideModal = () => DOM.modal.classList.add('hidden');
         DOM.modalCancelBtn.onclick = hideModal;
+
+        // --- PROCTORING & SECURITY ---
+        function initProctoring() {
+            if (proctoringEnabled) return;
+            try { document.documentElement.requestFullscreen(); } catch (err) { console.warn("Fullscreen request failed:", err); }
+            document.addEventListener('keydown', handleKeydown);
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+            window.addEventListener('blur', handleBlur);
+            window.addEventListener('focus', handleFocus);
+            proctoringEnabled = true;
+        }
+        
+        function removeProctoring() {
+            document.removeEventListener('keydown', handleKeydown);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('blur', handleBlur);
+            window.removeEventListener('focus', handleFocus);
+            proctoringEnabled = false;
+        }
+
+        function handleKeydown(e) {
+            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I', 'J'].includes(e.key)) || (e.ctrlKey && e.key === 'U')) {
+                e.preventDefault();
+            }
+        }
+
+        function handleVisibilityChange() {
+            if (document.hidden) {
+                handleViolation();
+            }
+        }
+        
+        function handleBlur() {
+            DOM.securityOverlay.classList.remove('hidden');
+            handleViolation();
+        }
+
+        function handleFocus() {
+            DOM.securityOverlay.classList.add('hidden');
+            if (violationCount > 0 && violationCount < MAX_VIOLATIONS) {
+                showModal(
+                    'Cảnh báo vi phạm!',
+                    `Bạn đã thoát khỏi màn hình làm bài ${violationCount} lần. Nếu vi phạm quá ${MAX_VIOLATIONS} lần, bài làm sẽ tự động được nộp.`,
+                    null,
+                    false
+                );
+            }
+        }
+
+        async function handleViolation() {
+            if (!proctoringEnabled) return;
+            violationCount++;
+            const submissionRef = doc(db, 'submissions', currentSubmissionId);
+            await updateDoc(submissionRef, { violationCount: violationCount });
+            if (violationCount >= MAX_VIOLATIONS) {
+                submitTest(true);
+            }
+        }
 
         async function startSession(submissionId) {
             showLoader('Đang tải dữ liệu bài làm...');
@@ -229,6 +288,8 @@
                 if (submissionData.status === 'submitted') {
                     displayResults(submissionData, currentTest);
                 } else {
+                    violationCount = submissionData.violationCount || 0;
+                    initProctoring();
                     renderTest(currentTest, submissionData.answers || {});
                     setupTestEnvironment(currentTest, submissionData);
                     DOM.loginScreen.classList.add('hidden');
@@ -473,7 +534,11 @@
             return answers;
         }
 
-        async function submitTest() {
+        async function submitTest(isForced = false) {
+            removeProctoring();
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            }
             clearInterval(timerInterval);
             showLoader('Đang nộp bài và chấm điểm...');
             
@@ -513,6 +578,9 @@
                 
                 const submissionSnap = await getDoc(doc(db, 'submissions', currentSubmissionId));
                 displayResults(submissionSnap.data(), currentTest);
+                if (isForced) {
+                    showModal("Bài thi đã tự động nộp", `Bạn đã vi phạm quy chế thi quá ${MAX_VIOLATIONS} lần.`, null, false);
+                }
             } catch (error) {
                 showModal('Lỗi', 'Không thể nộp bài. Vui lòng thử lại.', null, false);
             } finally {
@@ -521,6 +589,7 @@
         }
 
         function displayResults(submissionData, testData) {
+            removeProctoring();
             DOM.testContainer.classList.add('hidden');
             DOM.loginScreen.classList.add('hidden');
             DOM.resultScreen.classList.remove('hidden');
