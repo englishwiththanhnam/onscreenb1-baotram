@@ -1,0 +1,294 @@
+
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảng Điều Khiển Quản Lý</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- === CẤU HÌNH FIREBASE === -->
+    <script type="module">
+        const firebaseConfig = {
+            apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
+            authDomain: "b1-baotram.firebaseapp.com",
+            projectId: "b1-baotram",
+            storageBucket: "b1-baotram.firebasestorage.app",
+            messagingSenderId: "948701163187",
+            appId: "1:948701163187:web:043f2d381d63e741114ac6",
+            measurementId: "G-33NHT07JHE"
+        };
+        window.firebaseConfig = firebaseConfig;
+    </script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
+        .btn { font-weight: 600; padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: all 0.2s; border: none; }
+        .btn-primary { background-color: #4f46e5; color: white; }
+        .btn-primary:hover { background-color: #4338ca; }
+        .btn-danger { background-color: #ef4444; color: white; }
+        .btn-danger:hover { background-color: #dc2626; }
+        .btn-success { background-color: #22c55e; color: white; }
+        .btn-warning { background-color: #f59e0b; color: white; }
+        .input-field { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; }
+        .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #4f46e5; width: 32px; height: 32px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .status-badge { padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+        .status-not-started { background-color: #e5e7eb; color: #4b5563; }
+        .status-submitted { background-color: #d1fae5; color: #065f46; }
+        .status-inprogress { background-color: #fef3c7; color: #92400e; }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800">Bảng Điều Khiển Quản Lý</h1>
+            <p class="text-gray-600 mt-2">Quản lý đề thi, giao bài và theo dõi tiến độ của học sinh.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Cột danh sách đề thi -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-700">Danh sách Đề thi</h2>
+                    <button id="add-test-btn" class="btn btn-primary"><i class="fas fa-plus"></i></button>
+                </div>
+                <div id="test-list" class="space-y-2">
+                    <div class="text-center py-8"><div class="loader mx-auto"></div></div>
+                </div>
+            </div>
+
+            <!-- Cột chi tiết và danh sách học sinh -->
+            <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+                <div id="details-view">
+                    <div class="text-center text-gray-500 py-16">
+                        <i class="fas fa-arrow-left text-4xl mb-4"></i>
+                        <p class="text-xl">Chọn một đề thi từ danh sách bên trái để xem chi tiết.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, deleteDoc, query, where, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+        const app = initializeApp(window.firebaseConfig);
+        const db = getFirestore(app);
+
+        const DOM = {
+            testList: document.getElementById('test-list'),
+            addTestBtn: document.getElementById('add-test-btn'),
+            detailsView: document.getElementById('details-view'),
+        };
+
+        let tests = [];
+        let submissions = [];
+
+        async function loadTests() {
+            DOM.testList.innerHTML = '<div class="text-center py-8"><div class="loader mx-auto"></div></div>';
+            const testsCol = collection(db, "tests");
+            const snapshot = await getDocs(testsCol);
+            tests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderTestList();
+        }
+
+        function renderTestList() {
+            DOM.testList.innerHTML = '';
+            if (tests.length === 0) {
+                DOM.testList.innerHTML = '<p class="text-gray-500 text-center py-4">Chưa có đề thi nào.</p>';
+                return;
+            }
+            tests.forEach(test => {
+                const item = document.createElement('div');
+                item.className = 'p-3 border rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-100';
+                item.dataset.testId = test.id;
+                item.innerHTML = `
+                    <div>
+                        <p class="font-bold">${test.title}</p>
+                        <p class="text-sm text-gray-500">${test.id}</p>
+                    </div>
+                    <button class="btn-delete-test btn btn-danger" data-test-id="${test.id}"><i class="fas fa-trash"></i></button>
+                `;
+                DOM.testList.appendChild(item);
+            });
+        }
+
+        async function loadSubmissions(testId) {
+            const q = query(collection(db, "submissions"), where("testId", "==", testId));
+            const snapshot = await getDocs(q);
+            submissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderDetailsView(testId);
+        }
+
+        function renderDetailsView(testId) {
+            const test = tests.find(t => t.id === testId);
+            if (!test) return;
+
+            const publishBtnClass = test.answersPublished ? 'btn-warning' : 'btn-success';
+            const publishBtnText = test.answersPublished ? 'Hủy công bố' : 'Công bố đáp án';
+            const lockBtnClass = test.isLocked ? 'btn-success' : 'btn-danger';
+            const lockBtnText = test.isLocked ? 'Mở khóa' : 'Khóa đề thi';
+
+            DOM.detailsView.innerHTML = `
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="text-2xl font-bold text-gray-700">${test.title}</h2>
+                    <div class="flex gap-2">
+                        <button id="publish-btn" class="btn ${publishBtnClass}">${publishBtnText}</button>
+                        <button id="lock-btn" class="btn ${lockBtnClass}">${lockBtnText}</button>
+                    </div>
+                </div>
+                <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <h3 class="font-bold mb-2">Thêm học sinh mới</h3>
+                    <textarea id="new-student-list" class="input-field" rows="3" placeholder="Dán danh sách tên, mỗi tên một dòng..."></textarea>
+                    <button id="add-students-btn" class="btn btn-primary mt-2 w-full">Thêm và tạo mã</button>
+                </div>
+                <div>
+                    <h3 class="font-bold mb-2">Danh sách học sinh (${submissions.length})</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr>
+                                    <th class="border-b p-2">Tên học sinh</th>
+                                    <th class="border-b p-2">Mã truy cập</th>
+                                    <th class="border-b p-2">Trạng thái</th>
+                                    <th class="border-b p-2">Điểm số</th>
+                                    <th class="border-b p-2"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="student-table-body">
+                                ${submissions.map(sub => {
+                                    let statusBadge;
+                                    if (sub.status === 'submitted') {
+                                        statusBadge = '<span class="status-badge status-submitted">Đã nộp</span>';
+                                    } else if (Object.keys(sub.answers || {}).length > 0) {
+                                        statusBadge = '<span class="status-badge status-inprogress">Đang làm</span>';
+                                    } else {
+                                        statusBadge = '<span class="status-badge status-not-started">Chưa làm</span>';
+                                    }
+
+                                    return `
+                                    <tr>
+                                        <td class="border-b p-2"><a href="lam-bai-thi.html?submission_id=${sub.id}" target="_blank" class="text-blue-600 hover:underline">${sub.studentName}</a></td>
+                                        <td class="border-b p-2 font-mono">${sub.id}</td>
+                                        <td class="border-b p-2">${statusBadge}</td>
+                                        <td class="border-b p-2 font-bold">${sub.status === 'submitted' ? `${sub.score} / ${sub.totalPoints}` : '-'}</td>
+                                        <td class="border-b p-2 text-right">
+                                            <button class="btn-delete-student btn btn-danger" data-sub-id="${sub.id}"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                `}).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+        
+        async function updateTestStatus(testId, data) {
+             const testRef = doc(db, "tests", testId);
+             await updateDoc(testRef, data);
+             // Update local data and re-render
+             const testIndex = tests.findIndex(t => t.id === testId);
+             if(testIndex > -1) {
+                 tests[testIndex] = { ...tests[testIndex], ...data };
+             }
+             renderDetailsView(testId);
+        }
+
+
+        async function generateAndAssignCodes(testId) {
+            const studentList = document.getElementById('new-student-list').value.trim().split('\n').filter(name => name.trim() !== '');
+            if (studentList.length === 0) return alert("Vui lòng nhập tên học sinh.");
+
+            const addBtn = document.getElementById('add-students-btn');
+            addBtn.disabled = true;
+            addBtn.innerHTML = '<div class="loader mx-auto h-5 w-5"></div>';
+
+            const submissionsCol = collection(db, "submissions");
+            const snapshot = await getDocs(submissionsCol);
+            const existingCodes = new Set(snapshot.docs.map(d => d.id));
+
+            for (const studentName of studentList) {
+                let code;
+                do {
+                    code = Math.random().toString().substr(2, 6);
+                } while (existingCodes.has(code));
+                
+                existingCodes.add(code);
+                
+                const submissionData = {
+                    studentName: studentName.trim(),
+                    testId: testId,
+                    status: 'not-started',
+                    startTime: serverTimestamp(),
+                    answers: {}, score: 0, totalPoints: 0
+                };
+                await setDoc(doc(db, "submissions", code), submissionData);
+            }
+            
+            await loadSubmissions(testId); // Refresh list
+        }
+
+        // --- Event Listeners ---
+        DOM.addTestBtn.addEventListener('click', () => {
+            window.open('cong-cu-tao-de-thi.html', '_blank');
+        });
+
+        DOM.testList.addEventListener('click', async (e) => {
+            const testItem = e.target.closest('[data-test-id]');
+            const deleteBtn = e.target.closest('.btn-delete-test');
+
+            if (deleteBtn) {
+                const testId = deleteBtn.dataset.testId;
+                if (confirm(`Bạn có chắc chắn muốn xóa đề thi "${testId}" và TOÀN BỘ bài làm của học sinh? Hành động này không thể hoàn tác.`)) {
+                    await deleteDoc(doc(db, "tests", testId));
+                    const q = query(collection(db, "submissions"), where("testId", "==", testId));
+                    const snapshot = await getDocs(q);
+                    const deletePromises = snapshot.docs.map(d => deleteDoc(d.ref));
+                    await Promise.all(deletePromises);
+                    loadTests();
+                    DOM.detailsView.innerHTML = '<div class="text-center text-gray-500 py-16"><p>Đã xóa đề thi.</p></div>';
+                }
+            } else if (testItem) {
+                const testId = testItem.dataset.testId;
+                document.querySelectorAll('#test-list > div').forEach(el => el.classList.remove('bg-indigo-100'));
+                testItem.classList.add('bg-indigo-100');
+                DOM.detailsView.innerHTML = '<div class="text-center py-16"><div class="loader mx-auto"></div></div>';
+                await loadSubmissions(testId);
+            }
+        });
+        
+        DOM.detailsView.addEventListener('click', async (e) => {
+            const addBtn = e.target.closest('#add-students-btn');
+            const deleteBtn = e.target.closest('.btn-delete-student');
+            const publishBtn = e.target.closest('#publish-btn');
+            const lockBtn = e.target.closest('#lock-btn');
+            const testId = document.querySelector('#test-list .bg-indigo-100')?.dataset.testId;
+
+            if (addBtn) {
+                await generateAndAssignCodes(testId);
+            } else if (deleteBtn) {
+                const subId = deleteBtn.dataset.subId;
+                if (confirm(`Bạn có chắc chắn muốn xóa bài làm của học sinh có mã "${subId}"?`)) {
+                    await deleteDoc(doc(db, "submissions", subId));
+                    await loadSubmissions(testId);
+                }
+            } else if (publishBtn) {
+                const test = tests.find(t => t.id === testId);
+                const newStatus = !test.answersPublished;
+                await updateTestStatus(testId, { answersPublished: newStatus });
+            } else if (lockBtn) {
+                const test = tests.find(t => t.id === testId);
+                const newStatus = !test.isLocked;
+                await updateTestStatus(testId, { isLocked: newStatus });
+            }
+        });
+
+        // --- Initial Load ---
+        loadTests();
+    </script>
+</body>
+</html>
