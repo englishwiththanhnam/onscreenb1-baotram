@@ -89,9 +89,32 @@
         
         <!-- NÚT TẢI LÊN -->
         <div class="mt-8 text-center">
-             <button id="upload-btn" class="btn btn-primary text-lg w-full md:w-1/2"><i class="fas fa-cloud-upload-alt mr-2"></i>Tạo và Tải Đề Thi Lên Firebase</button>
-             <div id="loader" class="hidden my-4 flex justify-center"><div class="loader"></div></div>
+             <button id="upload-btn" class="btn btn-primary text-lg w-full md:w-1/2"><i class="fas fa-cloud-upload-alt mr-2"></i>Tải Đề Thi Lên Firebase</button>
              <p id="upload-log" class="text-green-600 font-semibold mt-2"></p>
+        </div>
+
+        <!-- GIAO BÀI -->
+        <div class="bg-white p-6 rounded-lg shadow-md mt-8">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4">3. Giao bài và Tạo mã truy cập</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="student-list" class="block text-sm font-medium text-gray-700">Dán danh sách học sinh (mỗi tên một dòng)</label>
+                    <textarea id="student-list" class="input-field mt-1" rows="5" placeholder="Nguyễn Văn An&#10;Trần Thị Bình&#10;Lê Văn Cường"></textarea>
+                </div>
+                <button id="generate-codes-btn" class="btn btn-primary w-full"><i class="fas fa-key mr-2"></i>Tạo mã cho học sinh</button>
+            </div>
+            <div id="codes-output" class="hidden mt-4">
+                <h3 class="text-lg font-bold">Mã truy cập đã tạo:</h3>
+                <table class="w-full mt-2 text-left border-collapse">
+                    <thead>
+                        <tr>
+                            <th class="border-b p-2">Tên học sinh</th>
+                            <th class="border-b p-2">Mã truy cập</th>
+                        </tr>
+                    </thead>
+                    <tbody id="codes-table-body"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -132,7 +155,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
         const app = initializeApp(window.firebaseConfig);
         const db = getFirestore(app);
@@ -144,8 +167,10 @@
             batchImportBtn: document.getElementById('batch-import-btn'),
             questionListContainer: document.getElementById('question-list-container'),
             uploadBtn: document.getElementById('upload-btn'),
-            loader: document.getElementById('loader'),
             uploadLog: document.getElementById('upload-log'),
+            generateCodesBtn: document.getElementById('generate-codes-btn'),
+            codesOutput: document.getElementById('codes-output'),
+            codesTableBody: document.getElementById('codes-table-body'),
             // Editor Modal
             editorModal: document.getElementById('question-editor-modal'),
             modalTitle: document.getElementById('modal-title'),
@@ -362,9 +387,8 @@
                 return;
             }
 
-            DOM.loader.classList.remove('hidden');
             DOM.uploadBtn.disabled = true;
-            DOM.uploadLog.textContent = '';
+            DOM.uploadLog.textContent = 'Đang tải lên...';
 
             try {
                 await setDoc(doc(db, "tests", testId), { title, type, duration, questions });
@@ -374,9 +398,57 @@
                 DOM.uploadLog.textContent = `LỖI: ${error.message}`;
                 DOM.uploadLog.classList.add('text-red-600');
             } finally {
-                DOM.loader.classList.add('hidden');
                 DOM.uploadBtn.disabled = false;
             }
+        }
+        
+        async function generateAndAssignCodes() {
+            const testId = document.getElementById('test-id').value.trim();
+            const studentList = document.getElementById('student-list').value.trim().split('\n').filter(name => name.trim() !== '');
+
+            if (!testId) {
+                alert("Vui lòng nhập Test ID ở mục 1 trước khi giao bài.");
+                return;
+            }
+            if (studentList.length === 0) {
+                alert("Vui lòng nhập danh sách học sinh.");
+                return;
+            }
+
+            DOM.generateCodesBtn.disabled = true;
+            DOM.codesTableBody.innerHTML = '';
+            DOM.codesOutput.classList.remove('hidden');
+
+            for (const studentName of studentList) {
+                const code = Math.random().toString().substr(2, 6);
+                const submissionRef = doc(db, "submissions", code);
+
+                const submissionData = {
+                    studentName: studentName.trim(),
+                    testId: testId,
+                    status: 'not-started',
+                    startTime: serverTimestamp(),
+                    answers: {},
+                    score: 0,
+                    totalPoints: 0
+                };
+
+                try {
+                    await setDoc(submissionRef, submissionData);
+                    const row = `<tr>
+                        <td class="border-b p-2">${studentName.trim()}</td>
+                        <td class="border-b p-2 font-mono font-bold">${code}</td>
+                    </tr>`;
+                    DOM.codesTableBody.innerHTML += row;
+                } catch (error) {
+                    const row = `<tr>
+                        <td class="border-b p-2">${studentName.trim()}</td>
+                        <td class="border-b p-2 text-red-500">Lỗi: ${error.message}</td>
+                    </tr>`;
+                    DOM.codesTableBody.innerHTML += row;
+                }
+            }
+            DOM.generateCodesBtn.disabled = false;
         }
 
         // --- EVENT LISTENERS ---
@@ -384,6 +456,7 @@
         DOM.cancelBtn.addEventListener('click', () => DOM.editorModal.style.display = 'none');
         DOM.saveQuestionBtn.addEventListener('click', saveQuestion);
         DOM.uploadBtn.addEventListener('click', uploadToFirebase);
+        DOM.generateCodesBtn.addEventListener('click', generateAndAssignCodes);
         DOM.questionType.addEventListener('change', (e) => renderOptionsUI(e.target.value, { text: DOM.questionText.value }));
         
         DOM.batchImportBtn.addEventListener('click', () => DOM.batchModal.style.display = 'block');
@@ -413,9 +486,5 @@
 
         renderQuestionList();
     </script>
-</body>
-</html>
-
-
 </body>
 </html>
