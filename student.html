@@ -156,7 +156,7 @@
     <!-- === LOGIC JAVASCRIPT === -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
         const app = initializeApp(window.firebaseConfig);
         const db = getFirestore(app);
@@ -166,6 +166,7 @@
         let violationCount = 0;
         const MAX_VIOLATIONS = 10;
         let proctoringEnabled = false;
+        let lastBlurTime = null;
 
         const DOM = {
             loginScreen: document.getElementById('login-screen'),
@@ -219,6 +220,9 @@
             document.addEventListener('visibilitychange', handleVisibilityChange);
             window.addEventListener('blur', handleBlur);
             window.addEventListener('focus', handleFocus);
+            if (currentTest.type === 'test') {
+                window.addEventListener('beforeunload', handleBeforeUnload);
+            }
             proctoringEnabled = true;
         }
         
@@ -227,6 +231,7 @@
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('blur', handleBlur);
             window.removeEventListener('focus', handleFocus);
+            window.removeEventListener('beforeunload', handleBeforeUnload);
             proctoringEnabled = false;
         }
 
@@ -244,11 +249,20 @@
         
         function handleBlur() {
             DOM.securityOverlay.classList.remove('hidden');
+            lastBlurTime = new Date();
             handleViolation();
         }
 
         function handleFocus() {
             DOM.securityOverlay.classList.add('hidden');
+            if (lastBlurTime) {
+                const duration = Math.round((new Date() - lastBlurTime) / 1000);
+                const submissionRef = doc(db, 'submissions', currentSubmissionId);
+                updateDoc(submissionRef, {
+                    violationLog: arrayUnion({ out: lastBlurTime, duration: duration })
+                });
+                lastBlurTime = null;
+            }
             if (violationCount > 0 && violationCount < MAX_VIOLATIONS) {
                 showModal(
                     'Cảnh báo vi phạm!',
@@ -264,8 +278,16 @@
             violationCount++;
             const submissionRef = doc(db, 'submissions', currentSubmissionId);
             await updateDoc(submissionRef, { violationCount: violationCount });
-            if (violationCount >= MAX_VIOLATIONS) {
+            if (violationCount >= MAX_VIOLATIONS && currentTest.type === 'test') {
                 submitTest(true);
+            }
+        }
+
+        function handleBeforeUnload(e) {
+            if (proctoringEnabled) {
+                submitTest(true);
+                e.preventDefault();
+                e.returnValue = '';
             }
         }
 
@@ -579,7 +601,7 @@
                 const submissionSnap = await getDoc(doc(db, 'submissions', currentSubmissionId));
                 displayResults(submissionSnap.data(), currentTest);
                 if (isForced) {
-                    showModal("Bài thi đã tự động nộp", `Bạn đã vi phạm quy chế thi quá ${MAX_VIOLATIONS} lần.`, null, false);
+                    showModal("Bài thi đã tự động nộp", `Bạn đã vi phạm quy chế thi.`, null, false);
                 }
             } catch (error) {
                 showModal('Lỗi', 'Không thể nộp bài. Vui lòng thử lại.', null, false);
@@ -599,8 +621,8 @@
             DOM.feedbackSummary.textContent = `Bạn đã trả lời đúng ${score} trên tổng số ${totalPoints} điểm.`;
 
             DOM.reviewContainer.innerHTML = '';
-            if (!testData.answersPublished) {
-                 DOM.reviewContainer.innerHTML = '<p class="text-center text-gray-600 mt-8">Giáo viên chưa công bố đáp án chi tiết. Vui lòng quay lại sau.</p>';
+            if (!testData.answersPublished && !testData.correctIncorrectPublished) {
+                 DOM.reviewContainer.innerHTML = '<p class="text-center text-gray-600 mt-8">Giáo viên chưa công bố đáp án. Vui lòng quay lại sau.</p>';
                  return;
             }
 
@@ -617,8 +639,9 @@
                         const isCorrect = studentAnswer === q.answer;
                         optionsHTML = `<div class="space-y-2 mt-4">` + Object.keys(q.options).map(key => {
                             let stateClass = '';
-                            if (key === q.answer) stateClass = 'bg-green-100 border-green-500';
+                            if (testData.answersPublished && key === q.answer) stateClass = 'bg-green-100 border-green-500';
                             else if (key === studentAnswer && !isCorrect) stateClass = 'bg-red-100 border-red-500';
+                            else if (key === studentAnswer && isCorrect) stateClass = 'bg-green-100 border-green-500';
                             return `<div class="flex items-center p-3 border rounded-lg ${stateClass}"><span class="ml-3 text-gray-700">${key}. ${q.options[key]}</span></div>`;
                         }).join('') + `</div>`;
                         break;
@@ -628,8 +651,8 @@
                             const correctOptions = q.answers[number];
                             const isBlankCorrect = correctOptions.some(opt => opt.toLowerCase() === sAnswer.toLowerCase());
                             const color = isBlankCorrect ? 'green' : 'red';
-                            const cAnswerDisplay = correctOptions.join(' / ');
-                            return `(${number}) <span class="font-bold text-${color}-600 border-b-2 border-${color}-400 px-1">${sAnswer}</span> <span class="text-green-600">(${cAnswerDisplay})</span>`;
+                            const cAnswerDisplay = testData.answersPublished ? `(${correctOptions.join(' / ')})` : '';
+                            return `(${number}) <span class="font-bold text-${color}-600 border-b-2 border-${color}-400 px-1">${sAnswer}</span> <span class="text-green-600">${cAnswerDisplay}</span>`;
                         });
                         optionsHTML = `<div class="text-lg leading-loose mt-4">${questionText}</div>`;
                         questionText = q.text.split('(')[0];
@@ -639,9 +662,8 @@
                 reviewCard.innerHTML = `
                     <p class="question-title">${index + 1}. ${questionText}</p>
                     ${optionsHTML}
-                    <div class="feedback mt-4 feedback-correct" style="display: block;">
-                        <p><strong>Giải thích:</strong> ${q.explanation || 'Không có giải thích.'}</p>
-                    </div>`;
+                    ${testData.answersPublished ? `<div class="feedback mt-4 feedback-correct" style="display: block;"><p><strong>Giải thích:</strong> ${q.explanation || 'Không có giải thích.'}</p></div>` : ''}
+                `;
                 DOM.reviewContainer.appendChild(reviewCard);
             });
         }
