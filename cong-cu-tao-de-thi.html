@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -155,7 +154,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, serverTimestamp, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
         const app = initializeApp(window.firebaseConfig);
         const db = getFirestore(app);
@@ -416,13 +415,25 @@
             }
 
             DOM.generateCodesBtn.disabled = true;
-            DOM.codesTableBody.innerHTML = '';
+            DOM.codesTableBody.innerHTML = '<tr><td colspan="2" class="p-2 text-center">Đang kiểm tra và tạo mã...</td></tr>';
             DOM.codesOutput.classList.remove('hidden');
 
-            for (const studentName of studentList) {
-                const code = Math.random().toString().substr(2, 6);
-                const submissionRef = doc(db, "submissions", code);
+            // Fetch existing codes to prevent duplicates
+            const submissionsCol = collection(db, "submissions");
+            const snapshot = await getDocs(submissionsCol);
+            const existingCodes = new Set(snapshot.docs.map(d => d.id));
 
+            DOM.codesTableBody.innerHTML = '';
+
+            for (const studentName of studentList) {
+                let code;
+                do {
+                    code = Math.random().toString().substr(2, 6);
+                } while (existingCodes.has(code));
+                
+                existingCodes.add(code); // Add to set to prevent duplicates within the same batch
+                
+                const submissionRef = doc(db, "submissions", code);
                 const submissionData = {
                     studentName: studentName.trim(),
                     testId: testId,
