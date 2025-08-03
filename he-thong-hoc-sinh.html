@@ -42,6 +42,8 @@
         .loader { border: 5px solid #f3f3f3; border-radius: 50%; border-top: 5px solid #4f46e5; width: 50px; height: 50px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .input-field-inline { display: inline-block; width: auto; min-width: 120px; border: 1px solid #d1d5db; border-radius: 6px; padding: 4px 8px; margin: 0 4px; }
+        .code-input { width: 40px; height: 50px; text-align: center; font-size: 1.5rem; border: 2px solid #d1d5db; border-radius: 8px; margin: 0 4px; transition: border-color 0.2s; }
+        .code-input:focus { outline: none; border-color: #4f46e5; }
     </style>
 </head>
 <body class="p-4 sm:p-6 md:p-8">
@@ -49,16 +51,29 @@
     <!-- === MÀN HÌNH ĐĂNG NHẬP === -->
     <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen text-center p-4">
         <div class="w-full max-w-md bg-white p-8 sm:p-10 rounded-2xl shadow-xl">
-            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 mb-4">Bài Kiểm Tra Online</h1>
-            <p class="text-gray-600 mb-8">Vui lòng nhập Mã truy cập do giáo viên cung cấp để bắt đầu.</p>
-            <div class="space-y-4 mb-6">
-                <div>
-                    <label for="access-code" class="block text-left text-lg font-medium text-gray-700 mb-2">Mã truy cập (6 chữ số):</label>
-                    <input type="text" id="access-code" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Nhập mã truy cập">
+            <div id="code-entry-view">
+                <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 mb-4">Bài Kiểm Tra Online</h1>
+                <p class="text-gray-600 mb-8">Vui lòng nhập Mã truy cập do giáo viên cung cấp để bắt đầu.</p>
+                <div id="code-inputs" class="flex justify-center mb-4">
+                    <input type="text" maxlength="1" class="code-input">
+                    <input type="text" maxlength="1" class="code-input">
+                    <input type="text" maxlength="1" class="code-input">
+                    <input type="text" maxlength="1" class="code-input">
+                    <input type="text" maxlength="1" class="code-input">
+                    <input type="text" maxlength="1" class="code-input">
+                </div>
+                <button id="check-code-btn" class="btn-primary mt-4 text-lg w-full">Kiểm tra mã</button>
+                <p id="login-error" class="text-red-500 mt-4 h-5"></p>
+            </div>
+            <div id="confirmation-view" class="hidden">
+                <h2 class="text-2xl font-bold text-gray-800">Chào mừng,</h2>
+                <p id="student-name-confirm" class="text-3xl font-bold text-indigo-600 my-4"></p>
+                <p class="text-gray-600 mb-8">Đây có phải là bạn không?</p>
+                <div class="flex gap-4">
+                    <button id="not-me-btn" class="btn-secondary w-1/2">Không phải tôi</button>
+                    <button id="continue-btn" class="btn-primary w-1/2">Tiếp tục</button>
                 </div>
             </div>
-            <button id="start-test-btn" class="btn-primary mt-4 text-lg w-full">Bắt đầu / Tiếp tục</button>
-            <p id="login-error" class="text-red-500 mt-4 h-5"></p>
         </div>
     </div>
 
@@ -77,7 +92,7 @@
             <div id="question-container"></div>
             <div class="flex flex-col sm:flex-row justify-center items-center gap-4 my-8">
                 <button id="save-progress-btn" class="btn-primary btn-secondary text-lg w-full sm:w-auto"><i class="fa-regular fa-floppy-disk"></i> Lưu tiến trình</button>
-                <button id="submit-btn" class="btn btn-primary btn-success text-lg w-full sm:w-auto"><i class="fa-regular fa-paper-plane"></i> Nộp bài</button>
+                <button id="submit-btn" class="btn-primary btn-success text-lg w-full sm:w-auto"><i class="fa-regular fa-paper-plane"></i> Nộp bài</button>
             </div>
         </div>
     </div>
@@ -106,7 +121,7 @@
             <p id="modal-message" class="text-gray-600 mb-6"></p>
             <div id="modal-actions">
                 <button id="modal-confirm-btn" class="btn-primary">Đồng ý</button>
-                <button id="modal-cancel-btn" class="btn btn-primary btn-secondary ml-2">Hủy</button>
+                <button id="modal-cancel-btn" class="btn-primary btn-secondary ml-2">Hủy</button>
             </div>
         </div>
     </div>
@@ -124,9 +139,15 @@
 
         const DOM = {
             loginScreen: document.getElementById('login-screen'),
+            codeEntryView: document.getElementById('code-entry-view'),
+            confirmationView: document.getElementById('confirmation-view'),
+            studentNameConfirm: document.getElementById('student-name-confirm'),
+            notMeBtn: document.getElementById('not-me-btn'),
+            continueBtn: document.getElementById('continue-btn'),
+            codeInputs: document.getElementById('code-inputs'),
+            checkCodeBtn: document.getElementById('check-code-btn'),
             testContainer: document.getElementById('test-container'),
             resultScreen: document.getElementById('result-screen'),
-            startBtn: document.getElementById('start-test-btn'),
             saveProgressBtn: document.getElementById('save-progress-btn'),
             submitBtn: document.getElementById('submit-btn'),
             questionContainer: document.getElementById('question-container'),
@@ -159,24 +180,77 @@
         const hideModal = () => DOM.modal.classList.add('hidden');
         DOM.modalCancelBtn.onclick = hideModal;
 
-        DOM.startBtn.addEventListener('click', async () => {
-            const accessCode = document.getElementById('access-code').value.trim();
+        // Login Logic
+        const inputs = DOM.codeInputs.querySelectorAll('input');
+        DOM.codeInputs.addEventListener('input', (e) => {
+            const target = e.target;
+            const val = target.value;
+            if (isNaN(val)) {
+                target.value = '';
+                return;
+            }
+            if (val != '') {
+                const next = target.nextElementSibling;
+                if (next) {
+                    next.focus();
+                }
+            }
+        });
+        DOM.codeInputs.addEventListener('keydown', (e) => {
+            const target = e.target;
+            if (e.key === 'Backspace' && target.value === '') {
+                const prev = target.previousElementSibling;
+                if (prev) {
+                    prev.focus();
+                }
+            }
+        });
+
+        DOM.checkCodeBtn.addEventListener('click', async () => {
+            const code = Array.from(inputs).map(input => input.value).join('');
             const loginError = document.getElementById('login-error');
 
-            if (!accessCode) { loginError.textContent = 'Vui lòng nhập Mã truy cập.'; return; }
+            if (code.length !== 6) {
+                loginError.textContent = 'Vui lòng nhập đủ 6 chữ số.';
+                return;
+            }
             loginError.textContent = '';
-            showLoader('Đang kiểm tra và tải dữ liệu...');
+            showLoader('Đang kiểm tra...');
 
             try {
-                currentSubmissionId = accessCode;
+                currentSubmissionId = code;
                 const submissionRef = doc(db, 'submissions', currentSubmissionId);
                 const submissionSnap = await getDoc(submissionRef);
 
                 if (!submissionSnap.exists()) throw new Error("Mã truy cập không hợp lệ.");
                 
                 const submissionData = submissionSnap.data();
-                DOM.studentNameDisplay.textContent = `Thí sinh: ${submissionData.studentName}`;
+                DOM.studentNameConfirm.textContent = submissionData.studentName;
+                DOM.codeEntryView.classList.add('hidden');
+                DOM.confirmationView.classList.remove('hidden');
 
+            } catch (error) {
+                showModal('Lỗi', error.message, null, false);
+            } finally {
+                hideLoader();
+            }
+        });
+
+        DOM.notMeBtn.addEventListener('click', () => {
+            inputs.forEach(input => input.value = '');
+            DOM.confirmationView.classList.add('hidden');
+            DOM.codeEntryView.classList.remove('hidden');
+            inputs[0].focus();
+        });
+
+        DOM.continueBtn.addEventListener('click', async () => {
+            showLoader('Đang tải dữ liệu bài làm...');
+            try {
+                const submissionRef = doc(db, 'submissions', currentSubmissionId);
+                const submissionSnap = await getDoc(submissionRef);
+                const submissionData = submissionSnap.data();
+                
+                DOM.studentNameDisplay.textContent = `Thí sinh: ${submissionData.studentName}`;
                 currentTest = await fetchTest(submissionData.testId);
 
                 if (submissionData.status === 'submitted') {
@@ -188,7 +262,7 @@
                     DOM.testContainer.classList.remove('hidden');
                 }
             } catch (error) {
-                showModal('Lỗi', error.message, null, false);
+                 showModal('Lỗi', error.message, null, false);
             } finally {
                 hideLoader();
             }
