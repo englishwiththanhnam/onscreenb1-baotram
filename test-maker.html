@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trình Soạn Thảo Đề Thi</title>
+    <title>Bảng Điều Khiển Quản Lý</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- === CẤU HÌNH FIREBASE === -->
     <script type="module">
-        // IMPORTANT: Replace with your actual Firebase project configuration
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
@@ -24,21 +23,21 @@
     </script>
 
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f9fafb; }
-        .btn { font-weight: 600; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.2s; border: none; }
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
+        .btn { font-weight: 600; padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: all 0.2s; border: none; }
         .btn-primary { background-color: #4f46e5; color: white; }
         .btn-primary:hover { background-color: #4338ca; }
-        .btn-primary:disabled { background-color: #a5b4fc; cursor: not-allowed; }
-        .btn-secondary { background-color: #6b7280; color: white; }
-        .btn-secondary:hover { background-color: #4b5563; }
         .btn-danger { background-color: #ef4444; color: white; }
         .btn-danger:hover { background-color: #dc2626; }
-        .input-field { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; transition: border-color 0.2s; }
-        .input-field:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2); }
-        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
-        .modal-content { background-color: #fefefe; padding: 24px; border: 1px solid #888; width: 90%; max-width: 800px; border-radius: 12px; }
-        .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #4f46e5; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        .btn-success { background-color: #22c55e; color: white; }
+        .btn-warning { background-color: #f59e0b; color: white; }
+        .input-field { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; }
+        .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #4f46e5; width: 32px; height: 32px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .status-badge { padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .status-not-started { background-color: #e5e7eb; color: #4b5563; }
+        .status-submitted { background-color: #d1fae5; color: #065f46; }
+        .status-inprogress { background-color: #fef3c7; color: #92400e; }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -61,114 +60,49 @@
         </div>
     </div>
 
-    <div id="main-content" class="max-w-6xl mx-auto" style="display: none;">
+    <div id="main-content" class="max-w-7xl mx-auto" style="display: none;">
         <div class="flex justify-between items-center mb-8">
-            <h1 id="page-title" class="text-4xl font-bold text-gray-800">Soạn Thảo Đề Thi</h1>
+            <h1 class="text-4xl font-bold text-gray-800">Bảng Điều Khiển</h1>
             <button id="logout-btn" class="btn btn-danger">Đăng xuất</button>
         </div>
 
-        <!-- TEST INFO -->
-        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
-            <h2 class="text-2xl font-bold text-gray-700 mb-4">1. Thông tin chung</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                    <label for="test-id" class="block text-sm font-medium text-gray-700">Test ID (Mã định danh)</label>
-                    <input type="text" id="test-id" class="input-field mt-1" placeholder="vd: practice_present_tense">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Test List Column -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-700">Danh sách Đề thi</h2>
+                    <button id="add-test-btn" class="btn btn-primary" title="Tạo đề thi mới"><i class="fas fa-plus"></i></button>
                 </div>
-                <div>
-                    <label for="test-title" class="block text-sm font-medium text-gray-700">Tiêu đề</label>
-                    <input type="text" id="test-title" class="input-field mt-1" placeholder="vd: Practice Present Tense">
-                </div>
-                <div>
-                    <label for="assignment-type" class="block text-sm font-medium text-gray-700">Phân loại</label>
-                    <select id="assignment-type" class="input-field mt-1">
-                        <option value="test">Đề thi (Tính giờ, tự động nộp)</option>
-                        <option value="assignment">Bài tập (Linh hoạt)</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="test-duration" class="block text-sm font-medium text-gray-700">Thời gian (phút)</label>
-                    <input type="number" id="test-duration" class="input-field mt-1" placeholder="vd: 60 (bỏ trống nếu là bài tập không tính giờ)">
+                <div id="test-list" class="space-y-2">
+                    <div class="text-center py-8"><div class="loader mx-auto"></div></div>
                 </div>
             </div>
-        </div>
 
-        <!-- QUESTIONS -->
-        <div class="bg-white p-6 rounded-lg shadow-md">
-            <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
-                <h2 class="text-2xl font-bold text-gray-700">2. Danh sách câu hỏi</h2>
-                <div class="flex gap-2">
-                    <button id="batch-import-btn" class="btn btn-secondary"><i class="fas fa-file-import mr-2"></i>Nhập hàng loạt</button>
-                    <button id="add-question-btn" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>Thêm câu hỏi mới</button>
+            <!-- Details and Student List Column -->
+            <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+                <div id="details-view">
+                    <div class="text-center text-gray-500 py-16">
+                        <i class="fas fa-arrow-left text-4xl mb-4"></i>
+                        <p class="text-xl">Chọn một đề thi từ danh sách bên trái để xem chi tiết.</p>
+                    </div>
                 </div>
-            </div>
-            <div id="question-list-container" class="space-y-3">
-                <p class="text-gray-500 text-center py-4">Chưa có câu hỏi nào. Nhấn "Thêm câu hỏi mới" hoặc "Nhập hàng loạt" để bắt đầu.</p>
-            </div>
-        </div>
-        
-        <!-- UPLOAD BUTTON -->
-        <div class="mt-8 text-center">
-             <button id="upload-btn" class="btn btn-primary text-lg w-full md:w-1/2"><i class="fas fa-cloud-upload-alt mr-2"></i>Lưu và Tải Đề Thi Lên Firebase</button>
-             <p id="upload-log" class="font-semibold mt-2 h-5"></p>
-        </div>
-    </div>
-
-    <!-- QUESTION EDITOR MODAL -->
-    <div id="question-editor-modal" class="modal">
-        <div class="modal-content">
-            <h3 id="modal-title" class="text-2xl font-bold text-gray-800 mb-4">Soạn thảo câu hỏi</h3>
-            <div class="space-y-4">
-                <select id="question-type" class="input-field">
-                    <option value="multiple-choice">Trắc nghiệm (Multiple Choice)</option>
-                    <option value="multi-select">Trắc nghiệm (Multi-Select)</option>
-                    <option value="cloze-test">Điền từ (Cloze Test)</option>
-                </select>
-                <textarea id="question-text" class="input-field" rows="3" placeholder="Nội dung câu hỏi..."></textarea>
-                <div id="options-container" class="space-y-2"></div>
-                <textarea id="explanation-text" class="input-field" rows="2" placeholder="Giải thích đáp án..."></textarea>
-            </div>
-            <div class="mt-6 flex justify-end gap-4">
-                <button id="cancel-btn" class="btn btn-secondary">Hủy</button>
-                <button id="save-question-btn" class="btn btn-primary">Lưu câu hỏi</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- BATCH IMPORT MODAL -->
-    <div id="batch-import-modal" class="modal">
-        <div class="modal-content">
-            <h3 class="text-2xl font-bold text-gray-800 mb-4">Nhập hàng loạt từ Template</h3>
-            <p class="text-sm text-gray-600 mb-4">Dán toàn bộ nội dung từ file Word hoặc Text vào ô dưới đây.</p>
-            <textarea id="batch-content" class="input-field w-full" rows="15"></textarea>
-            <div class="mt-6 flex justify-end gap-4">
-                <button id="batch-cancel-btn" class="btn btn-secondary">Hủy</button>
-                <button id="batch-process-btn" class="btn btn-primary">Xử lý & Nhập</button>
             </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, deleteDoc, query, where, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
         const app = initializeApp(window.firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
-        let questions = [];
-        let editingQuestionIndex = -1;
-        let isEditMode = false;
-        let originalTestId = null;
 
         const DOM = {
-            pageTitle: document.getElementById('page-title'),
-            addQuestionBtn: document.getElementById('add-question-btn'),
-            batchImportBtn: document.getElementById('batch-import-btn'),
-            questionListContainer: document.getElementById('question-list-container'),
-            uploadBtn: document.getElementById('upload-btn'),
-            uploadLog: document.getElementById('upload-log'),
-            // Login
+            testList: document.getElementById('test-list'),
+            addTestBtn: document.getElementById('add-test-btn'),
+            detailsView: document.getElementById('details-view'),
             loginScreen: document.getElementById('login-screen'),
             mainContent: document.getElementById('main-content'),
             loginBtn: document.getElementById('login-btn'),
@@ -176,36 +110,24 @@
             emailInput: document.getElementById('email-input'),
             passwordInput: document.getElementById('password-input'),
             loginError: document.getElementById('login-error'),
-            // Editor Modal
-            editorModal: document.getElementById('question-editor-modal'),
-            modalTitle: document.getElementById('modal-title'),
-            questionType: document.getElementById('question-type'),
-            questionText: document.getElementById('question-text'),
-            optionsContainer: document.getElementById('options-container'),
-            explanationText: document.getElementById('explanation-text'),
-            cancelBtn: document.getElementById('cancel-btn'),
-            saveQuestionBtn: document.getElementById('save-question-btn'),
-            // Batch Modal
-            batchModal: document.getElementById('batch-import-modal'),
-            batchContent: document.getElementById('batch-content'),
-            batchCancelBtn: document.getElementById('batch-cancel-btn'),
-            batchProcessBtn: document.getElementById('batch-process-btn'),
-            // Test Info
-            testIdInput: document.getElementById('test-id'),
-            testTitleInput: document.getElementById('test-title'),
-            assignmentTypeInput: document.getElementById('assignment-type'),
-            testDurationInput: document.getElementById('test-duration'),
         };
+
+        let localTestsCache = [];
+        let testsUnsubscribe = null;
+        let submissionsUnsubscribe = null;
+        let liveUpdateInterval;
 
         // --- AUTHENTICATION ---
         onAuthStateChanged(auth, user => {
             if (user) {
                 DOM.loginScreen.style.display = 'none';
                 DOM.mainContent.style.display = 'block';
-                checkEditMode();
+                listenForTests();
             } else {
                 DOM.loginScreen.style.display = 'flex';
                 DOM.mainContent.style.display = 'none';
+                if (testsUnsubscribe) testsUnsubscribe();
+                if (submissionsUnsubscribe) submissionsUnsubscribe();
             }
         });
 
@@ -222,303 +144,280 @@
 
         DOM.logoutBtn.addEventListener('click', () => signOut(auth));
 
-        // --- EDITOR LOGIC ---
-        async function checkEditMode() {
-            const params = new URLSearchParams(window.location.search);
-            originalTestId = params.get('edit');
-            if (originalTestId) {
-                isEditMode = true;
-                DOM.pageTitle.textContent = "Chỉnh Sửa Đề Thi";
-                DOM.testIdInput.disabled = true; // Prevent changing ID when editing
-                await loadTestData(originalTestId);
-            } else {
-                renderQuestionList();
-            }
+        // --- REAL-TIME DATA MANAGEMENT ---
+        function listenForTests() {
+            if (testsUnsubscribe) testsUnsubscribe();
+            const testsCol = collection(db, "tests");
+            testsUnsubscribe = onSnapshot(testsCol, (snapshot) => {
+                localTestsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderTestList();
+                
+                // If a test is currently selected, refresh its details view
+                const selectedTestId = document.querySelector('#test-list .bg-indigo-100')?.dataset.testId;
+                if (selectedTestId) {
+                    listenForSubmissions(selectedTestId);
+                }
+            });
         }
 
-        async function loadTestData(testId) {
-            const testRef = doc(db, "tests", testId);
-            const testSnap = await getDoc(testRef);
-
-            if (testSnap.exists()) {
-                const data = testSnap.data();
-                DOM.testIdInput.value = testId;
-                DOM.testTitleInput.value = data.title || '';
-                DOM.assignmentTypeInput.value = data.type || 'test';
-                DOM.testDurationInput.value = data.duration || '';
-                questions = data.questions || [];
-                renderQuestionList();
-            } else {
-                alert("Không tìm thấy đề thi để chỉnh sửa.");
-                window.location.search = ''; // Clear params
-            }
-        }
-
-        function renderQuestionList() {
-            DOM.questionListContainer.innerHTML = '';
-            if (questions.length === 0) {
-                DOM.questionListContainer.innerHTML = '<p class="text-gray-500 text-center py-4">Chưa có câu hỏi nào.</p>';
+        function renderTestList() {
+            const selectedTestId = document.querySelector('#test-list .bg-indigo-100')?.dataset.testId;
+            DOM.testList.innerHTML = '';
+            if (localTestsCache.length === 0) {
+                DOM.testList.innerHTML = '<p class="text-gray-500 text-center py-4">Chưa có đề thi nào.</p>';
                 return;
             }
-            questions.forEach((q, index) => {
+            localTestsCache.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
+            localTestsCache.forEach(test => {
                 const item = document.createElement('div');
-                item.className = 'p-4 border rounded-lg flex justify-between items-center bg-white';
+                item.className = 'p-3 border rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-100';
+                item.dataset.testId = test.id;
+                if (test.id === selectedTestId) {
+                    item.classList.add('bg-indigo-100');
+                }
                 item.innerHTML = `
-                    <div class="flex-grow mr-4">
-                        <span class="font-bold mr-2">${index + 1}.</span>
-                        <span class="text-gray-800">${q.text.substring(0, 80)}...</span>
-                        <span class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full ml-2">${q.type}</span>
+                    <div>
+                        <p class="font-bold">${test.title}</p>
+                        <p class="text-sm text-gray-500">${test.id}</p>
                     </div>
-                    <div class="flex gap-2 flex-shrink-0">
-                        <button class="btn-edit btn btn-secondary btn-sm" data-index="${index}"><i class="fas fa-edit"></i></button>
-                        <button class="btn-delete btn btn-danger btn-sm" data-index="${index}"><i class="fas fa-trash"></i></button>
+                    <div class="flex gap-2">
+                        <button class="btn-edit-test btn btn-secondary" title="Sửa đề thi" data-test-id="${test.id}"><i class="fas fa-edit"></i></button>
+                        <button class="btn-delete-test btn btn-danger" title="Xóa đề thi" data-test-id="${test.id}"><i class="fas fa-trash"></i></button>
                     </div>
                 `;
-                DOM.questionListContainer.appendChild(item);
+                DOM.testList.appendChild(item);
             });
         }
 
-        function openModal(questionIndex = -1) {
-            editingQuestionIndex = questionIndex;
-            const q = questionIndex > -1 ? questions[questionIndex] : {};
-            
-            DOM.modalTitle.textContent = questionIndex > -1 ? 'Chỉnh sửa câu hỏi' : 'Thêm câu hỏi mới';
-            DOM.questionType.value = q.type || 'multiple-choice';
-            DOM.questionText.value = q.text || '';
-            DOM.explanationText.value = q.explanation || '';
-            
-            renderOptionsUI(q.type || 'multiple-choice', q);
-            DOM.editorModal.style.display = 'flex';
-        }
+        function listenForSubmissions(testId) {
+            if (submissionsUnsubscribe) submissionsUnsubscribe();
+            clearInterval(liveUpdateInterval);
 
-        function closeModal() {
-            DOM.editorModal.style.display = 'none';
-        }
-
-        function renderOptionsUI(type, q = {}) {
-            DOM.optionsContainer.innerHTML = '';
-            switch (type) {
-                case 'multiple-choice':
-                case 'multi-select':
-                    const options = q.options || { A: '', B: '', C: '', D: '' };
-                    Object.keys(options).forEach(key => {
-                        const isChecked = Array.isArray(q.answer) ? q.answer.includes(key) : q.answer === key;
-                        DOM.optionsContainer.innerHTML += `
-                            <div class="flex items-center gap-2">
-                                <label class="font-bold">${key}.</label>
-                                <input type="text" value="${options[key]}" data-key="${key}" class="input-field option-input flex-grow">
-                                <input type="${type === 'multi-select' ? 'checkbox' : 'radio'}" name="answer" value="${key}" class="h-5 w-5 answer-input" ${isChecked ? 'checked' : ''}>
-                            </div>
-                        `;
-                    });
-                    break;
-                case 'cloze-test':
-                     const answers = q.answers || {};
-                     const blanks = (q.text || "").match(/\(\d+\)/g) || [];
-                     if (blanks.length === 0) {
-                        DOM.optionsContainer.innerHTML = '<p class="text-red-500">Lưu ý: Không tìm thấy chỗ trống nào có dạng (1), (2),... trong nội dung câu hỏi.</p>';
-                     }
-                     blanks.forEach(blank => {
-                         const number = blank.replace(/[()]/g, '');
-                         const answerValue = (answers[number] || []).join(' / ');
-                         DOM.optionsContainer.innerHTML += `
-                            <div class="flex items-center gap-2">
-                                <label class="font-bold">Chỗ trống (${number}):</label>
-                                <input type="text" value="${answerValue}" data-blank-number="${number}" class="input-field cloze-answer-input flex-grow" placeholder="Các đáp án cách nhau bởi dấu /">
-                            </div>
-                         `;
-                     });
-                    break;
-            }
-        }
-
-        function saveQuestion() {
-            try {
-                const type = DOM.questionType.value;
-                const newQuestion = {
-                    type: type,
-                    text: DOM.questionText.value.trim(),
-                    explanation: DOM.explanationText.value.trim(),
-                };
-
-                switch (type) {
-                    case 'multiple-choice':
-                    case 'multi-select':
-                        newQuestion.options = {};
-                        document.querySelectorAll('.option-input').forEach(input => {
-                            newQuestion.options[input.dataset.key] = input.value.trim();
-                        });
-                        const checked = Array.from(document.querySelectorAll('.answer-input:checked')).map(el => el.value);
-                        if (checked.length === 0) throw new Error("Vui lòng chọn ít nhất một đáp án.");
-                        newQuestion.answer = type === 'multiple-choice' ? checked[0] : checked;
-                        break;
-                    case 'cloze-test':
-                        newQuestion.answers = {};
-                        document.querySelectorAll('.cloze-answer-input').forEach(input => {
-                            const number = input.dataset.blankNumber;
-                            newQuestion.answers[number] = input.value.split('/').map(s => s.trim()).filter(Boolean);
-                        });
-                        if (Object.keys(newQuestion.answers).length === 0) {
-                            throw new Error("Vui lòng nhập đáp án cho ít nhất một chỗ trống.");
-                        }
-                        break;
-                }
-                
-                if (editingQuestionIndex > -1) {
-                    questions[editingQuestionIndex] = newQuestion;
-                } else {
-                    questions.push(newQuestion);
-                }
-                renderQuestionList();
-                closeModal();
-            } catch (error) {
-                alert(`Lỗi: ${error.message}`);
-            }
-        }
-        
-        function parseBatchContent(text) {
-            const questionBlocks = text.split(/\n\s*(?=\d+\.|\d+-\d+\.|\s*\[)/).filter(b => b.trim());
-            const parsedQuestions = [];
-
-            questionBlocks.forEach(block => {
-                try {
-                    const lines = block.split('\n').map(l => l.trim()).filter(l => l);
-                    if (lines.length === 0) return;
-
-                    let q = {};
-                    const firstLine = lines[0];
-                    const answerLine = lines.find(l => l.toLowerCase().startsWith('answer:')) || '';
-                    const explanationLine = lines.find(l => l.toLowerCase().startsWith('explanation:')) || '';
-
-                    if (firstLine.startsWith('[Fill in the blanks]') || /^\d+-\d+\./.test(firstLine) || answerLine.includes('|')) {
-                        q.type = 'cloze-test';
-                        const answerIndex = lines.findIndex(l => l.toLowerCase().startsWith('answer:'));
-                        if (answerIndex === -1) return;
-
-                        q.text = lines.slice(0, answerIndex).join(' ').replace('[Fill in the blanks]', '').trim();
-                        
-                        const answerString = answerLine.substring(answerLine.indexOf(':') + 1).trim();
-                        const answerGroups = answerString.split('|').map(group => group.split('/').map(answer => answer.trim()).filter(Boolean));
-                        
-                        const placeholders = q.text.match(/\(\d+\)/g) || [];
-                        q.answers = {};
-                        placeholders.forEach((placeholder, i) => {
-                            const number = placeholder.replace(/[()]/g, '');
-                            if (answerGroups[i]) {
-                                q.answers[number] = answerGroups[i];
-                            }
-                        });
-                        q.explanation = explanationLine.substring(explanationLine.indexOf(':') + 1).trim();
-                    } else { 
-                        const answerIndex = lines.findIndex(l => l.toLowerCase().startsWith('answer:'));
-                        if (answerIndex === -1) return;
-
-                        q.text = lines.shift()?.replace(/^\d+\.\s*/, '');
-                        q.options = {};
-                        
-                        const optionLines = lines.slice(0, answerIndex -1);
-                        optionLines.forEach(line => {
-                            const match = line.match(/^([A-Z])\.\s*(.*)/);
-                            if (match) q.options[match[1]] = match[2];
-                        });
-
-                        q.answer = answerLine.substring(answerLine.indexOf(':') + 1).trim();
-                        q.explanation = explanationLine.substring(explanationLine.indexOf(':') + 1).trim();
-                        
-                        if (Object.keys(q.options).length === 0) return; // Not a valid MC question
-                        q.type = (q.answer.length > 1 && q.answer.split(',').length > 1) ? 'multi-select' : 'multiple-choice';
-                         if(q.type === 'multi-select') {
-                            q.answer = q.answer.split(',').map(s => s.trim());
-                        }
-                    }
-                    
-                    if(q.text && (q.answer || (q.answers && Object.keys(q.answers).length > 0))) {
-                        parsedQuestions.push(q);
-                    }
-                } catch (e) {
-                    console.error("Error parsing block:", block, e);
-                }
-            });
-            return parsedQuestions;
-        }
-
-        async function uploadToFirebase() {
-            const testId = DOM.testIdInput.value.trim();
-            const title = DOM.testTitleInput.value.trim();
-            const type = DOM.assignmentTypeInput.value;
-            const duration = parseInt(DOM.testDurationInput.value, 10) || 0;
-
-            if (!testId || !title || questions.length === 0) {
-                alert("Vui lòng nhập đầy đủ Test ID, Tiêu đề và thêm ít nhất một câu hỏi.");
+            const test = localTestsCache.find(t => t.id === testId);
+            if (!test) {
+                DOM.detailsView.innerHTML = `<div class="text-center text-gray-500 py-16"><p>Đề thi không tồn tại.</p></div>`;
                 return;
             }
 
-            DOM.uploadBtn.disabled = true;
-            DOM.uploadLog.textContent = 'Đang tải lên...';
-            DOM.uploadLog.className = 'font-semibold mt-2 h-5 text-blue-600';
+            const q = query(collection(db, "submissions"), where("testId", "==", testId));
+            submissionsUnsubscribe = onSnapshot(q, (snapshot) => {
+                const submissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const currentTestState = localTestsCache.find(t => t.id === testId); // Get latest test state
+                renderDetailsView(currentTestState, submissions);
+                startLiveUpdates(currentTestState, submissions);
+            }, (error) => {
+                console.error("Error listening to submissions:", error);
+                DOM.detailsView.innerHTML = `<div class="text-center text-red-500 py-16"><p>Lỗi khi tải dữ liệu bài làm.</p></div>`;
+            });
+        }
 
-            try {
-                const testData = {
-                    title,
-                    type,
-                    duration,
-                    questions,
-                    updatedAt: serverTimestamp() // Add/update timestamp
-                };
-                // Add createdAt only if it's a new test
-                if (!isEditMode) {
-                    testData.createdAt = serverTimestamp();
-                    testData.isLocked = false;
-                    testData.answersPublished = false;
-                    testData.correctIncorrectPublished = false;
-                }
+        function renderDetailsView(test, submissions) {
+            if (!test) return;
 
-                await setDoc(doc(db, "tests", testId), testData, { merge: true }); // Use merge to avoid overwriting fields like 'isLocked'
-                
-                DOM.uploadLog.textContent = `THÀNH CÔNG! Đã lưu đề thi với ID "${testId}".`;
-                DOM.uploadLog.classList.add('text-green-600');
-                
-                setTimeout(() => {
-                    window.close(); // Close tab after successful save
-                }, 1500);
+            const publishCorrectIncorrectBtnClass = test.correctIncorrectPublished ? 'btn-warning' : 'btn-success';
+            const publishCorrectIncorrectBtnText = test.correctIncorrectPublished ? 'Hủy công bố Đúng/Sai' : 'Công bố Đúng/Sai';
+            const publishAnswersBtnClass = test.answersPublished ? 'btn-warning' : 'btn-success';
+            const publishAnswersBtnText = test.answersPublished ? 'Hủy công bố Đáp án' : 'Công bố Đáp án';
+            const lockBtnClass = test.isLocked ? 'btn-success' : 'btn-danger';
+            const lockBtnText = test.isLocked ? 'Mở khóa' : 'Khóa đề thi';
 
-            } catch (error) {
-                DOM.uploadLog.textContent = `LỖI: ${error.message}`;
-                DOM.uploadLog.classList.add('text-red-600');
-            } finally {
-                DOM.uploadBtn.disabled = false;
-            }
+            DOM.detailsView.innerHTML = `
+                <div class="flex flex-wrap justify-between items-start mb-4 gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-700">${test.title}</h2>
+                        <p class="text-sm text-gray-500">Cập nhật lần cuối: ${test.updatedAt ? test.updatedAt.toDate().toLocaleString('vi-VN') : 'N/A'}</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button id="publish-correct-incorrect-btn" class="btn ${publishCorrectIncorrectBtnClass} text-sm">${publishCorrectIncorrectBtnText}</button>
+                        <button id="publish-answers-btn" class="btn ${publishAnswersBtnClass} text-sm">${publishAnswersBtnText}</button>
+                        <button id="lock-btn" class="btn ${lockBtnClass} text-sm">${lockBtnText}</button>
+                    </div>
+                </div>
+                <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <h3 class="font-bold mb-2">Thêm học sinh mới</h3>
+                    <textarea id="new-student-list" class="input-field" rows="3" placeholder="Dán danh sách tên, mỗi tên một dòng..."></textarea>
+                    <button id="add-students-btn" class="btn btn-primary mt-2 w-full">Thêm và tạo mã</button>
+                </div>
+                <div>
+                    <h3 class="font-bold mb-2">Danh sách học sinh (${submissions.length})</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr>
+                                    <th class="border-b p-2">Tên học sinh</th>
+                                    <th class="border-b p-2">Mã truy cập</th>
+                                    <th class="border-b p-2">Trạng thái</th>
+                                    <th class="border-b p-2">Điểm số</th>
+                                    <th class="border-b p-2">Vi phạm</th>
+                                    <th class="border-b p-2"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="student-table-body">
+                                ${submissions.map(sub => {
+                                    let statusContent;
+                                    if (sub.status === 'submitted') {
+                                        statusContent = '<span class="status-badge status-submitted">Đã nộp</span>';
+                                    } else if (sub.startTime) {
+                                        const remainingTime = calculateRemainingTime(sub.startTime, sub.testSnapshot?.duration || test.duration);
+                                        statusContent = `<div class="flex items-center gap-2">
+                                            <span class="status-badge status-inprogress">Đang làm</span>
+                                            <span class="text-sm font-mono">${remainingTime}</span>
+                                        </div>`;
+                                    } else {
+                                        statusContent = '<span class="status-badge status-not-started">Chưa làm</span>';
+                                    }
+
+                                    return `
+                                    <tr data-sub-id="${sub.id}">
+                                        <td class="border-b p-2"><a href="student.html?submission_id=${sub.id}" target="_blank" class="text-blue-600 hover:underline">${sub.studentName}</a></td>
+                                        <td class="border-b p-2 font-mono">${sub.id}</td>
+                                        <td class="border-b p-2 status-cell">${statusContent}</td>
+                                        <td class="border-b p-2 font-bold">${sub.status === 'submitted' ? `${sub.score} / ${sub.totalPoints}` : '-'}</td>
+                                        <td class="border-b p-2 text-center">${sub.violationCount || 0}</td>
+                                        <td class="border-b p-2 text-right">
+                                            <button class="btn-delete-student btn btn-danger btn-sm" title="Xóa bài làm" data-sub-id="${sub.id}"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                `}).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function calculateRemainingTime(startTime, duration) {
+            if (!startTime || !duration) return '-';
+            const endTime = startTime.toDate().getTime() + duration * 60 * 1000;
+            const distance = endTime - new Date().getTime();
+            if (distance < 0) return "Hết giờ";
+            const minutes = Math.floor(distance / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+            return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function startLiveUpdates(test, submissions) {
+            clearInterval(liveUpdateInterval);
+            liveUpdateInterval = setInterval(() => {
+                submissions.forEach(sub => {
+                    if (sub.status !== 'submitted' && sub.startTime) {
+                        const row = document.querySelector(`tr[data-sub-id="${sub.id}"]`);
+                        if (row) {
+                            const statusCell = row.querySelector('.status-cell');
+                            const remainingTime = calculateRemainingTime(sub.startTime, sub.testSnapshot?.duration || test.duration);
+                             statusCell.innerHTML = `<div class="flex items-center gap-2">
+                                <span class="status-badge status-inprogress">Đang làm</span>
+                                <span class="text-sm font-mono">${remainingTime}</span>
+                            </div>`;
+                        }
+                    }
+                });
+            }, 1000);
         }
         
-        // --- EVENT LISTENERS ---
-        DOM.addQuestionBtn.addEventListener('click', () => openModal());
-        DOM.cancelBtn.addEventListener('click', closeModal);
-        DOM.saveQuestionBtn.addEventListener('click', saveQuestion);
-        DOM.uploadBtn.addEventListener('click', uploadToFirebase);
-        DOM.questionType.addEventListener('change', (e) => renderOptionsUI(e.target.value, { text: DOM.questionText.value }));
-        
-        DOM.batchImportBtn.addEventListener('click', () => DOM.batchModal.style.display = 'flex');
-        DOM.batchCancelBtn.addEventListener('click', () => DOM.batchModal.style.display = 'none');
-        DOM.batchProcessBtn.addEventListener('click', () => {
-            const parsed = parseBatchContent(DOM.batchContent.value);
-            if(parsed.length > 0) {
-                questions.push(...parsed);
-                renderQuestionList();
+        async function updateTestStatus(testId, data) {
+             const testRef = doc(db, "tests", testId);
+             await updateDoc(testRef, data);
+             // No need to do anything else, onSnapshot will handle the UI update
+        }
+
+        async function generateAndAssignCodes(testId) {
+            const studentList = document.getElementById('new-student-list').value.trim().split('\n').filter(name => name.trim() !== '');
+            if (studentList.length === 0) return alert("Vui lòng nhập tên học sinh.");
+
+            const addBtn = document.getElementById('add-students-btn');
+            addBtn.disabled = true;
+            addBtn.innerHTML = '<div class="loader mx-auto h-5 w-5"></div>';
+
+            const submissionsCol = collection(db, "submissions");
+            const snapshot = await getDocs(submissionsCol);
+            const existingCodes = new Set(snapshot.docs.map(d => d.id));
+
+            for (const studentName of studentList) {
+                let code;
+                do {
+                    code = Math.random().toString().substr(2, 6);
+                } while (existingCodes.has(code));
+                
+                existingCodes.add(code);
+                
+                const submissionData = {
+                    studentName: studentName.trim(),
+                    testId: testId,
+                    status: 'not-started',
+                    startTime: null,
+                    testSnapshot: null,
+                    answers: {}, 
+                    score: 0, 
+                    totalPoints: 0,
+                    violationCount: 0
+                };
+                await setDoc(doc(db, "submissions", code), submissionData);
             }
-            DOM.batchModal.style.display = 'none';
-            DOM.batchContent.value = '';
+            
+            document.getElementById('new-student-list').value = '';
+            addBtn.disabled = false;
+            addBtn.innerHTML = 'Thêm và tạo mã';
+        }
+
+        // --- Event Listeners ---
+        DOM.addTestBtn.addEventListener('click', () => {
+            window.open('test-maker.html', '_blank');
+        });
+
+        DOM.testList.addEventListener('click', async (e) => {
+            const testItem = e.target.closest('[data-test-id]');
+            const deleteBtn = e.target.closest('.btn-delete-test');
+            const editBtn = e.target.closest('.btn-edit-test');
+
+            if (deleteBtn) {
+                const testId = deleteBtn.dataset.testId;
+                if (confirm(`Bạn có chắc chắn muốn xóa đề thi "${testId}" và TOÀN BỘ bài làm của học sinh? Hành động này không thể hoàn tác.`)) {
+                    const q = query(collection(db, "submissions"), where("testId", "==", testId));
+                    const snapshot = await getDocs(q);
+                    const deletePromises = snapshot.docs.map(d => deleteDoc(d.ref));
+                    await Promise.all(deletePromises);
+                    await deleteDoc(doc(db, "tests", testId));
+                    DOM.detailsView.innerHTML = '<div class="text-center text-gray-500 py-16"><p>Đã xóa đề thi.</p></div>';
+                }
+            } else if (editBtn) {
+                const testId = editBtn.dataset.testId;
+                window.open(`test-maker.html?edit=${testId}`, '_blank');
+            }
+            else if (testItem) {
+                const testId = testItem.dataset.testId;
+                document.querySelectorAll('#test-list > div').forEach(el => el.classList.remove('bg-indigo-100'));
+                testItem.classList.add('bg-indigo-100');
+                DOM.detailsView.innerHTML = '<div class="text-center py-16"><div class="loader mx-auto"></div></div>';
+                listenForSubmissions(testId);
+            }
         });
         
-        DOM.questionListContainer.addEventListener('click', (e) => {
-            const btn = e.target.closest('button');
-            if (!btn) return;
-            const index = parseInt(btn.dataset.index, 10);
-            if (btn.classList.contains('btn-edit')) openModal(index);
-            if (btn.classList.contains('btn-delete')) {
-                if (confirm(`Bạn có chắc chắn muốn xóa câu hỏi ${index + 1}?`)) {
-                    questions.splice(index, 1);
-                    renderQuestionList();
+        DOM.detailsView.addEventListener('click', async (e) => {
+            const addBtn = e.target.closest('#add-students-btn');
+            const deleteBtn = e.target.closest('.btn-delete-student');
+            const publishCorrectIncorrectBtn = e.target.closest('#publish-correct-incorrect-btn');
+            const publishAnswersBtn = e.target.closest('#publish-answers-btn');
+            const lockBtn = e.target.closest('#lock-btn');
+            const testId = document.querySelector('#test-list .bg-indigo-100')?.dataset.testId;
+
+            if (!testId) return;
+            const test = localTestsCache.find(t => t.id === testId);
+            if (!test) return;
+
+            if (addBtn) {
+                await generateAndAssignCodes(testId);
+            } else if (deleteBtn) {
+                const subId = deleteBtn.dataset.subId;
+                if (confirm(`Bạn có chắc chắn muốn xóa bài làm của học sinh có mã "${subId}"?`)) {
+                    await deleteDoc(doc(db, "submissions", subId));
                 }
+            } else if (publishCorrectIncorrectBtn) {
+                await updateTestStatus(testId, { correctIncorrectPublished: !test.correctIncorrectPublished });
+            } else if (publishAnswersBtn) {
+                await updateTestStatus(testId, { answersPublished: !test.answersPublished });
+            } else if (lockBtn) {
+                await updateTestStatus(testId, { isLocked: !test.isLocked });
             }
         });
     </script>
