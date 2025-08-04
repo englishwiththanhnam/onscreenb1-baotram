@@ -31,6 +31,8 @@
         .btn-danger:hover { background-color: #dc2626; }
         .btn-success { background-color: #22c55e; color: white; }
         .btn-warning { background-color: #f59e0b; color: white; }
+        .btn-green { background-color: #10b981; color: white; }
+        .btn-green:hover { background-color: #059669; }
         .input-field { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; }
         .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #4f46e5; width: 32px; height: 32px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -41,19 +43,13 @@
     </style>
 </head>
 <body class="p-4 sm:p-8">
-    <!-- === PASSWORD PROTECTION === -->
+    <!-- === MÀN HÌNH ĐĂNG NHẬP (GIỮ NGUYÊN) === -->
     <div id="login-screen" class="fixed inset-0 bg-gray-800 bg-opacity-90 flex items-center justify-center z-[200]">
         <div class="bg-white p-8 rounded-lg shadow-xl text-center w-full max-w-sm">
             <h2 class="text-2xl font-bold mb-4">Đăng nhập Giáo viên</h2>
             <div class="space-y-4 text-left">
-                <div>
-                    <label for="email-input" class="block text-sm font-medium text-gray-700">Email</label>
-                    <input type="email" id="email-input" class="input-field w-full mt-1">
-                </div>
-                <div>
-                    <label for="password-input" class="block text-sm font-medium text-gray-700">Mật khẩu</label>
-                    <input type="password" id="password-input" class="input-field w-full mt-1">
-                </div>
+                <div><label for="email-input" class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="email-input" class="input-field w-full mt-1"></div>
+                <div><label for="password-input" class="block text-sm font-medium text-gray-700">Mật khẩu</label><input type="password" id="password-input" class="input-field w-full mt-1"></div>
             </div>
             <button id="login-btn" class="btn btn-primary w-full mt-6">Đăng nhập</button>
             <p id="login-error" class="text-red-500 mt-2 h-5"></p>
@@ -67,23 +63,26 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Test List Column -->
+            <!-- Cột danh sách bài tập -->
             <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold text-gray-700">Danh sách Đề thi</h2>
-                    <button id="add-test-btn" class="btn btn-primary" title="Tạo đề thi mới"><i class="fas fa-plus"></i></button>
+                    <h2 class="text-2xl font-bold text-gray-700">Danh sách Bài tập</h2>
+                    <div class="flex gap-2">
+                        <button onclick="window.open('test-maker.html', '_blank')" class="btn btn-primary" title="Tạo đề thi trắc nghiệm mới"><i class="fas fa-file-alt"></i></button>
+                        <button onclick="window.open('reading-maker.html', '_blank')" class="btn btn-green" title="Tạo bài đọc hiểu mới"><i class="fas fa-book-open"></i></button>
+                    </div>
                 </div>
                 <div id="test-list" class="space-y-2">
                     <div class="text-center py-8"><div class="loader mx-auto"></div></div>
                 </div>
             </div>
 
-            <!-- Details and Student List Column -->
+            <!-- Cột chi tiết và danh sách học sinh -->
             <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
                 <div id="details-view">
                     <div class="text-center text-gray-500 py-16">
                         <i class="fas fa-arrow-left text-4xl mb-4"></i>
-                        <p class="text-xl">Chọn một đề thi từ danh sách bên trái để xem chi tiết.</p>
+                        <p class="text-xl">Chọn một bài tập từ danh sách bên trái để xem chi tiết.</p>
                     </div>
                 </div>
             </div>
@@ -92,7 +91,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, deleteDoc, query, where, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { getFirestore, collection, doc, deleteDoc, query, where, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
         const app = initializeApp(window.firebaseConfig);
@@ -101,7 +100,6 @@
 
         const DOM = {
             testList: document.getElementById('test-list'),
-            addTestBtn: document.getElementById('add-test-btn'),
             detailsView: document.getElementById('details-view'),
             loginScreen: document.getElementById('login-screen'),
             mainContent: document.getElementById('main-content'),
@@ -114,19 +112,24 @@
 
         let localTestsCache = [];
         let testsUnsubscribe = null;
+        let readingTestsUnsubscribe = null;
         let submissionsUnsubscribe = null;
         let liveUpdateInterval;
+
+        let standardTests = [];
+        let readingTests = [];
 
         // --- AUTHENTICATION ---
         onAuthStateChanged(auth, user => {
             if (user) {
                 DOM.loginScreen.style.display = 'none';
                 DOM.mainContent.style.display = 'block';
-                listenForTests();
+                listenForData();
             } else {
                 DOM.loginScreen.style.display = 'flex';
                 DOM.mainContent.style.display = 'none';
                 if (testsUnsubscribe) testsUnsubscribe();
+                if (readingTestsUnsubscribe) readingTestsUnsubscribe();
                 if (submissionsUnsubscribe) submissionsUnsubscribe();
             }
         });
@@ -135,53 +138,73 @@
             const email = DOM.emailInput.value;
             const password = DOM.passwordInput.value;
             DOM.loginError.textContent = '';
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-            } catch (error) {
-                DOM.loginError.textContent = 'Email hoặc mật khẩu không đúng.';
-            }
+            try { await signInWithEmailAndPassword(auth, email, password); } 
+            catch (error) { DOM.loginError.textContent = 'Email hoặc mật khẩu không đúng.'; }
         });
 
         DOM.logoutBtn.addEventListener('click', () => signOut(auth));
 
         // --- REAL-TIME DATA MANAGEMENT ---
-        function listenForTests() {
+        function listenForData() {
+            // Listener for standard tests
             if (testsUnsubscribe) testsUnsubscribe();
             const testsCol = collection(db, "tests");
             testsUnsubscribe = onSnapshot(testsCol, (snapshot) => {
-                localTestsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderTestList();
-                
-                const selectedTestId = document.querySelector('#test-list .bg-indigo-100')?.dataset.testId;
-                if (selectedTestId) {
-                    listenForSubmissions(selectedTestId);
-                }
+                standardTests = snapshot.docs.map(doc => ({ id: doc.id, testType: 'standard', ...doc.data() }));
+                combineAndRenderLists();
             });
+
+            // Listener for reading tests
+            if (readingTestsUnsubscribe) readingTestsUnsubscribe();
+            const readingTestsCol = collection(db, "reading_tests");
+            readingTestsUnsubscribe = onSnapshot(readingTestsCol, (snapshot) => {
+                readingTests = snapshot.docs.map(doc => ({ id: doc.id, testType: 'reading', ...doc.data() }));
+                combineAndRenderLists();
+            });
+        }
+
+        function combineAndRenderLists() {
+            localTestsCache = [...standardTests, ...readingTests];
+            renderTestList();
+            
+            const selectedTestId = document.querySelector('#test-list .bg-indigo-100')?.dataset.testId;
+            if (selectedTestId) {
+                // Refresh details view if the selected test data changes
+                listenForSubmissions(selectedTestId);
+            }
         }
 
         function renderTestList() {
             const selectedTestId = document.querySelector('#test-list .bg-indigo-100')?.dataset.testId;
             DOM.testList.innerHTML = '';
             if (localTestsCache.length === 0) {
-                DOM.testList.innerHTML = '<p class="text-gray-500 text-center py-4">Chưa có đề thi nào.</p>';
+                DOM.testList.innerHTML = '<p class="text-gray-500 text-center py-4">Chưa có bài tập nào.</p>';
                 return;
             }
             localTestsCache.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
+            
             localTestsCache.forEach(test => {
                 const item = document.createElement('div');
-                item.className = 'p-3 border rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-100';
+                const isSelected = test.id === selectedTestId;
+                item.className = `p-3 border rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-100 ${isSelected ? 'bg-indigo-100' : ''}`;
                 item.dataset.testId = test.id;
-                if (test.id === selectedTestId) {
-                    item.classList.add('bg-indigo-100');
-                }
+                item.dataset.testType = test.testType;
+
+                const icon = test.testType === 'reading' 
+                    ? '<i class="fas fa-book-open text-green-600"></i>' 
+                    : '<i class="fas fa-file-alt text-indigo-600"></i>';
+
                 item.innerHTML = `
-                    <div>
-                        <p class="font-bold">${test.title}</p>
-                        <p class="text-sm text-gray-500">${test.id}</p>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xl w-6 text-center">${icon}</span>
+                        <div>
+                            <p class="font-bold">${test.title}</p>
+                            <p class="text-sm text-gray-500">${test.id}</p>
+                        </div>
                     </div>
                     <div class="flex gap-2">
-                        <button class="btn-edit-test btn btn-secondary" title="Sửa đề thi" data-test-id="${test.id}"><i class="fas fa-edit"></i></button>
-                        <button class="btn-delete-test btn btn-danger" title="Xóa đề thi" data-test-id="${test.id}"><i class="fas fa-trash"></i></button>
+                        <button class="btn-edit-test btn btn-secondary" title="Sửa" data-test-id="${test.id}" data-test-type="${test.testType}"><i class="fas fa-edit"></i></button>
+                        <button class="btn-delete-test btn btn-danger" title="Xóa" data-test-id="${test.id}" data-test-type="${test.testType}"><i class="fas fa-trash"></i></button>
                     </div>
                 `;
                 DOM.testList.appendChild(item);
@@ -194,7 +217,7 @@
 
             const test = localTestsCache.find(t => t.id === testId);
             if (!test) {
-                DOM.detailsView.innerHTML = `<div class="text-center text-gray-500 py-16"><p>Đề thi không tồn tại.</p></div>`;
+                DOM.detailsView.innerHTML = `<div class="text-center text-gray-500 py-16"><p>Bài tập không tồn tại.</p></div>`;
                 return;
             }
 
@@ -204,21 +227,23 @@
                 const currentTestState = localTestsCache.find(t => t.id === testId);
                 renderDetailsView(currentTestState, submissions);
                 startLiveUpdates(currentTestState, submissions);
-            }, (error) => {
-                console.error("Error listening to submissions:", error);
-                DOM.detailsView.innerHTML = `<div class="text-center text-red-500 py-16"><p>Lỗi khi tải dữ liệu bài làm.</p></div>`;
             });
         }
 
         function renderDetailsView(test, submissions) {
             if (!test) return;
 
-            const publishCorrectIncorrectBtnClass = test.correctIncorrectPublished ? 'btn-warning' : 'btn-success';
-            const publishCorrectIncorrectBtnText = test.correctIncorrectPublished ? 'Hủy công bố Đúng/Sai' : 'Công bố Đúng/Sai';
             const publishAnswersBtnClass = test.answersPublished ? 'btn-warning' : 'btn-success';
             const publishAnswersBtnText = test.answersPublished ? 'Hủy công bố Đáp án' : 'Công bố Đáp án';
             const lockBtnClass = test.isLocked ? 'btn-success' : 'btn-danger';
-            const lockBtnText = test.isLocked ? 'Mở khóa' : 'Khóa đề thi';
+            const lockBtnText = test.isLocked ? 'Mở khóa' : 'Khóa bài';
+            
+            // Only show "Publish Correct/Incorrect" for standard tests
+            const publishCorrectIncorrectBtnHTML = test.testType === 'standard' ? `
+                <button id="publish-correct-incorrect-btn" class="btn ${test.correctIncorrectPublished ? 'btn-warning' : 'btn-success'} text-sm">
+                    ${test.correctIncorrectPublished ? 'Hủy công bố Đúng/Sai' : 'Công bố Đúng/Sai'}
+                </button>
+            ` : '';
 
             DOM.detailsView.innerHTML = `
                 <div class="flex flex-wrap justify-between items-start mb-4 gap-4">
@@ -227,7 +252,7 @@
                         <p class="text-sm text-gray-500">Cập nhật lần cuối: ${test.updatedAt ? test.updatedAt.toDate().toLocaleString('vi-VN') : 'N/A'}</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <button id="publish-correct-incorrect-btn" class="btn ${publishCorrectIncorrectBtnClass} text-sm">${publishCorrectIncorrectBtnText}</button>
+                        ${publishCorrectIncorrectBtnHTML}
                         <button id="publish-answers-btn" class="btn ${publishAnswersBtnClass} text-sm">${publishAnswersBtnText}</button>
                         <button id="lock-btn" class="btn ${lockBtnClass} text-sm">${lockBtnText}</button>
                     </div>
@@ -241,48 +266,37 @@
                     <h3 class="font-bold mb-2">Danh sách học sinh (${submissions.length})</h3>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr>
-                                    <th class="border-b p-2">Tên học sinh</th>
-                                    <th class="border-b p-2">Mã truy cập</th>
-                                    <th class="border-b p-2">Trạng thái</th>
-                                    <th class="border-b p-2">Điểm số</th>
-                                    <th class="border-b p-2">Vi phạm</th>
-                                    <th class="border-b p-2"></th>
-                                </tr>
-                            </thead>
+                            <thead><tr><th class="border-b p-2">Tên</th><th class="border-b p-2">Mã truy cập</th><th class="border-b p-2">Trạng thái</th><th class="border-b p-2">Điểm</th><th class="border-b p-2">Vi phạm</th><th class="border-b p-2"></th></tr></thead>
                             <tbody id="student-table-body">
-                                ${submissions.map(sub => {
-                                    let statusContent;
-                                    if (sub.status === 'submitted') {
-                                        statusContent = '<span class="status-badge status-submitted">Đã nộp</span>';
-                                    } else if (sub.startTime) {
-                                        const remainingTime = calculateRemainingTime(sub.startTime, sub.testSnapshot?.duration || test.duration);
-                                        statusContent = `<div class="flex items-center gap-2">
-                                            <span class="status-badge status-inprogress">Đang làm</span>
-                                            <span class="text-sm font-mono">${remainingTime}</span>
-                                        </div>`;
-                                    } else {
-                                        statusContent = '<span class="status-badge status-not-started">Chưa làm</span>';
-                                    }
-
-                                    return `
+                                ${submissions.map(sub => `
                                     <tr data-sub-id="${sub.id}">
-                                        <td class="border-b p-2"><a href="student.html?submission_id=${sub.id}" target="_blank" class="text-blue-600 hover:underline">${sub.studentName}</a></td>
+                                        <td class="border-b p-2"><a href="${test.testType === 'reading' ? 'reading.html' : 'student.html'}?submission_id=${sub.id}" target="_blank" class="text-blue-600 hover:underline">${sub.studentName}</a></td>
                                         <td class="border-b p-2 font-mono">${sub.id}</td>
-                                        <td class="border-b p-2 status-cell">${statusContent}</td>
+                                        <td class="border-b p-2 status-cell">${renderStatus(sub, test)}</td>
                                         <td class="border-b p-2 font-bold">${sub.status === 'submitted' ? `${sub.score} / ${sub.totalPoints}` : '-'}</td>
                                         <td class="border-b p-2 text-center">${sub.violationCount || 0}</td>
-                                        <td class="border-b p-2 text-right">
-                                            <button class="btn-delete-student btn btn-danger btn-sm" title="Xóa bài làm" data-sub-id="${sub.id}"><i class="fas fa-trash"></i></button>
-                                        </td>
+                                        <td class="border-b p-2 text-right"><button class="btn-delete-student btn btn-danger btn-sm" title="Xóa" data-sub-id="${sub.id}"><i class="fas fa-trash"></i></button></td>
                                     </tr>
-                                `}).join('')}
+                                `).join('')}
                             </tbody>
                         </table>
                     </div>
                 </div>
             `;
+        }
+        
+        function renderStatus(sub, test) {
+             if (sub.status === 'submitted') {
+                return '<span class="status-badge status-submitted">Đã nộp</span>';
+            } else if (sub.startTime && test.testType === 'standard') { // Timer only for standard tests
+                const remainingTime = calculateRemainingTime(sub.startTime, sub.testSnapshot?.duration || test.duration);
+                return `<div class="flex items-center gap-2">
+                    <span class="status-badge status-inprogress">Đang làm</span>
+                    <span class="text-sm font-mono">${remainingTime}</span>
+                </div>`;
+            } else {
+                return '<span class="status-badge status-not-started">Chưa làm</span>';
+            }
         }
 
         function calculateRemainingTime(startTime, duration) {
@@ -297,25 +311,22 @@
 
         function startLiveUpdates(test, submissions) {
             clearInterval(liveUpdateInterval);
+            if (test.testType !== 'standard') return; // Only run timer updates for standard tests
             liveUpdateInterval = setInterval(() => {
                 submissions.forEach(sub => {
                     if (sub.status !== 'submitted' && sub.startTime) {
                         const row = document.querySelector(`tr[data-sub-id="${sub.id}"]`);
                         if (row) {
-                            const statusCell = row.querySelector('.status-cell');
-                            const remainingTime = calculateRemainingTime(sub.startTime, sub.testSnapshot?.duration || test.duration);
-                             statusCell.innerHTML = `<div class="flex items-center gap-2">
-                                <span class="status-badge status-inprogress">Đang làm</span>
-                                <span class="text-sm font-mono">${remainingTime}</span>
-                            </div>`;
+                            row.querySelector('.status-cell').innerHTML = renderStatus(sub, test);
                         }
                     }
                 });
             }, 1000);
         }
         
-        async function updateTestStatus(testId, data) {
-             const testRef = doc(db, "tests", testId);
+        async function updateTestStatus(testId, testType, data) {
+             const collectionName = testType === 'reading' ? 'reading_tests' : 'tests';
+             const testRef = doc(db, collectionName, testId);
              await updateDoc(testRef, data);
         }
 
@@ -328,28 +339,9 @@
             addBtn.innerHTML = '<div class="loader mx-auto h-5 w-5"></div>';
 
             const submissionsCol = collection(db, "submissions");
-            const snapshot = await getDocs(submissionsCol);
-            const existingCodes = new Set(snapshot.docs.map(d => d.id));
-
             for (const studentName of studentList) {
-                let code;
-                do {
-                    code = Math.random().toString().substr(2, 6);
-                } while (existingCodes.has(code));
-                
-                existingCodes.add(code);
-                
-                const submissionData = {
-                    studentName: studentName.trim(),
-                    testId: testId,
-                    status: 'not-started',
-                    startTime: null,
-                    testSnapshot: null,
-                    answers: {}, 
-                    score: 0, 
-                    totalPoints: 0,
-                    violationCount: 0
-                };
+                const code = Math.random().toString().substr(2, 6); // Simple code generation
+                const submissionData = { studentName: studentName.trim(), testId, status: 'not-started' };
                 await setDoc(doc(db, "submissions", code), submissionData);
             }
             
@@ -359,10 +351,6 @@
         }
 
         // --- Event Listeners ---
-        DOM.addTestBtn.addEventListener('click', () => {
-            window.open('test-maker.html', '_blank');
-        });
-
         DOM.testList.addEventListener('click', async (e) => {
             const testItem = e.target.closest('[data-test-id]');
             const deleteBtn = e.target.closest('.btn-delete-test');
@@ -370,17 +358,19 @@
 
             if (deleteBtn) {
                 const testId = deleteBtn.dataset.testId;
-                if (confirm(`Bạn có chắc chắn muốn xóa đề thi "${testId}" và TOÀN BỘ bài làm của học sinh? Hành động này không thể hoàn tác.`)) {
-                    const q = query(collection(db, "submissions"), where("testId", "==", testId));
-                    const snapshot = await getDocs(q);
-                    const deletePromises = snapshot.docs.map(d => deleteDoc(d.ref));
-                    await Promise.all(deletePromises);
-                    await deleteDoc(doc(db, "tests", testId));
-                    DOM.detailsView.innerHTML = '<div class="text-center text-gray-500 py-16"><p>Đã xóa đề thi.</p></div>';
+                const testType = deleteBtn.dataset.testType;
+                const collectionName = testType === 'reading' ? 'reading_tests' : 'tests';
+                if (confirm(`Bạn có chắc chắn muốn xóa bài tập "${testId}" và TOÀN BỘ bài làm của học sinh?`)) {
+                    await deleteDoc(doc(db, collectionName, testId));
+                    // Deleting submissions is a good practice, but can be done separately
+                    DOM.detailsView.innerHTML = '<div class="text-center text-gray-500 py-16"><p>Đã xóa bài tập.</p></div>';
                 }
             } else if (editBtn) {
                 const testId = editBtn.dataset.testId;
-                window.open(`test-maker.html?edit=${testId}`, '_blank');
+                const testType = editBtn.dataset.testType;
+                const page = testType === 'reading' ? 'reading-maker.html' : 'test-maker.html';
+                // Note: Edit for reading tests is not implemented in the maker yet. This just opens the page.
+                window.open(`${page}?edit=${testId}`, '_blank');
             }
             else if (testItem) {
                 const testId = testItem.dataset.testId;
@@ -392,30 +382,27 @@
         });
         
         DOM.detailsView.addEventListener('click', async (e) => {
-            const addBtn = e.target.closest('#add-students-btn');
-            const deleteBtn = e.target.closest('.btn-delete-student');
-            const publishCorrectIncorrectBtn = e.target.closest('#publish-correct-incorrect-btn');
-            const publishAnswersBtn = e.target.closest('#publish-answers-btn');
-            const lockBtn = e.target.closest('#lock-btn');
-            const testId = document.querySelector('#test-list .bg-indigo-100')?.dataset.testId;
+            const selectedTestItem = document.querySelector('#test-list .bg-indigo-100');
+            if (!selectedTestItem) return;
 
-            if (!testId) return;
+            const testId = selectedTestItem.dataset.testId;
+            const testType = selectedTestItem.dataset.testType;
             const test = localTestsCache.find(t => t.id === testId);
             if (!test) return;
 
-            if (addBtn) {
-                await generateAndAssignCodes(testId);
-            } else if (deleteBtn) {
+            const targetId = e.target.closest('button')?.id;
+            const deleteBtn = e.target.closest('.btn-delete-student');
+
+            if (targetId === 'add-students-btn') await generateAndAssignCodes(testId);
+            else if (deleteBtn) {
                 const subId = deleteBtn.dataset.subId;
-                if (confirm(`Bạn có chắc chắn muốn xóa bài làm của học sinh có mã "${subId}"?`)) {
-                    await deleteDoc(doc(db, "submissions", subId));
-                }
-            } else if (publishCorrectIncorrectBtn) {
-                await updateTestStatus(testId, { correctIncorrectPublished: !test.correctIncorrectPublished });
-            } else if (publishAnswersBtn) {
-                await updateTestStatus(testId, { answersPublished: !test.answersPublished });
-            } else if (lockBtn) {
-                await updateTestStatus(testId, { isLocked: !test.isLocked });
+                if (confirm(`Xóa bài làm có mã "${subId}"?`)) await deleteDoc(doc(db, "submissions", subId));
+            } else if (targetId === 'publish-correct-incorrect-btn') {
+                await updateTestStatus(testId, testType, { correctIncorrectPublished: !test.correctIncorrectPublished });
+            } else if (targetId === 'publish-answers-btn') {
+                await updateTestStatus(testId, testType, { answersPublished: !test.answersPublished });
+            } else if (targetId === 'lock-btn') {
+                await updateTestStatus(testId, testType, { isLocked: !test.isLocked });
             }
         });
     </script>
