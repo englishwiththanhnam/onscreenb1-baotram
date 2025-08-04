@@ -323,7 +323,7 @@
             }
         }
 
-        function renderTest(testData, savedAnswers = {}) {
+       function renderTest(testData, savedAnswers = {}) {
             DOM.testTitle.textContent = testData.title;
             DOM.questionContainer.innerHTML = '';
             const navGrid = document.getElementById('nav-grid');
@@ -334,6 +334,18 @@
                 questionCard.className = 'card';
                 questionCard.id = `question-card-${displayIndex}`;
                 questionCard.dataset.originalIndex = q.originalIndex;
+
+                // ===== BẮT ĐẦU MÃ MỚI =====
+                // Dịch loại câu hỏi sang tiếng Việt để hiển thị
+                const questionTypeMap = {
+                    'multiple-choice': 'Trắc nghiệm - Một lựa chọn',
+                    'multi-select': 'Trắc nghiệm - Nhiều lựa chọn',
+                    'cloze-test': 'Điền từ'
+                };
+                const vietnameseType = questionTypeMap[q.type] || 'Câu hỏi';
+                // Tạo mã HTML cho nhãn
+                const typeBadgeHTML = `<span class="inline-block bg-indigo-100 text-indigo-800 text-xs font-semibold mb-3 px-3 py-1 rounded-full">${vietnameseType}</span>`;
+                // ===== KẾT THÚC MÃ MỚI =====
 
                 let optionsHTML = '';
                 let questionText = q.text;
@@ -369,7 +381,9 @@
                         questionText = q.text.split(/ \(\d+\)/)[0];
                         break;
                 }
-                questionCard.innerHTML = `<p class="font-semibold text-gray-800">${displayIndex + 1}. ${questionText}</p>${optionsHTML}`;
+                
+                // Dòng này đã được cập nhật
+                questionCard.innerHTML = `${typeBadgeHTML}<p class="font-semibold text-gray-800">${displayIndex + 1}. ${questionText}</p>${optionsHTML}`;
                 DOM.questionContainer.appendChild(questionCard);
 
                 const navBtn = document.createElement('button');
