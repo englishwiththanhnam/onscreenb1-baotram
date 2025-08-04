@@ -152,7 +152,6 @@
                 localTestsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderTestList();
                 
-                // If a test is currently selected, refresh its details view
                 const selectedTestId = document.querySelector('#test-list .bg-indigo-100')?.dataset.testId;
                 if (selectedTestId) {
                     listenForSubmissions(selectedTestId);
@@ -202,7 +201,7 @@
             const q = query(collection(db, "submissions"), where("testId", "==", testId));
             submissionsUnsubscribe = onSnapshot(q, (snapshot) => {
                 const submissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                const currentTestState = localTestsCache.find(t => t.id === testId); // Get latest test state
+                const currentTestState = localTestsCache.find(t => t.id === testId);
                 renderDetailsView(currentTestState, submissions);
                 startLiveUpdates(currentTestState, submissions);
             }, (error) => {
@@ -318,7 +317,6 @@
         async function updateTestStatus(testId, data) {
              const testRef = doc(db, "tests", testId);
              await updateDoc(testRef, data);
-             // No need to do anything else, onSnapshot will handle the UI update
         }
 
         async function generateAndAssignCodes(testId) {
