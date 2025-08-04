@@ -157,15 +157,17 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        const app = initializeApp(window.firebaseConfig);
-        const db = getFirestore(app);
-        let currentSubmissionId = null;
-        let currentTest = null;
-        let timerInterval;
-        let violationCount = 0;
-        const MAX_VIOLATIONS = 10;
-        let proctoringEnabled = false;
+        // --- APP STATE ---
+        let appState = {
+            db: null,
+            currentSubmissionId: null,
+            currentTest: null,
+            timerInterval: null,
+            violationCount: 0,
+            proctoringEnabled: false,
+        };
 
+        // --- DOM ELEMENTS ---
         const DOM = {
             loginScreen: document.getElementById('login-screen'),
             codeEntryView: document.getElementById('code-entry-view'),
@@ -198,6 +200,7 @@
             securityOverlay: document.getElementById('security-overlay'),
         };
 
+        // --- HELPER FUNCTIONS ---
         const showLoader = (text = 'Đang tải...') => { DOM.loaderText.textContent = text; DOM.loaderOverlay.classList.remove('hidden'); };
         const hideLoader = () => DOM.loaderOverlay.classList.add('hidden');
         const showModal = (title, message, onConfirm, showCancel = false) => {
@@ -208,38 +211,108 @@
             DOM.modal.classList.remove('hidden');
         };
         const hideModal = () => DOM.modal.classList.add('hidden');
-        DOM.modalCancelBtn.onclick = hideModal;
 
         // --- PROCTORING & SECURITY ---
-        function initProctoring() { /* ... (same as previous version) ... */ }
-        function removeProctoring() { /* ... (same as previous version) ... */ }
-        function handleKeydown(e) { /* ... (same as previous version) ... */ }
-        function handleVisibilityChange() { /* ... (same as previous version) ... */ }
-        function handleBlur() { /* ... (same as previous version) ... */ }
-        function handleFocus() { /* ... (same as previous version) ... */ }
-        async function handleViolation(reason = "Không rõ") { /* ... (same as previous version) ... */ }
-        function handleBeforeUnload(e) { /* ... (same as previous version) ... */ }
+        function initProctoring() {
+            if (appState.proctoringEnabled) return;
+            document.addEventListener('keydown', handleKeydown);
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+            window.addEventListener('blur', handleBlur);
+            window.addEventListener('focus', handleFocus);
+            document.addEventListener('copy', (e) => e.preventDefault());
+            document.addEventListener('paste', (e) => e.preventDefault());
+            document.addEventListener('cut', (e) => e.preventDefault());
+            if (appState.currentTest.type === 'test') {
+                 window.addEventListener('beforeunload', handleBeforeUnload);
+            }
+            appState.proctoringEnabled = true;
+        }
+        
+        function removeProctoring() {
+            if (!appState.proctoringEnabled) return;
+            document.removeEventListener('keydown', handleKeydown);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('blur', handleBlur);
+            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('copy', (e) => e.preventDefault());
+            document.removeEventListener('paste', (e) => e.preventDefault());
+            document.removeEventListener('cut', (e) => e.preventDefault());
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            appState.proctoringEnabled = false;
+        }
 
+        function handleKeydown(e) {
+            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(e.key.toUpperCase())) || (e.ctrlKey && ['U', 'S', 'P'].includes(e.key.toUpperCase()))) {
+                e.preventDefault();
+                handleViolation(`Sử dụng phím tắt bị cấm (${e.key})`);
+            }
+        }
+
+        function handleVisibilityChange() {
+            if (document.hidden) {
+                handleViolation("Chuyển sang tab hoặc cửa sổ khác");
+            }
+        }
+        
+        function handleBlur() {
+            DOM.securityOverlay.classList.remove('hidden');
+            handleViolation("Thoát khỏi màn hình làm bài");
+        }
+
+        function handleFocus() {
+            DOM.securityOverlay.classList.add('hidden');
+            if (appState.violationCount > 0 && appState.violationCount < MAX_VIOLATIONS) {
+                showModal(
+                    'Cảnh báo vi phạm!',
+                    `Bạn đã thoát khỏi màn hình làm bài ${appState.violationCount} lần. Nếu vi phạm quá ${MAX_VIOLATIONS} lần, bài làm sẽ tự động được nộp.`,
+                    null,
+                    false
+                );
+            }
+        }
+
+        async function handleViolation(reason = "Không rõ") {
+            if (!appState.proctoringEnabled || appState.currentTest.status === 'submitted') return;
+            appState.violationCount++;
+            const submissionRef = doc(appState.db, 'submissions', appState.currentSubmissionId);
+            await updateDoc(submissionRef, { 
+                violationCount: appState.violationCount,
+                violationLog: arrayUnion({ reason: reason, timestamp: new Date() })
+            });
+            if (appState.violationCount >= MAX_VIOLATIONS && appState.currentTest.type === 'test') {
+                submitTest(true);
+            }
+        }
+
+        function handleBeforeUnload(e) {
+            if (appState.proctoringEnabled && appState.currentTest.type === 'test') {
+                e.preventDefault();
+                e.returnValue = 'Bạn có chắc chắn muốn rời khỏi? Bài làm sẽ được nộp tự động nếu bạn thoát.';
+                return e.returnValue;
+            }
+        }
+
+        // --- CORE LOGIC ---
         async function startSession(submissionId) {
             showLoader('Đang tải dữ liệu bài làm...');
             try {
-                currentSubmissionId = submissionId;
-                const submissionRef = doc(db, 'submissions', currentSubmissionId);
+                appState.currentSubmissionId = submissionId;
+                const submissionRef = doc(appState.db, 'submissions', appState.currentSubmissionId);
                 let submissionSnap = await getDoc(submissionRef);
                 if (!submissionSnap.exists()) throw new Error("Mã truy cập không hợp lệ.");
                 
                 let submissionData = submissionSnap.data();
                 
                 if (submissionData.testSnapshot) {
-                    currentTest = submissionData.testSnapshot;
+                    appState.currentTest = submissionData.testSnapshot;
                 } else {
-                    const testRef = doc(db, 'tests', submissionData.testId);
+                    const testRef = doc(appState.db, 'tests', submissionData.testId);
                     const testSnap = await getDoc(testRef);
                     if (!testSnap.exists()) throw new Error("Không tìm thấy đề thi gốc.");
-                    currentTest = testSnap.data();
+                    appState.currentTest = testSnap.data();
                     
                     await updateDoc(submissionRef, {
-                        testSnapshot: currentTest,
+                        testSnapshot: appState.currentTest,
                         startTime: serverTimestamp()
                     });
                     submissionSnap = await getDoc(submissionRef);
@@ -248,17 +321,17 @@
 
                 DOM.studentNameDisplay.textContent = `Thí sinh: ${submissionData.studentName}`;
 
-                if (currentTest.isLocked && submissionData.status !== 'submitted') {
+                if (appState.currentTest.isLocked && submissionData.status !== 'submitted') {
                     throw new Error("Đề thi này đã bị khóa. Vui lòng liên hệ giáo viên.");
                 }
 
                 if (submissionData.status === 'submitted') {
-                    displayResults(submissionData, currentTest);
+                    displayResults(submissionData, appState.currentTest);
                 } else {
-                    violationCount = submissionData.violationCount || 0;
+                    appState.violationCount = submissionData.violationCount || 0;
                     initProctoring();
-                    renderTest(currentTest, submissionData.answers || {});
-                    setupTestEnvironment(currentTest, submissionData);
+                    renderTest(appState.currentTest, submissionData.answers || {});
+                    setupTestEnvironment(appState.currentTest, submissionData);
                     DOM.loginScreen.classList.add('hidden');
                     DOM.testContainer.classList.remove('hidden');
                 }
@@ -271,65 +344,6 @@
             }
         }
 
-        // --- LOGIN LOGIC ---
-        const inputs = Array.from(DOM.codeInputs.querySelectorAll('input'));
-        DOM.codeInputs.addEventListener('input', (e) => {
-            const target = e.target;
-            if (target.value) {
-                const next = inputs[inputs.indexOf(target) + 1];
-                if (next) next.focus();
-            }
-        });
-        DOM.codeInputs.addEventListener('keydown', (e) => {
-            const target = e.target;
-            if (e.key === 'Backspace' && !target.value) {
-                const prev = inputs[inputs.indexOf(target) - 1];
-                if (prev) prev.focus();
-            }
-        });
-
-        DOM.checkCodeBtn.addEventListener('click', async () => {
-            const code = inputs.map(input => input.value).join('');
-            if (code.length !== 6) {
-                document.getElementById('login-error').textContent = 'Vui lòng nhập đủ 6 chữ số.';
-                return;
-            }
-            document.getElementById('login-error').textContent = '';
-            showLoader('Đang kiểm tra...');
-
-            try {
-                const submissionRef = doc(db, 'submissions', code);
-                const submissionSnap = await getDoc(submissionRef);
-                if (!submissionSnap.exists()) throw new Error("Mã truy cập không hợp lệ.");
-                
-                const submissionData = submissionSnap.data();
-                const testRef = doc(db, 'tests', submissionData.testId);
-                const testSnap = await getDoc(testRef);
-                if (!testSnap.exists()) throw new Error("Không tìm thấy đề thi tương ứng.");
-
-                currentSubmissionId = code;
-                DOM.studentNameConfirm.textContent = submissionData.studentName;
-                DOM.testTitleConfirm.textContent = testSnap.data().title;
-                DOM.codeEntryView.classList.add('hidden');
-                DOM.confirmationView.classList.remove('hidden');
-
-            } catch (error) {
-                showModal('Lỗi', error.message, null, false);
-            } finally {
-                hideLoader();
-            }
-        });
-
-        DOM.notMeBtn.addEventListener('click', () => {
-            inputs.forEach(input => input.value = '');
-            DOM.confirmationView.classList.add('hidden');
-            DOM.codeEntryView.classList.remove('hidden');
-            inputs[0].focus();
-        });
-
-        DOM.continueBtn.addEventListener('click', () => startSession(currentSubmissionId));
-
-        // --- TEST RENDERING & FUNCTIONALITY ---
         function seededShuffle(array, seed) {
             let currentIndex = array.length, temporaryValue, randomIndex;
             const random = () => {
@@ -368,7 +382,7 @@
                         let optionsArray = Object.entries(q.options);
 
                         if (q.shuffle) {
-                            const seed = currentSubmissionId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + index;
+                            const seed = appState.currentSubmissionId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + index;
                             optionsArray = seededShuffle(optionsArray, seed);
                         }
                         
@@ -376,7 +390,7 @@
                             optionsArray.map(([key, value], displayIndex) => {
                                 const savedAnswer = savedAnswers[index];
                                 const isChecked = Array.isArray(savedAnswer) ? savedAnswer.includes(key) : savedAnswer === key;
-                                const displayLetter = String.fromCharCode(65 + displayIndex); // A, B, C, D
+                                const displayLetter = String.fromCharCode(65 + displayIndex);
                                 return `<label class="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
                                     <input type="${inputType}" name="q_${index}" value="${key}" class="h-5 w-5 text-indigo-600 focus:ring-indigo-500" ${isChecked ? 'checked' : ''}>
                                     <span class="ml-3 text-gray-700"><span class="font-bold">${displayLetter}.</span> ${value}</span>
@@ -384,7 +398,12 @@
                             }).join('') + `</div>`;
                         break;
                     case 'cloze-test':
-                        // ... same as before
+                        questionText = q.text.replace(/\((\d+)\)/g, (match, number) => {
+                            const savedValue = (savedAnswers[index] && savedAnswers[index][number]) ? savedAnswers[index][number] : '';
+                            return `(${number}) <input type="text" data-blank-number="${number}" class="input-field-inline cloze-input" value="${savedValue}">`;
+                        });
+                        optionsHTML = `<div class="text-lg leading-loose mt-4">${questionText}</div>`;
+                        questionText = q.text.split(/ \(\d+\)/)[0];
                         break;
                 }
                 questionCard.innerHTML = `<p class="font-semibold text-gray-800">${index + 1}. ${questionText}</p>${optionsHTML}`;
@@ -414,7 +433,129 @@
             document.querySelectorAll('.card[data-question-index]').forEach(card => observer.observe(card));
         }
         
-        // ... other functions (updateNavPanel, setupTestEnvironment, startTimer, getCurrentAnswers, submitTest, displayResults, etc.) remain largely the same, but displayResults needs to be updated for shuffle.
+        function updateNavPanel() {
+            if (!appState.currentTest) return;
+            const answers = getCurrentAnswers();
+            appState.currentTest.questions.forEach((q, index) => {
+                const navBtn = document.getElementById(`nav-btn-${index}`);
+                if (!navBtn) return;
+                const studentAnswer = answers[index];
+                const isAnswered = studentAnswer !== null && studentAnswer !== undefined &&
+                    (Array.isArray(studentAnswer) ? studentAnswer.length > 0 : (typeof studentAnswer === 'object' ? Object.values(studentAnswer).some(v => v) : true));
+                navBtn.classList.toggle('answered', isAnswered);
+            });
+        }
+
+        function setupTestEnvironment(testData, submissionData) {
+            if (testData.duration > 0) {
+                DOM.timerDisplay.classList.remove('hidden');
+                startTimer(submissionData.startTime, testData.duration, testData.type === 'test');
+            } else {
+                DOM.timerDisplay.classList.add('hidden');
+            }
+            DOM.saveProgressBtn.style.display = testData.type === 'assignment' ? 'flex' : 'none';
+        }
+
+        function startTimer(startTime, durationMinutes, autoSubmit) {
+            if (!startTime) {
+                DOM.timer.textContent = "Bắt đầu";
+                return;
+            }
+            const testEndTime = startTime.toDate().getTime() + durationMinutes * 60 * 1000;
+            appState.timerInterval = setInterval(() => {
+                const distance = testEndTime - new Date().getTime();
+                if (distance < 0) {
+                    clearInterval(appState.timerInterval);
+                    DOM.timer.textContent = "Hết giờ";
+                    if (autoSubmit) {
+                        submitTest(true);
+                    }
+                    return;
+                }
+                const minutes = Math.floor(distance / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                DOM.timer.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function getCurrentAnswers() {
+            const answers = [];
+            if (!appState.currentTest) return answers;
+            appState.currentTest.questions.forEach((q, index) => {
+                const card = document.querySelector(`[data-question-index="${index}"]`);
+                if (!card) return;
+                switch (q.type) {
+                    case 'multiple-choice':
+                        const checkedRadio = card.querySelector(`input[name="q_${index}"]:checked`);
+                        answers[index] = checkedRadio ? checkedRadio.value : null;
+                        break;
+                    case 'multi-select':
+                        answers[index] = Array.from(card.querySelectorAll(`input[name="q_${index}"]:checked`)).map(el => el.value);
+                        break;
+                    case 'cloze-test':
+                        const clozeAnswers = {};
+                        card.querySelectorAll('.cloze-input').forEach(input => {
+                            clozeAnswers[input.dataset.blankNumber] = input.value.trim();
+                        });
+                        answers[index] = clozeAnswers;
+                        break;
+                }
+            });
+            return answers;
+        }
+
+        async function submitTest(isForced = false) {
+            removeProctoring();
+            clearInterval(appState.timerInterval);
+            showLoader('Đang nộp bài và chấm điểm...');
+            
+            try {
+                const answers = getCurrentAnswers();
+                let score = 0;
+                let totalPoints = 0;
+
+                appState.currentTest.questions.forEach((q, index) => {
+                    const studentAnswer = answers[index];
+                    const questionPoints = q.points || 1;
+                    switch (q.type) {
+                        case 'multiple-choice':
+                            totalPoints += questionPoints;
+                            if (studentAnswer === q.answer) score += questionPoints;
+                            break;
+                        case 'multi-select':
+                            totalPoints += questionPoints;
+                            const correctAnswers = q.answer.sort();
+                            const studentAnswersSorted = Array.isArray(studentAnswer) ? studentAnswer.sort() : [];
+                            if (JSON.stringify(correctAnswers) === JSON.stringify(studentAnswersSorted)) score += questionPoints;
+                            break;
+                        case 'cloze-test':
+                            Object.keys(q.answers).forEach(blankNumber => {
+                                totalPoints += questionPoints;
+                                const correctAnswerOptions = q.answers[blankNumber];
+                                const studentBlankAnswer = studentAnswer ? studentAnswer[blankNumber] : '';
+                                if (studentBlankAnswer && correctAnswerOptions.some(option => option.toLowerCase() === studentBlankAnswer.toLowerCase())) {
+                                    score += questionPoints;
+                                }
+                            });
+                            break;
+                    }
+                });
+
+                const finalSubmission = { answers, score, totalPoints, status: 'submitted', endTime: serverTimestamp() };
+                await updateDoc(doc(appState.db, 'submissions', appState.currentSubmissionId), finalSubmission);
+                
+                const submissionSnap = await getDoc(doc(appState.db, 'submissions', appState.currentSubmissionId));
+                displayResults(submissionSnap.data(), appState.currentTest);
+                if (isForced) {
+                    const reason = appState.violationCount >= MAX_VIOLATIONS ? 'Vi phạm quy chế thi quá số lần cho phép.' : 'Hết thời gian làm bài.';
+                    showModal("Bài thi đã tự động nộp", `Lý do: ${reason}`, null, false);
+                }
+            } catch (error) {
+                showModal('Lỗi', `Không thể nộp bài. Lỗi: ${error.message}`, null, false);
+            } finally {
+                hideLoader();
+            }
+        }
 
         function displayResults(submissionData, testData) {
             removeProctoring();
@@ -461,11 +602,11 @@
                             const wasThisOptionSelected = Array.isArray(studentAnswer) ? studentAnswer.includes(key) : key === studentAnswer;
 
                             if (testData.answersPublished && isThisOptionCorrect) {
-                                stateClass = 'bg-green-100 border-green-500'; // Correct answer
+                                stateClass = 'bg-green-100 border-green-500';
                             } else if (wasThisOptionSelected && !isThisOptionCorrect) {
-                                stateClass = 'bg-red-100 border-red-500'; // Incorrectly selected
+                                stateClass = 'bg-red-100 border-red-500';
                             } else if (wasThisOptionSelected && isThisOptionCorrect) {
-                                stateClass = 'bg-green-100 border-green-500'; // Correctly selected
+                                stateClass = 'bg-green-100 border-green-500';
                             }
 
                             return `<div class="flex items-center p-3 border rounded-lg ${stateClass}">
@@ -474,7 +615,19 @@
                         }).join('') + `</div>`;
                         break;
                     case 'cloze-test':
-                        // ... same as before
+                        let allCorrect = true;
+                         questionText = q.text.replace(/\((\d+)\)/g, (match, number) => {
+                            const sAnswer = (studentAnswer && studentAnswer[number]) ? studentAnswer[number] : "<i>(trống)</i>";
+                            const correctOptions = q.answers[number] || [];
+                            const isBlankCorrect = correctOptions.some(opt => opt.toLowerCase() === sAnswer.toLowerCase());
+                            if (!isBlankCorrect) allCorrect = false;
+                            const color = isBlankCorrect ? 'green' : 'red';
+                            const cAnswerDisplay = testData.answersPublished ? `(${correctOptions.join(' / ')})` : '';
+                            return `(${number}) <span class="font-bold text-${color}-600 border-b-2 border-${color}-400 px-1">${sAnswer}</span> <span class="text-green-600">${cAnswerDisplay}</span>`;
+                        });
+                        isQuestionCorrect = allCorrect;
+                        optionsHTML = `<div class="text-lg leading-loose mt-4">${questionText}</div>`;
+                        questionText = q.text.split(/ \(\d+\)/)[0];
                         break;
                 }
                 
@@ -490,18 +643,102 @@
             });
         }
 
-        // --- Init ---
-        window.addEventListener('load', () => {
+        // --- INITIALIZATION ---
+        function init() {
+            // Firebase
+            const app = initializeApp(window.firebaseConfig);
+            appState.db = getFirestore(app);
+
+            // Event Listeners
+            const codeInputs = Array.from(DOM.codeInputs.querySelectorAll('input'));
+            DOM.codeInputs.addEventListener('input', (e) => {
+                const target = e.target;
+                if (target.value) {
+                    const next = codeInputs[codeInputs.indexOf(target) + 1];
+                    if (next) next.focus();
+                }
+            });
+            DOM.codeInputs.addEventListener('keydown', (e) => {
+                const target = e.target;
+                if (e.key === 'Backspace' && !target.value) {
+                    const prev = codeInputs[codeInputs.indexOf(target) - 1];
+                    if (prev) prev.focus();
+                }
+            });
+
+            DOM.checkCodeBtn.addEventListener('click', async () => {
+                const code = codeInputs.map(input => input.value).join('');
+                if (code.length !== 6) {
+                    document.getElementById('login-error').textContent = 'Vui lòng nhập đủ 6 chữ số.';
+                    return;
+                }
+                document.getElementById('login-error').textContent = '';
+                showLoader('Đang kiểm tra...');
+
+                try {
+                    const submissionRef = doc(appState.db, 'submissions', code);
+                    const submissionSnap = await getDoc(submissionRef);
+                    if (!submissionSnap.exists()) throw new Error("Mã truy cập không hợp lệ.");
+                    
+                    const submissionData = submissionSnap.data();
+                    const testRef = doc(appState.db, 'tests', submissionData.testId);
+                    const testSnap = await getDoc(testRef);
+                    if (!testSnap.exists()) throw new Error("Không tìm thấy đề thi tương ứng.");
+
+                    appState.currentSubmissionId = code;
+                    DOM.studentNameConfirm.textContent = submissionData.studentName;
+                    DOM.testTitleConfirm.textContent = testSnap.data().title;
+                    DOM.codeEntryView.classList.add('hidden');
+                    DOM.confirmationView.classList.remove('hidden');
+
+                } catch (error) {
+                    showModal('Lỗi', error.message, null, false);
+                } finally {
+                    hideLoader();
+                }
+            });
+
+            DOM.notMeBtn.addEventListener('click', () => {
+                codeInputs.forEach(input => input.value = '');
+                DOM.confirmationView.classList.add('hidden');
+                DOM.codeEntryView.classList.remove('hidden');
+                codeInputs[0].focus();
+            });
+
+            DOM.continueBtn.addEventListener('click', () => startSession(appState.currentSubmissionId));
+
+            DOM.saveProgressBtn.addEventListener('click', async () => {
+                showLoader('Đang lưu tiến trình...');
+                try {
+                    await updateDoc(doc(appState.db, 'submissions', appState.currentSubmissionId), { answers: getCurrentAnswers() });
+                    showModal('Thành công', 'Đã lưu tiến trình của bạn.', null, false);
+                } catch (error) {
+                    showModal('Lỗi', 'Không thể lưu tiến trình.', null, false);
+                } finally {
+                    hideLoader();
+                }
+            });
+
+            DOM.submitBtn.addEventListener('click', () => {
+                showModal('Xác nhận nộp bài', 'Bạn có chắc chắn muốn nộp bài không? Bạn sẽ không thể sửa lại sau khi nộp.', () => submitTest(), true)
+            });
+
+            DOM.modalCancelBtn.onclick = hideModal;
+
+            // Check for URL params on load
             const params = new URLSearchParams(window.location.search);
             const submissionId = params.get('submission_id');
             if (submissionId) {
                 const codeArray = submissionId.split('');
-                inputs.forEach((input, index) => input.value = codeArray[index] || '');
+                codeInputs.forEach((input, index) => input.value = codeArray[index] || '');
                 DOM.checkCodeBtn.click();
             } else {
-                inputs[0].focus();
+                codeInputs[0].focus();
             }
-        });
+        }
+
+        // --- START THE APP ---
+        document.addEventListener('DOMContentLoaded', init);
 
     </script>
 </body>
