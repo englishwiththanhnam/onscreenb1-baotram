@@ -148,7 +148,7 @@
         import { getFirestore, doc, getDoc, updateDoc, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
         // --- APP STATE ---
-        let appState = {
+        const appState = {
             db: null,
             currentSubmissionId: null,
             currentTestSnapshot: null,
@@ -158,38 +158,8 @@
             proctoringEnabled: false,
         };
 
-        // --- DOM ELEMENTS ---
-        const DOM = {
-            loginScreen: document.getElementById('login-screen'),
-            codeEntryView: document.getElementById('code-entry-view'),
-            confirmationView: document.getElementById('confirmation-view'),
-            studentNameConfirm: document.getElementById('student-name-confirm'),
-            testTitleConfirm: document.getElementById('test-title-confirm'),
-            notMeBtn: document.getElementById('not-me-btn'),
-            continueBtn: document.getElementById('continue-btn'),
-            codeInputs: document.getElementById('code-inputs'),
-            checkCodeBtn: document.getElementById('check-code-btn'),
-            testContainer: document.getElementById('test-container'),
-            resultScreen: document.getElementById('result-screen'),
-            saveProgressBtn: document.getElementById('save-progress-btn'),
-            submitBtn: document.getElementById('submit-btn'),
-            questionContainer: document.getElementById('question-container'),
-            reviewContainer: document.getElementById('review-container'),
-            testTitle: document.getElementById('test-title'),
-            studentNameDisplay: document.getElementById('student-name-display'),
-            timer: document.getElementById('timer'),
-            timerDisplay: document.getElementById('timer-display'),
-            scoreText: document.getElementById('score-text'),
-            feedbackSummary: document.getElementById('feedback-summary'),
-            loaderOverlay: document.getElementById('loader-overlay'),
-            loaderText: document.getElementById('loader-text'),
-            modal: document.getElementById('modal'),
-            modalTitle: document.getElementById('modal-title'),
-            modalMessage: document.getElementById('modal-message'),
-            modalConfirmBtn: document.getElementById('modal-confirm-btn'),
-            modalCancelBtn: document.getElementById('modal-cancel-btn'),
-            securityOverlay: document.getElementById('security-overlay'),
-        };
+        // --- DOM ELEMENTS (khai báo rỗng, sẽ được gán giá trị sau khi DOM tải xong) ---
+        const DOM = {};
 
         // --- HELPER FUNCTIONS ---
         const showLoader = (text = 'Đang tải...') => { DOM.loaderText.textContent = text; DOM.loaderOverlay.classList.remove('hidden'); };
@@ -658,9 +628,44 @@
 
         // --- INITIALIZATION ---
         function init() {
+            // Gán giá trị cho các phần tử DOM sau khi trang đã tải
+            Object.assign(DOM, {
+                loginScreen: document.getElementById('login-screen'),
+                codeEntryView: document.getElementById('code-entry-view'),
+                confirmationView: document.getElementById('confirmation-view'),
+                studentNameConfirm: document.getElementById('student-name-confirm'),
+                testTitleConfirm: document.getElementById('test-title-confirm'),
+                notMeBtn: document.getElementById('not-me-btn'),
+                continueBtn: document.getElementById('continue-btn'),
+                codeInputs: document.getElementById('code-inputs'),
+                checkCodeBtn: document.getElementById('check-code-btn'),
+                testContainer: document.getElementById('test-container'),
+                resultScreen: document.getElementById('result-screen'),
+                saveProgressBtn: document.getElementById('save-progress-btn'),
+                submitBtn: document.getElementById('submit-btn'),
+                questionContainer: document.getElementById('question-container'),
+                reviewContainer: document.getElementById('review-container'),
+                testTitle: document.getElementById('test-title'),
+                studentNameDisplay: document.getElementById('student-name-display'),
+                timer: document.getElementById('timer'),
+                timerDisplay: document.getElementById('timer-display'),
+                scoreText: document.getElementById('score-text'),
+                feedbackSummary: document.getElementById('feedback-summary'),
+                loaderOverlay: document.getElementById('loader-overlay'),
+                loaderText: document.getElementById('loader-text'),
+                modal: document.getElementById('modal'),
+                modalTitle: document.getElementById('modal-title'),
+                modalMessage: document.getElementById('modal-message'),
+                modalConfirmBtn: document.getElementById('modal-confirm-btn'),
+                modalCancelBtn: document.getElementById('modal-cancel-btn'),
+                securityOverlay: document.getElementById('security-overlay'),
+            });
+
+            // Khởi tạo Firebase
             const app = initializeApp(window.firebaseConfig);
             appState.db = getFirestore(app);
 
+            // Gán sự kiện cho các nút
             const codeInputs = Array.from(DOM.codeInputs.querySelectorAll('input'));
             DOM.codeInputs.addEventListener('input', (e) => {
                 const target = e.target;
@@ -731,6 +736,7 @@
             });
             DOM.modalCancelBtn.onclick = hideModal;
 
+            // Xử lý tham số URL khi tải trang
             const params = new URLSearchParams(window.location.search);
             const submissionId = params.get('submission_id');
             if (submissionId) {
@@ -742,6 +748,7 @@
             }
         }
         
+        // Bắt đầu ứng dụng sau khi DOM đã sẵn sàng
         document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
