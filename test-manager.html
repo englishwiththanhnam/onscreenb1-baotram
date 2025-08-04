@@ -10,6 +10,7 @@
 
     <!-- === CẤU HÌNH FIREBASE === -->
     <script type="module">
+        // IMPORTANT: Replace with your actual Firebase project configuration
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
@@ -34,7 +35,7 @@
         .input-field { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; }
         .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #4f46e5; width: 32px; height: 32px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .status-badge { padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+        .status-badge { padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
         .status-not-started { background-color: #e5e7eb; color: #4b5563; }
         .status-submitted { background-color: #d1fae5; color: #065f46; }
         .status-inprogress { background-color: #fef3c7; color: #92400e; }
@@ -67,18 +68,18 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Cột danh sách đề thi -->
+            <!-- Test List Column -->
             <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-bold text-gray-700">Danh sách Đề thi</h2>
-                    <button id="add-test-btn" class="btn btn-primary"><i class="fas fa-plus"></i></button>
+                    <button id="add-test-btn" class="btn btn-primary" title="Tạo đề thi mới"><i class="fas fa-plus"></i></button>
                 </div>
                 <div id="test-list" class="space-y-2">
                     <div class="text-center py-8"><div class="loader mx-auto"></div></div>
                 </div>
             </div>
 
-            <!-- Cột chi tiết và danh sách học sinh -->
+            <!-- Details and Student List Column -->
             <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
                 <div id="details-view">
                     <div class="text-center text-gray-500 py-16">
@@ -92,7 +93,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, deleteDoc, query, where, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, deleteDoc, query, where, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
         const app = initializeApp(window.firebaseConfig);
@@ -113,7 +114,7 @@
         };
 
         let tests = [];
-        let submissions = [];
+        let submissionsUnsubscribe = null; // To store the snapshot listener
         let liveUpdateInterval;
 
         // --- AUTHENTICATION ---
@@ -125,6 +126,7 @@
             } else {
                 DOM.loginScreen.style.display = 'flex';
                 DOM.mainContent.style.display = 'none';
+                if (submissionsUnsubscribe) submissionsUnsubscribe(); // Detach listener on logout
             }
         });
 
@@ -141,6 +143,7 @@
 
         DOM.logoutBtn.addEventListener('click', () => signOut(auth));
 
+        // --- TEST MANAGEMENT ---
         async function loadTests() {
             DOM.testList.innerHTML = '<div class="text-center py-8"><div class="loader mx-auto"></div></div>';
             const testsCol = collection(db, "tests");
@@ -155,6 +158,7 @@
                 DOM.testList.innerHTML = '<p class="text-gray-500 text-center py-4">Chưa có đề thi nào.</p>';
                 return;
             }
+            tests.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
             tests.forEach(test => {
                 const item = document.createElement('div');
                 item.className = 'p-3 border rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-100';
@@ -165,23 +169,35 @@
                         <p class="text-sm text-gray-500">${test.id}</p>
                     </div>
                     <div class="flex gap-2">
-                        <button class="btn-edit-test btn btn-secondary" data-test-id="${test.id}"><i class="fas fa-edit"></i></button>
-                        <button class="btn-delete-test btn btn-danger" data-test-id="${test.id}"><i class="fas fa-trash"></i></button>
+                        <button class="btn-edit-test btn btn-secondary" title="Sửa đề thi" data-test-id="${test.id}"><i class="fas fa-edit"></i></button>
+                        <button class="btn-delete-test btn btn-danger" title="Xóa đề thi" data-test-id="${test.id}"><i class="fas fa-trash"></i></button>
                     </div>
                 `;
                 DOM.testList.appendChild(item);
             });
         }
 
-        async function loadSubmissions(testId) {
+        function listenForSubmissions(testId) {
+            // Detach any existing listener before starting a new one
+            if (submissionsUnsubscribe) {
+                submissionsUnsubscribe();
+            }
+            clearInterval(liveUpdateInterval);
+
             const q = query(collection(db, "submissions"), where("testId", "==", testId));
-            const snapshot = await getDocs(q);
-            submissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderDetailsView(testId);
+            
+            submissionsUnsubscribe = onSnapshot(q, (snapshot) => {
+                const submissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const test = tests.find(t => t.id === testId);
+                renderDetailsView(test, submissions);
+                startLiveUpdates(test, submissions);
+            }, (error) => {
+                console.error("Error listening to submissions:", error);
+                DOM.detailsView.innerHTML = `<div class="text-center text-red-500 py-16"><p>Lỗi khi tải dữ liệu bài làm.</p></div>`;
+            });
         }
 
-        function renderDetailsView(testId) {
-            const test = tests.find(t => t.id === testId);
+        function renderDetailsView(test, submissions) {
             if (!test) return;
 
             const publishCorrectIncorrectBtnClass = test.correctIncorrectPublished ? 'btn-warning' : 'btn-success';
@@ -193,7 +209,10 @@
 
             DOM.detailsView.innerHTML = `
                 <div class="flex flex-wrap justify-between items-start mb-4 gap-4">
-                    <h2 class="text-2xl font-bold text-gray-700">${test.title}</h2>
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-700">${test.title}</h2>
+                        <p class="text-sm text-gray-500">Cập nhật lần cuối: ${test.updatedAt ? test.updatedAt.toDate().toLocaleString('vi-VN') : 'N/A'}</p>
+                    </div>
                     <div class="flex flex-wrap gap-2">
                         <button id="publish-correct-incorrect-btn" class="btn ${publishCorrectIncorrectBtnClass} text-sm">${publishCorrectIncorrectBtnText}</button>
                         <button id="publish-answers-btn" class="btn ${publishAnswersBtnClass} text-sm">${publishAnswersBtnText}</button>
@@ -222,9 +241,10 @@
                             <tbody id="student-table-body">
                                 ${submissions.map(sub => {
                                     let statusContent;
+                                    // Determine status based on submission data
                                     if (sub.status === 'submitted') {
                                         statusContent = '<span class="status-badge status-submitted">Đã nộp</span>';
-                                    } else if (Object.keys(sub.answers || {}).length > 0) {
+                                    } else if (sub.startTime) { // If startTime exists, they are in progress
                                         const remainingTime = calculateRemainingTime(sub.startTime, test.duration);
                                         statusContent = `<div class="flex items-center gap-2">
                                             <span class="status-badge status-inprogress">Đang làm</span>
@@ -236,13 +256,13 @@
 
                                     return `
                                     <tr data-sub-id="${sub.id}">
-                                        <td class="border-b p-2"><a href="lam-bai-thi.html?submission_id=${sub.id}" target="_blank" class="text-blue-600 hover:underline">${sub.studentName}</a></td>
+                                        <td class="border-b p-2"><a href="student.html?submission_id=${sub.id}" target="_blank" class="text-blue-600 hover:underline">${sub.studentName}</a></td>
                                         <td class="border-b p-2 font-mono">${sub.id}</td>
                                         <td class="border-b p-2 status-cell">${statusContent}</td>
                                         <td class="border-b p-2 font-bold">${sub.status === 'submitted' ? `${sub.score} / ${sub.totalPoints}` : '-'}</td>
                                         <td class="border-b p-2 text-center">${sub.violationCount || 0}</td>
                                         <td class="border-b p-2 text-right">
-                                            <button class="btn-delete-student btn btn-danger" data-sub-id="${sub.id}"><i class="fas fa-trash"></i></button>
+                                            <button class="btn-delete-student btn btn-danger btn-sm" title="Xóa bài làm" data-sub-id="${sub.id}"><i class="fas fa-trash"></i></button>
                                         </td>
                                     </tr>
                                 `}).join('')}
@@ -251,7 +271,6 @@
                     </div>
                 </div>
             `;
-            startLiveUpdates(testId);
         }
 
         function calculateRemainingTime(startTime, duration) {
@@ -264,12 +283,11 @@
             return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         }
 
-        function startLiveUpdates(testId) {
+        function startLiveUpdates(test, submissions) {
             clearInterval(liveUpdateInterval);
             liveUpdateInterval = setInterval(() => {
-                const test = tests.find(t => t.id === testId);
                 submissions.forEach(sub => {
-                    if (sub.status !== 'submitted' && Object.keys(sub.answers || {}).length > 0) {
+                    if (sub.status !== 'submitted' && sub.startTime) {
                         const row = document.querySelector(`tr[data-sub-id="${sub.id}"]`);
                         if (row) {
                             const statusCell = row.querySelector('.status-cell');
@@ -291,7 +309,7 @@
              if(testIndex > -1) {
                  tests[testIndex] = { ...tests[testIndex], ...data };
              }
-             renderDetailsView(testId);
+             // The onSnapshot listener will handle re-rendering, so no need to call renderDetailsView here.
         }
 
         async function generateAndAssignCodes(testId) {
@@ -318,18 +336,25 @@
                     studentName: studentName.trim(),
                     testId: testId,
                     status: 'not-started',
-                    startTime: serverTimestamp(),
-                    answers: {}, score: 0, totalPoints: 0
+                    startTime: null, // IMPORTANT: Set to null initially. Will be set when student starts.
+                    testSnapshot: null, // IMPORTANT: Will store the test version student takes.
+                    answers: {}, 
+                    score: 0, 
+                    totalPoints: 0,
+                    violationCount: 0
                 };
                 await setDoc(doc(db, "submissions", code), submissionData);
             }
             
-            await loadSubmissions(testId); // Refresh list
+            document.getElementById('new-student-list').value = ''; // Clear textarea
+            addBtn.disabled = false;
+            addBtn.innerHTML = 'Thêm và tạo mã';
+            // The onSnapshot listener will automatically refresh the list.
         }
 
         // --- Event Listeners ---
         DOM.addTestBtn.addEventListener('click', () => {
-            window.open('cong-cu-tao-de-thi.html', '_blank');
+            window.open('test-maker.html', '_blank');
         });
 
         DOM.testList.addEventListener('click', async (e) => {
@@ -340,24 +365,27 @@
             if (deleteBtn) {
                 const testId = deleteBtn.dataset.testId;
                 if (confirm(`Bạn có chắc chắn muốn xóa đề thi "${testId}" và TOÀN BỘ bài làm của học sinh? Hành động này không thể hoàn tác.`)) {
-                    await deleteDoc(doc(db, "tests", testId));
+                    // Delete all submissions first
                     const q = query(collection(db, "submissions"), where("testId", "==", testId));
                     const snapshot = await getDocs(q);
                     const deletePromises = snapshot.docs.map(d => deleteDoc(d.ref));
                     await Promise.all(deletePromises);
-                    loadTests();
+                    // Then delete the test itself
+                    await deleteDoc(doc(db, "tests", testId));
+                    
+                    loadTests(); // Refresh test list
                     DOM.detailsView.innerHTML = '<div class="text-center text-gray-500 py-16"><p>Đã xóa đề thi.</p></div>';
                 }
             } else if (editBtn) {
                 const testId = editBtn.dataset.testId;
-                window.open(`cong-cu-tao-de-thi.html?edit=${testId}`, '_blank');
+                window.open(`test-maker.html?edit=${testId}`, '_blank');
             }
             else if (testItem) {
                 const testId = testItem.dataset.testId;
                 document.querySelectorAll('#test-list > div').forEach(el => el.classList.remove('bg-indigo-100'));
                 testItem.classList.add('bg-indigo-100');
                 DOM.detailsView.innerHTML = '<div class="text-center py-16"><div class="loader mx-auto"></div></div>';
-                await loadSubmissions(testId);
+                listenForSubmissions(testId);
             }
         });
         
@@ -369,22 +397,23 @@
             const lockBtn = e.target.closest('#lock-btn');
             const testId = document.querySelector('#test-list .bg-indigo-100')?.dataset.testId;
 
+            if (!testId) return;
+            const test = tests.find(t => t.id === testId);
+            if (!test) return;
+
             if (addBtn) {
                 await generateAndAssignCodes(testId);
             } else if (deleteBtn) {
                 const subId = deleteBtn.dataset.subId;
                 if (confirm(`Bạn có chắc chắn muốn xóa bài làm của học sinh có mã "${subId}"?`)) {
                     await deleteDoc(doc(db, "submissions", subId));
-                    await loadSubmissions(testId);
+                    // List will refresh automatically via onSnapshot
                 }
             } else if (publishCorrectIncorrectBtn) {
-                const test = tests.find(t => t.id === testId);
                 await updateTestStatus(testId, { correctIncorrectPublished: !test.correctIncorrectPublished });
             } else if (publishAnswersBtn) {
-                const test = tests.find(t => t.id === testId);
                 await updateTestStatus(testId, { answersPublished: !test.answersPublished });
             } else if (lockBtn) {
-                const test = tests.find(t => t.id === testId);
                 await updateTestStatus(testId, { isLocked: !test.isLocked });
             }
         });
