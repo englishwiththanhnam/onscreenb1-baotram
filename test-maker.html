@@ -112,7 +112,7 @@
                 </div>
             </div>
             <div id="question-list-container" class="space-y-3">
-                <p class="text-gray-500 text-center py-4">Chưa có câu hỏi nào. Nhấn "Thêm câu hỏi mới" hoặc "Nhập hàng loạt" để bắt đầu.</p>
+                <p class="text-gray-500 text-center py-4">Chưa có câu hỏi nào.</p>
             </div>
         </div>
         
@@ -148,7 +148,7 @@
     <div id="batch-import-modal" class="modal">
         <div class="modal-content">
             <h3 class="text-2xl font-bold text-gray-800 mb-4">Nhập hàng loạt từ Template</h3>
-            <p class="text-sm text-gray-600 mb-4">Dán toàn bộ nội dung từ file Word hoặc Text vào ô dưới đây.</p>
+            <p class="text-sm text-gray-600 mb-4">Dán toàn bộ nội dung từ file mẫu vào ô dưới đây.</p>
             <textarea id="batch-content" class="input-field w-full" rows="15"></textarea>
             <div class="mt-6 flex justify-end gap-4">
                 <button id="batch-cancel-btn" class="btn btn-secondary">Hủy</button>
@@ -162,14 +162,17 @@
         import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
-        const app = initializeApp(window.firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        let questions = [];
-        let editingQuestionIndex = -1;
-        let isEditMode = false;
-        let originalTestId = null;
+        // --- APP STATE ---
+        let appState = {
+            db: null,
+            auth: null,
+            questions: [],
+            editingQuestionIndex: -1,
+            isEditMode: false,
+            originalTestId: null,
+        };
 
+        // --- DOM ELEMENTS ---
         const DOM = {
             pageTitle: document.getElementById('page-title'),
             addQuestionBtn: document.getElementById('add-question-btn'),
@@ -204,47 +207,14 @@
             shuffleAnswersCheckbox: document.getElementById('shuffle-answers-checkbox'),
         };
 
-        // --- AUTHENTICATION ---
-        onAuthStateChanged(auth, user => {
-            if (user) {
-                DOM.loginScreen.style.display = 'none';
-                DOM.mainContent.style.display = 'block';
-                checkEditMode();
-            } else {
-                DOM.loginScreen.style.display = 'flex';
-                DOM.mainContent.style.display = 'none';
-            }
-        });
+        // --- CORE FUNCTIONS ---
 
-        DOM.loginBtn.addEventListener('click', async () => {
-            const email = DOM.emailInput.value;
-            const password = DOM.passwordInput.value;
-            DOM.loginError.textContent = '';
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-            } catch (error) {
-                DOM.loginError.textContent = 'Email hoặc mật khẩu không đúng.';
-            }
-        });
-
-        DOM.logoutBtn.addEventListener('click', () => signOut(auth));
-
-        // --- EDITOR LOGIC ---
-        async function checkEditMode() {
-            const params = new URLSearchParams(window.location.search);
-            originalTestId = params.get('edit');
-            if (originalTestId) {
-                isEditMode = true;
-                DOM.pageTitle.textContent = "Chỉnh Sửa Đề Thi";
-                DOM.testIdInput.disabled = true;
-                await loadTestData(originalTestId);
-            } else {
-                renderQuestionList();
-            }
-        }
-
+        /**
+         * Loads existing test data from Firestore if in edit mode.
+         * @param {string} testId The ID of the test to load.
+         */
         async function loadTestData(testId) {
-            const testRef = doc(db, "tests", testId);
+            const testRef = doc(appState.db, "tests", testId);
             const testSnap = await getDoc(testRef);
             if (testSnap.exists()) {
                 const data = testSnap.data();
@@ -254,21 +224,24 @@
                 DOM.testDurationInput.value = data.duration || '';
                 DOM.shuffleQuestionsCheckbox.checked = data.shuffleQuestions || false;
                 DOM.shuffleAnswersCheckbox.checked = data.shuffleAnswers || false;
-                questions = data.questions || [];
+                appState.questions = data.questions || [];
                 renderQuestionList();
             } else {
                 alert("Không tìm thấy đề thi để chỉnh sửa.");
-                window.location.search = '';
+                window.location.search = ''; // Clear params to avoid loop
             }
         }
 
+        /**
+         * Renders the list of questions to the UI.
+         */
         function renderQuestionList() {
             DOM.questionListContainer.innerHTML = '';
-            if (questions.length === 0) {
+            if (appState.questions.length === 0) {
                 DOM.questionListContainer.innerHTML = '<p class="text-gray-500 text-center py-4">Chưa có câu hỏi nào.</p>';
                 return;
             }
-            questions.forEach((q, index) => {
+            appState.questions.forEach((q, index) => {
                 const item = document.createElement('div');
                 item.className = 'p-4 border rounded-lg flex justify-between items-center bg-white';
                 item.innerHTML = `
@@ -286,9 +259,13 @@
             });
         }
 
+        /**
+         * Opens the question editor modal, optionally pre-filled with question data.
+         * @param {number} [questionIndex=-1] The index of the question to edit, or -1 for a new question.
+         */
         function openModal(questionIndex = -1) {
-            editingQuestionIndex = questionIndex;
-            const q = questionIndex > -1 ? questions[questionIndex] : {};
+            appState.editingQuestionIndex = questionIndex;
+            const q = questionIndex > -1 ? appState.questions[questionIndex] : {};
             
             DOM.modalTitle.textContent = questionIndex > -1 ? 'Chỉnh sửa câu hỏi' : 'Thêm câu hỏi mới';
             DOM.questionType.value = q.type || 'multiple-choice';
@@ -299,10 +276,19 @@
             DOM.editorModal.style.display = 'flex';
         }
 
+        /**
+         * Closes any open modal.
+         */
         function closeModal() {
             DOM.editorModal.style.display = 'none';
+            DOM.batchModal.style.display = 'none';
         }
 
+        /**
+         * Renders the specific input fields for the selected question type inside the modal.
+         * @param {string} type The type of question (e.g., 'multiple-choice').
+         * @param {object} q The question object to pre-fill the UI with.
+         */
         function renderOptionsUI(type, q = {}) {
             DOM.optionsContainer.innerHTML = '';
             switch (type) {
@@ -322,7 +308,7 @@
                     break;
                 case 'cloze-test':
                      const answers = q.answers || {};
-                     const blanks = (q.text || "").match(/\(\d+\)/g) || [];
+                     const blanks = (DOM.questionText.value || "").match(/\(\d+\)/g) || [];
                      if (blanks.length === 0) {
                         DOM.optionsContainer.innerHTML = '<p class="text-red-500">Lưu ý: Không tìm thấy chỗ trống nào có dạng (1), (2),... trong nội dung câu hỏi.</p>';
                      }
@@ -340,6 +326,9 @@
             }
         }
 
+        /**
+         * Saves the question from the modal to the appState.questions array.
+         */
         function saveQuestion() {
             try {
                 const type = DOM.questionType.value;
@@ -354,7 +343,9 @@
                     case 'multi-select':
                         newQuestion.options = {};
                         document.querySelectorAll('.option-input').forEach(input => {
-                            newQuestion.options[input.dataset.key] = input.value.trim();
+                            if (input.value.trim()) {
+                                newQuestion.options[input.dataset.key] = input.value.trim();
+                            }
                         });
                         const checked = Array.from(document.querySelectorAll('.answer-input:checked')).map(el => el.value);
                         if (checked.length === 0) throw new Error("Vui lòng chọn ít nhất một đáp án.");
@@ -364,7 +355,9 @@
                         newQuestion.answers = {};
                         document.querySelectorAll('.cloze-answer-input').forEach(input => {
                             const number = input.dataset.blankNumber;
-                            newQuestion.answers[number] = input.value.split('/').map(s => s.trim()).filter(Boolean);
+                            if (input.value.trim()) {
+                                newQuestion.answers[number] = input.value.split('/').map(s => s.trim()).filter(Boolean);
+                            }
                         });
                         if (Object.keys(newQuestion.answers).length === 0) {
                             throw new Error("Vui lòng nhập đáp án cho ít nhất một chỗ trống.");
@@ -372,10 +365,10 @@
                         break;
                 }
                 
-                if (editingQuestionIndex > -1) {
-                    questions[editingQuestionIndex] = newQuestion;
+                if (appState.editingQuestionIndex > -1) {
+                    appState.questions[appState.editingQuestionIndex] = newQuestion;
                 } else {
-                    questions.push(newQuestion);
+                    appState.questions.push(newQuestion);
                 }
                 renderQuestionList();
                 closeModal();
@@ -384,11 +377,76 @@
             }
         }
         
+        /**
+         * Parses a block of text from the batch import modal into question objects.
+         * @param {string} text The raw text from the textarea.
+         * @returns {Array<object>} An array of question objects.
+         */
         function parseBatchContent(text) {
-            // This function remains the same as previous versions
-            return []; // Placeholder
+            const questionBlocks = text.split(/\n\s*(?=\d+\.\s|\[Fill in the blanks\])/).filter(b => b.trim());
+            const parsedQuestions = [];
+
+            questionBlocks.forEach(block => {
+                try {
+                    const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+                    if (lines.length === 0) return;
+
+                    const q = {};
+                    const answerLine = lines.find(l => l.toLowerCase().startsWith('answer:')) || '';
+                    const explanationLine = lines.find(l => l.toLowerCase().startsWith('explanation:')) || '';
+                    const answerIndex = lines.findIndex(l => l.toLowerCase().startsWith('answer:'));
+                    const explanationIndex = lines.findIndex(l => l.toLowerCase().startsWith('explanation:'));
+
+                    // Determine content boundaries
+                    const endOfQuestionIndex = answerIndex !== -1 ? answerIndex : (explanationIndex !== -1 ? explanationIndex : lines.length);
+                    
+                    // --- CLOZE TEST PARSING ---
+                    if (lines[0].toLowerCase().includes('[fill in the blanks]') || answerLine.includes('|')) {
+                        q.type = 'cloze-test';
+                        q.text = lines.slice(0, endOfQuestionIndex).join(' ').replace(/\[Fill in the blanks\]/ig, '').replace(/^\d+\.\s*/, '').trim();
+                        
+                        const answerString = answerLine.substring(answerLine.indexOf(':') + 1).trim();
+                        const answerGroups = answerString.split('|').map(group => group.split('/').map(answer => answer.trim()).filter(Boolean));
+                        
+                        const placeholders = q.text.match(/\(\d+\)/g) || [];
+                        q.answers = {};
+                        placeholders.forEach((placeholder, i) => {
+                            const number = placeholder.replace(/[()]/g, '');
+                            if (answerGroups[i]) q.answers[number] = answerGroups[i];
+                        });
+                    } 
+                    // --- MULTIPLE CHOICE PARSING ---
+                    else {
+                        q.text = lines[0].replace(/^\d+\.\s*/, '').trim();
+                        q.options = {};
+                        const optionLines = lines.slice(1, endOfQuestionIndex);
+                        optionLines.forEach(line => {
+                            const match = line.match(/^([A-Z])\.\s*(.*)/);
+                            if (match) q.options[match[1]] = match[2].trim();
+                        });
+
+                        if (Object.keys(q.options).length === 0) return; // Not a valid MC question
+
+                        const answerString = answerLine.substring(answerLine.indexOf(':') + 1).trim();
+                        q.answer = answerString.split(',').map(s => s.trim()).filter(Boolean);
+                        q.type = q.answer.length > 1 ? 'multi-select' : 'multiple-choice';
+                        if (q.type === 'multiple-choice') q.answer = q.answer[0];
+                    }
+
+                    q.explanation = explanationLine.substring(explanationLine.indexOf(':') + 1).trim();
+                    parsedQuestions.push(q);
+
+                } catch (e) {
+                    console.error("Lỗi khi xử lý khối câu hỏi:", block, e);
+                    alert("Đã xảy ra lỗi khi xử lý một khối câu hỏi. Vui lòng kiểm tra định dạng và thử lại.");
+                }
+            });
+            return parsedQuestions;
         }
 
+        /**
+         * Uploads the complete test data to Firestore.
+         */
         async function uploadToFirebase() {
             const testId = DOM.testIdInput.value.trim();
             const title = DOM.testTitleInput.value.trim();
@@ -397,7 +455,7 @@
             const shuffleQuestions = DOM.shuffleQuestionsCheckbox.checked;
             const shuffleAnswers = DOM.shuffleAnswersCheckbox.checked;
 
-            if (!testId || !title || questions.length === 0) {
+            if (!testId || !title || appState.questions.length === 0) {
                 alert("Vui lòng nhập đầy đủ Test ID, Tiêu đề và thêm ít nhất một câu hỏi.");
                 return;
             }
@@ -408,29 +466,23 @@
 
             try {
                 const testData = {
-                    title,
-                    type,
-                    duration,
-                    questions,
-                    shuffleQuestions,
-                    shuffleAnswers,
+                    title, type, duration, shuffleQuestions, shuffleAnswers,
+                    questions: appState.questions,
                     updatedAt: serverTimestamp()
                 };
-                if (!isEditMode) {
+                if (!appState.isEditMode) {
                     testData.createdAt = serverTimestamp();
                     testData.isLocked = false;
                     testData.answersPublished = false;
                     testData.correctIncorrectPublished = false;
                 }
 
-                await setDoc(doc(db, "tests", testId), testData, { merge: true });
+                await setDoc(doc(appState.db, "tests", testId), testData, { merge: true });
                 
                 DOM.uploadLog.textContent = `THÀNH CÔNG! Đã lưu đề thi với ID "${testId}".`;
                 DOM.uploadLog.classList.add('text-green-600');
                 
-                setTimeout(() => {
-                    window.close();
-                }, 1500);
+                setTimeout(() => window.close(), 1500);
 
             } catch (error) {
                 DOM.uploadLog.textContent = `LỖI: ${error.message}`;
@@ -440,8 +492,46 @@
             }
         }
         
-        // --- EVENT LISTENERS ---
-        function initEventListeners() {
+        // --- INITIALIZATION ---
+        function init() {
+            // Initialize Firebase
+            const app = initializeApp(window.firebaseConfig);
+            appState.db = getFirestore(app);
+            appState.auth = getAuth(app);
+
+            // Setup Authentication listener
+            onAuthStateChanged(appState.auth, user => {
+                if (user) {
+                    DOM.loginScreen.style.display = 'none';
+                    DOM.mainContent.style.display = 'block';
+                    const params = new URLSearchParams(window.location.search);
+                    appState.originalTestId = params.get('edit');
+                    if (appState.originalTestId) {
+                        appState.isEditMode = true;
+                        DOM.pageTitle.textContent = "Chỉnh Sửa Đề Thi";
+                        DOM.testIdInput.disabled = true;
+                        loadTestData(appState.originalTestId);
+                    } else {
+                        renderQuestionList();
+                    }
+                } else {
+                    DOM.loginScreen.style.display = 'flex';
+                    DOM.mainContent.style.display = 'none';
+                }
+            });
+
+            // Setup Event Listeners
+            DOM.loginBtn.addEventListener('click', async () => {
+                const email = DOM.emailInput.value;
+                const password = DOM.passwordInput.value;
+                DOM.loginError.textContent = '';
+                try {
+                    await signInWithEmailAndPassword(appState.auth, email, password);
+                } catch (error) {
+                    DOM.loginError.textContent = 'Email hoặc mật khẩu không đúng.';
+                }
+            });
+            DOM.logoutBtn.addEventListener('click', () => signOut(appState.auth));
             DOM.addQuestionBtn.addEventListener('click', () => openModal());
             DOM.cancelBtn.addEventListener('click', closeModal);
             DOM.saveQuestionBtn.addEventListener('click', saveQuestion);
@@ -449,15 +539,18 @@
             DOM.questionType.addEventListener('change', (e) => renderOptionsUI(e.target.value, { text: DOM.questionText.value }));
             
             DOM.batchImportBtn.addEventListener('click', () => DOM.batchModal.style.display = 'flex');
-            DOM.batchCancelBtn.addEventListener('click', () => DOM.batchModal.style.display = 'none');
+            DOM.batchCancelBtn.addEventListener('click', closeModal);
             DOM.batchProcessBtn.addEventListener('click', () => {
                 const parsed = parseBatchContent(DOM.batchContent.value);
                 if(parsed && parsed.length > 0) {
-                    questions.push(...parsed);
+                    appState.questions.push(...parsed);
                     renderQuestionList();
+                    alert(`Đã nhập thành công ${parsed.length} câu hỏi.`);
+                } else {
+                    alert("Không tìm thấy câu hỏi hợp lệ nào trong nội dung đã dán.");
                 }
-                DOM.batchModal.style.display = 'none';
                 DOM.batchContent.value = '';
+                closeModal();
             });
             
             DOM.questionListContainer.addEventListener('click', (e) => {
@@ -467,14 +560,15 @@
                 if (btn.classList.contains('btn-edit')) openModal(index);
                 if (btn.classList.contains('btn-delete')) {
                     if (confirm(`Bạn có chắc chắn muốn xóa câu hỏi ${index + 1}?`)) {
-                        questions.splice(index, 1);
+                        appState.questions.splice(index, 1);
                         renderQuestionList();
                     }
                 }
             });
         }
         
-        initEventListeners();
+        // Start the application
+        init();
     </script>
 </body>
 </html>
