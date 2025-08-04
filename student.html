@@ -8,7 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- === CẤU HÌNH FIREBASE === -->
     <script type="module">
       const firebaseConfig = {
           apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
@@ -22,7 +21,6 @@
       window.firebaseConfig = firebaseConfig;
     </script>
 
-    <!-- === CSS STYLES === -->
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
         .card { background-color: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
@@ -51,7 +49,6 @@
 </head>
 <body oncontextmenu="return false;">
 
-    <!-- === SECURITY OVERLAY === -->
     <div id="security-overlay" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[200]">
         <div class="text-center text-white p-4">
             <i class="fas fa-shield-halved text-6xl"></i>
@@ -60,7 +57,6 @@
         </div>
     </div>
 
-    <!-- === LOGIN SCREEN === -->
     <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen text-center p-4">
         <div class="w-full max-w-md bg-white p-8 sm:p-10 rounded-2xl shadow-xl">
             <div id="code-entry-view">
@@ -85,7 +81,6 @@
         </div>
     </div>
 
-    <!-- === TEST CONTAINER === -->
     <div id="test-container" class="hidden">
         <div id="timer-bar" class="flex justify-between items-center">
             <h2 id="test-title" class="text-xl font-bold text-gray-700"></h2>
@@ -113,7 +108,6 @@
         </div>
     </div>
 
-    <!-- === RESULT SCREEN === -->
     <div id="result-screen" class="hidden max-w-4xl mx-auto p-4">
          <div class="card text-center">
             <h1 class="text-3xl font-bold text-gray-800 mb-2">Hoàn thành!</h1>
@@ -124,7 +118,6 @@
         <div id="review-container"></div>
     </div>
 
-    <!-- === MODALS & LOADER === -->
     <div id="loader-overlay" class="hidden fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-[250]">
         <div class="text-center">
             <div class="loader mx-auto"></div>
@@ -137,12 +130,11 @@
             <p id="modal-message" class="text-gray-600 mb-6"></p>
             <div id="modal-actions">
                 <button id="modal-confirm-btn" class="btn btn-primary">Đồng ý</button>
-                <button id="modal-cancel-btn" class="btn-secondary ml-2">Hủy</button>
+                <button id="modal-cancel-btn" class="btn btn-secondary ml-2">Hủy</button>
             </div>
         </div>
     </div>
 
-    <!-- === JAVASCRIPT LOGIC === -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
@@ -158,7 +150,7 @@
             proctoringEnabled: false,
         };
 
-        // --- DOM ELEMENTS (khai báo rỗng, sẽ được gán giá trị sau khi DOM tải xong) ---
+        // --- DOM ELEMENTS ---
         const DOM = {};
 
         // --- HELPER FUNCTIONS ---
@@ -542,7 +534,8 @@
 
                         let optionsArray = Object.entries(q.options);
                         if (liveTestSettings.shuffleAnswers) {
-                            const seed = submissionData.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + q.originalIndex;
+                            // *** FIX 2: Using appState.currentSubmissionId instead of submissionData.id ***
+                            const seed = appState.currentSubmissionId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + q.originalIndex;
                             optionsArray = seededShuffle(optionsArray, seed);
                         }
 
@@ -561,13 +554,13 @@
                             }
 
                             return `<div class="flex items-center p-3 border rounded-lg ${stateClass}">
-                                        <span class="ml-3 text-gray-700"><span class="font-bold">${displayLetter}.</span> ${value}</span>
-                                    </div>`;
+                                     <span class="ml-3 text-gray-700"><span class="font-bold">${displayLetter}.</span> ${value}</span>
+                                 </div>`;
                         }).join('') + `</div>`;
                         break;
                     case 'cloze-test':
                         let allCorrect = true;
-                         questionText = q.text.replace(/\((\d+)\)/g, (match, number) => {
+                          questionText = q.text.replace(/\((\d+)\)/g, (match, number) => {
                             const sAnswer = (studentAnswer && studentAnswer[number]) ? studentAnswer[number] : "<i>(trống)</i>";
                             const correctOptions = q.answers[number] || [];
                             const isBlankCorrect = correctOptions.some(opt => opt.toLowerCase() === sAnswer.toLowerCase());
@@ -639,6 +632,7 @@
                 continueBtn: document.getElementById('continue-btn'),
                 codeInputs: document.getElementById('code-inputs'),
                 checkCodeBtn: document.getElementById('check-code-btn'),
+                loginError: document.getElementById('login-error'), // *** FIX 1: THÊM DÒNG NÀY ***
                 testContainer: document.getElementById('test-container'),
                 resultScreen: document.getElementById('result-screen'),
                 saveProgressBtn: document.getElementById('save-progress-btn'),
