@@ -10,6 +10,7 @@
 
     <!-- === CẤU HÌNH FIREBASE === -->
     <script type="module">
+      // IMPORTANT: Replace with your actual Firebase project configuration
       const firebaseConfig = {
           apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
           authDomain: "b1-baotram.firebaseapp.com",
@@ -26,7 +27,8 @@
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
         .card { background-color: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .btn-primary { background-color: #4f46e5; color: white; font-weight: 600; padding: 12px 24px; border-radius: 8px; cursor: pointer; transition: background-color 0.3s; border: none; }
+        .btn { font-weight: 600; padding: 12px 24px; border-radius: 8px; cursor: pointer; transition: all 0.3s; border: none; }
+        .btn-primary { background-color: #4f46e5; color: white; }
         .btn-primary:hover { background-color: #4338ca; }
         .btn-secondary { background-color: #6b7280; color: white; }
         .btn-secondary:hover { background-color: #4b5563; }
@@ -44,7 +46,6 @@
         .nav-btn.answered { background-color: #4f46e5; color: white; border-color: #4f46e5; }
         .nav-btn.current { border-color: #4f46e5; box-shadow: 0 0 0 2px #4f46e5; }
         
-        /* Security Overlay */
         #security-overlay {
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
@@ -55,14 +56,14 @@
 
     <!-- === SECURITY OVERLAY === -->
     <div id="security-overlay" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[200]">
-        <div class="text-center text-white">
-            <i class="fas fa-eye-slash text-6xl"></i>
+        <div class="text-center text-white p-4">
+            <i class="fas fa-shield-halved text-6xl"></i>
             <h2 class="text-3xl font-bold mt-4">NỘI DUNG ĐANG ĐƯỢC BẢO VỆ</h2>
-            <p class="mt-2">Vui lòng quay lại màn hình làm bài.</p>
+            <p class="mt-2">Vui lòng quay lại màn hình làm bài để tiếp tục.</p>
         </div>
     </div>
 
-    <!-- === MÀN HÌNH ĐĂNG NHẬP === -->
+    <!-- === LOGIN SCREEN === -->
     <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen text-center p-4">
         <div class="w-full max-w-md bg-white p-8 sm:p-10 rounded-2xl shadow-xl">
             <div id="code-entry-view">
@@ -76,22 +77,23 @@
                     <input type="text" maxlength="1" class="code-input">
                     <input type="text" maxlength="1" class="code-input">
                 </div>
-                <button id="check-code-btn" class="btn-primary mt-4 text-lg w-full">Kiểm tra mã</button>
+                <button id="check-code-btn" class="btn btn-primary mt-4 text-lg w-full">Kiểm tra mã</button>
                 <p id="login-error" class="text-red-500 mt-4 h-5"></p>
             </div>
             <div id="confirmation-view" class="hidden">
                 <h2 class="text-2xl font-bold text-gray-800">Chào mừng,</h2>
                 <p id="student-name-confirm" class="text-3xl font-bold text-indigo-600 my-4"></p>
-                <p class="text-gray-600 mb-8">Đây có phải là bạn không?</p>
+                <p class="text-gray-600 mb-2">Bạn sắp làm bài kiểm tra:</p>
+                <p id="test-title-confirm" class="text-xl font-semibold text-gray-700 mb-8"></p>
                 <div class="flex gap-4">
                     <button id="not-me-btn" class="btn-secondary w-1/2">Không phải tôi</button>
-                    <button id="continue-btn" class="btn-primary w-1/2">Tiếp tục</button>
+                    <button id="continue-btn" class="btn-primary w-1/2">Bắt đầu</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- === KHUNG BÀI THI (CÓ NAVIGATION PANEL) === -->
+    <!-- === TEST CONTAINER === -->
     <div id="test-container" class="hidden">
         <div id="timer-bar" class="flex justify-between items-center">
             <h2 id="test-title" class="text-xl font-bold text-gray-700"></h2>
@@ -103,20 +105,20 @@
             </div>
         </div>
         
-        <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-8 pt-8">
-            <!-- Cột câu hỏi -->
+        <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-8 pt-8 px-4">
+            <!-- Questions Column -->
             <div class="lg:col-span-3">
                 <div id="question-container"></div>
                 <div class="flex flex-col sm:flex-row justify-center items-center gap-4 my-8">
-                    <button id="save-progress-btn" class="btn-secondary text-lg w-full sm:w-auto"><i class="fa-regular fa-floppy-disk"></i> Lưu tiến trình</button>
-                    <button id="submit-btn" class="btn-success text-lg w-full sm:w-auto"><i class="fa-regular fa-paper-plane"></i> Nộp bài</button>
+                    <button id="save-progress-btn" class="btn btn-secondary text-lg w-full sm:w-auto"><i class="fa-regular fa-floppy-disk"></i> Lưu tiến trình</button>
+                    <button id="submit-btn" class="btn btn-success text-lg w-full sm:w-auto"><i class="fa-regular fa-paper-plane"></i> Nộp bài</button>
                 </div>
             </div>
-            <!-- Cột Navigation Panel -->
+            <!-- Navigation Panel Column -->
             <div class="hidden lg:block lg:col-span-1">
                 <div id="navigation-panel" class="bg-white p-4 rounded-lg shadow-md">
                     <h3 class="font-bold mb-4 text-center">Câu hỏi</h3>
-                    <div id="nav-grid" class="grid grid-cols-4 gap-2">
+                    <div id="nav-grid" class="grid grid-cols-5 gap-2">
                         <!-- Navigation buttons will be injected here -->
                     </div>
                 </div>
@@ -124,8 +126,8 @@
         </div>
     </div>
 
-    <!-- === MÀN HÌNH KẾT QUẢ === -->
-    <div id="result-screen" class="hidden max-w-4xl mx-auto">
+    <!-- === RESULT SCREEN === -->
+    <div id="result-screen" class="hidden max-w-4xl mx-auto p-4">
          <div class="card text-center">
             <h1 class="text-3xl font-bold text-gray-800 mb-2">Hoàn thành!</h1>
             <p class="text-gray-600 mb-6">Dưới đây là kết quả bài làm của bạn.</p>
@@ -135,14 +137,14 @@
         <div id="review-container"></div>
     </div>
 
-    <!-- === MODAL VÀ LOADER === -->
-    <div id="loader-overlay" class="hidden fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
+    <!-- === MODALS & LOADER === -->
+    <div id="loader-overlay" class="hidden fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-[250]">
         <div class="text-center">
             <div class="loader mx-auto"></div>
             <p id="loader-text" class="text-lg font-semibold text-gray-700 mt-4">Đang tải...</p>
         </div>
     </div>
-    <div id="modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div id="modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-[300] p-4">
         <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm text-center">
             <h3 id="modal-title" class="text-xl font-bold text-gray-900 mb-4">Thông báo</h3>
             <p id="modal-message" class="text-gray-600 mb-6"></p>
@@ -153,7 +155,7 @@
         </div>
     </div>
 
-    <!-- === LOGIC JAVASCRIPT === -->
+    <!-- === JAVASCRIPT LOGIC === -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
@@ -161,18 +163,18 @@
         const app = initializeApp(window.firebaseConfig);
         const db = getFirestore(app);
         let currentSubmissionId = null;
-        let currentTest = null;
+        let currentTest = null; // This will hold the testSnapshot
         let timerInterval;
         let violationCount = 0;
         const MAX_VIOLATIONS = 10;
         let proctoringEnabled = false;
-        let lastBlurTime = null;
 
         const DOM = {
             loginScreen: document.getElementById('login-screen'),
             codeEntryView: document.getElementById('code-entry-view'),
             confirmationView: document.getElementById('confirmation-view'),
             studentNameConfirm: document.getElementById('student-name-confirm'),
+            testTitleConfirm: document.getElementById('test-title-confirm'),
             notMeBtn: document.getElementById('not-me-btn'),
             continueBtn: document.getElementById('continue-btn'),
             codeInputs: document.getElementById('code-inputs'),
@@ -186,7 +188,6 @@
             testTitle: document.getElementById('test-title'),
             studentNameDisplay: document.getElementById('student-name-display'),
             timerBar: document.getElementById('timer-bar'),
-            timerDisplay: document.getElementById('timer-display'),
             timer: document.getElementById('timer'),
             scoreText: document.getElementById('score-text'),
             feedbackSummary: document.getElementById('feedback-summary'),
@@ -215,54 +216,51 @@
         // --- PROCTORING & SECURITY ---
         function initProctoring() {
             if (proctoringEnabled) return;
-            try { document.documentElement.requestFullscreen(); } catch (err) { console.warn("Fullscreen request failed:", err); }
             document.addEventListener('keydown', handleKeydown);
             document.addEventListener('visibilitychange', handleVisibilityChange);
             window.addEventListener('blur', handleBlur);
             window.addEventListener('focus', handleFocus);
-            if (currentTest.type === 'test') {
-                window.addEventListener('beforeunload', handleBeforeUnload);
-            }
+            document.addEventListener('copy', (e) => e.preventDefault());
+            document.addEventListener('paste', (e) => e.preventDefault());
+            document.addEventListener('cut', (e) => e.preventDefault());
+            window.addEventListener('beforeunload', handleBeforeUnload);
             proctoringEnabled = true;
         }
         
         function removeProctoring() {
+            if (!proctoringEnabled) return;
             document.removeEventListener('keydown', handleKeydown);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('blur', handleBlur);
             window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('copy', (e) => e.preventDefault());
+            document.removeEventListener('paste', (e) => e.preventDefault());
+            document.removeEventListener('cut', (e) => e.preventDefault());
             window.removeEventListener('beforeunload', handleBeforeUnload);
             proctoringEnabled = false;
         }
 
         function handleKeydown(e) {
-            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I', 'J'].includes(e.key)) || (e.ctrlKey && e.key === 'U')) {
+            // Block F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+S
+            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I', 'J'].includes(e.key.toUpperCase())) || (e.ctrlKey && ['U', 'S'].includes(e.key.toUpperCase()))) {
                 e.preventDefault();
+                handleViolation("Sử dụng phím tắt bị cấm");
             }
         }
 
         function handleVisibilityChange() {
             if (document.hidden) {
-                handleViolation();
+                handleViolation("Chuyển sang tab hoặc cửa sổ khác");
             }
         }
         
         function handleBlur() {
             DOM.securityOverlay.classList.remove('hidden');
-            lastBlurTime = new Date();
-            handleViolation();
+            handleViolation("Thoát khỏi màn hình làm bài");
         }
 
         function handleFocus() {
             DOM.securityOverlay.classList.add('hidden');
-            if (lastBlurTime) {
-                const duration = Math.round((new Date() - lastBlurTime) / 1000);
-                const submissionRef = doc(db, 'submissions', currentSubmissionId);
-                updateDoc(submissionRef, {
-                    violationLog: arrayUnion({ out: lastBlurTime, duration: duration })
-                });
-                lastBlurTime = null;
-            }
             if (violationCount > 0 && violationCount < MAX_VIOLATIONS) {
                 showModal(
                     'Cảnh báo vi phạm!',
@@ -273,21 +271,24 @@
             }
         }
 
-        async function handleViolation() {
+        async function handleViolation(reason = "Không rõ") {
             if (!proctoringEnabled) return;
             violationCount++;
             const submissionRef = doc(db, 'submissions', currentSubmissionId);
-            await updateDoc(submissionRef, { violationCount: violationCount });
+            await updateDoc(submissionRef, { 
+                violationCount: violationCount,
+                violationLog: arrayUnion({ reason: reason, timestamp: new Date() })
+            });
             if (violationCount >= MAX_VIOLATIONS && currentTest.type === 'test') {
-                submitTest(true);
+                submitTest(true); // Force submit
             }
         }
 
         function handleBeforeUnload(e) {
-            if (proctoringEnabled) {
-                submitTest(true);
+            if (proctoringEnabled && currentTest.type === 'test') {
                 e.preventDefault();
-                e.returnValue = '';
+                e.returnValue = 'Bạn có chắc chắn muốn rời khỏi? Bài làm sẽ được nộp tự động nếu bạn thoát.';
+                return e.returnValue;
             }
         }
 
@@ -296,12 +297,33 @@
             try {
                 currentSubmissionId = submissionId;
                 const submissionRef = doc(db, 'submissions', currentSubmissionId);
-                const submissionSnap = await getDoc(submissionRef);
-                if (!submissionSnap.exists()) throw new Error("Mã không hợp lệ.");
+                let submissionSnap = await getDoc(submissionRef);
+                if (!submissionSnap.exists()) throw new Error("Mã truy cập không hợp lệ.");
                 
-                const submissionData = submissionSnap.data();
+                let submissionData = submissionSnap.data();
+                
+                // --- VERSIONING & SNAPSHOT LOGIC ---
+                // If student has already started, use their existing test snapshot.
+                if (submissionData.testSnapshot) {
+                    currentTest = submissionData.testSnapshot;
+                } else {
+                    // If this is the first time, fetch the latest test and create a snapshot.
+                    const testRef = doc(db, 'tests', submissionData.testId);
+                    const testSnap = await getDoc(testRef);
+                    if (!testSnap.exists()) throw new Error("Không tìm thấy đề thi gốc.");
+                    currentTest = testSnap.data();
+                    
+                    // Update the submission with the snapshot and the REAL start time
+                    await updateDoc(submissionRef, {
+                        testSnapshot: currentTest,
+                        startTime: serverTimestamp()
+                    });
+                    // Re-fetch submission data to get the server-generated timestamp
+                    submissionSnap = await getDoc(submissionRef);
+                    submissionData = submissionSnap.data();
+                }
+
                 DOM.studentNameDisplay.textContent = `Thí sinh: ${submissionData.studentName}`;
-                currentTest = await fetchTest(submissionData.testId);
 
                 if (currentTest.isLocked && submissionData.status !== 'submitted') {
                     throw new Error("Đề thi này đã bị khóa. Vui lòng liên hệ giáo viên.");
@@ -318,59 +340,53 @@
                     DOM.testContainer.classList.remove('hidden');
                 }
             } catch (error) {
-                 showModal('Lỗi', error.message, null, false);
-                 DOM.notMeBtn.click(); // Reset login view
+                 showModal('Lỗi', error.message, () => {
+                    DOM.notMeBtn.click(); // Reset login view
+                 }, false);
             } finally {
                 hideLoader();
             }
         }
 
-        // Login Logic
-        const inputs = DOM.codeInputs.querySelectorAll('input');
+        // --- LOGIN LOGIC ---
+        const inputs = Array.from(DOM.codeInputs.querySelectorAll('input'));
         DOM.codeInputs.addEventListener('input', (e) => {
             const target = e.target;
-            const val = target.value;
-            if (isNaN(val)) {
-                target.value = '';
-                return;
-            }
-            if (val != '') {
-                const next = target.nextElementSibling;
-                if (next) {
-                    next.focus();
-                }
+            if (target.value) {
+                const next = inputs[inputs.indexOf(target) + 1];
+                if (next) next.focus();
             }
         });
         DOM.codeInputs.addEventListener('keydown', (e) => {
             const target = e.target;
-            if (e.key === 'Backspace' && target.value === '') {
-                const prev = target.previousElementSibling;
-                if (prev) {
-                    prev.focus();
-                }
+            if (e.key === 'Backspace' && !target.value) {
+                const prev = inputs[inputs.indexOf(target) - 1];
+                if (prev) prev.focus();
             }
         });
 
         DOM.checkCodeBtn.addEventListener('click', async () => {
-            const code = Array.from(inputs).map(input => input.value).join('');
-            const loginError = document.getElementById('login-error');
-
+            const code = inputs.map(input => input.value).join('');
             if (code.length !== 6) {
-                loginError.textContent = 'Vui lòng nhập đủ 6 chữ số.';
+                document.getElementById('login-error').textContent = 'Vui lòng nhập đủ 6 chữ số.';
                 return;
             }
-            loginError.textContent = '';
+            document.getElementById('login-error').textContent = '';
             showLoader('Đang kiểm tra...');
 
             try {
-                currentSubmissionId = code;
-                const submissionRef = doc(db, 'submissions', currentSubmissionId);
+                const submissionRef = doc(db, 'submissions', code);
                 const submissionSnap = await getDoc(submissionRef);
-
                 if (!submissionSnap.exists()) throw new Error("Mã truy cập không hợp lệ.");
                 
                 const submissionData = submissionSnap.data();
+                const testRef = doc(db, 'tests', submissionData.testId);
+                const testSnap = await getDoc(testRef);
+                if (!testSnap.exists()) throw new Error("Không tìm thấy đề thi tương ứng.");
+
+                currentSubmissionId = code;
                 DOM.studentNameConfirm.textContent = submissionData.studentName;
+                DOM.testTitleConfirm.textContent = testSnap.data().title;
                 DOM.codeEntryView.classList.add('hidden');
                 DOM.confirmationView.classList.remove('hidden');
 
@@ -390,14 +406,7 @@
 
         DOM.continueBtn.addEventListener('click', () => startSession(currentSubmissionId));
 
-        async function fetchTest(testId) {
-            if (!testId) throw new Error("Không tìm thấy Test ID trong dữ liệu bài nộp.");
-            const testRef = doc(db, 'tests', testId);
-            const testSnap = await getDoc(testRef);
-            if (!testSnap.exists()) throw new Error(`Không tìm thấy đề thi với ID: ${testId}`);
-            return testSnap.data();
-        }
-
+        // --- TEST RENDERING & FUNCTIONALITY ---
         function renderTest(testData, savedAnswers = {}) {
             DOM.testTitle.textContent = testData.title;
             DOM.questionContainer.innerHTML = '';
@@ -422,7 +431,7 @@
                                 const savedAnswer = savedAnswers[index];
                                 const isChecked = Array.isArray(savedAnswer) ? savedAnswer.includes(key) : savedAnswer === key;
                                 return `<label class="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                                    <input type="${inputType}" name="q_${index}" value="${key}" class="h-5 w-5 text-indigo-600" ${isChecked ? 'checked' : ''}>
+                                    <input type="${inputType}" name="q_${index}" value="${key}" class="h-5 w-5 text-indigo-600 focus:ring-indigo-500" ${isChecked ? 'checked' : ''}>
                                     <span class="ml-3 text-gray-700">${key}. ${q.options[key]}</span>
                                 </label>`;
                             }).join('') + `</div>`;
@@ -433,13 +442,12 @@
                             return `(${number}) <input type="text" data-blank-number="${number}" class="input-field-inline cloze-input" value="${savedValue}">`;
                         });
                         optionsHTML = `<div class="text-lg leading-loose mt-4">${questionText}</div>`;
-                        questionText = q.text.split('(')[0]; // Show only the instruction part
+                        questionText = q.text.split(/ \(\d+\)/)[0]; // Show only the instruction part
                         break;
                 }
-                questionCard.innerHTML = `<p class="question-title">${index + 1}. ${questionText}</p>${optionsHTML}`;
+                questionCard.innerHTML = `<p class="font-semibold text-gray-800">${index + 1}. ${questionText}</p>${optionsHTML}`;
                 DOM.questionContainer.appendChild(questionCard);
 
-                // Populate Navigation Panel
                 const navBtn = document.createElement('button');
                 navBtn.id = `nav-btn-${index}`;
                 navBtn.className = 'nav-btn flex items-center justify-center rounded-md';
@@ -451,25 +459,17 @@
             });
             
             updateNavPanel();
-
             DOM.questionContainer.addEventListener('input', updateNavPanel);
             
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     const index = entry.target.dataset.questionIndex;
                     const navBtn = document.getElementById(`nav-btn-${index}`);
-                    if (!navBtn) return;
-                    if (entry.isIntersecting) {
-                        navBtn.classList.add('current');
-                    } else {
-                        navBtn.classList.remove('current');
-                    }
+                    if (navBtn) navBtn.classList.toggle('current', entry.isIntersecting);
                 });
             }, { rootMargin: "-50% 0px -50% 0px" });
 
-            document.querySelectorAll('.card[data-question-index]').forEach(card => {
-                observer.observe(card);
-            });
+            document.querySelectorAll('.card[data-question-index]').forEach(card => observer.observe(card));
         }
         
         function updateNavPanel() {
@@ -478,41 +478,28 @@
             currentTest.questions.forEach((q, index) => {
                 const navBtn = document.getElementById(`nav-btn-${index}`);
                 if (!navBtn) return;
-
-                let isAnswered = false;
                 const studentAnswer = answers[index];
-
-                if (q.type === 'cloze-test') {
-                    isAnswered = studentAnswer && Object.values(studentAnswer).some(val => val !== '');
-                } else {
-                    isAnswered = studentAnswer !== null && studentAnswer !== undefined && (Array.isArray(studentAnswer) ? studentAnswer.length > 0 : true);
-                }
-
-                if (isAnswered) {
-                    navBtn.classList.add('answered');
-                } else {
-                    navBtn.classList.remove('answered');
-                }
+                const isAnswered = studentAnswer !== null && studentAnswer !== undefined &&
+                    (Array.isArray(studentAnswer) ? studentAnswer.length > 0 : (typeof studentAnswer === 'object' ? Object.values(studentAnswer).some(v => v) : true));
+                navBtn.classList.toggle('answered', isAnswered);
             });
         }
 
         function setupTestEnvironment(testData, submissionData) {
-            if (testData.type === 'test') {
-                DOM.timerDisplay.classList.remove('hidden');
-                DOM.saveProgressBtn.classList.add('hidden');
-                startTimer(submissionData.startTime, testData.duration, true);
+            if (testData.duration > 0) {
+                DOM.timer.parentElement.classList.remove('hidden');
+                startTimer(submissionData.startTime, testData.duration, testData.type === 'test');
             } else {
-                DOM.saveProgressBtn.classList.remove('hidden');
-                if (testData.duration > 0) {
-                    DOM.timerDisplay.classList.remove('hidden');
-                    startTimer(submissionData.startTime, testData.duration, false);
-                } else {
-                    DOM.timerDisplay.classList.add('hidden');
-                }
+                DOM.timer.parentElement.classList.add('hidden');
             }
+            DOM.saveProgressBtn.style.display = testData.type === 'assignment' ? 'block' : 'none';
         }
 
         function startTimer(startTime, durationMinutes, autoSubmit) {
+            if (!startTime) { // Safety check if startTime is null
+                DOM.timer.textContent = "Bắt đầu";
+                return;
+            }
             const testEndTime = startTime.toDate().getTime() + durationMinutes * 60 * 1000;
             timerInterval = setInterval(() => {
                 const distance = testEndTime - new Date().getTime();
@@ -520,7 +507,7 @@
                     clearInterval(timerInterval);
                     DOM.timer.textContent = "Hết giờ";
                     if (autoSubmit) {
-                        showModal('Hết giờ!', 'Bài của bạn sẽ được nộp tự động.', () => submitTest(), false);
+                        showModal('Hết giờ!', 'Bài của bạn sẽ được nộp tự động.', () => submitTest(true), false);
                     }
                     return;
                 }
@@ -558,9 +545,6 @@
 
         async function submitTest(isForced = false) {
             removeProctoring();
-            if (document.fullscreenElement) {
-                document.exitFullscreen();
-            }
             clearInterval(timerInterval);
             showLoader('Đang nộp bài và chấm điểm...');
             
@@ -571,24 +555,25 @@
 
                 currentTest.questions.forEach((q, index) => {
                     const studentAnswer = answers[index];
+                    const questionPoints = q.points || 1; // Default 1 point per question part
                     switch (q.type) {
                         case 'multiple-choice':
-                            totalPoints++;
-                            if (studentAnswer === q.answer) score++;
+                            totalPoints += questionPoints;
+                            if (studentAnswer === q.answer) score += questionPoints;
                             break;
                         case 'multi-select':
-                            totalPoints++;
+                            totalPoints += questionPoints;
                             const correctAnswers = q.answer.sort();
                             const studentAnswersSorted = Array.isArray(studentAnswer) ? studentAnswer.sort() : [];
-                            if (JSON.stringify(correctAnswers) === JSON.stringify(studentAnswersSorted)) score++;
+                            if (JSON.stringify(correctAnswers) === JSON.stringify(studentAnswersSorted)) score += questionPoints;
                             break;
                         case 'cloze-test':
                             Object.keys(q.answers).forEach(blankNumber => {
-                                totalPoints++;
+                                totalPoints += questionPoints;
                                 const correctAnswerOptions = q.answers[blankNumber];
                                 const studentBlankAnswer = studentAnswer ? studentAnswer[blankNumber] : '';
                                 if (studentBlankAnswer && correctAnswerOptions.some(option => option.toLowerCase() === studentBlankAnswer.toLowerCase())) {
-                                    score++;
+                                    score += questionPoints;
                                 }
                             });
                             break;
@@ -601,7 +586,7 @@
                 const submissionSnap = await getDoc(doc(db, 'submissions', currentSubmissionId));
                 displayResults(submissionSnap.data(), currentTest);
                 if (isForced) {
-                    showModal("Bài thi đã tự động nộp", `Bạn đã vi phạm quy chế thi.`, null, false);
+                    showModal("Bài thi đã tự động nộp", `Lý do: ${violationCount >= MAX_VIOLATIONS ? 'Vi phạm quy chế thi quá số lần cho phép.' : 'Hết thời gian làm bài.'}`, null, false);
                 }
             } catch (error) {
                 showModal('Lỗi', 'Không thể nộp bài. Vui lòng thử lại.', null, false);
@@ -621,48 +606,56 @@
             DOM.feedbackSummary.textContent = `Bạn đã trả lời đúng ${score} trên tổng số ${totalPoints} điểm.`;
 
             DOM.reviewContainer.innerHTML = '';
-            if (!testData.answersPublished && !testData.correctIncorrectPublished) {
-                 DOM.reviewContainer.innerHTML = '<p class="text-center text-gray-600 mt-8">Giáo viên chưa công bố đáp án. Vui lòng quay lại sau.</p>';
+            if (!testData.correctIncorrectPublished) {
+                 DOM.reviewContainer.innerHTML = '<p class="text-center text-gray-600 mt-8">Giáo viên chưa công bố kết quả. Vui lòng quay lại sau.</p>';
                  return;
             }
 
-            DOM.reviewContainer.innerHTML = '<h2 class="section-title">Xem lại bài làm và giải thích</h2>';
+            DOM.reviewContainer.innerHTML = '<h2 class="text-2xl font-bold text-gray-700 my-6 text-center">Xem lại bài làm</h2>';
             testData.questions.forEach((q, index) => {
                 const studentAnswer = submissionData.answers[index];
                 const reviewCard = document.createElement('div');
                 reviewCard.className = 'card';
                 let optionsHTML = '';
                 let questionText = q.text;
+                let isQuestionCorrect = false;
 
                 switch (q.type) {
                     case 'multiple-choice':
-                        const isCorrect = studentAnswer === q.answer;
+                        isQuestionCorrect = studentAnswer === q.answer;
                         optionsHTML = `<div class="space-y-2 mt-4">` + Object.keys(q.options).map(key => {
                             let stateClass = '';
                             if (testData.answersPublished && key === q.answer) stateClass = 'bg-green-100 border-green-500';
-                            else if (key === studentAnswer && !isCorrect) stateClass = 'bg-red-100 border-red-500';
-                            else if (key === studentAnswer && isCorrect) stateClass = 'bg-green-100 border-green-500';
+                            else if (key === studentAnswer && !isQuestionCorrect) stateClass = 'bg-red-100 border-red-500';
+                            else if (key === studentAnswer && isQuestionCorrect) stateClass = 'bg-green-100 border-green-500';
                             return `<div class="flex items-center p-3 border rounded-lg ${stateClass}"><span class="ml-3 text-gray-700">${key}. ${q.options[key]}</span></div>`;
                         }).join('') + `</div>`;
                         break;
                     case 'cloze-test':
-                        questionText = q.text.replace(/\((\d+)\)/g, (match, number) => {
+                         let allCorrect = true;
+                         questionText = q.text.replace(/\((\d+)\)/g, (match, number) => {
                             const sAnswer = (studentAnswer && studentAnswer[number]) ? studentAnswer[number] : "<i>(trống)</i>";
-                            const correctOptions = q.answers[number];
+                            const correctOptions = q.answers[number] || [];
                             const isBlankCorrect = correctOptions.some(opt => opt.toLowerCase() === sAnswer.toLowerCase());
+                            if (!isBlankCorrect) allCorrect = false;
                             const color = isBlankCorrect ? 'green' : 'red';
                             const cAnswerDisplay = testData.answersPublished ? `(${correctOptions.join(' / ')})` : '';
                             return `(${number}) <span class="font-bold text-${color}-600 border-b-2 border-${color}-400 px-1">${sAnswer}</span> <span class="text-green-600">${cAnswerDisplay}</span>`;
                         });
+                        isQuestionCorrect = allCorrect;
                         optionsHTML = `<div class="text-lg leading-loose mt-4">${questionText}</div>`;
-                        questionText = q.text.split('(')[0];
+                        questionText = q.text.split(/ \(\d+\)/)[0];
                         break;
+                    // Add multi-select review logic if needed
                 }
                 
                 reviewCard.innerHTML = `
-                    <p class="question-title">${index + 1}. ${questionText}</p>
+                    <div class="flex justify-between items-center">
+                        <p class="font-semibold text-gray-800">${index + 1}. ${questionText}</p>
+                        ${isQuestionCorrect ? '<span class="text-green-600 font-bold">ĐÚNG</span>' : '<span class="text-red-600 font-bold">SAI</span>'}
+                    </div>
                     ${optionsHTML}
-                    ${testData.answersPublished ? `<div class="feedback mt-4 feedback-correct" style="display: block;"><p><strong>Giải thích:</strong> ${q.explanation || 'Không có giải thích.'}</p></div>` : ''}
+                    ${testData.answersPublished && q.explanation ? `<div class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200"><p><strong>Giải thích:</strong> ${q.explanation}</p></div>` : ''}
                 `;
                 DOM.reviewContainer.appendChild(reviewCard);
             });
@@ -679,13 +672,18 @@
                 hideLoader();
             }
         });
-        DOM.submitBtn.addEventListener('click', () => showModal('Xác nhận nộp bài', 'Bạn có chắc chắn muốn nộp bài không?', () => submitTest(), true));
+        DOM.submitBtn.addEventListener('click', () => showModal('Xác nhận nộp bài', 'Bạn có chắc chắn muốn nộp bài không? Bạn sẽ không thể sửa lại sau khi nộp.', () => submitTest(), true));
 
         window.addEventListener('load', () => {
             const params = new URLSearchParams(window.location.search);
             const submissionId = params.get('submission_id');
             if (submissionId) {
-                startSession(submissionId);
+                // Auto-fill and check code if coming from a direct link
+                const codeArray = submissionId.split('');
+                inputs.forEach((input, index) => input.value = codeArray[index] || '');
+                DOM.checkCodeBtn.click();
+            } else {
+                inputs[0].focus();
             }
         });
 
