@@ -241,6 +241,7 @@
                     answers,
                     totalQuestions,
                     updatedAt: serverTimestamp(),
+                    folderId: null // <<<!!! CHỈNH SỬA DUY NHẤT !!!>>>
                 };
                 if (!isEditMode) {
                     testData.createdAt = serverTimestamp();
