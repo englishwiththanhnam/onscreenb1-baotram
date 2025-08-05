@@ -48,13 +48,13 @@
         .btn-danger:hover { background: #dc2626; transform: translateY(-2px); }
         .input-field { background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.5); color: var(--text-primary); transition: all 0.2s ease-in-out; width: 100%; padding: 12px; border-radius: 12px; }
         .input-field:focus { background: rgba(255, 255, 255, 0.7); border-color: var(--primary-accent); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3); outline: none; }
-        textarea.input-field { min-height: 250px; font-family: monospace; font-size: 14px; }
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; }
         .modal.is-open { display: flex; }
         .modal-content { animation: scaleIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         .loader { width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid var(--primary-accent); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #data-table th { position: sticky; top: 0; background-color: rgba(255,255,255,0.6); backdrop-filter: blur(5px); }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -75,7 +75,7 @@
         </div>
     </div>
 
-    <div id="main-content" class="max-w-6xl mx-auto relative z-10" style="display: none;">
+    <div id="main-content" class="max-w-7xl mx-auto relative z-10" style="display: none;">
         <header class="flex justify-between items-center mb-8">
             <h1 id="page-title" class="text-4xl font-bold text-gray-800">Soạn Thảo Bộ Từ Vựng</h1>
             <button id="logout-btn" class="btn btn-danger">Đăng xuất</button>
@@ -97,20 +97,32 @@
 
         <div class="glass-panel p-6">
             <h2 class="text-2xl font-bold text-gray-700 mb-4">2. Dữ liệu đầu vào</h2>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Danh sách từ vựng</label>
-                    <p class="text-xs text-gray-500 mb-2 font-mono">Định dạng: <strong>word;type;pronunciation;meaning</strong></p>
-                    <textarea id="vocab-data" class="input-field" placeholder="jealous;adjective;/ˈdʒeləs/;ghen tuông, ghen tị"></textarea>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Danh sách cấu trúc (Tùy chọn)</label>
-                    <p class="text-xs text-gray-500 mb-2 font-mono">Định dạng: <strong>structure phrase:meaning</strong></p>
-                    <textarea id="structure-data" class="input-field" placeholder="be jealous of sb/sth:ghen tị với ai đó"></textarea>
-                </div>
+            <div class="flex items-center gap-4">
+                <label for="csv-upload" class="btn btn-secondary"><i class="fas fa-upload mr-2"></i>Tải lên file CSV</label>
+                <input type="file" id="csv-upload" class="hidden" accept=".csv">
+                <p id="file-name" class="text-gray-600"></p>
             </div>
-            <div class="mt-6 text-center">
-                <button id="enrich-ai-btn" class="btn btn-secondary"><i class="fas fa-wand-magic-sparkles mr-2"></i>Phân tích & Làm giàu bằng AI</button>
+        </div>
+
+        <div id="data-review-section" class="glass-panel p-6 mt-8 hidden">
+             <h2 class="text-2xl font-bold text-gray-700 mb-4">3. Xem lại & Làm giàu dữ liệu</h2>
+             <div id="table-container" class="max-h-[50vh] overflow-auto rounded-lg border border-white/50">
+                <table id="data-table" class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left">
+                            <th class="p-3">Từ vựng</th>
+                            <th class="p-3">Loại từ</th>
+                            <th class="p-3">Phiên âm</th>
+                            <th class="p-3">Nghĩa</th>
+                            <th class="p-3">Cấu trúc liên kết</th>
+                            <th class="p-3 text-center">AI</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-table-body"></tbody>
+                </table>
+             </div>
+             <div class="mt-6 text-center">
+                <button id="enrich-ai-btn" class="btn btn-secondary"><i class="fas fa-wand-magic-sparkles mr-2"></i>Làm giàu toàn bộ bằng AI</button>
                 <p id="ai-log" class="text-sm text-gray-600 mt-2 h-5"></p>
             </div>
         </div>
@@ -154,8 +166,10 @@
             loginError: document.getElementById('login-error'),
             testIdInput: document.getElementById('test-id'),
             testTitleInput: document.getElementById('test-title'),
-            vocabDataTextarea: document.getElementById('vocab-data'),
-            structureDataTextarea: document.getElementById('structure-data'),
+            csvUploadInput: document.getElementById('csv-upload'),
+            fileNameDisplay: document.getElementById('file-name'),
+            dataReviewSection: document.getElementById('data-review-section'),
+            dataTableBody: document.getElementById('data-table-body'),
             enrichAiBtn: document.getElementById('enrich-ai-btn'),
             aiLog: document.getElementById('ai-log'),
             uploadBtn: document.getElementById('upload-btn'),
@@ -178,16 +192,8 @@
                 DOM.testIdInput.value = testId;
                 DOM.testTitleInput.value = data.title || '';
                 localWordList = data.wordList || [];
-                
-                const vocabText = localWordList.map(w => `${w.word};${w.type};${w.pronunciation};${w.meaning}`).join('\n');
-                DOM.vocabDataTextarea.value = vocabText;
-
-                const structureText = localWordList
-                    .filter(w => w.structure && w.structure.trim())
-                    .map(w => `${w.structure.replace(/\*/g, '')}:${w.structure_meaning || ''}`)
-                    .join('\n');
-                DOM.structureDataTextarea.value = structureText;
-
+                renderTable();
+                DOM.dataReviewSection.classList.remove('hidden');
             } else {
                 showAlert("Không tìm thấy bộ từ vựng để chỉnh sửa.");
                 window.location.search = '';
@@ -195,8 +201,8 @@
         }
 
         async function callGeminiAPI(prompt) {
-            const apiKey = "AIzaSyBXE8xq9rQop1vlcGSqD7csklx8kLOTQ9Y"; 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-preview-0514:generateContent?key=${apiKey}`;
+            const apiKey = "AIzaSyBXE8xq9rQop1vlcGSqD7csklx8kLOTQ9Y"; // <-- PASTE YOUR API KEY HERE
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
 
             const payload = {
                 contents: [{ parts: [{ text: prompt }] }],
@@ -221,82 +227,125 @@
             return JSON.parse(result.candidates[0].content.parts[0].text);
         }
 
-        async function enrichWithAI() {
-            const vocabLines = DOM.vocabDataTextarea.value.trim().split('\n').filter(Boolean);
-            const structureLines = DOM.structureDataTextarea.value.trim().split('\n').filter(Boolean);
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
 
-            if (vocabLines.length === 0) {
-                showAlert("Vui lòng nhập ít nhất một từ vựng.");
+            DOM.fileNameDisplay.textContent = file.name;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target.result;
+                parseAndStructureCSV(text);
+                renderTable();
+                DOM.dataReviewSection.classList.remove('hidden');
+            };
+            reader.readAsText(file);
+        }
+
+        function parseAndStructureCSV(csvText) {
+            const rows = csvText.trim().split('\n');
+            const vocab = [];
+            const structures = [];
+
+            rows.forEach(row => {
+                const columns = row.split(',').map(c => c.trim().replace(/"/g, ''));
+                if (columns.length >= 4 && columns[0] && columns[1] && columns[2] && columns[3]) {
+                    vocab.push({ word: columns[0], type: columns[1], pronunciation: columns[2], meaning: columns[3] });
+                } else if (columns.length >= 2 && columns[0] && columns[1]) {
+                    structures.push({ phrase: columns[0], meaning: columns[1] });
+                }
+            });
+
+            localWordList = vocab.map((v, index) => {
+                const linkedStructure = structures.find(s => s.phrase.toLowerCase().includes(v.word.toLowerCase()));
+                return {
+                    id: index + 1,
+                    ...v,
+                    structure: linkedStructure ? linkedStructure.phrase : '',
+                    structure_meaning: linkedStructure ? linkedStructure.meaning : '',
+                    distractors_en: [],
+                    distractors_vi: [],
+                    isEnriched: false,
+                };
+            });
+        }
+
+        function renderTable() {
+            DOM.dataTableBody.innerHTML = '';
+            localWordList.forEach((word, index) => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-white/30';
+                row.innerHTML = `
+                    <td class="p-3 font-semibold">${word.word}</td>
+                    <td class="p-3">${word.type}</td>
+                    <td class="p-3">${word.pronunciation}</td>
+                    <td class="p-3">${word.meaning}</td>
+                    <td class="p-3 text-xs">${word.structure || 'N/A'}</td>
+                    <td class="p-3 text-center" id="ai-status-${index}">
+                        ${word.isEnriched ? '<i class="fas fa-check-circle text-green-500"></i>' : '<i class="fas fa-times-circle text-gray-400"></i>'}
+                    </td>
+                `;
+                DOM.dataTableBody.appendChild(row);
+            });
+        }
+
+        async function enrichWithAI() {
+            if (localWordList.length === 0) {
+                showAlert("Vui lòng tải lên file CSV và xử lý dữ liệu trước.");
                 return;
             }
 
             DOM.enrichAiBtn.disabled = true;
             DOM.enrichAiBtn.innerHTML = `<div class="loader"></div><span class="ml-2">Đang xử lý...</span>`;
             
-            localWordList = vocabLines.map((line, index) => {
-                const parts = line.split(';').map(p => p.trim());
-                return { id: index + 1, word: parts[0], type: parts[1], pronunciation: parts[2], meaning: parts[3], structure: '', structure_meaning: '', distractors_en: [], distractors_vi: [] };
-            });
-
-            const structures = structureLines.map(line => {
-                const parts = line.split(':');
-                const phrase = parts[0] ? parts[0].trim() : '';
-                const meaning = parts[1] ? parts[1].trim() : '';
-                return { phrase, meaning };
-            });
-
             let processedCount = 0;
-            for (const wordData of localWordList) {
+            for (const [index, wordData] of localWordList.entries()) {
+                if (wordData.isEnriched) {
+                    processedCount++;
+                    continue;
+                }
                 try {
-                    const prompt = `Bạn là một chuyên gia từ vựng và AI xử lý ngôn ngữ.
-Với từ vựng sau:
+                    const prompt = `Bạn là một chuyên gia từ vựng và AI.
+Với từ vựng:
 - Word: "${wordData.word}"
 - Type: "${wordData.type}"
 - Meaning: "${wordData.meaning}"
+- Linked Structure: "${wordData.structure}"
 
-Và danh sách các cấu trúc sau:
-${structures.length > 0 ? structures.map(s => `- "${s.phrase}"`).join('\n') : "- (Không có cấu trúc nào)"}
-
-Hãy thực hiện các tác vụ sau và trả về một đối tượng JSON duy nhất:
-1.  **linkStructure**: Từ danh sách cấu trúc đã cho, tìm cấu trúc DUY NHẤT thuộc về từ "${wordData.word}". Phân tích cấu trúc đó, xác định từ khóa quan trọng nhất và trả về chuỗi mới với từ khóa được bao trong dấu sao. Nếu không có cấu trúc nào phù hợp, trả về một chuỗi rỗng. Ví dụ: "be jealous *of* sb/sth".
-2.  **englishDistractors**: Tạo một mảng chứa 3 từ tiếng Anh gây nhiễu cho từ "${wordData.word}", cùng chủ đề và độ khó.
-3.  **vietnameseDistractors**: Tạo một mảng chứa 3 cụm từ tiếng Việt gây nhiễu cho nghĩa "${wordData.meaning}", cùng chủ đề.
+Hãy thực hiện các tác vụ sau và trả về một đối tượng JSON:
+1.  **analyzedStructure**: Phân tích cấu trúc "${wordData.structure}", xác định từ khóa và trả về chuỗi mới với từ khóa trong dấu sao. Nếu không có cấu trúc, trả về chuỗi rỗng.
+2.  **englishDistractors**: Tạo một mảng 3 từ tiếng Anh gây nhiễu cho "${wordData.word}".
+3.  **vietnameseDistractors**: Tạo một mảng 3 cụm từ tiếng Việt gây nhiễu cho nghĩa "${wordData.meaning}".
 Chỉ trả về đối tượng JSON.`;
                     
                     const aiData = await callGeminiAPI(prompt);
 
-                    wordData.structure = aiData.linkStructure || '';
-                    const linkedStructure = structures.find(s => s.phrase && aiData.linkStructure.includes(s.phrase.replace(/\*/g, '')));
-                    wordData.structure_meaning = linkedStructure ? linkedStructure.meaning : '';
+                    wordData.structure = aiData.analyzedStructure || wordData.structure;
                     wordData.distractors_en = aiData.englishDistractors || [];
                     wordData.distractors_vi = aiData.vietnameseDistractors || [];
+                    wordData.isEnriched = true;
 
                     processedCount++;
                     DOM.aiLog.textContent = `Đã xử lý ${processedCount}/${localWordList.length} từ...`;
+                    document.getElementById(`ai-status-${index}`).innerHTML = '<i class="fas fa-check-circle text-green-500"></i>';
 
                 } catch (error) {
                     console.error(`Lỗi khi xử lý từ "${wordData.word}":`, error);
-                    DOM.aiLog.textContent = `Lỗi với từ "${wordData.word}". Bỏ qua...`;
+                    document.getElementById(`ai-status-${index}`).innerHTML = '<i class="fas fa-exclamation-triangle text-red-500"></i>';
                 }
             }
-            
-            const updatedStructureText = localWordList
-                .filter(w => w.structure && w.structure.trim())
-                .map(w => `${w.structure.replace(/\*/g, '')}:${w.structure_meaning || ''}`)
-                .join('\n');
-            DOM.structureDataTextarea.value = updatedStructureText;
 
             DOM.aiLog.textContent = `Hoàn tất! Đã làm giàu ${processedCount} từ.`;
             DOM.enrichAiBtn.disabled = false;
-            DOM.enrichAiBtn.innerHTML = `<i class="fas fa-wand-magic-sparkles mr-2"></i>Phân tích & Làm giàu bằng AI`;
+            DOM.enrichAiBtn.innerHTML = `<i class="fas fa-wand-magic-sparkles mr-2"></i>Làm giàu toàn bộ bằng AI`;
         }
-
+        
         async function uploadToFirebase() {
             const testId = DOM.testIdInput.value.trim();
             const title = DOM.testTitleInput.value.trim();
             
-            if (!testId || !title || localWordList.length === 0 || !localWordList[0].distractors_en) {
-                showAlert("Vui lòng nhập ID, Tiêu đề và nhấn nút 'Phân tích & Làm giàu' trước khi lưu.");
+            if (!testId || !title || localWordList.length === 0) {
+                showAlert("Vui lòng nhập ID, Tiêu đề và tải lên dữ liệu từ vựng.");
                 return;
             }
 
@@ -357,6 +406,7 @@ Chỉ trả về đối tượng JSON.`;
         DOM.logoutBtn.addEventListener('click', () => signOut(auth));
         DOM.uploadBtn.addEventListener('click', uploadToFirebase);
         DOM.enrichAiBtn.addEventListener('click', enrichWithAI);
+        DOM.csvUploadInput.addEventListener('change', handleFileUpload);
     </script>
 </body>
 </html>
