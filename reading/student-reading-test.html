@@ -5,157 +5,234 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bài Đọc Hiểu Online</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- === CẤU HÌNH FIREBASE === -->
-    <script type="module">
-      const firebaseConfig = {
-          apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
-          authDomain: "b1-baotram.firebaseapp.com",
-          projectId: "b1-baotram",
-          storageBucket: "b1-baotram.firebasestorage.app",
-          messagingSenderId: "948701163187",
-          appId: "1:948701163187:web:043f2d381d63e741114ac6",
-          measurementId: "G-33NHT07JHE"
-      };
-      window.firebaseConfig = firebaseConfig;
-    </script>
-
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        html, body {
-            height: 100%;
-            overflow: hidden; /* Prevent body scroll */
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5;
+        :root {
+            --blur-intensity: 12px;
+            --saturation-intensity: 150%;
+            --glass-bg-color: rgba(255, 255, 255, 0.45);
+            --glass-border-color: rgba(255, 255, 255, 0.6);
+            --shadow-color: rgba(67, 56, 202, 0.15);
+            --primary-accent: #6d28d9;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --app-bg-start: #f5f7ff;
+            --app-bg-end: #e0e7ff;
         }
-        .panel {
-            height: calc(100vh - 80px); /* Adjust based on header height */
-            overflow-y: auto;
-            padding: 1rem;
+        html, body { height: 100%; overflow: hidden; font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--app-bg-start); }
+        body { background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%); }
+        .background-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        .shape { position: absolute; border-radius: 50%; filter: blur(25px); opacity: 0.6; }
+        .shape1 { width: 250px; height: 250px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); top: 10%; left: 5%; animation: float 28s infinite alternate ease-in-out; }
+        .shape2 { width: 180px; height: 180px; background: linear-gradient(135deg, #14b8a6, #67e8f9); bottom: 15%; right: 10%; animation: float 32s infinite alternate ease-in-out; }
+        @keyframes float { from { transform: translateY(20px) scale(1); } to { transform: translateY(-20px) scale(1.05); } }
+        .glass-panel {
+            background: var(--glass-bg-color);
+            backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity));
+            border-radius: 24px;
+            border: 1px solid var(--glass-border-color);
+            box-shadow: 0 8px 32px 0 var(--shadow-color);
         }
-        .answer-input {
-            width: 100%;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            padding: 6px 8px;
-        }
-        .answer-input:focus {
-            outline: none;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
-        }
-        /* Styles for login screen, modals, loader are similar to student.html */
-        .loader { border: 5px solid #f3f3f3; border-radius: 50%; border-top: 5px solid #4f46e5; width: 50px; height: 50px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .code-input { width: 40px; height: 50px; text-align: center; font-size: 1.5rem; border: 2px solid #d1d5db; border-radius: 8px; margin: 0 4px; }
-        .code-input:focus { outline: none; border-color: #4f46e5; }
-        .btn { font-weight: 600; padding: 12px 24px; border-radius: 8px; cursor: pointer; }
-        .btn-primary { background-color: #4f46e5; color: white; }
-        .btn-success { background-color: #10b981; color: white; }
+        .panel { height: calc(100vh - 112px); overflow-y: auto; padding: 1rem; }
+        .panel::-webkit-scrollbar { width: 6px; }
+        .panel::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.2); border-radius: 3px; }
+        .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; }
+        .btn-primary { background: var(--primary-accent); color: white; box-shadow: 0 4px 15px rgba(91, 33, 182, 0.25); }
+        .btn-primary:hover { background: #5b21b6; transform: translateY(-2px); }
+        .btn-secondary { background: rgba(255, 255, 255, 0.4); color: var(--text-primary); border-color: rgba(255, 255, 255, 0.6); }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.7); transform: translateY(-2px); }
+        .btn-success { background: #16a34a; color: white; }
+        .btn-success:hover { background: #15803d; transform: translateY(-2px); }
+        .input-field { background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.5); color: var(--text-primary); transition: all 0.2s ease-in-out; width: 100%; padding: 8px 12px; border-radius: 8px; }
+        .input-field:focus { background: rgba(255, 255, 255, 0.7); border-color: var(--primary-accent); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3); outline: none; }
+        .code-input { width: 48px; height: 60px; text-align: center; font-size: 2rem; font-weight: 700; color: var(--primary-accent); background: rgba(255, 255, 255, 0.6); border: 2px solid var(--glass-border-color); border-radius: 16px; margin: 0 4px; transition: all 0.2s; }
+        .code-input:focus { outline: none; border-color: var(--primary-accent); transform: scale(1.1); }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; }
+        .modal.is-open { display: flex; }
+        .modal-content { animation: scaleIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        #security-overlay { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
     </style>
 </head>
-<body>
-    <!-- === MÀN HÌNH ĐĂNG NHẬP (TƯƠNG TỰ STUDENT.HTML) === -->
-    <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen text-center p-4">
-         <div class="w-full max-w-md bg-white p-8 sm:p-10 rounded-2xl shadow-xl">
+<body oncontextmenu="return false;">
+    <div class="background-shapes">
+        <div class="shape shape1"></div>
+        <div class="shape shape2"></div>
+    </div>
+
+    <div id="security-overlay" class="modal">
+        <div class="text-center text-white p-4">
+            <i class="fas fa-shield-halved text-7xl text-yellow-300"></i>
+            <h2 class="text-4xl font-bold mt-4">VI PHẠM QUY CHẾ THI</h2>
+            <p id="violation-reason" class="mt-2 text-xl"></p>
+            <p class="mt-2 text-lg">Vui lòng quay lại màn hình làm bài ngay lập tức!</p>
+            <p id="violation-warning" class="mt-4 text-2xl font-bold text-red-400"></p>
+        </div>
+    </div>
+
+    <div id="loader-overlay" class="modal">
+        <div class="text-center">
+            <div class="w-16 h-16 border-8 border-t-violet-500 border-gray-200 rounded-full animate-spin"></div>
+            <p id="loader-text" class="text-lg font-semibold text-white mt-4">Đang tải...</p>
+        </div>
+    </div>
+    
+    <div id="custom-modal" class="modal"></div>
+
+    <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen text-center p-4 relative z-10">
+        <div class="glass-panel p-8 sm:p-10 rounded-2xl shadow-xl w-full max-w-lg">
             <div id="code-entry-view">
                 <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 mb-4">Bài Đọc Hiểu Online</h1>
-                <p class="text-gray-600 mb-8">Vui lòng nhập Mã truy cập do giáo viên cung cấp để bắt đầu.</p>
+                <p class="text-gray-600 mb-8">Nhập Mã truy cập để bắt đầu.</p>
                 <div id="code-inputs" class="flex justify-center mb-4">
                     <input type="text" maxlength="1" class="code-input"><input type="text" maxlength="1" class="code-input"><input type="text" maxlength="1" class="code-input"><input type="text" maxlength="1" class="code-input"><input type="text" maxlength="1" class="code-input"><input type="text" maxlength="1" class="code-input">
                 </div>
                 <button id="check-code-btn" class="btn btn-primary mt-4 text-lg w-full">Kiểm tra mã</button>
-                <p id="login-error" class="text-red-500 mt-4 h-5"></p>
             </div>
-             <div id="confirmation-view" class="hidden">
-                <h2 class="text-2xl font-bold text-gray-800">Chào mừng,</h2>
-                <p id="student-name-confirm" class="text-3xl font-bold text-indigo-600 my-4"></p>
+            <div id="confirmation-view" class="hidden">
+                 <h2 class="text-2xl font-bold text-gray-800">Xác nhận thông tin</h2>
+                <p id="student-name-confirm" class="text-3xl font-bold text-violet-700 my-4"></p>
                 <p class="text-gray-600 mb-2">Bạn sắp làm bài đọc hiểu:</p>
                 <p id="test-title-confirm" class="text-xl font-semibold text-gray-700 mb-8"></p>
                 <div class="flex gap-4">
                     <button id="not-me-btn" class="btn btn-secondary w-1/2">Không phải tôi</button>
-                    <button id="continue-btn" class="btn btn-primary w-1/2">Bắt đầu</button>
+                    <button id="continue-btn" class="btn btn-primary w-1/2">Bắt đầu thi</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- === GIAO DIỆN LÀM BÀI === -->
-    <div id="test-container" class="hidden flex flex-col h-screen">
-        <!-- Header -->
-        <header class="flex justify-between items-center p-4 bg-white shadow-md flex-shrink-0 h-[80px]">
-            <h1 id="test-title" class="text-xl font-bold text-gray-800"></h1>
-            <div class="flex items-center gap-4">
-                 <p id="student-name-display" class="font-semibold"></p>
-                 <button id="submit-btn" class="btn btn-success">Nộp bài</button>
+    <div id="test-container" class="hidden flex flex-col h-screen relative z-10">
+        <header class="p-4">
+            <div class="glass-panel flex justify-between items-center p-4 rounded-2xl">
+                <h1 id="test-title" class="text-xl font-bold text-gray-800"></h1>
+                <div class="flex items-center gap-4">
+                     <p id="student-name-display" class="font-semibold"></p>
+                     <button id="submit-btn" class="btn btn-success">Nộp bài</button>
+                </div>
             </div>
         </header>
 
-        <!-- Main Content (3 panels) -->
-        <main class="flex flex-grow overflow-hidden">
-            <!-- Panel 1: Passage -->
-            <div id="passage-container" class="panel flex-1 bg-white border-r border-gray-200">
-                <!-- Passage HTML will be injected here -->
-            </div>
-
-            <!-- Panel 2: Questions -->
-            <div id="questions-container" class="panel flex-1 bg-white border-r border-gray-200">
-                <!-- Questions HTML will be injected here -->
-            </div>
-
-            <!-- Panel 3: Answer Sheet -->
-            <div id="answersheet-container" class="panel w-1/4 lg:w-1/6 bg-gray-50">
-                <h2 class="font-bold text-lg mb-4 text-center">Phiếu trả lời</h2>
-                <div id="answer-inputs-grid" class="space-y-3">
-                    <!-- Answer inputs will be generated here -->
-                </div>
+        <main class="flex flex-grow overflow-hidden px-4 pb-4 gap-4">
+            <div id="passage-container" class="panel glass-panel flex-1"></div>
+            <div id="questions-container" class="panel glass-panel flex-1"></div>
+            <div id="answersheet-container" class="panel glass-panel w-1/4 lg:w-1/5">
+                <h2 class="font-bold text-lg mb-4 text-center sticky top-0 bg-white/30 backdrop-blur-sm py-2 rounded-t-xl">Phiếu trả lời</h2>
+                <div id="answer-inputs-grid" class="space-y-3 px-2"></div>
             </div>
         </main>
     </div>
 
-    <!-- === MÀN HÌNH KẾT QUẢ === -->
-    <div id="result-screen" class="hidden max-w-4xl mx-auto p-8">
-         <div class="bg-white p-8 rounded-lg shadow-xl text-center">
+    <div id="result-screen" class="hidden max-w-4xl mx-auto p-8 relative z-10">
+         <div class="glass-panel text-center p-8">
+            <i class="fas fa-trophy text-6xl text-yellow-400 mb-4"></i>
             <h1 class="text-3xl font-bold text-gray-800 mb-2">Hoàn thành!</h1>
-            <p id="score-text" class="text-4xl font-bold text-indigo-600 my-4"></p>
+            <p id="score-text" class="text-5xl font-bold text-violet-700 my-4"></p>
             <h2 class="text-2xl font-bold text-gray-700 my-6">Xem lại đáp án</h2>
-            <div id="review-container" class="space-y-2 text-left max-h-96 overflow-y-auto p-4 bg-gray-50 rounded">
-                <!-- Review content here -->
-            </div>
+            <div id="review-container" class="space-y-2 text-left max-h-96 overflow-y-auto p-4 bg-white/20 rounded-xl"></div>
         </div>
     </div>
-    
-    <!-- Loader and Modal overlays (similar to student.html) -->
-    <div id="loader-overlay" class="hidden fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-[250]"><div class="loader"></div></div>
-    <div id="modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-[300] p-4">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm text-center">
-            <h3 id="modal-title" class="text-xl font-bold text-gray-900 mb-4">Thông báo</h3>
-            <p id="modal-message" class="text-gray-600 mb-6"></p>
-            <button id="modal-confirm-btn" class="btn btn-primary">Đồng ý</button>
-        </div>
-    </div>
-
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, updateDoc, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
-        // --- APP STATE & DOM ---
-        const appState = { db: null, currentSubmissionId: null, testData: null };
-        const DOM = {}; // Will be populated in init()
+        const appState = { db: null, currentSubmissionId: null, testData: null, isTestRunning: false };
+        const DOM = {};
 
-        // --- HELPER FUNCTIONS ---
-        const showLoader = () => DOM.loaderOverlay.classList.remove('hidden');
-        const hideLoader = () => DOM.loaderOverlay.classList.add('hidden');
-        const showModal = (title, message, onConfirm) => {
-            DOM.modalTitle.textContent = title;
-            DOM.modalMessage.textContent = message;
-            DOM.modalConfirmBtn.onclick = () => { DOM.modal.classList.add('hidden'); if (onConfirm) onConfirm(); };
-            DOM.modal.classList.remove('hidden');
+        const showLoader = (text = 'Đang tải...') => { DOM.loaderText.textContent = text; DOM.loaderOverlay.classList.add('is-open'); };
+        const hideLoader = () => DOM.loaderOverlay.classList.remove('is-open');
+        
+        function showModal(title, message, onConfirm, showCancel = false) {
+            DOM.customModal.innerHTML = `
+                <div class="modal-content glass-panel text-center p-8 w-full max-w-sm">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">${title}</h3>
+                    <p class="text-gray-600 mb-6">${message}</p>
+                    <div class="flex gap-4 justify-center">
+                        ${showCancel ? '<button id="modal-cancel-btn" class="btn btn-secondary">Hủy</button>' : ''}
+                        <button id="modal-confirm-btn" class="btn btn-primary">Đồng ý</button>
+                    </div>
+                </div>`;
+            DOM.customModal.classList.add('is-open');
+            document.getElementById('modal-confirm-btn').onclick = () => {
+                DOM.customModal.classList.remove('is-open');
+                if (onConfirm) onConfirm();
+            };
+            if (showCancel) {
+                document.getElementById('modal-cancel-btn').onclick = () => DOM.customModal.classList.remove('is-open');
+            }
+        }
+
+        const ProctoringService = {
+            violationCount: 0,
+            maxViolations: 5,
+            isProctoring: false,
+
+            start(initialCount = 0) {
+                if (this.isProctoring) return;
+                document.addEventListener('visibilitychange', this.handleVisibilityChange);
+                window.addEventListener('blur', this.handleBlur);
+                window.addEventListener('focus', this.handleFocus);
+                document.addEventListener('keydown', this.handleKeydown);
+                document.addEventListener('fullscreenchange', this.handleFullscreenChange);
+                ['copy', 'paste', 'cut'].forEach(event => document.addEventListener(event, e => e.preventDefault()));
+                
+                this.isProctoring = true;
+                this.violationCount = initialCount;
+                
+                if (!document.fullscreenElement) {
+                    showModal(
+                        "Yêu cầu chế độ Toàn màn hình",
+                        "Để đảm bảo tính toàn vẹn của bài thi, bạn phải làm bài ở chế độ toàn màn hình. Nhấn 'Đồng ý' để tiếp tục.",
+                        () => document.documentElement.requestFullscreen().catch(err => console.error(err)),
+                        false
+                    );
+                }
+            },
+
+            stop() {
+                if (!this.isProctoring) return;
+                document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+                window.removeEventListener('blur', this.handleBlur);
+                window.removeEventListener('focus', this.handleFocus);
+                document.removeEventListener('keydown', this.handleKeydown);
+                document.removeEventListener('fullscreenchange', this.handleFullscreenChange);
+                this.isProctoring = false;
+            },
+
+            handleVisibilityChange: () => { if (document.hidden) ProctoringService.handleViolation("Chuyển sang tab hoặc cửa sổ khác"); },
+            handleBlur: () => ProctoringService.handleViolation("Rời khỏi màn hình làm bài"),
+            handleFocus: () => DOM.securityOverlay.classList.remove('is-open'),
+            handleFullscreenChange: () => { if (!document.fullscreenElement) ProctoringService.handleViolation("Thoát chế độ toàn màn hình"); },
+            handleKeydown: (e) => {
+                if (e.key === 'F12' || (e.ctrlKey && e.shiftKey) || (e.metaKey && e.altKey) || (e.ctrlKey && e.key.toLowerCase() === 'p') || (e.ctrlKey && e.key.toLowerCase() === 's')) {
+                    e.preventDefault();
+                    ProctoringService.handleViolation(`Sử dụng phím tắt bị cấm (${e.key})`);
+                }
+            },
+
+            async handleViolation(reason) {
+                if (!this.isProctoring) return;
+                this.violationCount++;
+                
+                DOM.violationReason.textContent = reason;
+                DOM.securityOverlay.classList.add('is-open');
+
+                const submissionRef = doc(appState.db, 'submissions', appState.currentSubmissionId);
+                await updateDoc(submissionRef, { 
+                    violationCount: this.violationCount,
+                    violationLog: arrayUnion({ reason, timestamp: new Date().toISOString() })
+                });
+                
+                DOM.violationWarning.textContent = `Bạn còn ${this.maxViolations - this.violationCount} lần cảnh báo.`;
+                if (this.violationCount >= this.maxViolations) {
+                    DOM.violationWarning.textContent = "BÀI THI SẼ TỰ ĐỘNG NỘP DO VI PHẠM QUY CHẾ!";
+                    setTimeout(() => submitTest(), 2000);
+                }
+            }
         };
 
-        // --- CORE LOGIC ---
         async function startSession(submissionId) {
             showLoader();
             try {
@@ -165,8 +242,6 @@
                 if (!submissionSnap.exists()) throw new Error("Mã truy cập không hợp lệ.");
                 
                 const submissionData = submissionSnap.data();
-
-                // IMPORTANT: Fetch from 'reading_tests' collection
                 const testRef = doc(appState.db, 'reading_tests', submissionData.testId);
                 const testSnap = await getDoc(testRef);
                 if (!testSnap.exists()) throw new Error("Không tìm thấy bài đọc tương ứng.");
@@ -180,6 +255,8 @@
                     DOM.studentNameDisplay.textContent = `Thí sinh: ${submissionData.studentName}`;
                     DOM.loginScreen.classList.add('hidden');
                     DOM.testContainer.classList.remove('hidden');
+                    appState.isTestRunning = true;
+                    ProctoringService.start(submissionData.violationCount || 0);
                 }
             } catch (error) {
                  showModal('Lỗi', error.message, () => DOM.notMeBtn.click());
@@ -196,26 +273,26 @@
             const answerGrid = DOM.answerInputsGrid;
             answerGrid.innerHTML = '';
             for (let i = 1; i <= testData.totalQuestions; i++) {
-                const answerDiv = document.createElement('div');
-                answerDiv.className = 'flex items-center gap-2';
-                answerDiv.innerHTML = `
-                    <label for="ans-${i}" class="font-bold w-8 text-right">${i}.</label>
-                    <input type="text" id="ans-${i}" data-q-number="${i}" class="answer-input" value="${savedAnswers[i] || ''}">
-                `;
-                answerGrid.appendChild(answerDiv);
+                answerGrid.innerHTML += `
+                    <div class="flex items-center gap-2">
+                        <label for="ans-${i}" class="font-bold w-8 text-right">${i}.</label>
+                        <input type="text" id="ans-${i}" data-q-number="${i}" class="input-field" value="${savedAnswers[i] || ''}">
+                    </div>`;
             }
         }
 
         function getCurrentAnswers() {
             const answers = {};
-            const inputs = DOM.answerInputsGrid.querySelectorAll('input[data-q-number]');
-            inputs.forEach(input => {
+            DOM.answerInputsGrid.querySelectorAll('input[data-q-number]').forEach(input => {
                 answers[input.dataset.qNumber] = input.value.trim();
             });
             return answers;
         }
 
         async function submitTest() {
+            if (!appState.isTestRunning) return;
+            appState.isTestRunning = false;
+            ProctoringService.stop();
             showLoader();
             try {
                 const studentAnswers = getCurrentAnswers();
@@ -224,7 +301,6 @@
 
                 for (let i = 1; i <= appState.testData.totalQuestions; i++) {
                     const qNum = String(i);
-                    // Case-insensitive comparison
                     if (studentAnswers[qNum] && correctAnswers[qNum] && studentAnswers[qNum].toLowerCase() === correctAnswers[qNum].toLowerCase()) {
                         score++;
                     }
@@ -262,32 +338,27 @@
                 const correctAns = testData.answers[qNum];
                 const isCorrect = studentAns.toLowerCase() === correctAns.toLowerCase();
                 
-                const resultDiv = document.createElement('div');
-                resultDiv.className = `p-2 rounded flex justify-between items-center ${isCorrect ? 'bg-green-100' : 'bg-red-100'}`;
-                resultDiv.innerHTML = `
-                    <div>
-                        <span class="font-bold">${qNum}.</span>
-                        <span>Đáp án của bạn: <strong>${studentAns}</strong></span>
-                    </div>
-                    ${isCorrect 
-                        ? '<i class="fas fa-check text-green-600"></i>' 
-                        : `<span class="font-semibold">Đáp án đúng: ${correctAns}</span>`
-                    }
-                `;
-                reviewContainer.appendChild(resultDiv);
+                reviewContainer.innerHTML += `
+                    <div class="p-3 rounded-lg flex justify-between items-center ${isCorrect ? 'bg-green-100' : 'bg-red-100'}">
+                        <div>
+                            <span class="font-bold">${qNum}.</span>
+                            <span>Đáp án của bạn: <strong>${studentAns}</strong></span>
+                        </div>
+                        ${isCorrect 
+                            ? '<i class="fas fa-check text-green-600"></i>' 
+                            : `<span class="font-semibold">Đáp án đúng: ${correctAns}</span>`
+                        }
+                    </div>`;
             }
         }
 
-        // --- INITIALIZATION ---
         function init() {
-            // Populate DOM object
             Object.assign(DOM, {
                 loginScreen: document.getElementById('login-screen'),
                 codeEntryView: document.getElementById('code-entry-view'),
                 confirmationView: document.getElementById('confirmation-view'),
                 codeInputs: document.getElementById('code-inputs'),
                 checkCodeBtn: document.getElementById('check-code-btn'),
-                loginError: document.getElementById('login-error'),
                 studentNameConfirm: document.getElementById('student-name-confirm'),
                 testTitleConfirm: document.getElementById('test-title-confirm'),
                 notMeBtn: document.getElementById('not-me-btn'),
@@ -298,36 +369,39 @@
                 submitBtn: document.getElementById('submit-btn'),
                 passageContainer: document.getElementById('passage-container'),
                 questionsContainer: document.getElementById('questions-container'),
-                answersheetContainer: document.getElementById('answersheet-container'),
                 answerInputsGrid: document.getElementById('answer-inputs-grid'),
                 resultScreen: document.getElementById('result-screen'),
                 scoreText: document.getElementById('score-text'),
                 reviewContainer: document.getElementById('review-container'),
                 loaderOverlay: document.getElementById('loader-overlay'),
-                modal: document.getElementById('modal'),
-                modalTitle: document.getElementById('modal-title'),
-                modalMessage: document.getElementById('modal-message'),
-                modalConfirmBtn: document.getElementById('modal-confirm-btn'),
+                loaderText: document.getElementById('loader-text'),
+                customModal: document.getElementById('custom-modal'),
+                securityOverlay: document.getElementById('security-overlay'),
+                violationReason: document.getElementById('violation-reason'),
+                violationWarning: document.getElementById('violation-warning'),
             });
 
-            // Initialize Firebase
-            const app = initializeApp(window.firebaseConfig);
-            appState.db = getFirestore(app);
+            appState.db = getFirestore(initializeApp(firebaseConfig));
 
-            // Login logic (adapted from student.html)
+            const codeInputs = Array.from(DOM.codeInputs.querySelectorAll('input'));
+            DOM.codeInputs.addEventListener('input', (e) => {
+                const target = e.target;
+                if (target.value && target.nextElementSibling) target.nextElementSibling.focus();
+            });
+            DOM.codeInputs.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !e.target.value && e.target.previousElementSibling) e.target.previousElementSibling.focus();
+            });
+
             DOM.checkCodeBtn.addEventListener('click', async () => {
-                const code = Array.from(DOM.codeInputs.querySelectorAll('input')).map(input => input.value).join('');
-                if (code.length !== 6) { DOM.loginError.textContent = 'Vui lòng nhập đủ 6 chữ số.'; return; }
-                DOM.loginError.textContent = '';
+                const code = codeInputs.map(input => input.value).join('');
+                if (code.length !== 6) return;
                 showLoader();
                 try {
                     const subSnap = await getDoc(doc(appState.db, 'submissions', code));
                     if (!subSnap.exists()) throw new Error("Mã truy cập không hợp lệ.");
                     const subData = subSnap.data();
-                    
-                    // This is a key difference: we check for a 'reading_tests' document
                     const testSnap = await getDoc(doc(appState.db, 'reading_tests', subData.testId));
-                    if (!testSnap.exists()) throw new Error("Đây là mã cho bài kiểm tra trắc nghiệm, không phải bài đọc.");
+                    if (!testSnap.exists()) throw new Error("Mã này không phải cho bài đọc hiểu.");
 
                     DOM.studentNameConfirm.textContent = subData.studentName;
                     DOM.testTitleConfirm.textContent = testSnap.data().title;
@@ -344,20 +418,13 @@
                 DOM.confirmationView.classList.add('hidden');
                 DOM.codeEntryView.classList.remove('hidden');
             });
-            DOM.continueBtn.addEventListener('click', () => {
-                const code = Array.from(DOM.codeInputs.querySelectorAll('input')).map(input => input.value).join('');
-                startSession(code);
-            });
-            DOM.submitBtn.addEventListener('click', () => {
-                 showModal('Xác nhận nộp bài', 'Bạn có chắc chắn muốn nộp bài không?', () => submitTest())
-            });
+            DOM.continueBtn.addEventListener('click', () => startSession(codeInputs.map(input => input.value).join('')));
+            DOM.submitBtn.addEventListener('click', () => showModal('Xác nhận nộp bài', 'Bạn có chắc chắn muốn nộp bài không?', () => submitTest(), true));
 
-            // Handle URL params
             const params = new URLSearchParams(window.location.search);
             const submissionId = params.get('submission_id');
             if (submissionId) {
-                const codeArray = submissionId.split('');
-                Array.from(DOM.codeInputs.querySelectorAll('input')).forEach((input, index) => input.value = codeArray[index] || '');
+                codeInputs.forEach((input, index) => input.value = submissionId[index] || '');
                 DOM.checkCodeBtn.click();
             }
         }
