@@ -3,10 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bài Thi Nghe Online</title>
+    <title>Làm Bài Thi Nghe</title>
+    <!-- All head content is identical to standard-test.html, only the body and script logic will differ -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
+            authDomain: "b1-baotram.firebaseapp.com",
+            projectId: "b1-baotram",
+            storageBucket: "b1-baotram.appspot.com",
+            messagingSenderId: "948701163187",
+            appId: "1:948701163187:web:043f2d381d63e741114ac6",
+            measurementId: "G-33NHT07JHE"
+        };
+        window.firebaseConfig = firebaseConfig;
+    </script>
+
     <style>
         :root {
             --blur-intensity: 12px;
@@ -16,7 +31,6 @@
             --shadow-color: rgba(67, 56, 202, 0.15);
             --primary-accent: #6d28d9;
             --text-primary: #0f172a;
-            --text-secondary: #475569;
             --app-bg-start: #f5f7ff;
             --app-bg-end: #e0e7ff;
         }
@@ -40,14 +54,10 @@
         .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; }
         .btn-primary { background: var(--primary-accent); color: white; box-shadow: 0 4px 15px rgba(91, 33, 182, 0.25); }
         .btn-primary:hover { background: #5b21b6; transform: translateY(-2px); }
-        .btn-secondary { background: rgba(255, 255, 255, 0.4); color: var(--text-primary); border-color: rgba(255, 255, 255, 0.6); }
-        .btn-secondary:hover { background: rgba(255, 255, 255, 0.7); transform: translateY(-2px); }
         .btn-success { background: #16a34a; color: white; }
         .btn-success:hover { background: #15803d; transform: translateY(-2px); }
         .input-field { background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.5); color: var(--text-primary); transition: all 0.2s ease-in-out; width: 100%; padding: 8px 12px; border-radius: 8px; }
         .input-field:focus { background: rgba(255, 255, 255, 0.7); border-color: var(--primary-accent); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3); outline: none; }
-        .code-input { width: 48px; height: 60px; text-align: center; font-size: 2rem; font-weight: 700; color: var(--primary-accent); background: rgba(255, 255, 255, 0.6); border: 2px solid var(--glass-border-color); border-radius: 16px; margin: 0 4px; transition: all 0.2s; }
-        .code-input:focus { outline: none; border-color: var(--primary-accent); transform: scale(1.1); }
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; }
         .modal.is-open { display: flex; }
         .modal-content { animation: scaleIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
@@ -66,6 +76,7 @@
         <div class="shape shape2"></div>
     </div>
 
+    <!-- === OVERLAYS === -->
     <div id="security-overlay" class="modal">
         <div class="text-center text-white p-4">
             <i class="fas fa-shield-halved text-7xl text-yellow-300"></i>
@@ -75,39 +86,15 @@
             <p id="violation-warning" class="mt-4 text-2xl font-bold text-red-400"></p>
         </div>
     </div>
-
-    <div id="loader-overlay" class="modal">
+    <div id="loader-overlay" class="modal is-open">
         <div class="text-center">
             <div class="w-16 h-16 border-8 border-t-violet-500 border-gray-200 rounded-full animate-spin"></div>
             <p id="loader-text" class="text-lg font-semibold text-white mt-4">Đang tải...</p>
         </div>
     </div>
-    
     <div id="custom-modal" class="modal"></div>
 
-    <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen text-center p-4 relative z-10">
-        <div class="glass-panel p-8 sm:p-10 rounded-2xl shadow-xl w-full max-w-lg">
-            <div id="code-entry-view">
-                <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 mb-4">Bài Thi Nghe Online</h1>
-                <p class="text-gray-600 mb-8">Nhập Mã truy cập để bắt đầu.</p>
-                <div id="code-inputs" class="flex justify-center mb-4">
-                    <input type="text" maxlength="1" class="code-input"><input type="text" maxlength="1" class="code-input"><input type="text" maxlength="1" class="code-input"><input type="text" maxlength="1" class="code-input"><input type="text" maxlength="1" class="code-input"><input type="text" maxlength="1" class="code-input">
-                </div>
-                <button id="check-code-btn" class="btn btn-primary mt-4 text-lg w-full">Kiểm tra mã</button>
-            </div>
-            <div id="confirmation-view" class="hidden">
-                 <h2 class="text-2xl font-bold text-gray-800">Xác nhận thông tin</h2>
-                <p id="student-name-confirm" class="text-3xl font-bold text-violet-700 my-4"></p>
-                <p class="text-gray-600 mb-2">Bạn sắp làm bài thi nghe:</p>
-                <p id="test-title-confirm" class="text-xl font-semibold text-gray-700 mb-8"></p>
-                <div class="flex gap-4">
-                    <button id="not-me-btn" class="btn btn-secondary w-1/2">Không phải tôi</button>
-                    <button id="continue-btn" class="btn btn-primary w-1/2">Bắt đầu thi</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <!-- === TEST UI === -->
     <div id="test-container" class="hidden flex flex-col h-screen relative z-10">
         <header class="p-4">
             <div class="glass-panel flex justify-between items-center p-4 rounded-2xl">
@@ -140,6 +127,7 @@
         </main>
     </div>
 
+    <!-- === RESULT UI === -->
     <div id="result-screen" class="hidden max-w-4xl mx-auto p-8 relative z-10">
          <div class="glass-panel text-center p-8">
             <i class="fas fa-trophy text-6xl text-yellow-400 mb-4"></i>
@@ -157,6 +145,7 @@
         const appState = { db: null, currentSubmissionId: null, testData: null, audioPlayer: null, currentPlayCount: 1, isTestRunning: false };
         const DOM = {};
 
+        // Helper and ProctoringService are identical to standard-test.html
         const showLoader = (text = 'Đang tải...') => { DOM.loaderText.textContent = text; DOM.loaderOverlay.classList.add('is-open'); };
         const hideLoader = () => DOM.loaderOverlay.classList.remove('is-open');
         
@@ -317,14 +306,13 @@
                 
                 DOM.studentNameDisplay.textContent = `Thí sinh: ${submissionData.studentName}`;
                 renderTest(appState.testData, submissionData.answers || {});
-                DOM.loginScreen.classList.add('hidden');
                 DOM.testContainer.classList.remove('hidden');
                 appState.isTestRunning = true;
                 ProctoringService.start(submissionData.violationCount || 0);
                 startTestProcedure();
 
             } catch (error) {
-                 showModal('Lỗi', error.message, () => DOM.notMeBtn.click());
+                 showModal('Lỗi', error.message, () => { window.location.href = 'index.html'; });
             } finally {
                 hideLoader();
             }
@@ -410,15 +398,6 @@
 
         function init() {
             Object.assign(DOM, {
-                loginScreen: document.getElementById('login-screen'),
-                codeEntryView: document.getElementById('code-entry-view'),
-                confirmationView: document.getElementById('confirmation-view'),
-                codeInputs: document.getElementById('code-inputs'),
-                checkCodeBtn: document.getElementById('check-code-btn'),
-                studentNameConfirm: document.getElementById('student-name-confirm'),
-                testTitleConfirm: document.getElementById('test-title-confirm'),
-                notMeBtn: document.getElementById('not-me-btn'),
-                continueBtn: document.getElementById('continue-btn'),
                 testContainer: document.getElementById('test-container'),
                 studentNameDisplay: document.getElementById('student-name-display'),
                 submitBtn: document.getElementById('submit-btn'),
@@ -439,49 +418,16 @@
                 violationWarning: document.getElementById('violation-warning'),
             });
 
-            appState.db = getFirestore(initializeApp(firebaseConfig));
-
-            const codeInputs = Array.from(DOM.codeInputs.querySelectorAll('input'));
-            DOM.codeInputs.addEventListener('input', (e) => {
-                if (e.target.value && e.target.nextElementSibling) e.target.nextElementSibling.focus();
-            });
-            DOM.codeInputs.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && !e.target.value && e.target.previousElementSibling) e.target.previousElementSibling.focus();
-            });
-
-            DOM.checkCodeBtn.addEventListener('click', async () => {
-                const code = codeInputs.map(input => input.value).join('');
-                if (code.length !== 6) return;
-                showLoader();
-                try {
-                    const subSnap = await getDoc(doc(appState.db, 'submissions', code));
-                    if (!subSnap.exists()) throw new Error("Mã truy cập không hợp lệ.");
-                    const subData = subSnap.data();
-                    const testSnap = await getDoc(doc(appState.db, 'listening_tests', subData.testId));
-                    if (!testSnap.exists()) throw new Error("Mã này không phải cho bài thi nghe.");
-                    DOM.studentNameConfirm.textContent = subData.studentName;
-                    DOM.testTitleConfirm.textContent = testSnap.data().title;
-                    DOM.codeEntryView.classList.add('hidden');
-                    DOM.confirmationView.classList.remove('hidden');
-                } catch (error) {
-                    showModal('Lỗi', error.message);
-                } finally {
-                    hideLoader();
-                }
-            });
+            appState.db = getFirestore(initializeApp(window.firebaseConfig));
             
-            DOM.notMeBtn.addEventListener('click', () => {
-                DOM.confirmationView.classList.add('hidden');
-                DOM.codeEntryView.classList.remove('hidden');
-            });
-            DOM.continueBtn.addEventListener('click', () => startSession(codeInputs.map(input => input.value).join('')));
             DOM.submitBtn.addEventListener('click', () => showModal('Xác nhận nộp bài', 'Bạn có chắc chắn muốn nộp bài không?', () => submitTest(), true));
 
             const params = new URLSearchParams(window.location.search);
             const submissionId = params.get('submission_id');
             if (submissionId) {
-                codeInputs.forEach((input, index) => input.value = submissionId[index] || '');
-                DOM.checkCodeBtn.click();
+                startSession(submissionId);
+            } else {
+                showModal('Lỗi', 'Không tìm thấy mã dự thi. Vui lòng truy cập qua cổng chính.', () => { window.location.href = 'index.html'; });
             }
         }
         
