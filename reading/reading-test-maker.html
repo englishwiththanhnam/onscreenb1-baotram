@@ -5,111 +5,140 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trình Soạn Thảo Bài Đọc Hiểu</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- === CẤU HÌNH FIREBASE === -->
-    <script type="module">
-        const firebaseConfig = {
-            apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
-            authDomain: "b1-baotram.firebaseapp.com",
-            projectId: "b1-baotram",
-            storageBucket: "b1-baotram.firebasestorage.app",
-            messagingSenderId: "948701163187",
-            appId: "1:948701163187:web:043f2d381d63e741114ac6",
-            measurementId: "G-33NHT07JHE"
-        };
-        window.firebaseConfig = firebaseConfig;
-    </script>
-
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f9fafb; }
-        .btn { font-weight: 600; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.2s; border: none; }
-        .btn-primary { background-color: #4f46e5; color: white; }
-        .btn-primary:hover { background-color: #4338ca; }
-        .btn-primary:disabled { background-color: #a5b4fc; cursor: not-allowed; }
-        .input-field { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; }
-        .input-field:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2); }
-        textarea.input-field { min-height: 200px; font-family: monospace; }
+        :root {
+            --blur-intensity: 12px;
+            --saturation-intensity: 150%;
+            --glass-bg-color: rgba(255, 255, 255, 0.45);
+            --glass-border-color: rgba(255, 255, 255, 0.6);
+            --shadow-color: rgba(67, 56, 202, 0.15);
+            --primary-accent: #6d28d9;
+            --text-primary: #0f172a;
+            --app-bg-start: #f5f7ff;
+            --app-bg-end: #e0e7ff;
+        }
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: var(--app-bg-start);
+            background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%);
+            color: var(--text-primary);
+        }
+        .background-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        .shape { position: absolute; border-radius: 50%; filter: blur(25px); opacity: 0.6; }
+        .shape1 { width: 250px; height: 250px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); top: 10%; left: 5%; animation: float 28s infinite alternate ease-in-out; }
+        .shape2 { width: 180px; height: 180px; background: linear-gradient(135deg, #14b8a6, #67e8f9); bottom: 15%; right: 10%; animation: float 32s infinite alternate ease-in-out; }
+        @keyframes float { from { transform: translateY(20px) scale(1); } to { transform: translateY(-20px) scale(1.05); } }
+        .glass-panel {
+            position: relative;
+            background: var(--glass-bg-color);
+            backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity));
+            border-radius: 24px;
+            border: 1px solid var(--glass-border-color);
+            box-shadow: 0 8px 32px 0 var(--shadow-color);
+        }
+        .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; }
+        .btn-primary { background: var(--primary-accent); color: white; box-shadow: 0 4px 15px rgba(91, 33, 182, 0.25); }
+        .btn-primary:hover { background: #5b21b6; transform: translateY(-2px); }
+        .btn-primary:disabled { background-color: #a5b4fc; cursor: not-allowed; transform: none; box-shadow: none; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; transform: translateY(-2px); }
+        .input-field { background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.5); color: var(--text-primary); transition: all 0.2s ease-in-out; width: 100%; padding: 12px; border-radius: 12px; }
+        .input-field:focus { background: rgba(255, 255, 255, 0.7); border-color: var(--primary-accent); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3); outline: none; }
+        textarea.input-field { min-height: 250px; font-family: monospace; }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; }
+        .modal.is-open { display: flex; }
+        .modal-content { animation: scaleIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body class="p-4 sm:p-8">
-    <!-- === MÀN HÌNH ĐĂNG NHẬP (GIỮ NGUYÊN) === -->
-    <div id="login-screen" class="fixed inset-0 bg-gray-800 bg-opacity-90 flex items-center justify-center z-[200]">
-        <div class="bg-white p-8 rounded-lg shadow-xl text-center w-full max-w-sm">
-            <h2 class="text-2xl font-bold mb-4">Đăng nhập Giáo viên</h2>
+    <div class="background-shapes">
+        <div class="shape shape1"></div>
+        <div class="shape shape2"></div>
+    </div>
+
+    <div id="login-screen" class="modal is-open">
+        <div class="modal-content glass-panel p-8 rounded-2xl shadow-xl text-center w-full max-w-sm">
+            <h2 class="text-2xl font-bold mb-6">Đăng nhập Giáo viên</h2>
             <div class="space-y-4 text-left">
-                <div>
-                    <label for="email-input" class="block text-sm font-medium text-gray-700">Email</label>
-                    <input type="email" id="email-input" class="input-field w-full mt-1">
-                </div>
-                <div>
-                    <label for="password-input" class="block text-sm font-medium text-gray-700">Mật khẩu</label>
-                    <input type="password" id="password-input" class="input-field w-full mt-1">
-                </div>
+                <div><label for="email-input" class="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" id="email-input" class="input-field"></div>
+                <div><label for="password-input" class="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label><input type="password" id="password-input" class="input-field"></div>
             </div>
             <button id="login-btn" class="btn btn-primary w-full mt-6">Đăng nhập</button>
             <p id="login-error" class="text-red-500 mt-2 h-5"></p>
         </div>
     </div>
 
-    <div id="main-content" class="max-w-6xl mx-auto" style="display: none;">
-        <div class="flex justify-between items-center mb-8">
-            <h1 class="text-4xl font-bold text-gray-800">Soạn Thảo Bài Đọc Hiểu</h1>
+    <div id="main-content" class="max-w-6xl mx-auto relative z-10" style="display: none;">
+        <header class="flex justify-between items-center mb-8">
+            <h1 id="page-title" class="text-4xl font-bold text-gray-800">Soạn Thảo Bài Đọc Hiểu</h1>
             <button id="logout-btn" class="btn btn-danger">Đăng xuất</button>
-        </div>
+        </header>
 
-        <!-- THÔNG TIN CHUNG -->
-        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+        <div class="glass-panel p-6 mb-8">
             <h2 class="text-2xl font-bold text-gray-700 mb-4">1. Thông tin chung</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label for="test-id" class="block text-sm font-medium text-gray-700">Reading Test ID (Mã định danh)</label>
-                    <input type="text" id="test-id" class="input-field mt-1" placeholder="vd: ielts_cam18_test1_p1">
+                    <label for="test-id" class="block text-sm font-medium text-gray-700 mb-1">Reading Test ID</label>
+                    <input type="text" id="test-id" class="input-field" placeholder="vd: ielts_cam18_test1_p1">
                 </div>
                 <div>
-                    <label for="test-title" class="block text-sm font-medium text-gray-700">Tiêu đề</label>
-                    <input type="text" id="test-title" class="input-field mt-1" placeholder="vd: IELTS Cambridge 18 - Test 1 Passage 1">
+                    <label for="test-title" class="block text-sm font-medium text-gray-700 mb-1">Tiêu đề</label>
+                    <input type="text" id="test-title" class="input-field" placeholder="vd: IELTS Cambridge 18 - Test 1 Passage 1">
                 </div>
             </div>
         </div>
 
-        <!-- NỘI DUNG -->
-        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+        <div class="glass-panel p-6 mb-8">
             <h2 class="text-2xl font-bold text-gray-700 mb-4">2. Nội dung bài đọc</h2>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div>
-                    <label for="passage-html" class="block text-sm font-medium text-gray-700 mb-2">Ngữ liệu (Dán mã HTML vào đây)</label>
+                    <label for="passage-html" class="block text-sm font-medium text-gray-700 mb-2">Ngữ liệu (HTML)</label>
                     <textarea id="passage-html" class="input-field" placeholder="Dán mã HTML của bài đọc..."></textarea>
                 </div>
                 <div>
-                    <label for="questions-html" class="block text-sm font-medium text-gray-700 mb-2">Câu hỏi (Dán mã HTML vào đây)</label>
+                    <label for="questions-html" class="block text-sm font-medium text-gray-700 mb-2">Câu hỏi (HTML)</label>
                     <textarea id="questions-html" class="input-field" placeholder="Dán mã HTML của phần câu hỏi..."></textarea>
                 </div>
             </div>
         </div>
         
-        <!-- ĐÁP ÁN -->
-        <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="glass-panel p-6">
              <h2 class="text-2xl font-bold text-gray-700 mb-4">3. Đáp án</h2>
-             <label for="answers-text" class="block text-sm font-medium text-gray-700 mb-2">Nhập đáp án theo định dạng: mỗi đáp án một dòng (vd: "1. TRUE", "2. NOT GIVEN")</label>
-             <textarea id="answers-text" class="input-field" rows="10" placeholder="1. TRUE&#10;2. FALSE&#10;3. NOT GIVEN&#10;4. C&#10;..."></textarea>
+             <label for="answers-text" class="block text-sm font-medium text-gray-700 mb-2">Nhập đáp án, mỗi đáp án một dòng (vd: "1. TRUE", "2. C")</label>
+             <textarea id="answers-text" class="input-field" rows="10" placeholder="1. TRUE&#10;2. FALSE&#10;3. NOT GIVEN&#10;4. C"></textarea>
         </div>
 
-        <!-- NÚT LƯU -->
         <div class="mt-8 text-center">
-             <button id="upload-btn" class="btn btn-primary text-lg w-full md:w-1/2"><i class="fas fa-cloud-upload-alt mr-2"></i>Lưu Bài Đọc Lên Firebase</button>
+             <button id="upload-btn" class="btn btn-primary text-lg w-full md:w-1/2"><i class="fas fa-cloud-upload-alt mr-2"></i>Lưu Bài Đọc</button>
              <p id="upload-log" class="font-semibold mt-2 h-5"></p>
         </div>
     </div>
+    
+    <div id="custom-alert-modal" class="modal"></div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
-        // --- APP STATE & DOM ---
-        const appState = { db: null, auth: null };
+        const firebaseConfig = {
+            apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
+            authDomain: "b1-baotram.firebaseapp.com",
+            projectId: "b1-baotram",
+            storageBucket: "b1-baotram.appspot.com",
+            messagingSenderId: "948701163187",
+            appId: "1:948701163187:web:043f2d381d63e741114ac6",
+            measurementId: "G-33NHT07JHE"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        let isEditMode = false;
+
         const DOM = {
             loginScreen: document.getElementById('login-screen'),
             mainContent: document.getElementById('main-content'),
@@ -125,36 +154,52 @@
             answersTextInput: document.getElementById('answers-text'),
             uploadBtn: document.getElementById('upload-btn'),
             uploadLog: document.getElementById('upload-log'),
+            alertModal: document.getElementById('custom-alert-modal'),
+            pageTitle: document.getElementById('page-title'),
         };
 
-        /**
-         * Parses the raw text from the answers textarea into a structured object.
-         * @param {string} text The raw text from the textarea.
-         * @returns {object} An object where keys are question numbers and values are the answers.
-         */
+        function showAlert(message) {
+            DOM.alertModal.innerHTML = `<div class="modal-content glass-panel text-center p-8"><p class="text-lg font-medium text-slate-800 mb-6">${message}</p><button id="alert-ok-btn" class="btn btn-primary">OK</button></div>`;
+            DOM.alertModal.classList.add('is-open');
+            document.getElementById('alert-ok-btn').onclick = () => DOM.alertModal.classList.remove('is-open');
+        }
+
+        async function loadTestData(testId) {
+            const testRef = doc(db, "reading_tests", testId);
+            const testSnap = await getDoc(testRef);
+            if (testSnap.exists()) {
+                const data = testSnap.data();
+                DOM.testIdInput.value = testId;
+                DOM.testTitleInput.value = data.title || '';
+                DOM.passageHtmlInput.value = data.passageHTML || '';
+                DOM.questionsHtmlInput.value = data.questionsHTML || '';
+                
+                const answersText = Object.entries(data.answers || {})
+                    .map(([num, ans]) => `${num}. ${ans}`)
+                    .join('\n');
+                DOM.answersTextInput.value = answersText;
+
+            } else {
+                showAlert("Không tìm thấy bài đọc để chỉnh sửa.");
+                window.location.search = '';
+            }
+        }
+
         function parseAnswers(text) {
             const answers = {};
-            const lines = text.trim().split('\n');
             let totalQuestions = 0;
-            lines.forEach(line => {
+            text.trim().split('\n').forEach(line => {
                 const trimmedLine = line.trim();
                 if (!trimmedLine) return;
-                
-                // Matches "1. Answer" or "1 Answer" or "1-Answer"
                 const match = trimmedLine.match(/^(\d+)\s*[.-]?\s*(.*)/);
                 if (match) {
-                    const number = match[1];
-                    const answerText = match[2].trim();
-                    answers[number] = answerText;
+                    answers[match[1]] = match[2].trim();
                     totalQuestions++;
                 }
             });
             return { answers, totalQuestions };
         }
 
-        /**
-         * Uploads the complete reading test data to Firestore.
-         */
         async function uploadToFirebase() {
             const testId = DOM.testIdInput.value.trim();
             const title = DOM.testTitleInput.value.trim();
@@ -163,7 +208,7 @@
             const { answers, totalQuestions } = parseAnswers(DOM.answersTextInput.value);
 
             if (!testId || !title || !passageHTML || !questionsHTML || totalQuestions === 0) {
-                alert("Vui lòng nhập đầy đủ ID, Tiêu đề, Ngữ liệu, Câu hỏi và ít nhất một Đáp án.");
+                showAlert("Vui lòng nhập đủ ID, Tiêu đề, Ngữ liệu, Câu hỏi và Đáp án.");
                 return;
             }
 
@@ -178,65 +223,47 @@
                     questionsHTML,
                     answers,
                     totalQuestions,
-                    createdAt: serverTimestamp(),
                     updatedAt: serverTimestamp(),
-                    // Add other metadata if needed, like in the main test system
-                    isLocked: false, 
-                    answersPublished: false,
                 };
-
-                // We save this in a new collection called 'reading_tests'
-                await setDoc(doc(appState.db, "reading_tests", testId), testData);
-                
-                DOM.uploadLog.textContent = `THÀNH CÔNG! Đã lưu bài đọc với ID "${testId}".`;
+                if (!isEditMode) {
+                    testData.createdAt = serverTimestamp();
+                }
+                await setDoc(doc(db, "reading_tests", testId), testData, { merge: true });
+                DOM.uploadLog.textContent = `THÀNH CÔNG! Đã lưu bài đọc ID: "${testId}".`;
                 DOM.uploadLog.className = 'font-semibold mt-2 h-5 text-green-600';
-                
                 setTimeout(() => window.close(), 2000);
-
             } catch (error) {
                 DOM.uploadLog.textContent = `LỖI: ${error.message}`;
                 DOM.uploadLog.className = 'font-semibold mt-2 h-5 text-red-600';
-                console.error("Upload error:", error);
             } finally {
                 DOM.uploadBtn.disabled = false;
             }
         }
         
-        // --- INITIALIZATION ---
-        function init() {
-            // Initialize Firebase
-            const app = initializeApp(window.firebaseConfig);
-            appState.db = getFirestore(app);
-            appState.auth = getAuth(app);
-
-            // Authentication listener
-            onAuthStateChanged(appState.auth, user => {
-                if (user) {
-                    DOM.loginScreen.style.display = 'none';
-                    DOM.mainContent.style.display = 'block';
-                } else {
-                    DOM.loginScreen.style.display = 'flex';
-                    DOM.mainContent.style.display = 'none';
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                DOM.loginScreen.classList.remove('is-open');
+                DOM.mainContent.style.display = 'block';
+                const params = new URLSearchParams(window.location.search);
+                const testIdToEdit = params.get('edit');
+                if (testIdToEdit) {
+                    isEditMode = true;
+                    DOM.pageTitle.textContent = "Chỉnh Sửa Bài Đọc Hiểu";
+                    DOM.testIdInput.disabled = true;
+                    loadTestData(testIdToEdit);
                 }
-            });
+            } else {
+                DOM.loginScreen.classList.add('is-open');
+                DOM.mainContent.style.display = 'none';
+            }
+        });
 
-            // Event Listeners
-            DOM.loginBtn.addEventListener('click', async () => {
-                const email = DOM.emailInput.value;
-                const password = DOM.passwordInput.value;
-                DOM.loginError.textContent = '';
-                try {
-                    await signInWithEmailAndPassword(appState.auth, email, password);
-                } catch (error) {
-                    DOM.loginError.textContent = 'Email hoặc mật khẩu không đúng.';
-                }
-            });
-            DOM.logoutBtn.addEventListener('click', () => signOut(appState.auth));
-            DOM.uploadBtn.addEventListener('click', uploadToFirebase);
-        }
-        
-        // Start the application
-        init();
+        DOM.loginBtn.addEventListener('click', async () => {
+            try { await signInWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value); } 
+            catch (error) { DOM.loginError.textContent = 'Email hoặc mật khẩu không đúng.'; }
+        });
+        DOM.logoutBtn.addEventListener('click', () => signOut(auth));
+        DOM.uploadBtn.addEventListener('click', uploadToFirebase);
     </script>
 </body>
 </html>
