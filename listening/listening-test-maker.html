@@ -5,12 +5,120 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trình Soạn Thảo Bài Thi Nghe</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --blur-intensity: 12px;
+            --saturation-intensity: 150%;
+            --glass-bg-color: rgba(255, 255, 255, 0.45);
+            --glass-border-color: rgba(255, 255, 255, 0.6);
+            --shadow-color: rgba(67, 56, 202, 0.15);
+            --primary-accent: #6d28d9;
+            --text-primary: #0f172a;
+            --app-bg-start: #f5f7ff;
+            --app-bg-end: #e0e7ff;
+        }
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: var(--app-bg-start);
+            background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%);
+            color: var(--text-primary);
+        }
+        .background-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        .shape { position: absolute; border-radius: 50%; filter: blur(25px); opacity: 0.6; }
+        .shape1 { width: 250px; height: 250px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); top: 10%; left: 5%; animation: float 28s infinite alternate ease-in-out; }
+        .shape2 { width: 180px; height: 180px; background: linear-gradient(135deg, #14b8a6, #67e8f9); bottom: 15%; right: 10%; animation: float 32s infinite alternate ease-in-out; }
+        @keyframes float { from { transform: translateY(20px) scale(1); } to { transform: translateY(-20px) scale(1.05); } }
+        .glass-panel {
+            position: relative;
+            background: var(--glass-bg-color);
+            backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity));
+            border-radius: 24px;
+            border: 1px solid var(--glass-border-color);
+            box-shadow: 0 8px 32px 0 var(--shadow-color);
+        }
+        .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; }
+        .btn-primary { background: var(--primary-accent); color: white; box-shadow: 0 4px 15px rgba(91, 33, 182, 0.25); }
+        .btn-primary:hover { background: #5b21b6; transform: translateY(-2px); }
+        .btn-primary:disabled { background-color: #a5b4fc; cursor: not-allowed; transform: none; box-shadow: none; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; transform: translateY(-2px); }
+        .input-field { background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.5); color: var(--text-primary); transition: all 0.2s ease-in-out; width: 100%; padding: 12px; border-radius: 12px; }
+        .input-field:focus { background: rgba(255, 255, 255, 0.7); border-color: var(--primary-accent); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3); outline: none; }
+        textarea.input-field { min-height: 150px; font-family: monospace; }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; }
+        .modal.is-open { display: flex; }
+        .modal-content { animation: scaleIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+    <div class="background-shapes">
+        <div class="shape shape1"></div>
+        <div class="shape shape2"></div>
+    </div>
 
-    <!-- === CẤU HÌNH FIREBASE === -->
+    <div id="login-screen" class="modal is-open">
+        <div class="modal-content glass-panel p-8 rounded-2xl shadow-xl text-center w-full max-w-sm">
+            <h2 class="text-2xl font-bold mb-6">Đăng nhập Giáo viên</h2>
+            <div class="space-y-4 text-left">
+                <div><label for="email-input" class="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" id="email-input" class="input-field"></div>
+                <div><label for="password-input" class="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label><input type="password" id="password-input" class="input-field"></div>
+            </div>
+            <button id="login-btn" class="btn btn-primary w-full mt-6">Đăng nhập</button>
+            <p id="login-error" class="text-red-500 mt-2 h-5"></p>
+        </div>
+    </div>
+
+    <div id="main-content" class="max-w-6xl mx-auto relative z-10" style="display: none;">
+        <header class="flex justify-between items-center mb-8">
+            <h1 id="page-title" class="text-4xl font-bold text-gray-800">Soạn Thảo Bài Thi Nghe</h1>
+            <button id="logout-btn" class="btn btn-danger">Đăng xuất</button>
+        </header>
+
+        <div class="glass-panel p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4">1. Thông tin chung</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div><label for="test-id" class="block text-sm font-medium text-gray-700 mb-1">Listening Test ID</label><input type="text" id="test-id" class="input-field" placeholder="vd: ielts_listening_test_1"></div>
+                <div><label for="test-title" class="block text-sm font-medium text-gray-700 mb-1">Tiêu đề</label><input type="text" id="test-title" class="input-field" placeholder="vd: IELTS Listening Practice Test 1"></div>
+            </div>
+        </div>
+
+        <div class="glass-panel p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4">2. Cấu hình Audio</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div><label for="play-count" class="block text-sm font-medium text-gray-700 mb-1">Số lần nghe</label><input type="number" id="play-count" class="input-field" value="1" min="1"></div>
+                <div><label for="pause-between" class="block text-sm font-medium text-gray-700 mb-1">Giây nghỉ giữa các file</label><input type="number" id="pause-between" class="input-field" value="5" min="0"></div>
+            </div>
+            <div class="mt-6">
+                <label for="audio-urls" class="block text-sm font-medium text-gray-700 mb-1">Danh sách Link Audio</label>
+                <p class="text-xs text-gray-500 mb-2">Dán các link audio công khai, mỗi link một dòng. Thứ tự dán sẽ là thứ tự phát.</p>
+                <textarea id="audio-urls" class="input-field" rows="5" placeholder="https://firebasestorage.googleapis.com/.../file1.mp3?alt=media&token=...\nhttps://firebasestorage.googleapis.com/.../file2.mp3?alt=media&token=..."></textarea>
+            </div>
+        </div>
+        
+        <div class="glass-panel p-6">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4">3. Nội dung & Đáp án</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div><label for="questions-html" class="block text-sm font-medium text-gray-700 mb-1">Nội dung đề thi (HTML)</label><textarea id="questions-html" class="input-field" placeholder="Dán mã HTML..."></textarea></div>
+                <div><label for="answers-text" class="block text-sm font-medium text-gray-700 mb-1">Đáp án</label><textarea id="answers-text" class="input-field" placeholder="1. answer one..."></textarea></div>
+            </div>
+        </div>
+
+        <div class="mt-8 text-center">
+             <button id="upload-btn" class="btn btn-primary text-lg w-full md:w-1/2"><i class="fas fa-cloud-upload-alt mr-2"></i>Lưu Bài Thi</button>
+             <p id="upload-log" class="font-semibold mt-2 h-5"></p>
+        </div>
+    </div>
+    
+    <div id="custom-alert-modal" class="modal"></div>
+
     <script type="module">
-        // CHỈ CẦN CẤU HÌNH CỦA DỰ ÁN CHÍNH
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
@@ -20,83 +128,12 @@
             appId: "1:948701163187:web:043f2d381d63e741114ac6",
             measurementId: "G-33NHT07JHE"
         };
-        window.firebaseConfig = firebaseConfig;
-    </script>
-
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f9fafb; }
-        .btn { font-weight: 600; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.2s; border: none; }
-        .btn-primary { background-color: #4f46e5; color: white; }
-        .btn-primary:disabled { background-color: #a5b4fc; cursor: not-allowed; }
-        .input-field { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; }
-        textarea.input-field { min-height: 200px; font-family: monospace; }
-    </style>
-</head>
-<body class="p-4 sm:p-8">
-    <!-- Màn hình đăng nhập -->
-    <div id="login-screen" class="fixed inset-0 bg-gray-800 bg-opacity-90 flex items-center justify-center z-[200]">
-        <div class="bg-white p-8 rounded-lg shadow-xl text-center w-full max-w-sm">
-            <h2 class="text-2xl font-bold mb-4">Đăng nhập Giáo viên</h2>
-            <div class="space-y-4 text-left">
-                <div><label for="email-input">Email</label><input type="email" id="email-input" class="input-field w-full mt-1"></div>
-                <div><label for="password-input">Mật khẩu</label><input type="password" id="password-input" class="input-field w-full mt-1"></div>
-            </div>
-            <button id="login-btn" class="btn btn-primary w-full mt-6">Đăng nhập</button>
-            <p id="login-error" class="text-red-500 mt-2 h-5"></p>
-        </div>
-    </div>
-
-    <div id="main-content" class="max-w-6xl mx-auto" style="display: none;">
-        <div class="flex justify-between items-center mb-8">
-            <h1 class="text-4xl font-bold text-gray-800">Soạn Thảo Bài Thi Nghe</h1>
-            <button id="logout-btn" class="btn btn-danger">Đăng xuất</button>
-        </div>
-
-        <!-- Thông tin chung -->
-        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
-            <h2 class="text-2xl font-bold text-gray-700 mb-4">1. Thông tin chung</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div><label for="test-id">Listening Test ID</label><input type="text" id="test-id" class="input-field mt-1" placeholder="vd: ielts_listening_test_1"></div>
-                <div><label for="test-title">Tiêu đề</label><input type="text" id="test-title" class="input-field mt-1" placeholder="vd: IELTS Listening Practice Test 1"></div>
-            </div>
-        </div>
-
-        <!-- Cấu hình Audio -->
-        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
-            <h2 class="text-2xl font-bold text-gray-700 mb-4">2. Cấu hình Audio</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div><label for="play-count">Số lần nghe</label><input type="number" id="play-count" class="input-field mt-1" value="1" min="1"></div>
-                <div><label for="pause-between">Giây nghỉ giữa các file</label><input type="number" id="pause-between" class="input-field mt-1" value="5" min="0"></div>
-            </div>
-            <div class="mt-6">
-                <label for="audio-urls" class="block text-sm font-medium text-gray-700">Danh sách Link Audio</label>
-                <p class="text-xs text-gray-500 mt-1">Dán các link audio công khai vào đây, mỗi link một dòng. Thứ tự dán sẽ là thứ tự phát.</p>
-                <textarea id="audio-urls" class="input-field mt-2" rows="5" placeholder="https://firebasestorage.googleapis.com/.../file1.mp3?alt=media&token=...\nhttps://firebasestorage.googleapis.com/.../file2.mp3?alt=media&token=..."></textarea>
-            </div>
-        </div>
         
-        <!-- Nội dung & Đáp án -->
-        <div class="bg-white p-6 rounded-lg shadow-md">
-            <h2 class="text-2xl font-bold text-gray-700 mb-4">3. Nội dung & Đáp án</h2>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div><label for="questions-html">Nội dung đề thi (HTML)</label><textarea id="questions-html" class="input-field" placeholder="Dán mã HTML..."></textarea></div>
-                <div><label for="answers-text">Đáp án</label><textarea id="answers-text" class="input-field" placeholder="1. answer one..."></textarea></div>
-            </div>
-        </div>
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        let isEditMode = false;
 
-        <!-- Nút lưu -->
-        <div class="mt-8 text-center">
-             <button id="upload-btn" class="btn btn-primary text-lg w-full md:w-1/2"><i class="fas fa-cloud-upload-alt mr-2"></i>Lưu Bài Thi</button>
-             <p id="upload-log" class="font-semibold mt-2 h-5"></p>
-        </div>
-    </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-
-        const appState = { db: null, auth: null };
         const DOM = {
             loginScreen: document.getElementById('login-screen'),
             mainContent: document.getElementById('main-content'),
@@ -114,7 +151,38 @@
             answersTextInput: document.getElementById('answers-text'),
             uploadBtn: document.getElementById('upload-btn'),
             uploadLog: document.getElementById('upload-log'),
+            alertModal: document.getElementById('custom-alert-modal'),
+            pageTitle: document.getElementById('page-title'),
         };
+
+        function showAlert(message) {
+            DOM.alertModal.innerHTML = `<div class="modal-content glass-panel text-center p-8"><p class="text-lg font-medium text-slate-800 mb-6">${message}</p><button id="alert-ok-btn" class="btn btn-primary">OK</button></div>`;
+            DOM.alertModal.classList.add('is-open');
+            document.getElementById('alert-ok-btn').onclick = () => DOM.alertModal.classList.remove('is-open');
+        }
+
+        async function loadTestData(testId) {
+            const testRef = doc(db, "listening_tests", testId);
+            const testSnap = await getDoc(testRef);
+            if (testSnap.exists()) {
+                const data = testSnap.data();
+                DOM.testIdInput.value = testId;
+                DOM.testTitleInput.value = data.title || '';
+                DOM.playCountInput.value = data.playCount || 1;
+                DOM.pauseBetweenInput.value = data.pauseBetween || 5;
+                DOM.audioUrlsTextarea.value = (data.audioURLs || []).join('\n');
+                DOM.questionsHtmlInput.value = data.questionsHTML || '';
+                
+                const answersText = Object.entries(data.answers || {})
+                    .map(([num, ans]) => `${num}. ${ans}`)
+                    .join('\n');
+                DOM.answersTextInput.value = answersText;
+
+            } else {
+                showAlert("Không tìm thấy bài thi nghe để chỉnh sửa.");
+                window.location.search = '';
+            }
+        }
 
         function parseAnswers(text) {
             const answers = {};
@@ -133,16 +201,16 @@
             const testId = DOM.testIdInput.value.trim();
             const title = DOM.testTitleInput.value.trim();
             const { answers, totalQuestions } = parseAnswers(DOM.answersTextInput.value);
-            
             const audioURLs = DOM.audioUrlsTextarea.value.trim().split('\n').filter(url => url.trim().startsWith('http'));
 
             if (!testId || !title || totalQuestions === 0 || audioURLs.length === 0) {
-                alert("Vui lòng nhập đủ thông tin, đáp án và ít nhất một link audio.");
+                showAlert("Vui lòng nhập đủ thông tin, đáp án và ít nhất một link audio.");
                 return;
             }
 
             DOM.uploadBtn.disabled = true;
             DOM.uploadLog.textContent = 'Đang lưu bài thi...';
+            DOM.uploadLog.className = 'font-semibold mt-2 h-5 text-blue-600';
 
             try {
                 const testData = {
@@ -153,40 +221,49 @@
                     audioURLs,
                     playCount: parseInt(DOM.playCountInput.value, 10) || 1,
                     pauseBetween: parseInt(DOM.pauseBetweenInput.value, 10) || 0,
-                    createdAt: serverTimestamp(),
                     updatedAt: serverTimestamp(),
                 };
+                if (!isEditMode) {
+                    testData.createdAt = serverTimestamp();
+                }
 
-                await setDoc(doc(appState.db, "listening_tests", testId), testData);
+                await setDoc(doc(db, "listening_tests", testId), testData, { merge: true });
                 DOM.uploadLog.textContent = `THÀNH CÔNG! Đã lưu bài thi nghe ID: "${testId}".`;
+                DOM.uploadLog.className = 'font-semibold mt-2 h-5 text-green-600';
                 setTimeout(() => window.close(), 2000);
 
             } catch (error) {
                 DOM.uploadLog.textContent = `LỖI: ${error.message}`;
+                DOM.uploadLog.className = 'font-semibold mt-2 h-5 text-red-600';
             } finally {
                 DOM.uploadBtn.disabled = false;
             }
         }
         
-        function init() {
-            const app = initializeApp(window.firebaseConfig);
-            appState.db = getFirestore(app);
-            appState.auth = getAuth(app);
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                DOM.loginScreen.classList.remove('is-open');
+                DOM.mainContent.style.display = 'block';
+                const params = new URLSearchParams(window.location.search);
+                const testIdToEdit = params.get('edit');
+                if (testIdToEdit) {
+                    isEditMode = true;
+                    DOM.pageTitle.textContent = "Chỉnh Sửa Bài Thi Nghe";
+                    DOM.testIdInput.disabled = true;
+                    loadTestData(testIdToEdit);
+                }
+            } else {
+                DOM.loginScreen.classList.add('is-open');
+                DOM.mainContent.style.display = 'none';
+            }
+        });
 
-            onAuthStateChanged(appState.auth, user => {
-                DOM.loginScreen.style.display = user ? 'none' : 'flex';
-                DOM.mainContent.style.display = user ? 'block' : 'none';
-            });
-
-            DOM.loginBtn.addEventListener('click', async () => {
-                try { await signInWithEmailAndPassword(appState.auth, DOM.emailInput.value, DOM.passwordInput.value); } 
-                catch (error) { DOM.loginError.textContent = 'Email hoặc mật khẩu không đúng.'; }
-            });
-            DOM.logoutBtn.addEventListener('click', () => signOut(appState.auth));
-            DOM.uploadBtn.addEventListener('click', uploadToFirebase);
-        }
-        
-        init();
+        DOM.loginBtn.addEventListener('click', async () => {
+            try { await signInWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value); } 
+            catch (error) { DOM.loginError.textContent = 'Email hoặc mật khẩu không đúng.'; }
+        });
+        DOM.logoutBtn.addEventListener('click', () => signOut(auth));
+        DOM.uploadBtn.addEventListener('click', uploadToFirebase);
     </script>
 </body>
 </html>
