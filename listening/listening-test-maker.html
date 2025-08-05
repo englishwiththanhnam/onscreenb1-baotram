@@ -10,8 +10,8 @@
 
     <!-- === CẤU HÌNH FIREBASE === -->
     <script type="module">
-        // DỰ ÁN CHÍNH (DÙNG CHO DATABASE & AUTH)
-        const primaryFirebaseConfig = {
+        // CHỈ CẦN CẤU HÌNH CỦA DỰ ÁN CHÍNH
+        const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
             projectId: "b1-baotram",
@@ -20,19 +20,7 @@
             appId: "1:948701163187:web:043f2d381d63e741114ac6",
             measurementId: "G-33NHT07JHE"
         };
-        window.primaryFirebaseConfig = primaryFirebaseConfig;
-
-        // DỰ ÁN PHỤ (CHỈ DÙNG CHO STORAGE)
-        const storageFirebaseConfig = {
-          apiKey: "AIzaSyD6jCTrKWrerZTyB_sAejxqcuUpUvg91Pk",
-          authDomain: "data-storage-285e6.firebaseapp.com",
-          projectId: "data-storage-285e6",
-          storageBucket: "data-storage-285e6.appspot.com",
-          messagingSenderId: "300159133661",
-          appId: "1:300159133661:web:28c26715e55f840c88f834",
-          measurementId: "G-VYE4DKRXEF"
-        };
-        window.storageFirebaseConfig = storageFirebaseConfig;
+        window.firebaseConfig = firebaseConfig;
     </script>
 
     <style>
@@ -44,10 +32,8 @@
         textarea.input-field { min-height: 200px; font-family: monospace; }
         .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #4f46e5; width: 24px; height: 24px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        /* Styles for drag and drop */
         .draggable { cursor: move; }
         .dragging { opacity: 0.5; background: #c7d2fe; }
-        .drag-over { border: 2px dashed #4f46e5; }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -113,10 +99,10 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-storage.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-functions.js";
 
-        const appState = { db: null, auth: null, storage: null, audioFiles: [] };
+        const appState = { db: null, auth: null, functions: null, audioFiles: [] };
         const DOM = {
             loginScreen: document.getElementById('login-screen'),
             mainContent: document.getElementById('main-content'),
@@ -158,44 +144,44 @@
                 item.draggable = true;
                 item.dataset.index = index;
                 
-                let statusIcon = '';
-                if (fileData.uploading) {
-                    statusIcon = '<div class="loader"></div>';
-                } else if (fileData.url) {
-                    statusIcon = '<i class="fas fa-check-circle text-green-500"></i>';
-                } else {
-                    statusIcon = '<i class="fas fa-times-circle text-red-500"></i>';
-                }
+                let statusIcon = fileData.uploading ? '<div class="loader"></div>' : 
+                                 fileData.url ? '<i class="fas fa-check-circle text-green-500"></i>' : 
+                                 '<i class="fas fa-times-circle text-red-500"></i>';
 
-                item.innerHTML = `
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-grip-vertical text-gray-400"></i>
-                        <span>${fileData.name}</span>
-                    </div>
-                    ${statusIcon}
-                `;
+                item.innerHTML = `<div class="flex items-center gap-2"><i class="fas fa-grip-vertical text-gray-400"></i><span>${fileData.name}</span></div>${statusIcon}`;
                 DOM.uploadStatusList.appendChild(item);
+            });
+        }
+        
+        // Convert file to Base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = error => reject(error);
             });
         }
 
         async function handleFileUpload(files) {
             DOM.uploadBtn.disabled = true;
-            const newFiles = Array.from(files).map(file => ({
-                name: file.name,
-                file: file,
-                uploading: true,
-                url: null
-            }));
+            const uploadAudioFile = httpsCallable(appState.functions, 'uploadAudioFile');
+
+            const newFiles = Array.from(files).map(file => ({ name: file.name, file: file, uploading: true, url: null }));
             appState.audioFiles.push(...newFiles);
             renderAudioList();
 
             await Promise.all(newFiles.map(async (fileData) => {
                 try {
-                    const storageRef = ref(appState.storage, `listening_audio/${Date.now()}_${fileData.name}`);
-                    await uploadBytes(storageRef, fileData.file);
-                    fileData.url = await getDownloadURL(storageRef);
+                    const base64 = await fileToBase64(fileData.file);
+                    const result = await uploadAudioFile({ 
+                        fileAsBase64: base64, 
+                        fileName: fileData.name,
+                        fileType: fileData.file.type
+                    });
+                    fileData.url = result.data.downloadURL;
                 } catch (error) {
-                    console.error("File upload error:", error);
+                    console.error("Cloud Function upload error:", error);
                 } finally {
                     fileData.uploading = false;
                 }
@@ -209,7 +195,6 @@
             const testId = DOM.testIdInput.value.trim();
             const title = DOM.testTitleInput.value.trim();
             const { answers, totalQuestions } = parseAnswers(DOM.answersTextInput.value);
-            
             const audioURLs = appState.audioFiles.map(f => f.url).filter(Boolean);
 
             if (!testId || !title || totalQuestions === 0 || audioURLs.length === 0) {
@@ -226,7 +211,7 @@
                     questionsHTML: DOM.questionsHtmlInput.value,
                     answers,
                     totalQuestions,
-                    audioURLs, // Save the sorted URLs
+                    audioURLs,
                     playCount: parseInt(DOM.playCountInput.value, 10) || 1,
                     pauseBetween: parseInt(DOM.pauseBetweenInput.value, 10) || 0,
                     createdAt: serverTimestamp(),
@@ -234,7 +219,6 @@
                 };
 
                 await setDoc(doc(appState.db, "listening_tests", testId), testData);
-                
                 DOM.uploadLog.textContent = `THÀNH CÔNG! Đã lưu bài thi nghe ID: "${testId}".`;
                 setTimeout(() => window.close(), 2000);
 
@@ -247,56 +231,25 @@
         
         function setupDragAndDrop() {
             let draggedItem = null;
-            DOM.uploadStatusList.addEventListener('dragstart', (e) => {
+            DOM.uploadStatusList.addEventListener('dragstart', e => {
                 draggedItem = e.target;
                 setTimeout(() => e.target.classList.add('dragging'), 0);
             });
-
-            DOM.uploadStatusList.addEventListener('dragend', (e) => {
-                e.target.classList.remove('dragging');
-            });
-
-            DOM.uploadStatusList.addEventListener('dragover', (e) => {
+            DOM.uploadStatusList.addEventListener('dragend', e => e.target.classList.remove('dragging'));
+            DOM.uploadStatusList.addEventListener('dragover', e => e.preventDefault());
+            DOM.uploadStatusList.addEventListener('drop', e => {
                 e.preventDefault();
-                const afterElement = getDragAfterElement(DOM.uploadStatusList, e.clientY);
-                if (afterElement == null) {
-                    DOM.uploadStatusList.appendChild(draggedItem);
-                } else {
-                    DOM.uploadStatusList.insertBefore(draggedItem, afterElement);
-                }
-            });
-            
-            DOM.uploadStatusList.addEventListener('drop', (e) => {
-                e.preventDefault();
-                const newOrder = Array.from(DOM.uploadStatusList.children).map(item => {
-                    return appState.audioFiles[parseInt(item.dataset.index)];
-                });
+                const newOrder = Array.from(DOM.uploadStatusList.children).map(item => appState.audioFiles[parseInt(item.dataset.index)]);
                 appState.audioFiles = newOrder;
-                // Re-render to update dataset.index for future drags
                 renderAudioList();
             });
-
-            function getDragAfterElement(container, y) {
-                const draggableElements = [...container.querySelectorAll('.draggable:not(.dragging)')];
-                return draggableElements.reduce((closest, child) => {
-                    const box = child.getBoundingClientRect();
-                    const offset = y - box.top - box.height / 2;
-                    if (offset < 0 && offset > closest.offset) {
-                        return { offset: offset, element: child };
-                    } else {
-                        return closest;
-                    }
-                }, { offset: Number.NEGATIVE_INFINITY }).element;
-            }
         }
 
         function init() {
-            const primaryApp = initializeApp(window.primaryFirebaseConfig, "primary");
-            appState.db = getFirestore(primaryApp);
-            appState.auth = getAuth(primaryApp);
-
-            const storageApp = initializeApp(window.storageFirebaseConfig, "storageApp");
-            appState.storage = getStorage(storageApp);
+            const app = initializeApp(window.firebaseConfig);
+            appState.db = getFirestore(app);
+            appState.auth = getAuth(app);
+            appState.functions = getFunctions(app);
 
             onAuthStateChanged(appState.auth, user => {
                 DOM.loginScreen.style.display = user ? 'none' : 'flex';
