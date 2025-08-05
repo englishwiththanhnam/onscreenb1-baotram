@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Thư viện SortableJS cho chức năng kéo thả -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <style>
         :root {
@@ -55,28 +56,24 @@
         .modal-content { animation: scaleIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         
-        /* CSS Mới cho Giao diện Drive */
-        .folder-tree-item.active, .special-location.active {
-            background-color: var(--primary-accent) !important;
-            color: white;
-        }
-        .folder-tree-item.active .text-gray-500, .special-location.active .text-gray-500 {
-            color: #e0e7ff;
-        }
-        .main-view-item {
-            transition: all 0.2s ease-in-out;
-        }
-        .main-view-item:hover {
-            transform: translateY(-4px);
-            background: rgba(255, 255, 255, 0.7);
-        }
-        .sortable-ghost {
-            opacity: 0.4;
-            background: #c7d2fe;
-        }
-        .sortable-drag {
-            opacity: 1 !important;
-        }
+        .folder-tree-item.active, .special-location.active { background-color: var(--primary-accent) !important; color: white; }
+        .folder-tree-item.active .text-gray-500, .special-location.active .text-gray-500 { color: #e0e7ff; }
+        .main-view-item { transition: all 0.2s ease-in-out; }
+        .main-view-item:hover { transform: translateY(-4px); background: rgba(255, 255, 255, 0.7); }
+        .main-view-item.selected { background: rgba(124, 58, 237, 0.3); border: 1px solid var(--primary-accent); }
+        .sortable-ghost { opacity: 0.4; background: #c7d2fe; }
+        .sortable-drag { opacity: 1 !important; }
+        #context-menu { position: absolute; z-index: 1000; display: none; }
+        .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; }
+        .status-not-started { background-color: #e5e7eb; color: #4b5563; }
+        .status-in-progress { background-color: #fef08a; color: #854d0e; }
+        .status-submitted { background-color: #d1fae5; color: #065f46; }
+        .toggle-switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 28px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--primary-accent); }
+        input:checked + .slider:before { transform: translateX(22px); }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -85,6 +82,7 @@
         <div class="shape shape2"></div>
     </div>
 
+    <!-- Login Screen -->
     <div id="login-screen" class="modal is-open">
         <div class="modal-content glass-panel p-8 rounded-2xl shadow-xl text-center w-full max-w-sm">
             <h2 class="text-2xl font-bold mb-6">Đăng nhập Giáo viên</h2>
@@ -97,6 +95,7 @@
         </div>
     </div>
 
+    <!-- Main Content -->
     <div id="main-content" class="max-w-screen-2xl mx-auto relative z-10" style="display: none;">
         <header class="flex flex-wrap justify-between items-center mb-8">
             <h1 class="text-4xl font-bold text-gray-800">Quản lý Bài tập</h1>
@@ -111,41 +110,44 @@
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Cột Trái: Cây thư mục -->
             <div class="lg:col-span-3 glass-panel p-4">
                 <button id="new-folder-btn" class="btn btn-primary w-full mb-4">
                     <i class="fas fa-folder-plus mr-2"></i>Tạo thư mục mới
                 </button>
                 <div id="special-locations-list" class="space-y-1 mb-4">
-                     <div data-folder-id="unassigned" class="special-location p-3 rounded-lg cursor-pointer hover:bg-violet-100 transition-colors">
+                     <div data-location-id="unassigned" class="special-location p-3 rounded-lg cursor-pointer hover:bg-violet-100 transition-colors">
                         <i class="fas fa-inbox w-6 text-center mr-2 text-yellow-500"></i><span class="font-semibold">Danh sách chờ</span>
                     </div>
                 </div>
                 <hr class="my-2 border-white/50">
-                <div id="folder-tree-container" class="space-y-1 max-h-[60vh] overflow-y-auto">
-                    </div>
+                <div id="folder-tree-container" class="space-y-1 max-h-[60vh] overflow-y-auto"></div>
             </div>
 
+            <!-- Cột Giữa: Nội dung chính -->
             <div class="lg:col-span-5 glass-panel p-4">
-                <div id="breadcrumb-container" class="p-2 mb-4 text-gray-600">Trang chủ</div>
-                <div id="main-content-view" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[70vh] overflow-y-auto p-2">
-                    </div>
+                <div id="breadcrumb-container" class="p-2 mb-4 text-gray-600"></div>
+                <div id="main-content-view" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[70vh] overflow-y-auto p-2"></div>
             </div>
 
+            <!-- Cột Phải: Chi tiết -->
             <div id="details-view" class="lg:col-span-4 glass-panel p-6 max-h-[80vh] overflow-y-auto">
                 <div class="text-center text-gray-500 py-16">
-                    <i class="fas fa-arrow-left text-4xl mb-4"></i>
+                    <i class="fas fa-info-circle text-4xl mb-4"></i>
                     <p class="text-xl">Chọn một bài tập để xem chi tiết.</p>
                 </div>
             </div>
         </div>
     </div>
     
+    <!-- Modals & Context Menu -->
+    <div id="context-menu" class="glass-panel !rounded-lg !p-2 min-w-[180px]"></div>
     <div id="custom-confirm-modal" class="modal"></div>
     <div id="move-item-modal" class="modal"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getFirestore, collection, doc, addDoc, deleteDoc, query, where, setDoc, updateDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, addDoc, deleteDoc, query, where, setDoc, updateDoc, onSnapshot, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
         // --- Firebase & App State ---
@@ -167,9 +169,10 @@
             currentUser: null,
             localTestsCache: [],
             localFoldersCache: [],
-            currentFolderId: "root",
+            currentLocationId: "root", // can be 'root', 'unassigned', or a folderId
             selectedTestId: null,
-            unsubscribe: () => {}
+            unsubscribers: [],
+            timerInterval: null,
         };
         
         const DOM = {
@@ -187,6 +190,7 @@
             breadcrumbContainer: document.getElementById('breadcrumb-container'),
             mainContentView: document.getElementById('main-content-view'),
             detailsView: document.getElementById('details-view'),
+            contextMenu: document.getElementById('context-menu'),
             confirmModal: document.getElementById('custom-confirm-modal'),
             moveItemModal: document.getElementById('move-item-modal'),
         };
@@ -198,15 +202,21 @@
                 DOM.loginScreen.classList.remove('is-open');
                 DOM.mainContent.style.display = 'block';
                 startDataListeners();
+                changeCurrentLocation('root');
             } else {
                 appState.currentUser = null;
-                appState.unsubscribe();
+                appState.unsubscribers.forEach(unsub => unsub());
+                appState.unsubscribers = [];
                 DOM.loginScreen.classList.add('is-open');
                 DOM.mainContent.style.display = 'none';
             }
         });
 
         function startDataListeners() {
+            // Clear previous listeners
+            appState.unsubscribers.forEach(unsub => unsub());
+            appState.unsubscribers = [];
+
             const collectionsToWatch = {
                 standard: 'tests',
                 reading: 'reading_tests',
@@ -214,12 +224,11 @@
                 folders: 'folders'
             };
 
-            const unsubs = {};
             let combinedTests = {};
             
             Object.entries(collectionsToWatch).forEach(([type, name]) => {
-                const q = query(collection(db, name));
-                unsubs[type] = onSnapshot(q, (snapshot) => {
+                const q = query(collection(db, name)); // Add where('ownerId', '==', appState.currentUser.uid) for multi-user
+                const unsub = onSnapshot(q, (snapshot) => {
                     if (type === 'folders') {
                         appState.localFoldersCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                         renderFolderTree();
@@ -230,9 +239,8 @@
                     renderMainContentView();
                     renderBreadcrumb();
                 });
+                appState.unsubscribers.push(unsub);
             });
-
-            appState.unsubscribe = () => Object.values(unsubs).forEach(unsub => unsub());
         }
 
         // --- Render Functions ---
@@ -242,9 +250,10 @@
             const children = appState.localFoldersCache.filter(f => f.parentId === parentId);
             children.forEach(folder => {
                 const item = document.createElement('div');
-                item.className = `folder-tree-item p-3 rounded-lg cursor-pointer hover:bg-violet-100 transition-colors ${folder.id === appState.currentFolderId ? 'active' : ''}`;
+                item.className = `folder-tree-item p-3 rounded-lg cursor-pointer hover:bg-violet-100 transition-colors ${folder.id === appState.currentLocationId ? 'active' : ''}`;
                 item.style.paddingLeft = `${12 + level * 20}px`;
-                item.dataset.folderId = folder.id;
+                item.dataset.itemId = folder.id;
+                item.dataset.itemType = 'folder';
                 item.innerHTML = `<i class="fas fa-folder w-6 text-center mr-2 text-gray-500"></i><span class="font-semibold">${folder.name}</span>`;
                 DOM.folderTreeContainer.appendChild(item);
                 renderFolderTree(folder.id, level + 1);
@@ -253,24 +262,19 @@
         
         function renderMainContentView() {
             DOM.mainContentView.innerHTML = '';
-            const folderId = appState.currentFolderId;
+            const locationId = appState.currentLocationId;
 
             let itemsToShow = [];
-            // Get subfolders
-            if (folderId !== 'unassigned') {
-                 itemsToShow.push(...appState.localFoldersCache.filter(f => f.parentId === folderId));
+            if (locationId !== 'unassigned') {
+                 itemsToShow.push(...appState.localFoldersCache.filter(f => f.parentId === locationId));
             }
 
-            // Get tests - <<<!!! SỬA LỖI Ở ĐÂY !!!>>>
-            if (folderId === 'unassigned') {
-                // Lấy những bài thi có folderId là null (mới tạo) HOẶC không có trường folderId (dữ liệu cũ)
+            if (locationId === 'unassigned') {
                 itemsToShow.push(...appState.localTestsCache.filter(t => !t.folderId));
             } else {
-                // Lấy những bài thi có folderId khớp với thư mục hiện tại
-                itemsToShow.push(...appState.localTestsCache.filter(t => t.folderId === folderId));
+                itemsToShow.push(...appState.localTestsCache.filter(t => t.folderId === locationId));
             }
 
-            // Sort items: folders first, then alphabetically
             itemsToShow.sort((a,b) => {
                 const aIsFolder = !!a.parentId;
                 const bIsFolder = !!b.parentId;
@@ -287,7 +291,7 @@
             itemsToShow.forEach(item => {
                 const isFolder = !!item.parentId;
                 const element = document.createElement('div');
-                element.className = 'main-view-item flex flex-col items-center justify-center p-4 rounded-xl cursor-pointer text-center bg-white/30';
+                element.className = `main-view-item flex flex-col items-center justify-center p-4 rounded-xl cursor-pointer text-center bg-white/30 ${item.id === appState.selectedTestId ? 'selected' : ''}`;
                 element.dataset.itemId = item.id;
                 element.dataset.itemType = isFolder ? 'folder' : item.testType;
                 
@@ -304,14 +308,12 @@
                 `;
                 DOM.mainContentView.appendChild(element);
             });
-
-            // Init Drag and Drop
             initSortable();
         }
 
         function renderBreadcrumb() {
             let path = [{ name: 'Trang chủ', id: 'root' }];
-            let currentId = appState.currentFolderId;
+            let currentId = appState.currentLocationId;
             
             if (currentId === 'unassigned') {
                 path.push({ name: 'Danh sách chờ', id: 'unassigned' });
@@ -321,87 +323,175 @@
                     if (folder) {
                         path.splice(1, 0, { name: folder.name, id: folder.id });
                         currentId = folder.parentId;
-                    } else {
-                        break;
-                    }
+                    } else { break; }
                 }
             }
            
             DOM.breadcrumbContainer.innerHTML = path.map((p, i) => 
                 i === path.length - 1 
                 ? `<span class="font-bold text-gray-800">${p.name}</span>`
-                : `<a href="#" class="text-violet-700 hover:underline" data-folder-id="${p.id}">${p.name}</a>`
+                : `<a href="#" class="text-violet-700 hover:underline" data-location-id="${p.id}">${p.name}</a>`
             ).join('<span class="mx-2">/</span>');
         }
 
         function renderDetailsView(test) {
-             // This function is very similar to the original, adapted for the new state
-             // For brevity in this example, we'll just show a placeholder
+             if (appState.timerInterval) clearInterval(appState.timerInterval);
              if (!test) {
-                 DOM.detailsView.innerHTML = `<div class="text-center text-gray-500 py-16"><i class="fas fa-arrow-left text-4xl mb-4"></i><p class="text-xl">Chọn một bài tập để xem chi tiết.</p></div>`;
+                 DOM.detailsView.innerHTML = `<div class="text-center text-gray-500 py-16"><i class="fas fa-info-circle text-4xl mb-4"></i><p class="text-xl">Chọn một bài tập để xem chi tiết.</p></div>`;
                  return;
              }
+             
              DOM.detailsView.innerHTML = `
                 <h2 class="text-3xl font-bold text-gray-700">${test.title}</h2>
-                <p class="font-mono text-sm text-gray-500">${test.id}</p>
-                <div class="mt-6">
-                    <p>Phần chi tiết bài làm của học sinh, cài đặt, v.v... sẽ được hiển thị ở đây.</p>
-                    <p class="mt-4">Logic cho phần này có thể được sao chép từ phiên bản cũ và điều chỉnh để phù hợp.</p>
+                <p class="font-mono text-sm text-gray-500 mb-4">${test.id}</p>
+                
+                <div id="settings-panel" class="my-6 p-4 bg-white/30 rounded-2xl" data-testid="${test.id}" data-testtype="${test.testType}">
+                    <h3 class="font-bold mb-3">Cài đặt & Trạng thái</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="flex items-center justify-between p-3 bg-white/40 rounded-lg">
+                            <label for="lock-test-toggle" class="font-medium">Khóa đề thi</label>
+                            <label class="toggle-switch"><input type="checkbox" id="lock-test-toggle" ${test.isLocked ? 'checked' : ''}><span class="slider"></span></label>
+                        </div>
+                        <div class="p-3 bg-white/40 rounded-lg">
+                            <span class="font-medium">Công bố kết quả</span>
+                            <div class="flex justify-around mt-2">
+                                <label><input type="radio" name="publish-results" value="none" ${(!test.resultsPublished || test.resultsPublished === 'none') ? 'checked' : ''}> Không</label>
+                                <label><input type="radio" name="publish-results" value="correctIncorrect" ${test.resultsPublished === 'correctIncorrect' ? 'checked' : ''}> Đúng/Sai</label>
+                                <label><input type="radio" name="publish-results" value="full" ${test.resultsPublished === 'full' ? 'checked' : ''}> Toàn bộ</label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-             `;
+
+                <div class="my-6 p-4 bg-white/30 rounded-2xl">
+                    <h3 class="font-bold mb-2">Thêm học sinh mới</h3>
+                    <textarea id="new-student-list" class="input-field" rows="3" placeholder="Dán danh sách tên, mỗi tên một dòng..."></textarea>
+                    <button id="add-students-btn" class="btn btn-primary mt-2 w-full">Thêm và tạo mã</button>
+                </div>
+
+                <div>
+                    <h3 class="font-bold mb-2">Danh sách học sinh</h3>
+                    <div class="overflow-x-auto max-h-[45vh]">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="sticky top-0 bg-white/50 backdrop-blur-sm"><tr><th class="p-3 border-b border-gray-300">Tên</th><th class="p-3 border-b border-gray-300">Mã</th><th class="p-3 border-b border-gray-300">Trạng thái</th><th class="p-3 border-b border-gray-300">Điểm</th><th class="p-3 border-b border-gray-300">Vi phạm</th><th class="p-3 border-b border-gray-300"></th></tr></thead>
+                            <tbody id="submission-table-body">
+                                <tr><td colspan="6" class="p-4 text-center">Đang tải danh sách...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+                
+            const q = query(collection(db, "submissions"), where("testId", "==", test.id));
+            const unsub = onSnapshot(q, (snapshot) => {
+                const submissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderSubmissionsTable(submissions, test);
+                if (appState.timerInterval) clearInterval(appState.timerInterval);
+                appState.timerInterval = setInterval(() => updateTimers(submissions, test), 1000);
+            });
+            appState.unsubscribers.push(unsub);
+        }
+
+        function renderSubmissionsTable(submissions, test) {
+            const tableBody = document.getElementById('submission-table-body');
+            if (!tableBody) return;
+            if (submissions.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">Chưa có học sinh nào.</td></tr>`;
+                return;
+            }
+            tableBody.innerHTML = submissions.map(sub => {
+                const statusInfo = getStatusInfo(sub, test);
+                return `
+                <tr class="hover:bg-white/40" data-submission-id="${sub.id}">
+                    <td class="p-3 border-b border-gray-200"><a href="index.html?submission_id=${sub.id}" target="_blank" class="text-violet-700 hover:underline font-semibold">${sub.studentName}</a></td>
+                    <td class="p-3 border-b border-gray-200 font-mono">${sub.id}</td>
+                    <td class="p-3 border-b border-gray-200"><span class="status-badge ${statusInfo.class}">${statusInfo.text}</span><br><span class="text-sm font-mono">${statusInfo.timer}</span></td>
+                    <td class="p-3 border-b border-gray-200 font-bold">${sub.status === 'submitted' ? `${sub.score} / ${sub.totalPoints}` : '-'}</td>
+                    <td class="p-3 border-b border-gray-200 text-center font-bold ${sub.violationCount > 0 ? 'text-red-500' : ''}">${sub.violationCount || 0}</td>
+                    <td class="p-3 border-b border-gray-200 text-right"><button class="btn-delete-student btn btn-danger !p-2 !rounded-full" data-sub-id="${sub.id}"><i class="fas fa-trash text-sm"></i></button></td>
+                </tr>
+            `}).join('');
+        }
+
+        function getStatusInfo(sub, test) {
+            if (sub.status === 'submitted') return { text: 'Đã nộp', class: 'status-submitted', timer: '-' };
+            if (sub.startTime) {
+                const duration = test.duration || 0;
+                if (duration > 0) {
+                    const endTime = sub.startTime.toDate().getTime() + duration * 60 * 1000;
+                    const remaining = Math.max(0, endTime - Date.now());
+                    if (remaining > 0) {
+                        const minutes = String(Math.floor(remaining / 60000)).padStart(2, '0');
+                        const seconds = String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0');
+                        return { text: 'Đang làm', class: 'status-in-progress', timer: `${minutes}:${seconds}` };
+                    } else {
+                         return { text: 'Hết giờ', class: 'status-in-progress', timer: '00:00' };
+                    }
+                }
+                return { text: 'Đang làm', class: 'status-in-progress', timer: 'Không tính giờ' };
+            }
+            return { text: 'Chưa làm', class: 'status-not-started', timer: '-' };
+        };
+
+        function updateTimers(submissions, test) {
+            const tableBody = document.getElementById('submission-table-body');
+            if (!tableBody) return;
+            submissions.forEach(sub => {
+                if (sub.startTime && sub.status !== 'submitted') {
+                    const statusInfo = getStatusInfo(sub, test);
+                    const row = tableBody.querySelector(`tr[data-submission-id="${sub.id}"]`);
+                    if (row) {
+                        const timerCell = row.children[2].querySelector('.text-sm');
+                        if (timerCell) timerCell.textContent = statusInfo.timer;
+                        if (statusInfo.timer === '00:00' && timerCell.previousElementSibling.textContent !== 'Hết giờ') {
+                             renderSubmissionsTable(submissions, test); // Re-render row on time out
+                        }
+                    }
+                }
+            });
         }
 
         // --- Logic & Event Handlers ---
         function initSortable() {
-            // Drag tests from main view
             new Sortable(DOM.mainContentView, {
-                group: { name: 'shared' },
+                group: { name: 'drive', pull: true, put: true },
                 animation: 150,
-                filter: '.main-view-item[data-item-type="folder"]', // only tests can be dragged
-                onEnd: (evt) => {
-                    // This handles reordering within the same folder, can be ignored for now
+                onEnd: async (evt) => {
+                    if (evt.to !== evt.from) return; // Only handle reordering within same list
                 }
             });
 
-            // Drop tests onto folders in main view
-            document.querySelectorAll('.main-view-item[data-item-type="folder"]').forEach(folderEl => {
+            document.querySelectorAll('.folder-tree-item, .special-location').forEach(folderEl => {
                 new Sortable(folderEl, {
-                    group: { name: 'shared' },
-                    animation: 150,
-                    onAdd: async (evt) => {
-                        const testId = evt.item.dataset.itemId;
-                        const testType = evt.item.dataset.itemType;
-                        const destFolderId = evt.to.dataset.itemId;
-                        moveItem(testId, testType, destFolderId);
-                    }
-                });
-            });
-
-            // Drop tests onto folders in the tree
-            document.querySelectorAll('.folder-tree-item').forEach(folderEl => {
-                new Sortable(folderEl, {
-                     group: 'shared',
+                     group: { name: 'drive', pull: false, put: true },
                      onAdd: async (evt) => {
-                        const testId = evt.item.dataset.itemId;
-                        const testType = evt.item.dataset.itemType;
-                        const destFolderId = evt.to.dataset.folderId;
-                        moveItem(testId, testType, destFolderId);
+                        const itemId = evt.item.dataset.itemId;
+                        const itemType = evt.item.dataset.itemType;
+                        const destFolderId = evt.to.dataset.itemId || evt.to.dataset.locationId;
+                        moveItem(itemId, itemType, destFolderId === 'unassigned' ? null : destFolderId);
                      }
                 });
+            });
+            
+            new Sortable(DOM.breadcrumbContainer, {
+                group: { name: 'drive', pull: false, put: true },
+                onAdd: (evt) => {
+                    const itemId = evt.item.dataset.itemId;
+                    const itemType = evt.item.dataset.itemType;
+                    moveItem(itemId, itemType, 'root');
+                }
             });
         }
         
         async function moveItem(itemId, itemType, destinationFolderId) {
             const collectionNameMap = {
-                standard: 'tests',
-                reading: 'reading_tests',
-                listening: 'listening_tests'
+                standard: 'tests', reading: 'reading_tests', listening: 'listening_tests', folder: 'folders'
             };
             const collectionName = collectionNameMap[itemType];
             if (!collectionName) return;
 
             const itemRef = doc(db, collectionName, itemId);
-            await updateDoc(itemRef, { folderId: destinationFolderId });
+            const fieldToUpdate = itemType === 'folder' ? 'parentId' : 'folderId';
+            await updateDoc(itemRef, { [fieldToUpdate]: destinationFolderId });
         }
 
         DOM.newFolderBtn.addEventListener('click', async () => {
@@ -409,79 +499,191 @@
             if (folderName && folderName.trim()) {
                 await addDoc(collection(db, 'folders'), {
                     name: folderName.trim(),
-                    parentId: appState.currentFolderId,
+                    parentId: appState.currentLocationId === 'unassigned' ? 'root' : appState.currentLocationId,
                     ownerId: appState.currentUser.uid,
-                    createdAt: new Date()
+                    createdAt: serverTimestamp()
                 });
             }
         });
 
-        function changeCurrentFolder(newFolderId) {
-            appState.currentFolderId = newFolderId;
-            // Update active class on folder tree
+        function changeCurrentLocation(newLocationId) {
+            appState.currentLocationId = newLocationId;
+            appState.selectedTestId = null;
             document.querySelectorAll('.folder-tree-item, .special-location').forEach(el => {
-                el.classList.toggle('active', el.dataset.folderId === newFolderId);
+                el.classList.toggle('active', (el.dataset.itemId || el.dataset.locationId) === newLocationId);
             });
             renderMainContentView();
             renderBreadcrumb();
-            // Clear details view
             renderDetailsView(null);
         }
+        
+        // --- Global Event Listeners ---
+        document.addEventListener('click', (e) => {
+            // Hide context menu
+            DOM.contextMenu.style.display = 'none';
 
-        DOM.folderTreeContainer.addEventListener('click', e => {
-            const target = e.target.closest('.folder-tree-item');
-            if (target) {
-                changeCurrentFolder(target.dataset.folderId);
+            // Left Sidebar Clicks
+            const specialLocation = e.target.closest('.special-location');
+            if (specialLocation) {
+                changeCurrentLocation(specialLocation.dataset.locationId);
+                return;
             }
-        });
-
-        DOM.specialLocationsList.addEventListener('click', e => {
-            const target = e.target.closest('.special-location');
-            if (target) {
-                changeCurrentFolder(target.dataset.folderId);
+            const folderTreeItem = e.target.closest('.folder-tree-item');
+            if (folderTreeItem) {
+                changeCurrentLocation(folderTreeItem.dataset.itemId);
+                return;
             }
-        });
 
-        DOM.breadcrumbContainer.addEventListener('click', e => {
-            if (e.target.tagName === 'A') {
+            // Breadcrumb Clicks
+            const breadcrumbLink = e.target.closest('#breadcrumb-container a');
+            if (breadcrumbLink) {
                 e.preventDefault();
-                changeCurrentFolder(e.target.dataset.folderId);
+                changeCurrentLocation(breadcrumbLink.dataset.locationId);
+                return;
+            }
+
+            // Main Content Clicks
+            const mainViewItem = e.target.closest('.main-view-item');
+            if (mainViewItem) {
+                if (mainViewItem.dataset.itemType !== 'folder') {
+                    appState.selectedTestId = mainViewItem.dataset.itemId;
+                    const test = appState.localTestsCache.find(t => t.id === appState.selectedTestId);
+                    renderDetailsView(test);
+                    renderMainContentView(); // Re-render to show selection
+                }
+            } else {
+                // Clicked outside any item in main view
+                if (e.target.closest('#main-content-view')) {
+                    appState.selectedTestId = null;
+                    renderMainContentView();
+                    renderDetailsView(null);
+                }
+            }
+
+            // Details View Clicks
+            const detailsPanel = e.target.closest('#details-view');
+            if (detailsPanel) {
+                handleDetailsViewClick(e);
+            }
+        });
+        
+        document.addEventListener('dblclick', e => {
+            const mainViewItem = e.target.closest('.main-view-item');
+            if (mainViewItem && mainViewItem.dataset.itemType === 'folder') {
+                changeCurrentLocation(mainViewItem.dataset.itemId);
+            }
+        });
+        
+        document.addEventListener('contextmenu', e => {
+            const item = e.target.closest('.main-view-item, .folder-tree-item');
+            if (!item) return;
+            e.preventDefault();
+            
+            const itemId = item.dataset.itemId;
+            const itemType = item.dataset.itemType;
+            
+            let menuItems = '';
+            if (itemType === 'folder') {
+                menuItems = `
+                    <div class="p-2 hover:bg-violet-200 rounded-md cursor-pointer" data-action="rename">Đổi tên</div>
+                    <div class="p-2 hover:bg-violet-200 rounded-md cursor-pointer" data-action="delete-folder">Xóa</div>
+                `;
+            } else { // It's a test
+                menuItems = `
+                    <div class="p-2 hover:bg-violet-200 rounded-md cursor-pointer" data-action="edit-test">Sửa đề thi</div>
+                    <div class="p-2 hover:bg-violet-200 rounded-md cursor-pointer" data-action="delete-test">Xóa</div>
+                `;
+            }
+            
+            DOM.contextMenu.innerHTML = menuItems;
+            DOM.contextMenu.style.display = 'block';
+            DOM.contextMenu.style.left = `${e.pageX}px`;
+            DOM.contextMenu.style.top = `${e.pageY}px`;
+            DOM.contextMenu.dataset.contextItemId = itemId;
+            DOM.contextMenu.dataset.contextItemType = itemType;
+        });
+        
+        DOM.contextMenu.addEventListener('click', async e => {
+            const action = e.target.dataset.action;
+            const itemId = DOM.contextMenu.dataset.contextItemId;
+            const itemType = DOM.contextMenu.dataset.contextItemType;
+            if (!action || !itemId || !itemType) return;
+
+            if (action === 'delete-folder') {
+                const hasChildren = appState.localFoldersCache.some(f => f.parentId === itemId) || appState.localTestsCache.some(t => t.folderId === itemId);
+                if (hasChildren) {
+                    alert("Không thể xóa thư mục này vì nó không rỗng. Vui lòng di chuyển hoặc xóa các mục bên trong trước.");
+                    return;
+                }
+                const confirmDelete = confirm(`Bạn có chắc muốn xóa thư mục này?`);
+                if (confirmDelete) {
+                    await deleteDoc(doc(db, 'folders', itemId));
+                }
+            } else if (action === 'delete-test') {
+                const confirmDelete = confirm(`Bạn có chắc muốn xóa bài thi này và tất cả bài làm của học sinh?`);
+                if (confirmDelete) {
+                    // Delete submissions first
+                    const submissionsQuery = query(collection(db, "submissions"), where("testId", "==", itemId));
+                    const submissionSnapshot = await getDocs(submissionsQuery);
+                    const deletePromises = submissionSnapshot.docs.map(sDoc => deleteDoc(sDoc.ref));
+                    await Promise.all(deletePromises);
+                    
+                    // Then delete the test
+                    const collectionName = `${itemType}_tests`.replace('standard_tests', 'tests');
+                    await deleteDoc(doc(db, collectionName, itemId));
+                    renderDetailsView(null);
+                }
+            } else if (action === 'rename') {
+                const currentFolder = appState.localFoldersCache.find(f => f.id === itemId);
+                const newName = prompt("Nhập tên mới cho thư mục:", currentFolder.name);
+                if (newName && newName.trim()) {
+                    await updateDoc(doc(db, 'folders', itemId), { name: newName.trim() });
+                }
+            } else if (action === 'edit-test') {
+                 const pageMap = { standard: 'standard/standard-test-maker.html', reading: 'reading/reading-test-maker.html', listening: 'listening/listening-test-maker.html' };
+                 window.open(`${pageMap[itemType]}?edit=${itemId}`, '_blank');
             }
         });
 
-        DOM.mainContentView.addEventListener('dblclick', e => {
-             const target = e.target.closest('.main-view-item');
-             if (target && target.dataset.itemType === 'folder') {
-                changeCurrentFolder(target.dataset.itemId);
-             }
-        });
+        async function handleDetailsViewClick(e) {
+            const settingsPanel = e.target.closest('#settings-panel');
+            if (settingsPanel) {
+                const testId = settingsPanel.dataset.testid;
+                const testType = settingsPanel.dataset.testtype;
+                const collectionName = `${testType}_tests`.replace('standard_tests', 'tests');
+                const testRef = doc(db, collectionName, testId);
 
-        DOM.mainContentView.addEventListener('click', e => {
-             const target = e.target.closest('.main-view-item');
-             if (target && target.dataset.itemType !== 'folder') {
-                const testId = target.dataset.itemId;
-                appState.selectedTestId = testId;
-                const test = appState.localTestsCache.find(t => t.id === testId);
-                renderDetailsView(test);
-             }
-        });
+                if (e.target.id === 'lock-test-toggle') await updateDoc(testRef, { isLocked: e.target.checked });
+                if (e.target.name === 'publish-results') await updateDoc(testRef, { resultsPublished: e.target.value });
+                return;
+            }
 
+            if (e.target.closest('#add-students-btn')) {
+                const names = document.getElementById('new-student-list').value.trim().split('\n').filter(Boolean);
+                for (const name of names) {
+                    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+                    await setDoc(doc(db, "submissions", code), { studentName: name.trim(), testId: appState.selectedTestId, status: 'not-started', violationCount: 0 });
+                }
+                document.getElementById('new-student-list').value = '';
+            } else if (e.target.closest('.btn-delete-student')) {
+                const subId = e.target.closest('.btn-delete-student').dataset.subId;
+                if (confirm(`Xóa bài làm của học sinh này?`)) {
+                    await deleteDoc(doc(db, "submissions", subId));
+                }
+            }
+        }
+
+        // --- Auth & Util Buttons ---
         DOM.loginBtn.addEventListener('click', () => {
              signInWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value)
                 .catch(e => DOM.loginError.textContent = 'Đăng nhập thất bại.');
         });
-
         DOM.logoutBtn.addEventListener('click', () => signOut(auth));
-        
         DOM.createTestButtons.addEventListener('click', (e) => {
             const button = e.target.closest('button');
             if (!button) return;
             const type = button.dataset.type;
-            const pageMap = { 
-                standard: 'standard/standard-test-maker.html', 
-                reading: 'reading/reading-test-maker.html', 
-                listening: 'listening/listening-test-maker.html' 
-            };
+            const pageMap = { standard: 'standard/standard-test-maker.html', reading: 'reading/reading-test-maker.html', listening: 'listening/listening-test-maker.html' };
             if(pageMap[type]) window.open(pageMap[type], '_blank');
         });
 
