@@ -417,6 +417,10 @@
         async function submitTest(isForced = false) {
             if (!appState.isTestRunning) return;
             appState.isTestRunning = false;
+            if (appState.audioPlayer) {
+                appState.audioPlayer.pause();
+                appState.audioPlayer.src = "";
+            }
             ProctoringService.stop();
             clearInterval(appState.timerInterval);
             showLoader();
@@ -506,8 +510,6 @@
                 questionsContainer: document.getElementById('questions-container'),
                 answerInputsGrid: document.getElementById('answer-inputs-grid'),
                 getReadyOverlay: document.getElementById('get-ready-overlay'),
-                countdownContainer: document.getElementById('countdown-container'),
-                countdownTimer: document.getElementById('countdown-timer'),
                 readyBtn: document.getElementById('ready-btn'),
                 audioPlayer: document.getElementById('audio-player'),
                 audioStatus: document.getElementById('audio-status'),
