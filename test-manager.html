@@ -58,6 +58,12 @@
         .status-not-started { background-color: #e5e7eb; color: #4b5563; }
         .status-in-progress { background-color: #fef08a; color: #854d0e; }
         .status-submitted { background-color: #d1fae5; color: #065f46; }
+        .toggle-switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 28px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--primary-accent); }
+        input:checked + .slider:before { transform: translateX(22px); }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -112,7 +118,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getFirestore, collection, doc, deleteDoc, query, where, setDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, deleteDoc, query, where, setDoc, updateDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -232,7 +238,8 @@
                     return { text: 'Đã nộp', class: 'status-submitted', timer: '-' };
                 }
                 if (sub.startTime) {
-                    const duration = (sub.testSnapshot && sub.testSnapshot.duration) ? sub.testSnapshot.duration : (test.duration || 0);
+                    const testSnapshot = sub.testSnapshot || test;
+                    const duration = testSnapshot.duration || 0;
                     if (duration > 0) {
                         const endTime = sub.startTime.toDate().getTime() + duration * 60 * 1000;
                         const remaining = Math.max(0, endTime - Date.now());
@@ -251,11 +258,37 @@
 
             DOM.detailsView.innerHTML = `
                 <h2 class="text-3xl font-bold text-gray-700">${test.title}</h2>
+                
+                <!-- Settings Panel -->
+                <div id="settings-panel" class="my-6 p-4 bg-white/30 rounded-2xl" data-testid="${test.id}" data-testtype="${test.testType}">
+                    <h3 class="font-bold mb-3">Cài đặt & Trạng thái</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="flex items-center justify-between p-3 bg-white/40 rounded-lg">
+                            <label for="lock-test-toggle" class="font-medium">Khóa đề thi</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="lock-test-toggle" ${test.isLocked ? 'checked' : ''}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="p-3 bg-white/40 rounded-lg">
+                            <span class="font-medium">Công bố kết quả</span>
+                            <div class="flex justify-around mt-2">
+                                <label><input type="radio" name="publish-results" value="none" ${(!test.resultsPublished || test.resultsPublished === 'none') ? 'checked' : ''}> Không</label>
+                                <label><input type="radio" name="publish-results" value="correctIncorrect" ${test.resultsPublished === 'correctIncorrect' ? 'checked' : ''}> Đúng/Sai</label>
+                                <label><input type="radio" name="publish-results" value="full" ${test.resultsPublished === 'full' ? 'checked' : ''}> Toàn bộ</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Students Panel -->
                 <div class="my-6 p-4 bg-white/30 rounded-2xl">
                     <h3 class="font-bold mb-2">Thêm học sinh mới</h3>
                     <textarea id="new-student-list" class="input-field" rows="3" placeholder="Dán danh sách tên, mỗi tên một dòng..."></textarea>
                     <button id="add-students-btn" class="btn btn-primary mt-2 w-full">Thêm và tạo mã</button>
                 </div>
+
+                <!-- Submissions List -->
                 <div>
                     <h3 class="font-bold mb-2">Danh sách học sinh (${submissions.length})</h3>
                     <div class="overflow-x-auto max-h-[45vh]">
@@ -286,7 +319,8 @@
 
             submissions.forEach(sub => {
                 if (sub.startTime && sub.status !== 'submitted') {
-                    const duration = (sub.testSnapshot && sub.testSnapshot.duration) ? sub.testSnapshot.duration : (test.duration || 0);
+                    const testSnapshot = sub.testSnapshot || test;
+                    const duration = testSnapshot.duration || 0;
                     if (duration > 0) {
                         const endTime = sub.startTime.toDate().getTime() + duration * 60 * 1000;
                         const remaining = Math.max(0, endTime - Date.now());
@@ -345,9 +379,9 @@
             const button = e.target.closest('button');
             if (!button) return;
             const title = button.title;
-            if (title.includes('trắc nghiệm')) window.open('test-maker.html', '_blank');
-            else if (title.includes('đọc hiểu')) window.open('reading-test-maker.html', '_blank');
-            else if (title.includes('nghe')) window.open('listening-test-maker.html', '_blank');
+            if (title.includes('trắc nghiệm')) window.open('standard/standard-test-maker.html', '_blank');
+            else if (title.includes('đọc hiểu')) window.open('reading/reading-test-maker.html', '_blank');
+            else if (title.includes('nghe')) window.open('listening/listening-test-maker.html', '_blank');
         });
 
         DOM.testList.addEventListener('click', (e) => {
@@ -362,9 +396,9 @@
                 const testType = item.dataset.testType;
                 const testId = item.dataset.testId;
                 const pageMap = { 
-                    standard: 'test-maker.html', 
-                    reading: 'reading-test-maker.html', 
-                    listening: 'listening-test-maker.html' 
+                    standard: 'standard/standard-test-maker.html', 
+                    reading: 'reading/reading-test-maker.html', 
+                    listening: 'listening/listening-test-maker.html' 
                 };
                 window.open(`${pageMap[testType]}?edit=${testId}`, '_blank');
             } else if (deleteBtn) {
@@ -387,6 +421,22 @@
         });
 
         DOM.detailsView.addEventListener('click', async (e) => {
+            const settingsPanel = e.target.closest('#settings-panel');
+            if (settingsPanel) {
+                const testId = settingsPanel.dataset.testid;
+                const testType = settingsPanel.dataset.testtype;
+                const collectionName = `${testType}_tests`.replace('standard_tests', 'tests');
+                const testRef = doc(db, collectionName, testId);
+
+                if (e.target.id === 'lock-test-toggle') {
+                    await updateDoc(testRef, { isLocked: e.target.checked });
+                }
+                if (e.target.name === 'publish-results') {
+                    await updateDoc(testRef, { resultsPublished: e.target.value });
+                }
+                return;
+            }
+
             const testId = document.querySelector('#test-list .bg-violet-200')?.dataset.testId;
             if (!testId) return;
 
