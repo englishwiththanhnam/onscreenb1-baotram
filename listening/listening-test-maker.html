@@ -44,7 +44,7 @@
         .btn-primary:disabled { background-color: #a5b4fc; cursor: not-allowed; transform: none; box-shadow: none; }
         .btn-danger { background: #ef4444; color: white; }
         .btn-danger:hover { background: #dc2626; transform: translateY(-2px); }
-        .input-field { background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.5); color: var(--text-primary); transition: all 0.2s ease-in-out; width: 100%; padding: 12px; border-radius: 12px; }
+        .input-field, select.input-field { background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.5); color: var(--text-primary); transition: all 0.2s ease-in-out; width: 100%; padding: 12px; border-radius: 12px; -webkit-appearance: none; -moz-appearance: none; appearance: none;}
         .input-field:focus { background: rgba(255, 255, 255, 0.7); border-color: var(--primary-accent); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3); outline: none; }
         textarea.input-field { min-height: 150px; font-family: monospace; }
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; }
@@ -79,9 +79,20 @@
 
         <div class="glass-panel p-6 mb-8">
             <h2 class="text-2xl font-bold text-gray-700 mb-4">1. Thông tin chung</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div><label for="test-id" class="block text-sm font-medium text-gray-700 mb-1">Listening Test ID</label><input type="text" id="test-id" class="input-field" placeholder="vd: ielts_listening_test_1"></div>
                 <div><label for="test-title" class="block text-sm font-medium text-gray-700 mb-1">Tiêu đề</label><input type="text" id="test-title" class="input-field" placeholder="vd: IELTS Listening Practice Test 1"></div>
+                <div>
+                    <label for="assignment-type" class="block text-sm font-medium text-gray-700 mb-1">Phân loại</label>
+                    <select id="assignment-type" class="input-field">
+                        <option value="test">Đề thi (Tính giờ, giám sát)</option>
+                        <option value="assignment">Bài tập (Linh hoạt)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="test-duration" class="block text-sm font-medium text-gray-700 mb-1">Thời gian (phút)</label>
+                    <input type="number" id="test-duration" class="input-field" placeholder="vd: 40 (bỏ trống nếu không tính giờ)">
+                </div>
             </div>
         </div>
 
@@ -144,6 +155,8 @@
             loginError: document.getElementById('login-error'),
             testIdInput: document.getElementById('test-id'),
             testTitleInput: document.getElementById('test-title'),
+            assignmentTypeInput: document.getElementById('assignment-type'),
+            testDurationInput: document.getElementById('test-duration'),
             playCountInput: document.getElementById('play-count'),
             pauseBetweenInput: document.getElementById('pause-between'),
             audioUrlsTextarea: document.getElementById('audio-urls'),
@@ -168,6 +181,8 @@
                 const data = testSnap.data();
                 DOM.testIdInput.value = testId;
                 DOM.testTitleInput.value = data.title || '';
+                DOM.assignmentTypeInput.value = data.type || 'assignment';
+                DOM.testDurationInput.value = data.duration || '';
                 DOM.playCountInput.value = data.playCount || 1;
                 DOM.pauseBetweenInput.value = data.pauseBetween || 5;
                 DOM.audioUrlsTextarea.value = (data.audioURLs || []).join('\n');
@@ -215,6 +230,8 @@
             try {
                 const testData = {
                     title,
+                    type: DOM.assignmentTypeInput.value,
+                    duration: parseInt(DOM.testDurationInput.value, 10) || 0,
                     questionsHTML: DOM.questionsHtmlInput.value,
                     answers,
                     totalQuestions,
@@ -225,6 +242,8 @@
                 };
                 if (!isEditMode) {
                     testData.createdAt = serverTimestamp();
+                    testData.isLocked = false;
+                    testData.resultsPublished = 'none';
                 }
 
                 await setDoc(doc(db, "listening_tests", testId), testData, { merge: true });
