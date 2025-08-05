@@ -140,9 +140,9 @@
                     'listening': 'listening_tests'
                 };
                 const pageMap = {
-                    'standard': 'standard-test.html',
-                    'reading': 'reading-test.html',
-                    'listening': 'listening-test.html'
+                    'standard': 'standard/standard-test.html',
+                    'reading': 'reading/reading-test.html',
+                    'listening': 'listening/listening-test.html'
                 };
 
                 let testTypeFound = null;
@@ -193,7 +193,6 @@
                 }
             });
 
-            // Tự động kiểm tra nếu mã được truyền qua URL
             const params = new URLSearchParams(window.location.search);
             const submissionIdFromUrl = params.get('submission_id');
             if (submissionIdFromUrl && submissionIdFromUrl.length === 6) {
