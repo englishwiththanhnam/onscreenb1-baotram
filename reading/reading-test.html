@@ -103,7 +103,12 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-4">
-                     <p id="student-name-display" class="font-semibold"></p>
+                     <div class="text-right">
+                        <p id="student-name-display" class="font-semibold"></p>
+                        <span id="timer-display" class="text-2xl font-bold text-red-600 hidden">
+                            <i class="fa-regular fa-clock"></i> <span id="timer">00:00</span>
+                        </span>
+                    </div>
                      <button id="submit-btn" class="btn btn-success">Nộp bài</button>
                 </div>
             </div>
@@ -133,7 +138,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
-        const appState = { db: null, currentSubmissionId: null, testData: null, isTestRunning: false };
+        const appState = { db: null, currentSubmissionId: null, testData: null, isTestRunning: false, timerInterval: null };
         const DOM = {};
 
         const showLoader = (text = 'Đang tải...') => { DOM.loaderText.textContent = text; DOM.loaderOverlay.classList.add('is-open'); };
@@ -161,7 +166,7 @@
 
         const ProctoringService = {
             violationCount: 0,
-            maxViolations: 5,
+            maxViolations: 10,
             isProctoring: false,
 
             start(initialCount = 0) {
@@ -171,6 +176,7 @@
                 window.addEventListener('focus', this.handleFocus);
                 document.addEventListener('keydown', this.handleKeydown);
                 document.addEventListener('fullscreenchange', this.handleFullscreenChange);
+                window.addEventListener('beforeunload', this.handleBeforeUnload);
                 ['copy', 'paste', 'cut'].forEach(event => document.addEventListener(event, e => e.preventDefault()));
                 
                 this.isProctoring = true;
@@ -196,7 +202,17 @@
                 window.removeEventListener('focus', this.handleFocus);
                 document.removeEventListener('keydown', this.handleKeydown);
                 document.removeEventListener('fullscreenchange', this.handleFullscreenChange);
+                window.removeEventListener('beforeunload', this.handleBeforeUnload);
                 this.isProctoring = false;
+            },
+
+            handleBeforeUnload(e) {
+                if (appState.isTestRunning && appState.testData.type === 'test') {
+                    submitTest(true); 
+                    const confirmationMessage = 'Bạn có chắc chắn muốn rời khỏi? Bài làm sẽ được nộp tự động.';
+                    (e || window.event).returnValue = confirmationMessage; 
+                    return confirmationMessage; 
+                }
             },
 
             handleVisibilityChange: () => { if (document.hidden) ProctoringService.handleViolation("Chuyển sang tab hoặc cửa sổ khác"); },
@@ -234,7 +250,7 @@
                 DOM.violationWarning.textContent = `Bạn còn ${this.maxViolations - this.violationCount} lần cảnh báo.`;
                 if (this.violationCount >= this.maxViolations) {
                     DOM.violationWarning.textContent = "BÀI THI SẼ TỰ ĐỘNG NỘP DO VI PHẠM QUY CHẾ!";
-                    setTimeout(() => submitTest(), 2000);
+                    setTimeout(() => submitTest(true), 2000);
                 }
             }
         };
@@ -244,30 +260,68 @@
             try {
                 appState.currentSubmissionId = submissionId;
                 const submissionRef = doc(appState.db, 'submissions', submissionId);
-                const submissionSnap = await getDoc(submissionRef);
+                let submissionSnap = await getDoc(submissionRef);
                 if (!submissionSnap.exists()) throw new Error("Mã truy cập không hợp lệ.");
                 
-                const submissionData = submissionSnap.data();
-                const testRef = doc(appState.db, 'reading_tests', submissionData.testId);
-                const testSnap = await getDoc(testRef);
-                if (!testSnap.exists()) throw new Error("Không tìm thấy bài đọc tương ứng.");
-                
-                appState.testData = testSnap.data();
+                let submissionData = submissionSnap.data();
                 
                 if (submissionData.status === 'submitted') {
-                    displayResults(submissionData, appState.testData);
-                } else {
-                    renderTest(appState.testData, submissionData.answers || {});
-                    DOM.studentNameDisplay.textContent = `Thí sinh: ${submissionData.studentName}`;
-                    DOM.testContainer.classList.remove('hidden');
-                    appState.isTestRunning = true;
-                    ProctoringService.start(submissionData.violationCount || 0);
+                    const testData = submissionData.testSnapshot || (await getDoc(doc(appState.db, 'reading_tests', submissionData.testId))).data();
+                    displayResults(submissionData, testData);
+                    return;
                 }
+                
+                if (!submissionData.testSnapshot) {
+                    const testRef = doc(appState.db, 'reading_tests', submissionData.testId);
+                    const testSnap = await getDoc(testRef);
+                    if (!testSnap.exists()) throw new Error("Không tìm thấy bài đọc tương ứng.");
+                    appState.testData = testSnap.data();
+                    
+                    await updateDoc(submissionRef, {
+                        testSnapshot: appState.testData,
+                        startTime: serverTimestamp()
+                    });
+                    submissionSnap = await getDoc(submissionRef);
+                    submissionData = submissionSnap.data();
+                } else {
+                    appState.testData = submissionData.testSnapshot;
+                }
+                
+                renderTest(appState.testData, submissionData.answers || {});
+                DOM.studentNameDisplay.textContent = `Thí sinh: ${submissionData.studentName}`;
+                DOM.testContainer.classList.remove('hidden');
+                appState.isTestRunning = true;
+                
+                if (appState.testData.type === 'test') {
+                    ProctoringService.start(submissionData.violationCount || 0);
+                    if (appState.testData.duration > 0) {
+                        DOM.timerDisplay.classList.remove('hidden');
+                        startTimer(submissionData.startTime, appState.testData.duration);
+                    }
+                }
+
             } catch (error) {
                  showModal('Lỗi', error.message, () => { window.location.href = 'index.html'; });
             } finally {
                 hideLoader();
             }
+        }
+
+        function startTimer(startTime, durationMinutes) {
+            if (!startTime) return;
+            const testEndTime = startTime.toDate().getTime() + durationMinutes * 60 * 1000;
+            appState.timerInterval = setInterval(() => {
+                const distance = testEndTime - new Date().getTime();
+                if (distance < 0) {
+                    clearInterval(appState.timerInterval);
+                    DOM.timer.textContent = "Hết giờ";
+                    if (appState.isTestRunning) submitTest(true);
+                    return;
+                }
+                const minutes = String(Math.floor(distance / (1000 * 60))).padStart(2, '0');
+                const seconds = String(Math.floor((distance % (1000 * 60)) / 1000)).padStart(2, '0');
+                DOM.timer.textContent = `${minutes}:${seconds}`;
+            }, 1000);
         }
 
         function renderTest(testData, savedAnswers) {
@@ -294,10 +348,11 @@
             return answers;
         }
 
-        async function submitTest() {
+        async function submitTest(isForced = false) {
             if (!appState.isTestRunning) return;
             appState.isTestRunning = false;
             ProctoringService.stop();
+            clearInterval(appState.timerInterval);
             showLoader();
             try {
                 const studentAnswers = getCurrentAnswers();
@@ -321,6 +376,11 @@
 
                 await updateDoc(doc(appState.db, 'submissions', appState.currentSubmissionId), finalSubmission);
                 displayResults(finalSubmission, appState.testData);
+
+                if (isForced) {
+                    const reason = ProctoringService.violationCount >= ProctoringService.maxViolations ? 'Vi phạm quy chế thi.' : 'Hết thời gian.';
+                    showModal("Bài thi đã tự động nộp", `Lý do: ${reason}`, null, false);
+                }
 
             } catch (error) {
                 showModal('Lỗi', `Không thể nộp bài. Lỗi: ${error.message}`);
@@ -378,6 +438,8 @@
                 testContainer: document.getElementById('test-container'),
                 testTitle: document.getElementById('test-title'),
                 studentNameDisplay: document.getElementById('student-name-display'),
+                timerDisplay: document.getElementById('timer-display'),
+                timer: document.getElementById('timer'),
                 submitBtn: document.getElementById('submit-btn'),
                 passageContainer: document.getElementById('passage-container'),
                 questionsContainer: document.getElementById('questions-container'),
