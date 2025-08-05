@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Làm Bài Thi Đọc Hiểu</title>
-    <!-- All head content is identical to standard-test.html, only the body and script logic will differ -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -33,6 +32,7 @@
             --text-primary: #0f172a;
             --app-bg-start: #f5f7ff;
             --app-bg-end: #e0e7ff;
+            --base-font-size: 16px; /* Font size variable */
         }
         html, body { height: 100%; overflow: hidden; font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--app-bg-start); }
         body { background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%); }
@@ -48,7 +48,7 @@
             border: 1px solid var(--glass-border-color);
             box-shadow: 0 8px 32px 0 var(--shadow-color);
         }
-        .panel { height: calc(100vh - 112px); overflow-y: auto; padding: 1rem; }
+        .panel { height: calc(100vh - 112px); overflow-y: auto; padding: 1rem; font-size: var(--base-font-size); }
         .panel::-webkit-scrollbar { width: 6px; }
         .panel::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.2); border-radius: 3px; }
         .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; }
@@ -79,6 +79,7 @@
             <p id="violation-reason" class="mt-2 text-xl"></p>
             <p class="mt-2 text-lg">Vui lòng quay lại màn hình làm bài ngay lập tức!</p>
             <p id="violation-warning" class="mt-4 text-2xl font-bold text-red-400"></p>
+            <button id="reenter-fullscreen-btn" class="btn btn-primary mt-8">Vào lại Toàn màn hình</button>
         </div>
     </div>
     <div id="loader-overlay" class="modal is-open">
@@ -93,7 +94,14 @@
     <div id="test-container" class="hidden flex flex-col h-screen relative z-10">
         <header class="p-4">
             <div class="glass-panel flex justify-between items-center p-4 rounded-2xl">
-                <h1 id="test-title" class="text-xl font-bold text-gray-800"></h1>
+                <div class="flex items-center gap-4">
+                    <h1 id="test-title" class="text-xl font-bold text-gray-800"></h1>
+                    <div class="flex items-center gap-2 bg-white/50 rounded-full px-3 py-1">
+                        <button id="font-decrease-btn" class="w-6 h-6 rounded-full hover:bg-white/50 transition-colors"><i class="fas fa-minus"></i></button>
+                        <span class="text-sm font-medium">Cỡ chữ</span>
+                        <button id="font-increase-btn" class="w-6 h-6 rounded-full hover:bg-white/50 transition-colors"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
                 <div class="flex items-center gap-4">
                      <p id="student-name-display" class="font-semibold"></p>
                      <button id="submit-btn" class="btn btn-success">Nộp bài</button>
@@ -117,7 +125,6 @@
             <i class="fas fa-trophy text-6xl text-yellow-400 mb-4"></i>
             <h1 class="text-3xl font-bold text-gray-800 mb-2">Hoàn thành!</h1>
             <p id="score-text" class="text-5xl font-bold text-violet-700 my-4"></p>
-            <h2 class="text-2xl font-bold text-gray-700 my-6">Xem lại đáp án</h2>
             <div id="review-container" class="space-y-2 text-left max-h-96 overflow-y-auto p-4 bg-white/20 rounded-xl"></div>
         </div>
     </div>
@@ -129,7 +136,6 @@
         const appState = { db: null, currentSubmissionId: null, testData: null, isTestRunning: false };
         const DOM = {};
 
-        // Helper and ProctoringService are identical to standard-test.html
         const showLoader = (text = 'Đang tải...') => { DOM.loaderText.textContent = text; DOM.loaderOverlay.classList.add('is-open'); };
         const hideLoader = () => DOM.loaderOverlay.classList.remove('is-open');
         
@@ -178,6 +184,9 @@
                         false
                     );
                 }
+                DOM.reenterFullscreenBtn.onclick = () => {
+                    document.documentElement.requestFullscreen().catch(err => console.error("Fullscreen request failed:", err));
+                };
             },
 
             stop() {
@@ -192,8 +201,16 @@
 
             handleVisibilityChange: () => { if (document.hidden) ProctoringService.handleViolation("Chuyển sang tab hoặc cửa sổ khác"); },
             handleBlur: () => ProctoringService.handleViolation("Rời khỏi màn hình làm bài"),
-            handleFocus: () => DOM.securityOverlay.classList.remove('is-open'),
-            handleFullscreenChange: () => { if (!document.fullscreenElement) ProctoringService.handleViolation("Thoát chế độ toàn màn hình"); },
+            handleFocus: () => {
+                 if(document.fullscreenElement) DOM.securityOverlay.classList.remove('is-open');
+            },
+            handleFullscreenChange: () => {
+                if (document.fullscreenElement) {
+                    DOM.securityOverlay.classList.remove('is-open');
+                } else {
+                    ProctoringService.handleViolation("Thoát chế độ toàn màn hình");
+                }
+            },
             handleKeydown: (e) => {
                 if (e.key === 'F12' || (e.ctrlKey && e.shiftKey) || (e.metaKey && e.altKey) || (e.ctrlKey && e.key.toLowerCase() === 'p') || (e.ctrlKey && e.key.toLowerCase() === 's')) {
                     e.preventDefault();
@@ -312,13 +329,23 @@
             }
         }
 
-        function displayResults(submissionData, testData) {
+        async function displayResults(submissionData, testData) {
             DOM.testContainer.classList.add('hidden');
             DOM.resultScreen.classList.remove('hidden');
             
             DOM.scoreText.textContent = `${submissionData.score} / ${submissionData.totalPoints}`;
             
             const reviewContainer = DOM.reviewContainer;
+            
+            const liveTestRef = doc(appState.db, 'reading_tests', submissionData.testId);
+            const liveTestSnap = await getDoc(liveTestRef);
+            const liveSettings = liveTestSnap.exists() ? liveTestSnap.data() : {};
+            
+            if (!liveSettings.resultsPublished || liveSettings.resultsPublished === 'none') {
+                reviewContainer.innerHTML = `<p class="text-center text-gray-600 mt-8">Giáo viên chưa công bố kết quả chi tiết.</p>`;
+                return;
+            }
+
             reviewContainer.innerHTML = '';
             for (let i = 1; i <= testData.totalQuestions; i++) {
                 const qNum = String(i);
@@ -326,16 +353,22 @@
                 const correctAns = testData.answers[qNum];
                 const isCorrect = studentAns.toLowerCase() === correctAns.toLowerCase();
                 
+                let resultHTML = '';
+                if (isCorrect) {
+                    resultHTML = '<i class="fas fa-check text-green-600"></i>';
+                } else if (liveSettings.resultsPublished === 'full') {
+                    resultHTML = `<span class="font-semibold">Đáp án đúng: ${correctAns}</span>`;
+                } else { // correctIncorrect
+                    resultHTML = '<i class="fas fa-times text-red-600"></i>';
+                }
+
                 reviewContainer.innerHTML += `
                     <div class="p-3 rounded-lg flex justify-between items-center ${isCorrect ? 'bg-green-100' : 'bg-red-100'}">
                         <div>
                             <span class="font-bold">${qNum}.</span>
                             <span>Đáp án của bạn: <strong>${studentAns}</strong></span>
                         </div>
-                        ${isCorrect 
-                            ? '<i class="fas fa-check text-green-600"></i>' 
-                            : `<span class="font-semibold">Đáp án đúng: ${correctAns}</span>`
-                        }
+                        ${resultHTML}
                     </div>`;
             }
         }
@@ -358,11 +391,24 @@
                 securityOverlay: document.getElementById('security-overlay'),
                 violationReason: document.getElementById('violation-reason'),
                 violationWarning: document.getElementById('violation-warning'),
+                reenterFullscreenBtn: document.getElementById('reenter-fullscreen-btn'),
+                fontDecreaseBtn: document.getElementById('font-decrease-btn'),
+                fontIncreaseBtn: document.getElementById('font-increase-btn'),
             });
 
             appState.db = getFirestore(initializeApp(window.firebaseConfig));
 
             DOM.submitBtn.addEventListener('click', () => showModal('Xác nhận nộp bài', 'Bạn có chắc chắn muốn nộp bài không?', () => submitTest(), true));
+
+            const updateFontSize = (change) => {
+                const root = document.documentElement;
+                const currentSize = parseFloat(getComputedStyle(root).getPropertyValue('--base-font-size'));
+                const newSize = Math.max(12, Math.min(24, currentSize + change));
+                root.style.setProperty('--base-font-size', `${newSize}px`);
+            };
+
+            DOM.fontDecreaseBtn.addEventListener('click', () => updateFontSize(-1));
+            DOM.fontIncreaseBtn.addEventListener('click', () => updateFontSize(1));
 
             const params = new URLSearchParams(window.location.search);
             const submissionId = params.get('submission_id');
