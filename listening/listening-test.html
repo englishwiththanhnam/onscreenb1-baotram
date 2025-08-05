@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Làm Bài Thi Nghe</title>
-    <!-- All head content is identical to standard-test.html, only the body and script logic will differ -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -33,6 +32,7 @@
             --text-primary: #0f172a;
             --app-bg-start: #f5f7ff;
             --app-bg-end: #e0e7ff;
+            --base-font-size: 16px; /* Font size variable */
         }
         html, body { height: 100%; overflow: hidden; font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--app-bg-start); }
         body { background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%); }
@@ -48,7 +48,7 @@
             border: 1px solid var(--glass-border-color);
             box-shadow: 0 8px 32px 0 var(--shadow-color);
         }
-        .panel { height: calc(100vh - 112px); overflow-y: auto; padding: 1rem; }
+        .panel { height: calc(100vh - 112px); overflow-y: auto; padding: 1rem; font-size: var(--base-font-size); }
         .panel::-webkit-scrollbar { width: 6px; }
         .panel::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.2); border-radius: 3px; }
         .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; }
@@ -63,11 +63,6 @@
         .modal-content { animation: scaleIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         #security-overlay { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
-        audio::-webkit-media-controls-panel { background-color: rgba(255,255,255,0.5); }
-        audio::-webkit-media-controls-play-button,
-        audio::-webkit-media-controls-timeline,
-        audio::-webkit-media-controls-current-time-display,
-        audio::-webkit-media-controls-time-remaining-display { display: none !important; }
     </style>
 </head>
 <body oncontextmenu="return false;">
@@ -84,6 +79,7 @@
             <p id="violation-reason" class="mt-2 text-xl"></p>
             <p class="mt-2 text-lg">Vui lòng quay lại màn hình làm bài ngay lập tức!</p>
             <p id="violation-warning" class="mt-4 text-2xl font-bold text-red-400"></p>
+            <button id="reenter-fullscreen-btn" class="btn btn-primary mt-8">Vào lại Toàn màn hình</button>
         </div>
     </div>
     <div id="loader-overlay" class="modal is-open">
@@ -98,9 +94,17 @@
     <div id="test-container" class="hidden flex flex-col h-screen relative z-10">
         <header class="p-4">
             <div class="glass-panel flex justify-between items-center p-4 rounded-2xl">
-                <div id="audio-player-container" class="flex-grow">
-                    <audio id="audio-player" controlslist="nodownload noplaybackrate"></audio>
-                    <div id="audio-status" class="text-sm font-semibold text-gray-600"></div>
+                <div id="audio-player-container" class="flex-grow mr-4">
+                    <audio id="audio-player" class="hidden"></audio>
+                    <div id="audio-status" class="text-sm font-semibold text-gray-600 mb-1"></div>
+                    <div class="w-full bg-gray-200/50 rounded-full h-2.5">
+                        <div id="audio-progress-bar" class="bg-violet-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 bg-white/50 rounded-full px-3 py-1 mr-4">
+                    <button id="font-decrease-btn" class="w-6 h-6 rounded-full hover:bg-white/50 transition-colors"><i class="fas fa-minus"></i></button>
+                    <span class="text-sm font-medium">Cỡ chữ</span>
+                    <button id="font-increase-btn" class="w-6 h-6 rounded-full hover:bg-white/50 transition-colors"><i class="fas fa-plus"></i></button>
                 </div>
                 <div class="flex items-center gap-4">
                      <p id="student-name-display" class="font-semibold"></p>
@@ -133,7 +137,6 @@
             <i class="fas fa-trophy text-6xl text-yellow-400 mb-4"></i>
             <h1 class="text-3xl font-bold text-gray-800 mb-2">Hoàn thành!</h1>
             <p id="score-text" class="text-5xl font-bold text-violet-700 my-4"></p>
-            <h2 class="text-2xl font-bold text-gray-700 my-6">Xem lại đáp án</h2>
             <div id="review-container" class="space-y-2 text-left max-h-96 overflow-y-auto p-4 bg-white/20 rounded-xl"></div>
         </div>
     </div>
@@ -142,10 +145,12 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
+        // This script is largely the same as the previous turn's listening-test.html,
+        // but includes the updated ProctoringService and displayResults logic.
+        
         const appState = { db: null, currentSubmissionId: null, testData: null, audioPlayer: null, currentPlayCount: 1, isTestRunning: false };
         const DOM = {};
 
-        // Helper and ProctoringService are identical to standard-test.html
         const showLoader = (text = 'Đang tải...') => { DOM.loaderText.textContent = text; DOM.loaderOverlay.classList.add('is-open'); };
         const hideLoader = () => DOM.loaderOverlay.classList.remove('is-open');
         
@@ -194,6 +199,9 @@
                         false
                     );
                 }
+                DOM.reenterFullscreenBtn.onclick = () => {
+                    document.documentElement.requestFullscreen().catch(err => console.error("Fullscreen request failed:", err));
+                };
             },
 
             stop() {
@@ -208,8 +216,16 @@
 
             handleVisibilityChange: () => { if (document.hidden) ProctoringService.handleViolation("Chuyển sang tab hoặc cửa sổ khác"); },
             handleBlur: () => ProctoringService.handleViolation("Rời khỏi màn hình làm bài"),
-            handleFocus: () => DOM.securityOverlay.classList.remove('is-open'),
-            handleFullscreenChange: () => { if (!document.fullscreenElement) ProctoringService.handleViolation("Thoát chế độ toàn màn hình"); },
+            handleFocus: () => {
+                 if(document.fullscreenElement) DOM.securityOverlay.classList.remove('is-open');
+            },
+            handleFullscreenChange: () => {
+                if (document.fullscreenElement) {
+                    DOM.securityOverlay.classList.remove('is-open');
+                } else {
+                    ProctoringService.handleViolation("Thoát chế độ toàn màn hình");
+                }
+            },
             handleKeydown: (e) => {
                 if (e.key === 'F12' || (e.ctrlKey && e.shiftKey) || (e.metaKey && e.altKey) || (e.ctrlKey && e.key.toLowerCase() === 'p') || (e.ctrlKey && e.key.toLowerCase() === 's')) {
                     e.preventDefault();
@@ -242,6 +258,9 @@
             const { audioURLs, pauseBetween, playCount } = appState.testData;
             const audioPlayer = appState.audioPlayer;
             const statusDiv = DOM.audioStatus;
+            const progressBar = DOM.audioProgressBar;
+
+            progressBar.style.width = '0%';
 
             if (audioIndex >= audioURLs.length) {
                 appState.currentPlayCount++;
@@ -250,16 +269,33 @@
                     setTimeout(() => playAudioSequentially(0), (pauseBetween || 3) * 1000);
                 } else {
                     statusDiv.textContent = "Bài nghe đã kết thúc.";
-                    audioPlayer.style.display = 'none';
+                    progressBar.style.width = '100%';
                 }
                 return;
             }
 
             statusDiv.textContent = `Đang phát file ${audioIndex + 1}/${audioURLs.length} - Lần nghe ${appState.currentPlayCount}/${playCount}`;
             audioPlayer.src = audioURLs[audioIndex];
-            audioPlayer.play();
+            
+            audioPlayer.oncanplaythrough = () => {
+                audioPlayer.play().catch(e => {
+                    console.error("Lỗi khi phát audio:", e);
+                    statusDiv.textContent = "Lỗi phát audio. Vui lòng tải lại trang.";
+                });
+            };
+            audioPlayer.onerror = () => {
+                statusDiv.textContent = `Không thể tải file audio ${audioIndex + 1}.`;
+            };
+
+            audioPlayer.ontimeupdate = () => {
+                if (audioPlayer.duration) {
+                    const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+                    progressBar.style.width = `${progress}%`;
+                }
+            };
 
             audioPlayer.onended = () => {
+                progressBar.style.width = '100%';
                 const isLastFile = audioIndex === audioURLs.length - 1;
                 if (!isLastFile && pauseBetween > 0) {
                     statusDiv.textContent = `Tạm nghỉ ${pauseBetween} giây...`;
@@ -280,7 +316,6 @@
                     clearInterval(interval);
                     DOM.getReadyOverlay.classList.add('hidden');
                     DOM.questionsContainer.classList.remove('hidden');
-                    appState.audioPlayer.style.display = 'block';
                     playAudioSequentially(0);
                 }
             }, 1000);
@@ -374,13 +409,23 @@
             }
         }
 
-        function displayResults(submissionData, testData) {
+        async function displayResults(submissionData, testData) {
             DOM.testContainer.classList.add('hidden');
             DOM.resultScreen.classList.remove('hidden');
             
             DOM.scoreText.textContent = `${submissionData.score} / ${submissionData.totalPoints}`;
             
             const reviewContainer = DOM.reviewContainer;
+
+            const liveTestRef = doc(appState.db, 'listening_tests', submissionData.testId);
+            const liveTestSnap = await getDoc(liveTestRef);
+            const liveSettings = liveTestSnap.exists() ? liveTestSnap.data() : {};
+            
+            if (!liveSettings.resultsPublished || liveSettings.resultsPublished === 'none') {
+                reviewContainer.innerHTML = `<p class="text-center text-gray-600 mt-8">Giáo viên chưa công bố kết quả chi tiết.</p>`;
+                return;
+            }
+
             reviewContainer.innerHTML = '';
             for (let i = 1; i <= testData.totalQuestions; i++) {
                 const qNum = String(i);
@@ -388,10 +433,19 @@
                 const correctAns = testData.answers[qNum];
                 const isCorrect = studentAns.toLowerCase() === correctAns.toLowerCase();
                 
+                let resultHTML = '';
+                if (isCorrect) {
+                    resultHTML = '<i class="fas fa-check text-green-600"></i>';
+                } else if (liveSettings.resultsPublished === 'full') {
+                    resultHTML = `<span class="font-semibold">Đáp án đúng: ${correctAns}</span>`;
+                } else { // correctIncorrect
+                    resultHTML = '<i class="fas fa-times text-red-600"></i>';
+                }
+
                 reviewContainer.innerHTML += `
                     <div class="p-3 rounded-lg flex justify-between items-center ${isCorrect ? 'bg-green-100' : 'bg-red-100'}">
                         <div><span class="font-bold">${qNum}.</span><span> Đáp án của bạn: <strong>${studentAns}</strong></span></div>
-                        ${!isCorrect ? `<span class="font-semibold">Đáp án đúng: ${correctAns}</span>` : '<i class="fas fa-check text-green-600"></i>'}
+                        ${resultHTML}
                     </div>`;
             }
         }
@@ -407,6 +461,7 @@
                 countdownTimer: document.getElementById('countdown-timer'),
                 audioPlayer: document.getElementById('audio-player'),
                 audioStatus: document.getElementById('audio-status'),
+                audioProgressBar: document.getElementById('audio-progress-bar'),
                 resultScreen: document.getElementById('result-screen'),
                 scoreText: document.getElementById('score-text'),
                 reviewContainer: document.getElementById('review-container'),
@@ -416,11 +471,24 @@
                 securityOverlay: document.getElementById('security-overlay'),
                 violationReason: document.getElementById('violation-reason'),
                 violationWarning: document.getElementById('violation-warning'),
+                reenterFullscreenBtn: document.getElementById('reenter-fullscreen-btn'),
+                fontDecreaseBtn: document.getElementById('font-decrease-btn'),
+                fontIncreaseBtn: document.getElementById('font-increase-btn'),
             });
 
             appState.db = getFirestore(initializeApp(window.firebaseConfig));
             
             DOM.submitBtn.addEventListener('click', () => showModal('Xác nhận nộp bài', 'Bạn có chắc chắn muốn nộp bài không?', () => submitTest(), true));
+
+            const updateFontSize = (change) => {
+                const root = document.documentElement;
+                const currentSize = parseFloat(getComputedStyle(root).getPropertyValue('--base-font-size'));
+                const newSize = Math.max(12, Math.min(24, currentSize + change));
+                root.style.setProperty('--base-font-size', `${newSize}px`);
+            };
+
+            DOM.fontDecreaseBtn.addEventListener('click', () => updateFontSize(-1));
+            DOM.fontIncreaseBtn.addEventListener('click', () => updateFontSize(1));
 
             const params = new URLSearchParams(window.location.search);
             const submissionId = params.get('submission_id');
