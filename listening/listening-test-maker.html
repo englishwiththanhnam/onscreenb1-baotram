@@ -239,6 +239,7 @@
                     playCount: parseInt(DOM.playCountInput.value, 10) || 1,
                     pauseBetween: parseInt(DOM.pauseBetweenInput.value, 10) || 0,
                     updatedAt: serverTimestamp(),
+                    folderId: null // <<<!!! CHỈNH SỬA DUY NHẤT !!!>>>
                 };
                 if (!isEditMode) {
                     testData.createdAt = serverTimestamp();
