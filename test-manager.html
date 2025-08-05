@@ -261,9 +261,14 @@
                  itemsToShow.push(...appState.localFoldersCache.filter(f => f.parentId === folderId));
             }
 
-            // Get tests
-            const filterFolderId = folderId === 'unassigned' ? null : folderId;
-            itemsToShow.push(...appState.localTestsCache.filter(t => t.folderId === filterFolderId));
+            // Get tests - <<<!!! SỬA LỖI Ở ĐÂY !!!>>>
+            if (folderId === 'unassigned') {
+                // Lấy những bài thi có folderId là null (mới tạo) HOẶC không có trường folderId (dữ liệu cũ)
+                itemsToShow.push(...appState.localTestsCache.filter(t => !t.folderId));
+            } else {
+                // Lấy những bài thi có folderId khớp với thư mục hiện tại
+                itemsToShow.push(...appState.localTestsCache.filter(t => t.folderId === folderId));
+            }
 
             // Sort items: folders first, then alphabetically
             itemsToShow.sort((a,b) => {
