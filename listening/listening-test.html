@@ -123,12 +123,8 @@
                 <div id="get-ready-overlay" class="h-full flex flex-col items-center justify-center text-center">
                     <i class="fas fa-headphones text-6xl text-violet-500 mb-4"></i>
                     <h2 class="text-3xl font-bold">Chuẩn bị bắt đầu</h2>
-                    <p class="text-lg text-gray-600 mt-2">Nhấn "Sẵn sàng" khi bạn đã sẵn sàng để bắt đầu nghe.</p>
-                    <div id="countdown-container" class="hidden">
-                        <p class="text-lg text-gray-600 mt-2">Bài nghe sẽ tự động phát sau</p>
-                        <p id="countdown-timer" class="text-5xl font-bold text-violet-600 my-4">20</p>
-                    </div>
-                    <button id="ready-btn" class="btn btn-primary mt-8 text-xl">Sẵn sàng</button>
+                    <p class="text-lg text-gray-600 mt-2">Nhấn nút bên dưới khi bạn đã sẵn sàng để bắt đầu nghe.</p>
+                    <button id="ready-btn" class="btn btn-primary mt-8 text-xl">Bắt đầu Nghe</button>
                 </div>
                 <div id="questions-container" class="hidden p-4"></div>
             </div>
@@ -293,12 +289,13 @@
             statusDiv.textContent = `Đang phát file ${audioIndex + 1}/${audioURLs.length} - Lần nghe ${appState.currentPlayCount}/${playCount}`;
             audioPlayer.src = audioURLs[audioIndex];
             
-            audioPlayer.oncanplaythrough = () => {
-                audioPlayer.play().catch(e => {
-                    console.error("Lỗi khi phát audio:", e);
-                    statusDiv.textContent = "Lỗi phát audio. Vui lòng tải lại trang.";
-                });
-            };
+            audioPlayer.play().catch(e => {
+                console.error("Lỗi khi phát audio:", e);
+                statusDiv.textContent = "Lỗi phát audio. Vui lòng nhấn 'Bắt đầu nghe' lại.";
+                DOM.getReadyOverlay.classList.remove('hidden');
+                DOM.questionsContainer.classList.add('hidden');
+            });
+            
             audioPlayer.onerror = () => {
                 statusDiv.textContent = `Không thể tải file audio ${audioIndex + 1}.`;
             };
@@ -323,20 +320,9 @@
         }
 
         function startTestProcedure() {
-            DOM.readyBtn.classList.add('hidden');
-            DOM.countdownContainer.classList.remove('hidden');
-            let countdown = 20;
-            DOM.countdownTimer.textContent = countdown;
-            const interval = setInterval(() => {
-                countdown--;
-                DOM.countdownTimer.textContent = countdown;
-                if (countdown <= 0) {
-                    clearInterval(interval);
-                    DOM.getReadyOverlay.classList.add('hidden');
-                    DOM.questionsContainer.classList.remove('hidden');
-                    playAudioSequentially(0);
-                }
-            }, 1000);
+            DOM.getReadyOverlay.classList.add('hidden');
+            DOM.questionsContainer.classList.remove('hidden');
+            playAudioSequentially(0);
         }
 
         async function startSession(submissionId) {
@@ -383,7 +369,6 @@
                         startTimer(submissionData.startTime, appState.testData.duration);
                     }
                 }
-                // Don't start countdown immediately, wait for ready button
             } catch (error) {
                  showModal('Lỗi', error.message, () => { window.location.href = 'index.html'; });
             } finally {
@@ -542,6 +527,7 @@
             });
 
             appState.db = getFirestore(initializeApp(window.firebaseConfig));
+            appState.audioPlayer = DOM.audioPlayer;
             
             DOM.submitBtn.addEventListener('click', () => showModal('Xác nhận nộp bài', 'Bạn có chắc chắn muốn nộp bài không?', () => submitTest(), true));
             DOM.readyBtn.addEventListener('click', startTestProcedure);
