@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Soạn Thảo Bộ Từ Vựng</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --blur-intensity: 12px;
+            --saturation-intensity: 150%;
+            --glass-bg-color: rgba(255, 255, 255, 0.45);
+            --glass-border-color: rgba(255, 255, 255, 0.6);
+            --shadow-color: rgba(67, 56, 202, 0.15);
+            --primary-accent: #6d28d9;
+            --text-primary: #0f172a;
+            --app-bg-start: #f5f7ff;
+            --app-bg-end: #e0e7ff;
+        }
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: var(--app-bg-start);
+            background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%);
+            color: var(--text-primary);
+        }
+        .background-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        .shape { position: absolute; border-radius: 50%; filter: blur(25px); opacity: 0.6; }
+        .shape1 { width: 250px; height: 250px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); top: 10%; left: 5%; animation: float 28s infinite alternate ease-in-out; }
+        .shape2 { width: 180px; height: 180px; background: linear-gradient(135deg, #14b8a6, #67e8f9); bottom: 15%; right: 10%; animation: float 32s infinite alternate ease-in-out; }
+        @keyframes float { from { transform: translateY(20px) scale(1); } to { transform: translateY(-20px) scale(1.05); } }
+        .glass-panel {
+            position: relative;
+            background: var(--glass-bg-color);
+            backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity));
+            border-radius: 24px;
+            border: 1px solid var(--glass-border-color);
+            box-shadow: 0 8px 32px 0 var(--shadow-color);
+        }
+        .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; }
+        .btn-primary { background: var(--primary-accent); color: white; box-shadow: 0 4px 15px rgba(91, 33, 182, 0.25); }
+        .btn-primary:hover:not(:disabled) { background: #5b21b6; transform: translateY(-2px); }
+        .btn-primary:disabled { background-color: #a5b4fc; cursor: not-allowed; transform: none; box-shadow: none; }
+        .btn-secondary { background: rgba(255, 255, 255, 0.4); color: var(--text-primary); border-color: rgba(255, 255, 255, 0.6); }
+        .btn-secondary:hover:not(:disabled) { background: rgba(255, 255, 255, 0.7); transform: translateY(-2px); }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; transform: translateY(-2px); }
+        .input-field { background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.5); color: var(--text-primary); transition: all 0.2s ease-in-out; width: 100%; padding: 12px; border-radius: 12px; }
+        .input-field:focus { background: rgba(255, 255, 255, 0.7); border-color: var(--primary-accent); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3); outline: none; }
+        textarea.input-field { min-height: 250px; font-family: monospace; font-size: 14px; }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; }
+        .modal.is-open { display: flex; }
+        .modal-content { animation: scaleIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .loader { width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid var(--primary-accent); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+    <div class="background-shapes">
+        <div class="shape shape1"></div>
+        <div class="shape shape2"></div>
+    </div>
+
+    <div id="login-screen" class="modal is-open">
+        <div class="modal-content glass-panel p-8 rounded-2xl shadow-xl text-center w-full max-w-sm">
+            <h2 class="text-2xl font-bold mb-6">Đăng nhập Giáo viên</h2>
+            <div class="space-y-4 text-left">
+                <div><label for="email-input" class="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" id="email-input" class="input-field"></div>
+                <div><label for="password-input" class="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label><input type="password" id="password-input" class="input-field"></div>
+            </div>
+            <button id="login-btn" class="btn btn-primary w-full mt-6">Đăng nhập</button>
+            <p id="login-error" class="text-red-500 mt-2 h-5"></p>
+        </div>
+    </div>
+
+    <div id="main-content" class="max-w-6xl mx-auto relative z-10" style="display: none;">
+        <header class="flex justify-between items-center mb-8">
+            <h1 id="page-title" class="text-4xl font-bold text-gray-800">Soạn Thảo Bộ Từ Vựng</h1>
+            <button id="logout-btn" class="btn btn-danger">Đăng xuất</button>
+        </header>
+
+        <div class="glass-panel p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4">1. Thông tin chung</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="test-id" class="block text-sm font-medium text-gray-700 mb-1">Vocabulary Set ID</label>
+                    <input type="text" id="test-id" class="input-field" placeholder="vd: unit_1_family">
+                </div>
+                <div>
+                    <label for="test-title" class="block text-sm font-medium text-gray-700 mb-1">Tiêu đề</label>
+                    <input type="text" id="test-title" class="input-field" placeholder="vd: Unit 1: Family Life">
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-panel p-6">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4">2. Dữ liệu đầu vào</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Danh sách từ vựng</label>
+                    <p class="text-xs text-gray-500 mb-2 font-mono">Định dạng: <strong>word;type;pronunciation;meaning</strong></p>
+                    <textarea id="vocab-data" class="input-field" placeholder="jealous;adjective;/ˈdʒeləs/;ghen tuông, ghen tị"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Danh sách cấu trúc (Tùy chọn)</label>
+                    <p class="text-xs text-gray-500 mb-2 font-mono">Định dạng: <strong>structure phrase:meaning</strong></p>
+                    <textarea id="structure-data" class="input-field" placeholder="be jealous of sb/sth:ghen tị với ai đó"></textarea>
+                </div>
+            </div>
+            <div class="mt-6 text-center">
+                <button id="enrich-ai-btn" class="btn btn-secondary"><i class="fas fa-wand-magic-sparkles mr-2"></i>Phân tích & Làm giàu bằng AI</button>
+                <p id="ai-log" class="text-sm text-gray-600 mt-2 h-5"></p>
+            </div>
+        </div>
+
+        <div class="mt-8 text-center">
+             <button id="upload-btn" class="btn btn-primary text-lg w-full md:w-1/2"><i class="fas fa-cloud-upload-alt mr-2"></i>Lưu Bộ Từ Vựng</button>
+             <p id="upload-log" class="font-semibold mt-2 h-5"></p>
+        </div>
+    </div>
+    
+    <div id="custom-alert-modal" class="modal"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
+            authDomain: "b1-baotram.firebaseapp.com",
+            projectId: "b1-baotram",
+            storageBucket: "b1-baotram.appspot.com",
+            messagingSenderId: "948701163187",
+            appId: "1:948701163187:web:043f2d381d63e741114ac6",
+            measurementId: "G-33NHT07JHE"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        let isEditMode = false;
+        let localWordList = [];
+
+        const DOM = {
+            loginScreen: document.getElementById('login-screen'),
+            mainContent: document.getElementById('main-content'),
+            loginBtn: document.getElementById('login-btn'),
+            logoutBtn: document.getElementById('logout-btn'),
+            emailInput: document.getElementById('email-input'),
+            passwordInput: document.getElementById('password-input'),
+            loginError: document.getElementById('login-error'),
+            testIdInput: document.getElementById('test-id'),
+            testTitleInput: document.getElementById('test-title'),
+            vocabDataTextarea: document.getElementById('vocab-data'),
+            structureDataTextarea: document.getElementById('structure-data'),
+            enrichAiBtn: document.getElementById('enrich-ai-btn'),
+            aiLog: document.getElementById('ai-log'),
+            uploadBtn: document.getElementById('upload-btn'),
+            uploadLog: document.getElementById('upload-log'),
+            alertModal: document.getElementById('custom-alert-modal'),
+            pageTitle: document.getElementById('page-title'),
+        };
+
+        function showAlert(message) {
+            DOM.alertModal.innerHTML = `<div class="modal-content glass-panel text-center p-8"><p class="text-lg font-medium text-slate-800 mb-6">${message}</p><button id="alert-ok-btn" class="btn btn-primary">OK</button></div>`;
+            DOM.alertModal.classList.add('is-open');
+            document.getElementById('alert-ok-btn').onclick = () => DOM.alertModal.classList.remove('is-open');
+        }
+
+        async function loadTestData(testId) {
+            const testRef = doc(db, "vocab_sets", testId);
+            const testSnap = await getDoc(testRef);
+            if (testSnap.exists()) {
+                const data = testSnap.data();
+                DOM.testIdInput.value = testId;
+                DOM.testTitleInput.value = data.title || '';
+                localWordList = data.wordList || [];
+                
+                const vocabText = localWordList.map(w => `${w.word};${w.type};${w.pronunciation};${w.meaning}`).join('\n');
+                DOM.vocabDataTextarea.value = vocabText;
+
+                const structureText = localWordList
+                    .filter(w => w.structure && w.structure.trim())
+                    .map(w => `${w.structure.replace(/\*/g, '')}:${w.structure_meaning || ''}`)
+                    .join('\n');
+                DOM.structureDataTextarea.value = structureText;
+
+            } else {
+                showAlert("Không tìm thấy bộ từ vựng để chỉnh sửa.");
+                window.location.search = '';
+            }
+        }
+
+        async function callGeminiAPI(prompt) {
+            const apiKey = ""; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-preview-0514:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: "application/json" }
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.text();
+                throw new Error(`API error: ${response.statusText} - ${errorBody}`);
+            }
+
+            const result = await response.json();
+            if (!result.candidates || !result.candidates[0].content.parts[0].text) {
+                throw new Error("Invalid API response structure.");
+            }
+            return JSON.parse(result.candidates[0].content.parts[0].text);
+        }
+
+        async function enrichWithAI() {
+            const vocabLines = DOM.vocabDataTextarea.value.trim().split('\n').filter(Boolean);
+            const structureLines = DOM.structureDataTextarea.value.trim().split('\n').filter(Boolean);
+
+            if (vocabLines.length === 0) {
+                showAlert("Vui lòng nhập ít nhất một từ vựng.");
+                return;
+            }
+
+            DOM.enrichAiBtn.disabled = true;
+            DOM.enrichAiBtn.innerHTML = `<div class="loader"></div><span class="ml-2">Đang xử lý...</span>`;
+            
+            localWordList = vocabLines.map((line, index) => {
+                const parts = line.split(';').map(p => p.trim());
+                return { id: index + 1, word: parts[0], type: parts[1], pronunciation: parts[2], meaning: parts[3], structure: '', structure_meaning: '', distractors_en: [], distractors_vi: [] };
+            });
+
+            const structures = structureLines.map(line => {
+                const parts = line.split(':');
+                const phrase = parts[0] ? parts[0].trim() : '';
+                const meaning = parts[1] ? parts[1].trim() : '';
+                return { phrase, meaning };
+            });
+
+            let processedCount = 0;
+            for (const wordData of localWordList) {
+                try {
+                    const prompt = `Bạn là một chuyên gia từ vựng và AI xử lý ngôn ngữ.
+Với từ vựng sau:
+- Word: "${wordData.word}"
+- Type: "${wordData.type}"
+- Meaning: "${wordData.meaning}"
+
+Và danh sách các cấu trúc sau:
+${structures.length > 0 ? structures.map(s => `- "${s.phrase}"`).join('\n') : "- (Không có cấu trúc nào)"}
+
+Hãy thực hiện các tác vụ sau và trả về một đối tượng JSON duy nhất:
+1.  **linkStructure**: Từ danh sách cấu trúc đã cho, tìm cấu trúc DUY NHẤT thuộc về từ "${wordData.word}". Phân tích cấu trúc đó, xác định từ khóa quan trọng nhất và trả về chuỗi mới với từ khóa được bao trong dấu sao. Nếu không có cấu trúc nào phù hợp, trả về một chuỗi rỗng. Ví dụ: "be jealous *of* sb/sth".
+2.  **englishDistractors**: Tạo một mảng chứa 3 từ tiếng Anh gây nhiễu cho từ "${wordData.word}", cùng chủ đề và độ khó.
+3.  **vietnameseDistractors**: Tạo một mảng chứa 3 cụm từ tiếng Việt gây nhiễu cho nghĩa "${wordData.meaning}", cùng chủ đề.
+Chỉ trả về đối tượng JSON.`;
+                    
+                    const aiData = await callGeminiAPI(prompt);
+
+                    wordData.structure = aiData.linkStructure || '';
+                    const linkedStructure = structures.find(s => s.phrase && aiData.linkStructure.includes(s.phrase.replace(/\*/g, '')));
+                    wordData.structure_meaning = linkedStructure ? linkedStructure.meaning : '';
+                    wordData.distractors_en = aiData.englishDistractors || [];
+                    wordData.distractors_vi = aiData.vietnameseDistractors || [];
+
+                    processedCount++;
+                    DOM.aiLog.textContent = `Đã xử lý ${processedCount}/${localWordList.length} từ...`;
+
+                } catch (error) {
+                    console.error(`Lỗi khi xử lý từ "${wordData.word}":`, error);
+                    DOM.aiLog.textContent = `Lỗi với từ "${wordData.word}". Bỏ qua...`;
+                }
+            }
+            
+            const updatedStructureText = localWordList
+                .filter(w => w.structure && w.structure.trim())
+                .map(w => `${w.structure.replace(/\*/g, '')}:${w.structure_meaning || ''}`)
+                .join('\n');
+            DOM.structureDataTextarea.value = updatedStructureText;
+
+            DOM.aiLog.textContent = `Hoàn tất! Đã làm giàu ${processedCount} từ.`;
+            DOM.enrichAiBtn.disabled = false;
+            DOM.enrichAiBtn.innerHTML = `<i class="fas fa-wand-magic-sparkles mr-2"></i>Phân tích & Làm giàu bằng AI`;
+        }
+
+        async function uploadToFirebase() {
+            const testId = DOM.testIdInput.value.trim();
+            const title = DOM.testTitleInput.value.trim();
+            
+            if (!testId || !title || localWordList.length === 0 || !localWordList[0].distractors_en) {
+                showAlert("Vui lòng nhập ID, Tiêu đề và nhấn nút 'Phân tích & Làm giàu' trước khi lưu.");
+                return;
+            }
+
+            DOM.uploadBtn.disabled = true;
+            DOM.uploadLog.textContent = 'Đang lưu...';
+            DOM.uploadLog.className = 'font-semibold mt-2 h-5 text-blue-600';
+
+            try {
+                const setData = {
+                    title,
+                    wordList: localWordList,
+                    totalWords: localWordList.length,
+                    updatedAt: serverTimestamp(),
+                    folderId: null,
+                    type: 'assignment'
+                };
+                if (!isEditMode) {
+                    setData.createdAt = serverTimestamp();
+                    setData.isLocked = false;
+                    setData.resultsPublished = 'full';
+                }
+
+                await setDoc(doc(db, "vocab_sets", testId), setData, { merge: true });
+                DOM.uploadLog.textContent = `THÀNH CÔNG! Đã lưu bộ từ vựng ID: "${testId}".`;
+                DOM.uploadLog.className = 'font-semibold mt-2 h-5 text-green-600';
+                setTimeout(() => window.close(), 2000);
+
+            } catch (error) {
+                DOM.uploadLog.textContent = `LỖI: ${error.message}`;
+                DOM.uploadLog.className = 'font-semibold mt-2 h-5 text-red-600';
+            } finally {
+                DOM.uploadBtn.disabled = false;
+            }
+        }
+        
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                DOM.loginScreen.classList.remove('is-open');
+                DOM.mainContent.style.display = 'block';
+                const params = new URLSearchParams(window.location.search);
+                const testIdToEdit = params.get('edit');
+                if (testIdToEdit) {
+                    isEditMode = true;
+                    DOM.pageTitle.textContent = "Chỉnh Sửa Bộ Từ Vựng";
+                    DOM.testIdInput.disabled = true;
+                    loadTestData(testIdToEdit);
+                }
+            } else {
+                DOM.loginScreen.classList.add('is-open');
+                DOM.mainContent.style.display = 'none';
+            }
+        });
+
+        DOM.loginBtn.addEventListener('click', async () => {
+            try { await signInWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value); } 
+            catch (error) { DOM.loginError.textContent = 'Email hoặc mật khẩu không đúng.'; }
+        });
+        DOM.logoutBtn.addEventListener('click', () => signOut(auth));
+        DOM.uploadBtn.addEventListener('click', uploadToFirebase);
+        DOM.enrichAiBtn.addEventListener('click', enrichWithAI);
+    </script>
+</body>
+</html>
