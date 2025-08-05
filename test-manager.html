@@ -77,6 +77,11 @@
         input:checked + .slider { background-color: var(--primary-accent); }
         input:checked + .slider:before { transform: translateX(22px); }
         
+        /* Custom Radio Buttons */
+        .custom-radio-group label { padding: 8px 16px; border-radius: 10px; background-color: rgba(255,255,255,0.3); border: 1px solid rgba(255,255,255,0.5); cursor: pointer; transition: all 0.2s ease-in-out; }
+        .custom-radio-group input:checked + label { background-color: var(--primary-accent); color: white; border-color: var(--primary-accent); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .custom-radio-group input { display: none; }
+
         /* Animation Classes */
         .anim-fade-out { animation: fadeOut 0.2s ease-out forwards; }
         .anim-fade-in { animation: fadeIn 0.3s ease-in forwards; }
@@ -138,7 +143,7 @@
     
     <!-- Modals & Context Menu -->
     <div id="context-menu" class="glass-panel !rounded-lg !p-2 min-w-[180px]"></div>
-    <div id="custom-confirm-modal" class="modal"></div>
+    <div id="custom-modal-container"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
@@ -186,7 +191,7 @@
             specialLocationsList: document.getElementById('special-locations-list'),
             mainPanelView: document.getElementById('main-panel-view'),
             contextMenu: document.getElementById('context-menu'),
-            confirmModal: document.getElementById('custom-confirm-modal'),
+            modalContainer: document.getElementById('custom-modal-container'),
         };
 
         // --- Auth & Initialization ---
@@ -341,7 +346,7 @@
                         <button id="history-back-btn" class="btn btn-secondary !p-3 !rounded-full mr-4"><i class="fas fa-arrow-left"></i></button>
                         <div><h2 class="text-3xl font-bold text-gray-700">${test.title}</h2><p class="font-mono text-sm text-gray-500">${test.id}</p></div>
                     </div>
-                    <div id="settings-panel" class="my-6 p-4 bg-white/30 rounded-2xl" data-testid="${test.id}" data-testtype="${test.testType}"><h3 class="font-bold mb-3">Cài đặt & Trạng thái</h3><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div class="flex items-center justify-between p-3 bg-white/40 rounded-lg"><label for="lock-test-toggle" class="font-medium">Khóa đề thi</label><label class="toggle-switch"><input type="checkbox" id="lock-test-toggle" ${test.isLocked ? 'checked' : ''}><span class="slider"></span></label></div><div class="p-3 bg-white/40 rounded-lg"><span class="font-medium">Công bố kết quả</span><div class="flex justify-around mt-2"><label><input type="radio" name="publish-results" value="none" ${(!test.resultsPublished || test.resultsPublished === 'none') ? 'checked' : ''}> Không</label><label><input type="radio" name="publish-results" value="correctIncorrect" ${test.resultsPublished === 'correctIncorrect' ? 'checked' : ''}> Đúng/Sai</label><label><input type="radio" name="publish-results" value="full" ${test.resultsPublished === 'full' ? 'checked' : ''}> Toàn bộ</label></div></div></div></div>
+                    <div id="settings-panel" class="my-6 p-4 bg-white/30 rounded-2xl" data-testid="${test.id}" data-testtype="${test.testType}"><h3 class="font-bold mb-3">Cài đặt & Trạng thái</h3><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div class="flex items-center justify-between p-3 bg-white/40 rounded-lg"><label for="lock-test-toggle" class="font-medium">Khóa đề thi</label><label class="toggle-switch"><input type="checkbox" id="lock-test-toggle" ${test.isLocked ? 'checked' : ''}><span class="slider"></span></label></div><div class="p-3 bg-white/40 rounded-lg"><span class="font-medium">Công bố kết quả</span><div class="flex justify-around mt-2 custom-radio-group"><input type="radio" name="publish-results" value="none" id="pub-none" ${(!test.resultsPublished || test.resultsPublished === 'none') ? 'checked' : ''}><label for="pub-none">Không</label><input type="radio" name="publish-results" value="correctIncorrect" id="pub-ci" ${test.resultsPublished === 'correctIncorrect' ? 'checked' : ''}><label for="pub-ci">Đúng/Sai</label><input type="radio" name="publish-results" value="full" id="pub-full" ${test.resultsPublished === 'full' ? 'checked' : ''}><label for="pub-full">Toàn bộ</label></div></div></div></div>
                     <div class="my-6 p-4 bg-white/30 rounded-2xl"><h3 class="font-bold mb-2">Thêm học sinh mới</h3><textarea id="new-student-list" class="input-field" rows="3" placeholder="Dán danh sách tên, mỗi tên một dòng..."></textarea><button id="add-students-btn" class="btn btn-primary mt-2 w-full">Thêm và tạo mã</button></div>
                     <div><h3 class="font-bold mb-2">Danh sách học sinh</h3><div class="overflow-x-auto max-h-[45vh]"><table class="w-full text-left border-collapse"><thead class="sticky top-0 bg-white/50 backdrop-blur-sm"><tr><th class="p-3 border-b border-gray-300">Tên</th><th class="p-3 border-b border-gray-300">Mã</th><th class="p-3 border-b border-gray-300">Trạng thái</th><th class="p-3 border-b border-gray-300">Điểm</th><th class="p-3 border-b border-gray-300">Vi phạm</th><th class="p-3 border-b border-gray-300"></th></tr></thead><tbody id="submission-table-body"><tr><td colspan="6" class="p-4 text-center">Đang tải danh sách...</td></tr></tbody></table></div></div>
                 </div>`;
@@ -519,7 +524,7 @@
                     menuItems = `<div class="p-2 hover:bg-violet-200 rounded-md cursor-pointer" data-action="open-test">Mở chi tiết</div><div class="p-2 hover:bg-violet-200 rounded-md cursor-pointer" data-action="edit-test">Sửa đề thi</div><hr class="my-1 border-white/50"><div class="p-2 hover:bg-violet-200 rounded-md cursor-pointer" data-action="delete-test">Xóa</div>`;
                 }
             } else if (!e.target.closest('#main-content-view')) {
-                return; // Don't show menu if not in the main content view area
+                return;
             }
 
             DOM.contextMenu.innerHTML = menuItems;
@@ -537,14 +542,16 @@
             if (!action) return;
 
             if (action === 'new-folder') {
-                const newName = prompt("Nhập tên thư mục mới:");
+                const newName = await showPromptModal("Tạo thư mục mới", "Nhập tên cho thư mục:", "Thư mục không tên");
                 if (newName) createNewFolder(newName);
             } else if (action === 'delete-folder') {
                 const hasChildren = appState.localFoldersCache.some(f => f.parentId === itemId) || appState.localTestsCache.some(t => t.folderId === itemId);
-                if (hasChildren) { alert("Không thể xóa thư mục này vì nó không rỗng."); return; }
-                if (confirm(`Bạn có chắc muốn xóa thư mục này?`)) { await deleteDoc(doc(db, 'folders', itemId)); }
+                if (hasChildren) { showModal("Không thể xóa", "Thư mục phải rỗng trước khi xóa."); return; }
+                const confirmed = await showConfirmModal("Xác nhận xóa", "Bạn có chắc muốn xóa vĩnh viễn thư mục này?");
+                if (confirmed) { await deleteDoc(doc(db, 'folders', itemId)); }
             } else if (action === 'delete-test') {
-                if (confirm(`Bạn có chắc muốn xóa bài thi này và tất cả bài làm của học sinh?`)) {
+                const confirmed = await showConfirmModal("Xác nhận xóa", "Bạn có chắc muốn xóa bài thi này và tất cả bài làm của học sinh? Thao tác này không thể hoàn tác.");
+                if (confirmed) {
                     const submissionsQuery = query(collection(db, "submissions"), where("testId", "==", itemId));
                     const submissionSnapshot = await getDocs(submissionsQuery);
                     await Promise.all(submissionSnapshot.docs.map(sDoc => deleteDoc(sDoc.ref)));
@@ -553,7 +560,7 @@
                 }
             } else if (action === 'rename') {
                 const currentFolder = appState.localFoldersCache.find(f => f.id === itemId);
-                const newName = prompt("Nhập tên mới cho thư mục:", currentFolder.name);
+                const newName = await showPromptModal("Đổi tên thư mục", "Nhập tên mới:", currentFolder.name);
                 if (newName && newName.trim()) { await updateDoc(doc(db, 'folders', itemId), { name: newName.trim() }); }
             } else if (action === 'edit-test') {
                  const pageMap = { standard: 'standard/standard-test-maker.html', reading: 'reading/reading-test-maker.html', listening: 'listening/listening-test-maker.html' };
@@ -584,8 +591,55 @@
                 document.getElementById('new-student-list').value = '';
             } else if (e.target.closest('.btn-delete-student')) {
                 const subId = e.target.closest('.btn-delete-student').dataset.subId;
-                if (confirm(`Xóa bài làm của học sinh này?`)) { await deleteDoc(doc(db, "submissions", subId)); }
+                const confirmed = await showConfirmModal("Xác nhận xóa", "Bạn có chắc muốn xóa bài làm của học sinh này?");
+                if (confirmed) { await deleteDoc(doc(db, "submissions", subId)); }
             }
+        }
+
+        // --- Custom Modals ---
+        function showModal(title, message) {
+            return new Promise(resolve => {
+                const modal = document.createElement('div');
+                modal.className = 'modal is-open';
+                modal.innerHTML = `<div class="modal-content glass-panel text-center p-8 w-full max-w-sm"><h3 class="text-xl font-bold text-gray-900 mb-4">${title}</h3><p class="text-gray-600 mb-6">${message}</p><button class="btn btn-primary">OK</button></div>`;
+                DOM.modalContainer.appendChild(modal);
+                modal.querySelector('button').onclick = () => {
+                    modal.remove();
+                    resolve(true);
+                };
+            });
+        }
+        function showConfirmModal(title, message) {
+            return new Promise(resolve => {
+                const modal = document.createElement('div');
+                modal.className = 'modal is-open';
+                modal.innerHTML = `<div class="modal-content glass-panel text-center p-8 w-full max-w-sm"><h3 class="text-xl font-bold text-gray-900 mb-4">${title}</h3><p class="text-gray-600 mb-6">${message}</p><div class="flex gap-4 justify-center"><button class="btn btn-secondary" data-resolve="false">Hủy</button><button class="btn btn-danger" data-resolve="true">Xác nhận</button></div></div>`;
+                DOM.modalContainer.appendChild(modal);
+                modal.querySelectorAll('button').forEach(btn => {
+                    btn.onclick = () => {
+                        modal.remove();
+                        resolve(btn.dataset.resolve === 'true');
+                    };
+                });
+            });
+        }
+        function showPromptModal(title, message, defaultValue = '') {
+            return new Promise(resolve => {
+                const modal = document.createElement('div');
+                modal.className = 'modal is-open';
+                modal.innerHTML = `<div class="modal-content glass-panel p-8 w-full max-w-sm"><h3 class="text-xl font-bold text-gray-900 mb-4">${title}</h3><p class="text-gray-600 mb-4">${message}</p><input type="text" class="input-field mb-6" value="${defaultValue}"><div class="flex gap-4 justify-center"><button class="btn btn-secondary" data-resolve="null">Hủy</button><button class="btn btn-primary" data-resolve="value">OK</button></div></div>`;
+                DOM.modalContainer.appendChild(modal);
+                const input = modal.querySelector('input');
+                input.focus();
+                input.select();
+                modal.querySelectorAll('button').forEach(btn => {
+                    btn.onclick = () => {
+                        const resolution = btn.dataset.resolve === 'value' ? input.value : null;
+                        modal.remove();
+                        resolve(resolution);
+                    };
+                });
+            });
         }
 
         // --- Auth & Util Buttons ---
