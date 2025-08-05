@@ -227,18 +227,12 @@
                 return;
             }
             
-            const studentPage = { 
-                standard: 'student.html', 
-                reading: 'reading/student-reading-test.html', 
-                listening: 'listening/listening-student.html' 
-            };
-            
             const getStatusInfo = (sub) => {
                 if (sub.status === 'submitted') {
                     return { text: 'Đã nộp', class: 'status-submitted', timer: '-' };
                 }
                 if (sub.startTime) {
-                    const duration = test.duration || 0;
+                    const duration = (sub.testSnapshot && sub.testSnapshot.duration) ? sub.testSnapshot.duration : (test.duration || 0);
                     if (duration > 0) {
                         const endTime = sub.startTime.toDate().getTime() + duration * 60 * 1000;
                         const remaining = Math.max(0, endTime - Date.now());
@@ -272,7 +266,7 @@
                                     const statusInfo = getStatusInfo(sub);
                                     return `
                                     <tr class="hover:bg-white/40" data-submission-id="${sub.id}">
-                                        <td class="p-3 border-b border-gray-200"><a href="${studentPage[test.testType]}?submission_id=${sub.id}" target="_blank" class="text-violet-700 hover:underline font-semibold">${sub.studentName}</a></td>
+                                        <td class="p-3 border-b border-gray-200"><a href="index.html?submission_id=${sub.id}" target="_blank" class="text-violet-700 hover:underline font-semibold">${sub.studentName}</a></td>
                                         <td class="p-3 border-b border-gray-200 font-mono">${sub.id}</td>
                                         <td class="p-3 border-b border-gray-200"><span class="status-badge ${statusInfo.class}">${statusInfo.text}</span><br><span class="text-sm font-mono">${statusInfo.timer}</span></td>
                                         <td class="p-3 border-b border-gray-200 font-bold">${sub.status === 'submitted' ? `${sub.score} / ${sub.totalPoints}` : '-'}</td>
@@ -292,7 +286,7 @@
 
             submissions.forEach(sub => {
                 if (sub.startTime && sub.status !== 'submitted') {
-                    const duration = test.duration || 0;
+                    const duration = (sub.testSnapshot && sub.testSnapshot.duration) ? sub.testSnapshot.duration : (test.duration || 0);
                     if (duration > 0) {
                         const endTime = sub.startTime.toDate().getTime() + duration * 60 * 1000;
                         const remaining = Math.max(0, endTime - Date.now());
@@ -304,7 +298,6 @@
                             const timerCell = row.children[2].querySelector('.text-sm');
                             if (timerCell) timerCell.textContent = `${minutes}:${seconds}`;
                             if (remaining === 0 && timerCell.textContent !== '00:00') {
-                                // Refresh view if time just ran out
                                 renderDetailsView(test, submissions);
                             }
                         }
@@ -353,8 +346,8 @@
             if (!button) return;
             const title = button.title;
             if (title.includes('trắc nghiệm')) window.open('test-maker.html', '_blank');
-            else if (title.includes('đọc hiểu')) window.open('reading/reading-test-maker.html', '_blank');
-            else if (title.includes('nghe')) window.open('listening/listening-test-maker.html', '_blank');
+            else if (title.includes('đọc hiểu')) window.open('reading-test-maker.html', '_blank');
+            else if (title.includes('nghe')) window.open('listening-test-maker.html', '_blank');
         });
 
         DOM.testList.addEventListener('click', (e) => {
@@ -370,8 +363,8 @@
                 const testId = item.dataset.testId;
                 const pageMap = { 
                     standard: 'test-maker.html', 
-                    reading: 'reading/reading-test-maker.html', 
-                    listening: 'listening/listening-test-maker.html' 
+                    reading: 'reading-test-maker.html', 
+                    listening: 'listening-test-maker.html' 
                 };
                 window.open(`${pageMap[testType]}?edit=${testId}`, '_blank');
             } else if (deleteBtn) {
