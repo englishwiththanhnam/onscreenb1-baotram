@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Thư viện SortableJS cho chức năng kéo thả -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <style>
         :root {
@@ -55,17 +54,14 @@
         .modal.is-open { display: flex; }
         .modal-content { animation: scaleIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        
         .folder-tree-item.active, .special-location.active { background-color: var(--primary-accent) !important; color: white; }
         .folder-tree-item.active .text-violet-600, .special-location.active .text-violet-600 { color: #e0e7ff; }
         .main-view-item { transition: all 0.2s ease-in-out, opacity 0.3s ease-in-out; }
         .main-view-item:hover { transform: translateY(-4px); background: rgba(255, 255, 255, 0.7); }
         .sortable-ghost { opacity: 0.4; background: #c7d2fe; }
         .sortable-drag { opacity: 1 !important; }
-        
         #context-menu { position: absolute; z-index: 1000; opacity: 0; transform: scale(0.95) translateY(10px); transition: opacity 0.15s ease-out, transform 0.15s ease-out; pointer-events: none; }
         #context-menu.show { opacity: 1; transform: scale(1) translateY(0); pointer-events: auto; }
-
         .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; }
         .status-not-started { background-color: #e5e7eb; color: #4b5563; }
         .status-in-progress { background-color: #fef08a; color: #854d0e; }
@@ -76,13 +72,9 @@
         .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--primary-accent); }
         input:checked + .slider:before { transform: translateX(22px); }
-        
-        /* Custom Radio Buttons */
         .custom-radio-group label { padding: 8px 16px; border-radius: 10px; background-color: rgba(255,255,255,0.3); border: 1px solid rgba(255,255,255,0.5); cursor: pointer; transition: all 0.2s ease-in-out; }
         .custom-radio-group input:checked + label { background-color: var(--primary-accent); color: white; border-color: var(--primary-accent); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .custom-radio-group input { display: none; }
-
-        /* Animation Classes */
         .anim-fade-out { animation: fadeOut 0.2s ease-out forwards; }
         .anim-fade-in { animation: fadeIn 0.3s ease-in forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -95,7 +87,6 @@
         <div class="shape shape2"></div>
     </div>
 
-    <!-- Login Screen -->
     <div id="login-screen" class="modal is-open">
         <div class="modal-content glass-panel p-8 rounded-2xl shadow-xl text-center w-full max-w-sm">
             <h2 class="text-2xl font-bold mb-6">Đăng nhập Giáo viên</h2>
@@ -108,7 +99,6 @@
         </div>
     </div>
 
-    <!-- Main Content -->
     <div id="main-content" class="max-w-screen-2xl mx-auto relative z-10" style="display: none;">
         <header class="flex flex-wrap justify-between items-center mb-8">
             <h1 class="text-4xl font-bold text-gray-800">Quản lý Bài tập</h1>
@@ -117,13 +107,13 @@
                     <button data-type="standard" class="btn btn-secondary !p-3" title="Tạo đề trắc nghiệm"><i class="fas fa-file-alt text-lg"></i></button>
                     <button data-type="reading" class="btn btn-secondary !p-3" title="Tạo bài đọc hiểu"><i class="fas fa-book-open text-lg"></i></button>
                     <button data-type="listening" class="btn btn-secondary !p-3" title="Tạo bài thi nghe"><i class="fas fa-headphones text-lg"></i></button>
+                    <button data-type="vocabulary" class="btn btn-secondary !p-3" title="Tạo Bộ từ vựng"><i class="fas fa-spell-check text-lg"></i></button>
                 </div>
                 <button id="logout-btn" class="btn btn-danger">Đăng xuất</button>
             </div>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <!-- Cột Trái: Cây thư mục -->
             <div class="lg:col-span-3 glass-panel p-4">
                 <div id="special-locations-list" class="space-y-1 mb-4">
                      <div data-location-id="unassigned" class="special-location p-3 rounded-lg cursor-pointer hover:bg-violet-100 transition-colors">
@@ -133,15 +123,10 @@
                 <hr class="my-2 border-white/50">
                 <div id="folder-tree-container" class="space-y-1 max-h-[65vh] overflow-y-auto"></div>
             </div>
-
-            <!-- Cột Phải: Panel chính (Hợp nhất) -->
-            <div id="main-panel-view" class="lg:col-span-9 glass-panel p-6 max-h-[80vh] overflow-y-auto">
-                <!-- Nội dung sẽ được render ở đây -->
-            </div>
+            <div id="main-panel-view" class="lg:col-span-9 glass-panel p-6 max-h-[80vh] overflow-y-auto"></div>
         </div>
     </div>
     
-    <!-- Modals & Context Menu -->
     <div id="context-menu" class="glass-panel !rounded-lg !p-2 min-w-[180px]"></div>
     <div id="custom-modal-container"></div>
 
@@ -150,7 +135,6 @@
         import { getFirestore, collection, doc, addDoc, deleteDoc, query, where, setDoc, updateDoc, onSnapshot, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
-        // --- Firebase & App State ---
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
@@ -172,7 +156,7 @@
             locationHistory: ['root'],
             get currentLocationId() { return this.locationHistory[this.locationHistory.length - 1]; },
             selectedTestId: null,
-            mainPanelViewMode: 'folder', // 'folder' or 'details'
+            mainPanelViewMode: 'folder',
             searchQuery: '',
             unsubscribers: [],
             timerInterval: null,
@@ -194,7 +178,6 @@
             modalContainer: document.getElementById('custom-modal-container'),
         };
 
-        // --- Auth & Initialization ---
         onAuthStateChanged(auth, user => {
             if (user) {
                 appState.currentUser = user;
@@ -214,7 +197,13 @@
         function startDataListeners() {
             appState.unsubscribers.forEach(unsub => unsub());
             appState.unsubscribers = [];
-            const collectionsToWatch = { standard: 'tests', reading: 'reading_tests', listening: 'listening_tests', folders: 'folders' };
+            const collectionsToWatch = { 
+                standard: 'tests', 
+                reading: 'reading_tests', 
+                listening: 'listening_tests',
+                vocabulary: 'vocab_sets',
+                folders: 'folders' 
+            };
             let combinedTests = {};
             
             Object.entries(collectionsToWatch).forEach(([type, name]) => {
@@ -233,7 +222,6 @@
             });
         }
 
-        // --- Main Rendering Logic ---
         function renderMainPanel(isNavigating = false) {
             const container = DOM.mainPanelView;
             const animateAndRender = (renderFunction, ...args) => {
@@ -257,7 +245,6 @@
             }
         }
 
-        // --- Folder View Rendering ---
         function renderFolderView() {
             const locationId = appState.currentLocationId;
             let itemsToShow = [];
@@ -292,7 +279,7 @@
             if (itemsToShow.length === 0) {
                 mainContentHTML += `<p class="col-span-full text-center text-gray-500 py-10">${isSearchActive ? 'Không tìm thấy kết quả.' : 'Thư mục này trống.'}</p>`;
             } else {
-                const icons = { folder: '<i class="fas fa-folder text-5xl text-violet-600 mb-2"></i>', standard: '<i class="fas fa-file-alt text-5xl text-violet-600 mb-2"></i>', reading: '<i class="fas fa-book-open text-5xl text-violet-600 mb-2"></i>', listening: '<i class="fas fa-headphones text-5xl text-violet-600 mb-2"></i>' };
+                const icons = { folder: '<i class="fas fa-folder text-5xl text-violet-600 mb-2"></i>', standard: '<i class="fas fa-file-alt text-5xl text-violet-600 mb-2"></i>', reading: '<i class="fas fa-book-open text-5xl text-violet-600 mb-2"></i>', listening: '<i class="fas fa-headphones text-5xl text-violet-600 mb-2"></i>', vocabulary: '<i class="fas fa-spell-check text-5xl text-violet-600 mb-2"></i>' };
                 itemsToShow.forEach(item => {
                     const isFolder = !!item.parentId;
                     mainContentHTML += `<div class="main-view-item flex flex-col items-center justify-center p-4 rounded-xl cursor-pointer text-center bg-white/30" data-item-id="${item.id}" data-item-type="${isFolder ? 'folder' : item.testType}">${icons[isFolder ? 'folder' : item.testType]}<p class="font-semibold text-sm break-words w-full">${item.name || item.title}</p></div>`;
@@ -332,7 +319,6 @@
             return path.map((p, i) => i === path.length - 1 ? `<span class="font-bold text-gray-800">${p.name}</span>` : `<a href="#" class="text-violet-700 hover:underline" data-location-id="${p.id}">${p.name}</a>`).join('<span class="mx-2">/</span>');
         }
 
-        // --- Details View Rendering ---
         function renderDetailsView(test) {
              if (appState.timerInterval) clearInterval(appState.timerInterval);
              if (!test) {
@@ -367,7 +353,8 @@
             if (submissions.length === 0) { tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">Chưa có học sinh nào.</td></tr>`; return; }
             tableBody.innerHTML = submissions.map(sub => {
                 const statusInfo = getStatusInfo(sub, test);
-                return `<tr class="hover:bg-white/40" data-submission-id="${sub.id}"><td class="p-3 border-b border-gray-200"><a href="index.html?submission_id=${sub.id}" target="_blank" class="text-violet-700 hover:underline font-semibold">${sub.studentName}</a></td><td class="p-3 border-b border-gray-200 font-mono">${sub.id}</td><td class="p-3 border-b border-gray-200"><span class="status-badge ${statusInfo.class}">${statusInfo.text}</span><br><span class="text-sm font-mono">${statusInfo.timer}</span></td><td class="p-3 border-b border-gray-200 font-bold">${sub.status === 'submitted' ? `${sub.score} / ${sub.totalPoints}` : '-'}</td><td class="p-3 border-b border-gray-200 text-center font-bold ${sub.violationCount > 0 ? 'text-red-500' : ''}">${sub.violationCount || 0}</td><td class="p-3 border-b border-gray-200 text-right"><button class="btn-delete-student btn btn-danger !p-2 !rounded-full" data-sub-id="${sub.id}"><i class="fas fa-trash text-sm"></i></button></td></tr>`
+                const scoreDisplay = (sub.status === 'submitted' && sub.score !== undefined) ? `${sub.score} / ${sub.totalPoints}` : '-';
+                return `<tr class="hover:bg-white/40" data-submission-id="${sub.id}"><td class="p-3 border-b border-gray-200"><a href="index.html?submission_id=${sub.id}" target="_blank" class="text-violet-700 hover:underline font-semibold">${sub.studentName}</a></td><td class="p-3 border-b border-gray-200 font-mono">${sub.id}</td><td class="p-3 border-b border-gray-200"><span class="status-badge ${statusInfo.class}">${statusInfo.text}</span><br><span class="text-sm font-mono">${statusInfo.timer}</span></td><td class="p-3 border-b border-gray-200 font-bold">${scoreDisplay}</td><td class="p-3 border-b border-gray-200 text-center font-bold ${sub.violationCount > 0 ? 'text-red-500' : ''}">${sub.violationCount || 0}</td><td class="p-3 border-b border-gray-200 text-right"><button class="btn-delete-student btn btn-danger !p-2 !rounded-full" data-sub-id="${sub.id}"><i class="fas fa-trash text-sm"></i></button></td></tr>`
             }).join('');
         }
 
@@ -405,7 +392,6 @@
             });
         }
 
-        // --- Logic & Event Handlers ---
         function initSortable() {
             const mainContentView = document.getElementById('main-content-view');
             if (!mainContentView) return;
@@ -421,7 +407,7 @@
         }
         
         async function moveItem(itemId, itemType, destinationFolderId) {
-            const collectionNameMap = { standard: 'tests', reading: 'reading_tests', listening: 'listening_tests', folder: 'folders' };
+            const collectionNameMap = { standard: 'tests', reading: 'reading_tests', listening: 'listening_tests', vocabulary: 'vocab_sets', folder: 'folders' };
             const collectionName = collectionNameMap[itemType];
             if (!collectionName) return;
             const itemRef = doc(db, collectionName, itemId);
@@ -452,7 +438,6 @@
             renderMainPanel(true);
         }
         
-        // --- Global Event Listeners ---
         document.addEventListener('click', (e) => {
             DOM.contextMenu.classList.remove('show');
             const specialLocation = e.target.closest('.special-location');
@@ -473,7 +458,6 @@
                 }
                 return;
             }
-
             const breadcrumbContainer = e.target.closest('#breadcrumb-container');
             if (breadcrumbContainer) {
                 breadcrumbContainer.classList.add('hidden');
@@ -481,14 +465,12 @@
                 searchContainer.classList.remove('hidden');
                 searchContainer.querySelector('input').focus();
             }
-            
             const searchInput = e.target.closest('#search-input');
             if (!searchInput && document.getElementById('search-container') && !document.getElementById('search-container').classList.contains('hidden')) {
                 document.getElementById('breadcrumb-container').classList.remove('hidden');
                 document.getElementById('search-container').classList.add('hidden');
                 if (appState.searchQuery) { appState.searchQuery = ''; renderMainPanel(); }
             }
-            
             const detailsPanel = e.target.closest('#main-panel-view');
             if (detailsPanel) { handleDetailsViewClick(e); }
         });
@@ -555,7 +537,8 @@
                     const submissionsQuery = query(collection(db, "submissions"), where("testId", "==", itemId));
                     const submissionSnapshot = await getDocs(submissionsQuery);
                     await Promise.all(submissionSnapshot.docs.map(sDoc => deleteDoc(sDoc.ref)));
-                    const collectionName = `${itemType}_tests`.replace('standard_tests', 'tests');
+                    const collectionNameMap = { standard: 'tests', reading: 'reading_tests', listening: 'listening_tests', vocabulary: 'vocab_sets' };
+                    const collectionName = collectionNameMap[itemType];
                     await deleteDoc(doc(db, collectionName, itemId));
                 }
             } else if (action === 'rename') {
@@ -563,7 +546,7 @@
                 const newName = await showPromptModal("Đổi tên thư mục", "Nhập tên mới:", currentFolder.name);
                 if (newName && newName.trim()) { await updateDoc(doc(db, 'folders', itemId), { name: newName.trim() }); }
             } else if (action === 'edit-test') {
-                 const pageMap = { standard: 'standard/standard-test-maker.html', reading: 'reading/reading-test-maker.html', listening: 'listening/listening-test-maker.html' };
+                 const pageMap = { standard: 'standard/standard-test-maker.html', reading: 'reading/reading-test-maker.html', listening: 'listening/listening-test-maker.html', vocabulary: 'vocabulary/vocabulary-test-maker.html' };
                  window.open(`${pageMap[itemType]}?edit=${itemId}`, '_blank');
             } else if (action === 'open-test') {
                 appState.selectedTestId = itemId;
@@ -576,7 +559,8 @@
             const settingsPanel = e.target.closest('#settings-panel');
             if (settingsPanel) {
                 const testId = settingsPanel.dataset.testid; const testType = settingsPanel.dataset.testtype;
-                const collectionName = `${testType}_tests`.replace('standard_tests', 'tests');
+                const collectionNameMap = { standard: 'tests', reading: 'reading_tests', listening: 'listening_tests', vocabulary: 'vocab_sets' };
+                const collectionName = collectionNameMap[testType];
                 const testRef = doc(db, collectionName, testId);
                 if (e.target.id === 'lock-test-toggle') await updateDoc(testRef, { isLocked: e.target.checked });
                 if (e.target.name === 'publish-results') await updateDoc(testRef, { resultsPublished: e.target.value });
@@ -596,7 +580,6 @@
             }
         }
 
-        // --- Custom Modals ---
         function showModal(title, message) {
             return new Promise(resolve => {
                 const modal = document.createElement('div');
@@ -642,13 +625,12 @@
             });
         }
 
-        // --- Auth & Util Buttons ---
         DOM.loginBtn.addEventListener('click', () => { signInWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value).catch(e => DOM.loginError.textContent = 'Đăng nhập thất bại.'); });
         DOM.logoutBtn.addEventListener('click', () => signOut(auth));
         DOM.createTestButtons.addEventListener('click', (e) => {
             const button = e.target.closest('button'); if (!button) return;
             const type = button.dataset.type;
-            const pageMap = { standard: 'standard/standard-test-maker.html', reading: 'reading/reading-test-maker.html', listening: 'listening/listening-test-maker.html' };
+            const pageMap = { standard: 'standard/standard-test-maker.html', reading: 'reading/reading-test-maker.html', listening: 'listening/listening-test-maker.html', vocabulary: 'vocabulary/vocabulary-test-maker.html' };
             if(pageMap[type]) window.open(pageMap[type], '_blank');
         });
 
