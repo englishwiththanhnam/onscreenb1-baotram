@@ -15,25 +15,24 @@
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
             projectId: "b1-baotram",
-            storageBucket: "b1-baotram.appspot.com",
+            storageBucket: "b1-baotram.appspot.com", // Sửa lại cho đúng chuẩn
             messagingSenderId: "948701163187",
             appId: "1:948701163187:web:043f2d381d63e741114ac6",
             measurementId: "G-33NHT07JHE"
         };
         window.primaryFirebaseConfig = primaryFirebaseConfig;
 
-        // ===== BƯỚC QUAN TRỌNG =====
-        // DÁN CẤU HÌNH CỦA DỰ ÁN MỚI (BLAZE PLAN) VÀO ĐÂY
-        // DỰ ÁN NÀY CHỈ DÙNG CHO STORAGE
-        const firebaseConfig = {
-  apiKey: "AIzaSyD6jCTrKWrerZTyB_sAejxqcuUpUvg91Pk",
-  authDomain: "data-storage-285e6.firebaseapp.com",
-  projectId: "data-storage-285e6",
-  storageBucket: "data-storage-285e6.firebasestorage.app",
-  messagingSenderId: "300159133661",
-  appId: "1:300159133661:web:28c26715e55f840c88f834",
-  measurementId: "G-VYE4DKRXEF"
-};
+        // ===== SỬA LỖI TẠI ĐÂY =====
+        // Đổi tên biến từ 'firebaseConfig' thành 'storageFirebaseConfig'
+        const storageFirebaseConfig = {
+          apiKey: "AIzaSyD6jCTrKWrerZTyB_sAejxqcuUpUvg91Pk",
+          authDomain: "data-storage-285e6.firebaseapp.com",
+          projectId: "data-storage-285e6",
+          storageBucket: "data-storage-285e6.appspot.com", // Sửa lại cho đúng chuẩn
+          messagingSenderId: "300159133661",
+          appId: "1:300159133661:web:28c26715e55f840c88f834",
+          measurementId: "G-VYE4DKRXEF"
+        };
         window.storageFirebaseConfig = storageFirebaseConfig;
 
     </script>
@@ -244,17 +243,14 @@
         }
         
         function init() {
-            // ===== THAY ĐỔI QUAN TRỌNG TRONG HÀM INIT =====
             // Khởi tạo ứng dụng chính (dùng cho DB và Auth)
             const primaryApp = initializeApp(window.primaryFirebaseConfig, "primary");
             appState.db = getFirestore(primaryApp);
             appState.auth = getAuth(primaryApp);
 
             // Khởi tạo ứng dụng phụ (chỉ dùng cho Storage)
-            // Chúng ta đặt cho nó một cái tên duy nhất là "storageApp" để tránh xung đột
             const storageApp = initializeApp(window.storageFirebaseConfig, "storageApp");
             appState.storage = getStorage(storageApp);
-            // ===== KẾT THÚC THAY ĐỔI =====
 
 
             onAuthStateChanged(appState.auth, user => {
