@@ -30,10 +30,6 @@
         .btn-primary:disabled { background-color: #a5b4fc; cursor: not-allowed; }
         .input-field { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; }
         textarea.input-field { min-height: 200px; font-family: monospace; }
-        .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #4f46e5; width: 24px; height: 24px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .draggable { cursor: move; }
-        .dragging { opacity: 0.5; background: #c7d2fe; }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -68,15 +64,14 @@
         <!-- Cấu hình Audio -->
         <div class="bg-white p-6 rounded-lg shadow-md mb-8">
             <h2 class="text-2xl font-bold text-gray-700 mb-4">2. Cấu hình Audio</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div><label for="play-count">Số lần nghe</label><input type="number" id="play-count" class="input-field mt-1" value="1" min="1"></div>
                 <div><label for="pause-between">Giây nghỉ giữa các file</label><input type="number" id="pause-between" class="input-field mt-1" value="5" min="0"></div>
-                <div class="md:col-span-3">
-                    <label for="audio-upload">Tải lên file audio (mp3, wav, m4a)</label>
-                    <input type="file" id="audio-upload" class="mt-1" multiple accept="audio/*">
-                    <p class="text-xs text-gray-500 mt-2">Kéo thả các file dưới đây để sắp xếp lại thứ tự phát.</p>
-                    <div id="upload-status-list" class="mt-2 text-sm text-gray-600 space-y-2 p-2 border rounded-md bg-gray-50 min-h-[50px]"></div>
-                </div>
+            </div>
+            <div class="mt-6">
+                <label for="audio-urls" class="block text-sm font-medium text-gray-700">Danh sách Link Audio</label>
+                <p class="text-xs text-gray-500 mt-1">Dán các link audio công khai vào đây, mỗi link một dòng. Thứ tự dán sẽ là thứ tự phát.</p>
+                <textarea id="audio-urls" class="input-field mt-2" rows="5" placeholder="https://firebasestorage.googleapis.com/.../file1.mp3?alt=media&token=...\nhttps://firebasestorage.googleapis.com/.../file2.mp3?alt=media&token=..."></textarea>
             </div>
         </div>
         
@@ -100,9 +95,8 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-functions.js";
 
-        const appState = { db: null, auth: null, functions: null, audioFiles: [] };
+        const appState = { db: null, auth: null };
         const DOM = {
             loginScreen: document.getElementById('login-screen'),
             mainContent: document.getElementById('main-content'),
@@ -115,8 +109,7 @@
             testTitleInput: document.getElementById('test-title'),
             playCountInput: document.getElementById('play-count'),
             pauseBetweenInput: document.getElementById('pause-between'),
-            audioUploadInput: document.getElementById('audio-upload'),
-            uploadStatusList: document.getElementById('upload-status-list'),
+            audioUrlsTextarea: document.getElementById('audio-urls'),
             questionsHtmlInput: document.getElementById('questions-html'),
             answersTextInput: document.getElementById('answers-text'),
             uploadBtn: document.getElementById('upload-btn'),
@@ -135,70 +128,16 @@
             });
             return { answers, totalQuestions };
         }
-        
-        function renderAudioList() {
-            DOM.uploadStatusList.innerHTML = '';
-            appState.audioFiles.forEach((fileData, index) => {
-                const item = document.createElement('div');
-                item.className = 'draggable p-2 border rounded-md bg-white flex items-center justify-between';
-                item.draggable = true;
-                item.dataset.index = index;
-                
-                let statusIcon = fileData.uploading ? '<div class="loader"></div>' : 
-                                 fileData.url ? '<i class="fas fa-check-circle text-green-500"></i>' : 
-                                 '<i class="fas fa-times-circle text-red-500"></i>';
-
-                item.innerHTML = `<div class="flex items-center gap-2"><i class="fas fa-grip-vertical text-gray-400"></i><span>${fileData.name}</span></div>${statusIcon}`;
-                DOM.uploadStatusList.appendChild(item);
-            });
-        }
-        
-        // Convert file to Base64
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result.split(',')[1]);
-                reader.onerror = error => reject(error);
-            });
-        }
-
-        async function handleFileUpload(files) {
-            DOM.uploadBtn.disabled = true;
-            const uploadAudioFile = httpsCallable(appState.functions, 'uploadAudioFile');
-
-            const newFiles = Array.from(files).map(file => ({ name: file.name, file: file, uploading: true, url: null }));
-            appState.audioFiles.push(...newFiles);
-            renderAudioList();
-
-            await Promise.all(newFiles.map(async (fileData) => {
-                try {
-                    const base64 = await fileToBase64(fileData.file);
-                    const result = await uploadAudioFile({ 
-                        fileAsBase64: base64, 
-                        fileName: fileData.name,
-                        fileType: fileData.file.type
-                    });
-                    fileData.url = result.data.downloadURL;
-                } catch (error) {
-                    console.error("Cloud Function upload error:", error);
-                } finally {
-                    fileData.uploading = false;
-                }
-            }));
-            
-            renderAudioList();
-            DOM.uploadBtn.disabled = false;
-        }
 
         async function uploadToFirebase() {
             const testId = DOM.testIdInput.value.trim();
             const title = DOM.testTitleInput.value.trim();
             const { answers, totalQuestions } = parseAnswers(DOM.answersTextInput.value);
-            const audioURLs = appState.audioFiles.map(f => f.url).filter(Boolean);
+            
+            const audioURLs = DOM.audioUrlsTextarea.value.trim().split('\n').filter(url => url.trim().startsWith('http'));
 
             if (!testId || !title || totalQuestions === 0 || audioURLs.length === 0) {
-                alert("Vui lòng nhập đủ thông tin, đáp án và tải lên ít nhất một file audio thành công.");
+                alert("Vui lòng nhập đủ thông tin, đáp án và ít nhất một link audio.");
                 return;
             }
 
@@ -229,27 +168,10 @@
             }
         }
         
-        function setupDragAndDrop() {
-            let draggedItem = null;
-            DOM.uploadStatusList.addEventListener('dragstart', e => {
-                draggedItem = e.target;
-                setTimeout(() => e.target.classList.add('dragging'), 0);
-            });
-            DOM.uploadStatusList.addEventListener('dragend', e => e.target.classList.remove('dragging'));
-            DOM.uploadStatusList.addEventListener('dragover', e => e.preventDefault());
-            DOM.uploadStatusList.addEventListener('drop', e => {
-                e.preventDefault();
-                const newOrder = Array.from(DOM.uploadStatusList.children).map(item => appState.audioFiles[parseInt(item.dataset.index)]);
-                appState.audioFiles = newOrder;
-                renderAudioList();
-            });
-        }
-
         function init() {
             const app = initializeApp(window.firebaseConfig);
             appState.db = getFirestore(app);
             appState.auth = getAuth(app);
-            appState.functions = getFunctions(app);
 
             onAuthStateChanged(appState.auth, user => {
                 DOM.loginScreen.style.display = user ? 'none' : 'flex';
@@ -261,10 +183,7 @@
                 catch (error) { DOM.loginError.textContent = 'Email hoặc mật khẩu không đúng.'; }
             });
             DOM.logoutBtn.addEventListener('click', () => signOut(appState.auth));
-            DOM.audioUploadInput.addEventListener('change', (e) => handleFileUpload(e.target.files));
             DOM.uploadBtn.addEventListener('click', uploadToFirebase);
-            
-            setupDragAndDrop();
         }
         
         init();
