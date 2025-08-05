@@ -134,32 +134,29 @@
                 }
 
                 const testId = submissionSnap.data().testId;
+                
                 const testCollections = {
-                    'standard': 'tests',
-                    'reading': 'reading_tests',
-                    'listening': 'listening_tests'
-                };
-                const pageMap = {
-                    'standard': 'standard/standard-test.html',
-                    'reading': 'reading/reading-test.html',
-                    'listening': 'listening/listening-test.html'
+                    'tests': 'standard/standard-test.html',
+                    'reading_tests': 'reading/reading-test.html',
+                    'listening_tests': 'listening/listening-test.html',
+                    'vocab_sets': 'vocabulary/vocabulary-test.html'
                 };
 
-                let testTypeFound = null;
+                let redirectUrl = null;
 
-                for (const type in testCollections) {
-                    const testRef = doc(db, testCollections[type], testId);
+                for (const collectionName in testCollections) {
+                    const testRef = doc(db, collectionName, testId);
                     const testSnap = await getDoc(testRef);
                     if (testSnap.exists()) {
-                        testTypeFound = type;
+                        redirectUrl = testCollections[collectionName];
                         break;
                     }
                 }
 
-                if (testTypeFound) {
-                    window.location.href = `${pageMap[testTypeFound]}?submission_id=${submissionId}`;
+                if (redirectUrl) {
+                    window.location.href = `${redirectUrl}?submission_id=${submissionId}`;
                 } else {
-                    throw new Error("Không tìm thấy bài thi tương ứng với mã này.");
+                    throw new Error("Không tìm thấy bài thi/bài tập tương ứng với mã này.");
                 }
 
             } catch (error) {
