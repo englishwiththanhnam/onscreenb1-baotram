@@ -187,7 +187,7 @@
 
         const ProctoringService = {
             violationCount: 0,
-            maxViolations: 5,
+            maxViolations: 10,
             isProctoring: false,
 
             start() {
@@ -197,6 +197,7 @@
                 window.addEventListener('focus', this.handleFocus);
                 document.addEventListener('keydown', this.handleKeydown);
                 document.addEventListener('fullscreenchange', this.handleFullscreenChange);
+                window.addEventListener('beforeunload', this.handleBeforeUnload);
                 ['copy', 'paste', 'cut'].forEach(event => document.addEventListener(event, e => e.preventDefault()));
                 
                 this.isProctoring = true;
@@ -222,7 +223,17 @@
                 window.removeEventListener('focus', this.handleFocus);
                 document.removeEventListener('keydown', this.handleKeydown);
                 document.removeEventListener('fullscreenchange', this.handleFullscreenChange);
+                window.removeEventListener('beforeunload', this.handleBeforeUnload);
                 this.isProctoring = false;
+            },
+            
+            handleBeforeUnload(e) {
+                if (appState.isTestRunning && appState.currentTestSnapshot.testSnapshot.type === 'test') {
+                    submitTest(true); // Force submit
+                    const confirmationMessage = 'Bạn có chắc chắn muốn rời khỏi? Bài làm sẽ được nộp tự động.';
+                    (e || window.event).returnValue = confirmationMessage; 
+                    return confirmationMessage; 
+                }
             },
 
             handleVisibilityChange: () => {
@@ -230,7 +241,7 @@
             },
             handleBlur: () => ProctoringService.handleViolation("Rời khỏi màn hình làm bài"),
             handleFocus: () => {
-                if(document.fullscreenElement) DOM.securityOverlay.classList.remove('is-open');
+                 if(document.fullscreenElement) DOM.securityOverlay.classList.remove('is-open');
             },
             handleFullscreenChange: () => {
                 if (document.fullscreenElement) {
