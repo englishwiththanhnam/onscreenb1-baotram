@@ -5,98 +5,256 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bài Thi Nghe Online</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <script type="module">
-      const firebaseConfig = {
-          apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
-          authDomain: "b1-baotram.firebaseapp.com",
-          projectId: "b1-baotram",
-          storageBucket: "b1-baotram.appspot.com",
-          messagingSenderId: "948701163187",
-          appId: "1:948701163187:web:043f2d381d63e741114ac6",
-          measurementId: "G-33NHT07JHE"
-      };
-      window.firebaseConfig = firebaseConfig;
-    </script>
-
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        html, body { height: 100%; overflow: hidden; font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
-        .panel { height: calc(100vh - 80px); overflow-y: auto; padding: 1rem; }
-        .answer-input { width: 100%; border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 8px; }
-        .btn { font-weight: 600; padding: 12px 24px; border-radius: 8px; cursor: pointer; }
-        .btn-primary { background-color: #4f46e5; color: white; }
-        .btn-success { background-color: #10b981; color: white; }
-        .loader { border: 5px solid #f3f3f3; border-radius: 50%; border-top: 5px solid #4f46e5; width: 50px; height: 50px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .code-input { width: 40px; height: 50px; text-align: center; font-size: 1.5rem; border: 2px solid #d1d5db; border-radius: 8px; margin: 0 4px; }
-        audio::-webkit-media-controls-panel { background-color: #f1f5f9; }
+        :root {
+            --blur-intensity: 12px;
+            --saturation-intensity: 150%;
+            --glass-bg-color: rgba(255, 255, 255, 0.45);
+            --glass-border-color: rgba(255, 255, 255, 0.6);
+            --shadow-color: rgba(67, 56, 202, 0.15);
+            --primary-accent: #6d28d9;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --app-bg-start: #f5f7ff;
+            --app-bg-end: #e0e7ff;
+        }
+        html, body { height: 100%; overflow: hidden; font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--app-bg-start); }
+        body { background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%); }
+        .background-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        .shape { position: absolute; border-radius: 50%; filter: blur(25px); opacity: 0.6; }
+        .shape1 { width: 250px; height: 250px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); top: 10%; left: 5%; animation: float 28s infinite alternate ease-in-out; }
+        .shape2 { width: 180px; height: 180px; background: linear-gradient(135deg, #14b8a6, #67e8f9); bottom: 15%; right: 10%; animation: float 32s infinite alternate ease-in-out; }
+        @keyframes float { from { transform: translateY(20px) scale(1); } to { transform: translateY(-20px) scale(1.05); } }
+        .glass-panel {
+            background: var(--glass-bg-color);
+            backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity));
+            border-radius: 24px;
+            border: 1px solid var(--glass-border-color);
+            box-shadow: 0 8px 32px 0 var(--shadow-color);
+        }
+        .panel { height: calc(100vh - 112px); overflow-y: auto; padding: 1rem; }
+        .panel::-webkit-scrollbar { width: 6px; }
+        .panel::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.2); border-radius: 3px; }
+        .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; }
+        .btn-primary { background: var(--primary-accent); color: white; box-shadow: 0 4px 15px rgba(91, 33, 182, 0.25); }
+        .btn-primary:hover { background: #5b21b6; transform: translateY(-2px); }
+        .btn-secondary { background: rgba(255, 255, 255, 0.4); color: var(--text-primary); border-color: rgba(255, 255, 255, 0.6); }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.7); transform: translateY(-2px); }
+        .btn-success { background: #16a34a; color: white; }
+        .btn-success:hover { background: #15803d; transform: translateY(-2px); }
+        .input-field { background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.5); color: var(--text-primary); transition: all 0.2s ease-in-out; width: 100%; padding: 8px 12px; border-radius: 8px; }
+        .input-field:focus { background: rgba(255, 255, 255, 0.7); border-color: var(--primary-accent); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3); outline: none; }
+        .code-input { width: 48px; height: 60px; text-align: center; font-size: 2rem; font-weight: 700; color: var(--primary-accent); background: rgba(255, 255, 255, 0.6); border: 2px solid var(--glass-border-color); border-radius: 16px; margin: 0 4px; transition: all 0.2s; }
+        .code-input:focus { outline: none; border-color: var(--primary-accent); transform: scale(1.1); }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; }
+        .modal.is-open { display: flex; }
+        .modal-content { animation: scaleIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        #security-overlay { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+        audio::-webkit-media-controls-panel { background-color: rgba(255,255,255,0.5); }
         audio::-webkit-media-controls-play-button,
         audio::-webkit-media-controls-timeline,
         audio::-webkit-media-controls-current-time-display,
         audio::-webkit-media-controls-time-remaining-display { display: none !important; }
     </style>
 </head>
-<body>
-    <!-- Màn hình chờ & Đăng nhập -->
-    <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen text-center p-4">
-         <div id="initial-view" class="w-full max-w-md bg-white p-8 sm:p-10 rounded-2xl shadow-xl">
-            <!-- Code Entry, Confirmation will be shown here -->
+<body oncontextmenu="return false;">
+    <div class="background-shapes">
+        <div class="shape shape1"></div>
+        <div class="shape shape2"></div>
+    </div>
+
+    <div id="security-overlay" class="modal">
+        <div class="text-center text-white p-4">
+            <i class="fas fa-shield-halved text-7xl text-yellow-300"></i>
+            <h2 class="text-4xl font-bold mt-4">VI PHẠM QUY CHẾ THI</h2>
+            <p id="violation-reason" class="mt-2 text-xl"></p>
+            <p class="mt-2 text-lg">Vui lòng quay lại màn hình làm bài ngay lập tức!</p>
+            <p id="violation-warning" class="mt-4 text-2xl font-bold text-red-400"></p>
         </div>
     </div>
 
-    <!-- Giao diện làm bài -->
-    <div id="test-container" class="hidden flex flex-col h-screen">
-        <header class="flex justify-between items-center p-4 bg-white shadow-md flex-shrink-0 h-[80px]">
-            <div id="audio-player-container" class="flex-grow">
-                <audio id="audio-player" controlslist="nodownload noplaybackrate"></audio>
-                <div id="audio-status" class="text-sm font-semibold text-gray-600"></div>
+    <div id="loader-overlay" class="modal">
+        <div class="text-center">
+            <div class="w-16 h-16 border-8 border-t-violet-500 border-gray-200 rounded-full animate-spin"></div>
+            <p id="loader-text" class="text-lg font-semibold text-white mt-4">Đang tải...</p>
+        </div>
+    </div>
+    
+    <div id="custom-modal" class="modal"></div>
+
+    <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen text-center p-4 relative z-10">
+        <div class="glass-panel p-8 sm:p-10 rounded-2xl shadow-xl w-full max-w-lg">
+            <div id="code-entry-view">
+                <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 mb-4">Bài Thi Nghe Online</h1>
+                <p class="text-gray-600 mb-8">Nhập Mã truy cập để bắt đầu.</p>
+                <div id="code-inputs" class="flex justify-center mb-4">
+                    <input type="text" maxlength="1" class="code-input"><input type="text" maxlength="1" class="code-input"><input type="text" maxlength="1" class="code-input"><input type="text" maxlength="1" class="code-input"><input type="text" maxlength="1" class="code-input"><input type="text" maxlength="1" class="code-input">
+                </div>
+                <button id="check-code-btn" class="btn btn-primary mt-4 text-lg w-full">Kiểm tra mã</button>
             </div>
-            <div class="flex items-center gap-4">
-                 <p id="student-name-display" class="font-semibold"></p>
-                 <button id="submit-btn" class="btn btn-success">Nộp bài</button>
+            <div id="confirmation-view" class="hidden">
+                 <h2 class="text-2xl font-bold text-gray-800">Xác nhận thông tin</h2>
+                <p id="student-name-confirm" class="text-3xl font-bold text-violet-700 my-4"></p>
+                <p class="text-gray-600 mb-2">Bạn sắp làm bài thi nghe:</p>
+                <p id="test-title-confirm" class="text-xl font-semibold text-gray-700 mb-8"></p>
+                <div class="flex gap-4">
+                    <button id="not-me-btn" class="btn btn-secondary w-1/2">Không phải tôi</button>
+                    <button id="continue-btn" class="btn btn-primary w-1/2">Bắt đầu thi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="test-container" class="hidden flex flex-col h-screen relative z-10">
+        <header class="p-4">
+            <div class="glass-panel flex justify-between items-center p-4 rounded-2xl">
+                <div id="audio-player-container" class="flex-grow">
+                    <audio id="audio-player" controlslist="nodownload noplaybackrate"></audio>
+                    <div id="audio-status" class="text-sm font-semibold text-gray-600"></div>
+                </div>
+                <div class="flex items-center gap-4">
+                     <p id="student-name-display" class="font-semibold"></p>
+                     <button id="submit-btn" class="btn btn-success">Nộp bài</button>
+                </div>
             </div>
         </header>
 
-        <main class="flex flex-grow overflow-hidden">
-            <div id="test-content-wrapper" class="w-3/4 bg-white border-r border-gray-200">
+        <main class="flex flex-grow overflow-hidden px-4 pb-4 gap-4">
+            <div id="test-content-wrapper" class="panel glass-panel w-3/4">
                 <div id="get-ready-overlay" class="h-full flex flex-col items-center justify-center text-center">
-                    <i class="fas fa-headphones text-6xl text-indigo-500 mb-4"></i>
+                    <i class="fas fa-headphones text-6xl text-violet-500 mb-4"></i>
                     <h2 class="text-3xl font-bold">Chuẩn bị bắt đầu</h2>
                     <p class="text-lg text-gray-600 mt-2">Bài nghe sẽ tự động phát sau</p>
-                    <p id="countdown-timer" class="text-5xl font-bold text-indigo-600 my-4">20</p>
+                    <p id="countdown-timer" class="text-5xl font-bold text-violet-600 my-4">20</p>
                     <p>Vui lòng không thoát khỏi màn hình này.</p>
                 </div>
-                <div id="questions-container" class="panel hidden"></div>
+                <div id="questions-container" class="hidden p-4"></div>
             </div>
-            <div id="answersheet-container" class="panel w-1/4 bg-gray-50">
-                <h2 class="font-bold text-lg mb-4 text-center">Phiếu trả lời</h2>
-                <div id="answer-inputs-grid" class="space-y-3"></div>
+            <div id="answersheet-container" class="panel glass-panel w-1/4">
+                <h2 class="font-bold text-lg mb-4 text-center sticky top-0 bg-white/30 backdrop-blur-sm py-2 rounded-t-xl">Phiếu trả lời</h2>
+                <div id="answer-inputs-grid" class="space-y-3 px-2"></div>
             </div>
         </main>
     </div>
 
-    <!-- Màn hình kết quả (tương tự reading.html) -->
-    <div id="result-screen" class="hidden max-w-4xl mx-auto p-8"></div>
-    <div id="loader-overlay" class="hidden fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-[250]"><div class="loader"></div></div>
+    <div id="result-screen" class="hidden max-w-4xl mx-auto p-8 relative z-10">
+         <div class="glass-panel text-center p-8">
+            <i class="fas fa-trophy text-6xl text-yellow-400 mb-4"></i>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Hoàn thành!</h1>
+            <p id="score-text" class="text-5xl font-bold text-violet-700 my-4"></p>
+            <h2 class="text-2xl font-bold text-gray-700 my-6">Xem lại đáp án</h2>
+            <div id="review-container" class="space-y-2 text-left max-h-96 overflow-y-auto p-4 bg-white/20 rounded-xl"></div>
+        </div>
+    </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, updateDoc, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
-        const appState = { db: null, currentSubmissionId: null, testData: null, audioPlayer: null, currentPlayCount: 1 };
+        const appState = { db: null, currentSubmissionId: null, testData: null, audioPlayer: null, currentPlayCount: 1, isTestRunning: false };
         const DOM = {};
 
-        const showLoader = () => document.getElementById('loader-overlay').classList.remove('hidden');
-        const hideLoader = () => document.getElementById('loader-overlay').classList.add('hidden');
+        const showLoader = (text = 'Đang tải...') => { DOM.loaderText.textContent = text; DOM.loaderOverlay.classList.add('is-open'); };
+        const hideLoader = () => DOM.loaderOverlay.classList.remove('is-open');
+        
+        function showModal(title, message, onConfirm, showCancel = false) {
+            DOM.customModal.innerHTML = `
+                <div class="modal-content glass-panel text-center p-8 w-full max-w-sm">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">${title}</h3>
+                    <p class="text-gray-600 mb-6">${message}</p>
+                    <div class="flex gap-4 justify-center">
+                        ${showCancel ? '<button id="modal-cancel-btn" class="btn btn-secondary">Hủy</button>' : ''}
+                        <button id="modal-confirm-btn" class="btn btn-primary">Đồng ý</button>
+                    </div>
+                </div>`;
+            DOM.customModal.classList.add('is-open');
+            document.getElementById('modal-confirm-btn').onclick = () => {
+                DOM.customModal.classList.remove('is-open');
+                if (onConfirm) onConfirm();
+            };
+            if (showCancel) {
+                document.getElementById('modal-cancel-btn').onclick = () => DOM.customModal.classList.remove('is-open');
+            }
+        }
+
+        const ProctoringService = {
+            violationCount: 0,
+            maxViolations: 5,
+            isProctoring: false,
+
+            start(initialCount = 0) {
+                if (this.isProctoring) return;
+                document.addEventListener('visibilitychange', this.handleVisibilityChange);
+                window.addEventListener('blur', this.handleBlur);
+                window.addEventListener('focus', this.handleFocus);
+                document.addEventListener('keydown', this.handleKeydown);
+                document.addEventListener('fullscreenchange', this.handleFullscreenChange);
+                ['copy', 'paste', 'cut'].forEach(event => document.addEventListener(event, e => e.preventDefault()));
+                
+                this.isProctoring = true;
+                this.violationCount = initialCount;
+                
+                if (!document.fullscreenElement) {
+                    showModal(
+                        "Yêu cầu chế độ Toàn màn hình",
+                        "Để đảm bảo tính toàn vẹn của bài thi, bạn phải làm bài ở chế độ toàn màn hình. Nhấn 'Đồng ý' để tiếp tục.",
+                        () => document.documentElement.requestFullscreen().catch(err => console.error(err)),
+                        false
+                    );
+                }
+            },
+
+            stop() {
+                if (!this.isProctoring) return;
+                document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+                window.removeEventListener('blur', this.handleBlur);
+                window.removeEventListener('focus', this.handleFocus);
+                document.removeEventListener('keydown', this.handleKeydown);
+                document.removeEventListener('fullscreenchange', this.handleFullscreenChange);
+                this.isProctoring = false;
+            },
+
+            handleVisibilityChange: () => { if (document.hidden) ProctoringService.handleViolation("Chuyển sang tab hoặc cửa sổ khác"); },
+            handleBlur: () => ProctoringService.handleViolation("Rời khỏi màn hình làm bài"),
+            handleFocus: () => DOM.securityOverlay.classList.remove('is-open'),
+            handleFullscreenChange: () => { if (!document.fullscreenElement) ProctoringService.handleViolation("Thoát chế độ toàn màn hình"); },
+            handleKeydown: (e) => {
+                if (e.key === 'F12' || (e.ctrlKey && e.shiftKey) || (e.metaKey && e.altKey) || (e.ctrlKey && e.key.toLowerCase() === 'p') || (e.ctrlKey && e.key.toLowerCase() === 's')) {
+                    e.preventDefault();
+                    ProctoringService.handleViolation(`Sử dụng phím tắt bị cấm (${e.key})`);
+                }
+            },
+
+            async handleViolation(reason) {
+                if (!this.isProctoring) return;
+                this.violationCount++;
+                
+                DOM.violationReason.textContent = reason;
+                DOM.securityOverlay.classList.add('is-open');
+
+                const submissionRef = doc(appState.db, 'submissions', appState.currentSubmissionId);
+                await updateDoc(submissionRef, { 
+                    violationCount: this.violationCount,
+                    violationLog: arrayUnion({ reason, timestamp: new Date().toISOString() })
+                });
+                
+                DOM.violationWarning.textContent = `Bạn còn ${this.maxViolations - this.violationCount} lần cảnh báo.`;
+                if (this.violationCount >= this.maxViolations) {
+                    DOM.violationWarning.textContent = "BÀI THI SẼ TỰ ĐỘNG NỘP DO VI PHẠM QUY CHẾ!";
+                    setTimeout(() => submitTest(), 2000);
+                }
+            }
+        };
 
         function playAudioSequentially(audioIndex = 0) {
             const { audioURLs, pauseBetween, playCount } = appState.testData;
             const audioPlayer = appState.audioPlayer;
             const statusDiv = DOM.audioStatus;
 
-            if (audioIndex >= audioURLs.length) { // Finished one round
+            if (audioIndex >= audioURLs.length) {
                 appState.currentPlayCount++;
                 if (appState.currentPlayCount <= playCount) {
                     statusDiv.textContent = `Chuẩn bị nghe lần ${appState.currentPlayCount}/${playCount}...`;
@@ -139,19 +297,6 @@
             }, 1000);
         }
 
-        function renderTest(testData, savedAnswers) {
-            DOM.questionsContainer.innerHTML = testData.questionsHTML;
-            const answerGrid = DOM.answerInputsGrid;
-            answerGrid.innerHTML = '';
-            for (let i = 1; i <= testData.totalQuestions; i++) {
-                answerGrid.innerHTML += `
-                    <div class="flex items-center gap-2">
-                        <label class="font-bold w-8 text-right">${i}.</label>
-                        <input type="text" data-q-number="${i}" class="answer-input" value="${savedAnswers[i] || ''}">
-                    </div>`;
-            }
-        }
-        
         async function startSession(submissionId) {
             showLoader();
             try {
@@ -161,36 +306,119 @@
                 
                 const submissionData = submissionSnap.data();
                 const testSnap = await getDoc(doc(appState.db, 'listening_tests', submissionData.testId));
-                if (!testSnap.exists()) throw new Error("Đây là mã cho loại bài tập khác, không phải bài thi nghe.");
+                if (!testSnap.exists()) throw new Error("Đây là mã cho loại bài tập khác.");
                 
                 appState.testData = testSnap.data();
                 
-                // Setup UI for test
+                if (submissionData.status === 'submitted') {
+                    displayResults(submissionData, appState.testData);
+                    return;
+                }
+                
                 DOM.studentNameDisplay.textContent = `Thí sinh: ${submissionData.studentName}`;
                 renderTest(appState.testData, submissionData.answers || {});
                 DOM.loginScreen.classList.add('hidden');
                 DOM.testContainer.classList.remove('hidden');
+                appState.isTestRunning = true;
+                ProctoringService.start(submissionData.violationCount || 0);
                 startTestProcedure();
 
             } catch (error) {
-                 alert(error.message); // Simple alert for now
+                 showModal('Lỗi', error.message, () => DOM.notMeBtn.click());
             } finally {
                 hideLoader();
             }
         }
         
-        // Submit and result logic is similar to reading.html
-        // ... (omitted for brevity, but would be included here)
+        function renderTest(testData, savedAnswers) {
+            DOM.questionsContainer.innerHTML = testData.questionsHTML;
+            const answerGrid = DOM.answerInputsGrid;
+            answerGrid.innerHTML = '';
+            for (let i = 1; i <= testData.totalQuestions; i++) {
+                answerGrid.innerHTML += `
+                    <div class="flex items-center gap-2">
+                        <label class="font-bold w-8 text-right">${i}.</label>
+                        <input type="text" data-q-number="${i}" class="input-field" value="${savedAnswers[i] || ''}">
+                    </div>`;
+            }
+        }
+
+        function getCurrentAnswers() {
+            const answers = {};
+            DOM.answerInputsGrid.querySelectorAll('input[data-q-number]').forEach(input => {
+                answers[input.dataset.qNumber] = input.value.trim();
+            });
+            return answers;
+        }
+
+        async function submitTest() {
+            if (!appState.isTestRunning) return;
+            appState.isTestRunning = false;
+            ProctoringService.stop();
+            showLoader();
+            try {
+                const studentAnswers = getCurrentAnswers();
+                const correctAnswers = appState.testData.answers;
+                let score = 0;
+
+                for (let i = 1; i <= appState.testData.totalQuestions; i++) {
+                    const qNum = String(i);
+                    if (studentAnswers[qNum] && correctAnswers[qNum] && studentAnswers[qNum].toLowerCase() === correctAnswers[qNum].toLowerCase()) {
+                        score++;
+                    }
+                }
+
+                const finalSubmission = {
+                    answers: studentAnswers,
+                    score,
+                    totalPoints: appState.testData.totalQuestions,
+                    status: 'submitted',
+                    endTime: serverTimestamp()
+                };
+
+                await updateDoc(doc(appState.db, 'submissions', appState.currentSubmissionId), finalSubmission);
+                displayResults(finalSubmission, appState.testData);
+
+            } catch (error) {
+                showModal('Lỗi', `Không thể nộp bài. Lỗi: ${error.message}`);
+            } finally {
+                hideLoader();
+            }
+        }
+
+        function displayResults(submissionData, testData) {
+            DOM.testContainer.classList.add('hidden');
+            DOM.resultScreen.classList.remove('hidden');
+            
+            DOM.scoreText.textContent = `${submissionData.score} / ${submissionData.totalPoints}`;
+            
+            const reviewContainer = DOM.reviewContainer;
+            reviewContainer.innerHTML = '';
+            for (let i = 1; i <= testData.totalQuestions; i++) {
+                const qNum = String(i);
+                const studentAns = submissionData.answers[qNum] || "<i>(chưa trả lời)</i>";
+                const correctAns = testData.answers[qNum];
+                const isCorrect = studentAns.toLowerCase() === correctAns.toLowerCase();
+                
+                reviewContainer.innerHTML += `
+                    <div class="p-3 rounded-lg flex justify-between items-center ${isCorrect ? 'bg-green-100' : 'bg-red-100'}">
+                        <div><span class="font-bold">${qNum}.</span><span> Đáp án của bạn: <strong>${studentAns}</strong></span></div>
+                        ${!isCorrect ? `<span class="font-semibold">Đáp án đúng: ${correctAns}</span>` : '<i class="fas fa-check text-green-600"></i>'}
+                    </div>`;
+            }
+        }
 
         function init() {
-            const app = initializeApp(window.firebaseConfig);
-            appState.db = getFirestore(app);
-            appState.audioPlayer = document.getElementById('audio-player');
-            
-            // Populate DOM object
             Object.assign(DOM, {
                 loginScreen: document.getElementById('login-screen'),
-                initialView: document.getElementById('initial-view'),
+                codeEntryView: document.getElementById('code-entry-view'),
+                confirmationView: document.getElementById('confirmation-view'),
+                codeInputs: document.getElementById('code-inputs'),
+                checkCodeBtn: document.getElementById('check-code-btn'),
+                studentNameConfirm: document.getElementById('student-name-confirm'),
+                testTitleConfirm: document.getElementById('test-title-confirm'),
+                notMeBtn: document.getElementById('not-me-btn'),
+                continueBtn: document.getElementById('continue-btn'),
                 testContainer: document.getElementById('test-container'),
                 studentNameDisplay: document.getElementById('student-name-display'),
                 submitBtn: document.getElementById('submit-btn'),
@@ -201,23 +429,60 @@
                 audioPlayer: document.getElementById('audio-player'),
                 audioStatus: document.getElementById('audio-status'),
                 resultScreen: document.getElementById('result-screen'),
+                scoreText: document.getElementById('score-text'),
+                reviewContainer: document.getElementById('review-container'),
+                loaderOverlay: document.getElementById('loader-overlay'),
+                loaderText: document.getElementById('loader-text'),
+                customModal: document.getElementById('custom-modal'),
+                securityOverlay: document.getElementById('security-overlay'),
+                violationReason: document.getElementById('violation-reason'),
+                violationWarning: document.getElementById('violation-warning'),
             });
 
-            // Initial login UI
-            DOM.initialView.innerHTML = `
-                <h1 class="text-3xl font-bold text-gray-800 mb-4">Bài Thi Nghe Online</h1>
-                <p class="text-gray-600 mb-8">Nhập Mã truy cập để bắt đầu.</p>
-                <div class="flex justify-center mb-4">
-                    ${[...Array(6)].map(() => `<input type="text" maxlength="1" class="code-input">`).join('')}
-                </div>
-                <button id="check-code-btn" class="btn btn-primary mt-4 text-lg w-full">Kiểm tra mã</button>`;
+            appState.db = getFirestore(initializeApp(firebaseConfig));
 
-            DOM.initialView.addEventListener('click', async (e) => {
-                if (e.target.id !== 'check-code-btn') return;
-                const code = Array.from(DOM.initialView.querySelectorAll('.code-input')).map(input => input.value).join('');
-                if (code.length !== 6) { alert('Vui lòng nhập đủ 6 chữ số.'); return; }
-                startSession(code);
+            const codeInputs = Array.from(DOM.codeInputs.querySelectorAll('input'));
+            DOM.codeInputs.addEventListener('input', (e) => {
+                if (e.target.value && e.target.nextElementSibling) e.target.nextElementSibling.focus();
             });
+            DOM.codeInputs.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !e.target.value && e.target.previousElementSibling) e.target.previousElementSibling.focus();
+            });
+
+            DOM.checkCodeBtn.addEventListener('click', async () => {
+                const code = codeInputs.map(input => input.value).join('');
+                if (code.length !== 6) return;
+                showLoader();
+                try {
+                    const subSnap = await getDoc(doc(appState.db, 'submissions', code));
+                    if (!subSnap.exists()) throw new Error("Mã truy cập không hợp lệ.");
+                    const subData = subSnap.data();
+                    const testSnap = await getDoc(doc(appState.db, 'listening_tests', subData.testId));
+                    if (!testSnap.exists()) throw new Error("Mã này không phải cho bài thi nghe.");
+                    DOM.studentNameConfirm.textContent = subData.studentName;
+                    DOM.testTitleConfirm.textContent = testSnap.data().title;
+                    DOM.codeEntryView.classList.add('hidden');
+                    DOM.confirmationView.classList.remove('hidden');
+                } catch (error) {
+                    showModal('Lỗi', error.message);
+                } finally {
+                    hideLoader();
+                }
+            });
+            
+            DOM.notMeBtn.addEventListener('click', () => {
+                DOM.confirmationView.classList.add('hidden');
+                DOM.codeEntryView.classList.remove('hidden');
+            });
+            DOM.continueBtn.addEventListener('click', () => startSession(codeInputs.map(input => input.value).join('')));
+            DOM.submitBtn.addEventListener('click', () => showModal('Xác nhận nộp bài', 'Bạn có chắc chắn muốn nộp bài không?', () => submitTest(), true));
+
+            const params = new URLSearchParams(window.location.search);
+            const submissionId = params.get('submission_id');
+            if (submissionId) {
+                codeInputs.forEach((input, index) => input.value = submissionId[index] || '');
+                DOM.checkCodeBtn.click();
+            }
         }
         
         document.addEventListener('DOMContentLoaded', init);
