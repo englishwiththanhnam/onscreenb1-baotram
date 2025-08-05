@@ -165,9 +165,6 @@
         import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
-        // This entire script is identical to the one from the previous turn (test_maker_v3).
-        // The only change is the file name and location.
-        // All logic for creating/editing standard tests is contained here.
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
@@ -446,19 +443,24 @@
                     shuffleAnswers: DOM.shuffleAnswersCheckbox.checked,
                     questions: appState.questions,
                     updatedAt: serverTimestamp(),
+                    folderId: null // <<<!!! CHỈNH SỬA DUY NHẤT !!!>>>
                 };
+
                 if (!appState.isEditMode) {
                     testData.createdAt = serverTimestamp();
                     testData.isLocked = false;
                     testData.resultsPublished = 'none';
                 }
+
                 await setDoc(doc(db, "tests", testId), testData, { merge: true });
+                
                 DOM.uploadLog.textContent = `THÀNH CÔNG! Đã lưu đề thi ID: "${testId}".`;
-                DOM.uploadLog.classList.add('text-green-600');
+                DOM.uploadLog.className = 'font-semibold mt-2 h-5 text-green-600';
                 setTimeout(() => window.close(), 2000);
+
             } catch (error) {
                 DOM.uploadLog.textContent = `LỖI: ${error.message}`;
-                DOM.uploadLog.classList.add('text-red-600');
+                DOM.uploadLog.className = 'font-semibold mt-2 h-5 text-red-600';
             } finally {
                 DOM.uploadBtn.disabled = false;
             }
