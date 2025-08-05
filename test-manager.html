@@ -5,11 +5,116 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bảng Điều Khiển Quản Lý</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --blur-intensity: 12px;
+            --saturation-intensity: 150%;
+            --glass-bg-color: rgba(255, 255, 255, 0.45);
+            --glass-border-color: rgba(255, 255, 255, 0.6);
+            --shadow-color: rgba(67, 56, 202, 0.15);
+            --primary-accent: #6d28d9;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --app-bg-start: #f5f7ff;
+            --app-bg-end: #e0e7ff;
+        }
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: var(--app-bg-start);
+            background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+        .background-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        .shape { position: absolute; border-radius: 50%; filter: blur(25px); opacity: 0.6; }
+        .shape1 { width: 250px; height: 250px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); top: 10%; left: 5%; animation: float 28s infinite alternate ease-in-out; }
+        .shape2 { width: 180px; height: 180px; background: linear-gradient(135deg, #14b8a6, #67e8f9); bottom: 15%; right: 10%; animation: float 32s infinite alternate ease-in-out; }
+        @keyframes float { from { transform: translateY(20px) scale(1); } to { transform: translateY(-20px) scale(1.05); } }
+        .glass-panel {
+            position: relative;
+            background: var(--glass-bg-color);
+            backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity));
+            -webkit-backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity));
+            border-radius: 24px;
+            border: 1px solid var(--glass-border-color);
+            box-shadow: 0 8px 32px 0 var(--shadow-color);
+        }
+        .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; }
+        .btn-primary { background: var(--primary-accent); color: white; box-shadow: 0 4px 15px rgba(91, 33, 182, 0.25); }
+        .btn-primary:hover { background: #5b21b6; transform: translateY(-2px); box-shadow: 0 7px 20px rgba(91, 33, 182, 0.4); }
+        .btn-secondary { background: rgba(255, 255, 255, 0.4); color: var(--text-primary); border-color: rgba(255, 255, 255, 0.6); }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.7); transform: translateY(-2px); }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; transform: translateY(-2px); }
+        .input-field { background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.5); color: var(--text-primary); transition: all 0.2s ease-in-out; width: 100%; padding: 12px; border-radius: 12px; }
+        .input-field:focus { background: rgba(255, 255, 255, 0.7); border-color: var(--primary-accent); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3); outline: none; }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; }
+        .modal.is-open { display: flex; }
+        .modal-content { animation: scaleIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; }
+        .status-not-started { background-color: #e5e7eb; color: #4b5563; }
+        .status-in-progress { background-color: #fef08a; color: #854d0e; }
+        .status-submitted { background-color: #d1fae5; color: #065f46; }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+    <div class="background-shapes">
+        <div class="shape shape1"></div>
+        <div class="shape shape2"></div>
+    </div>
 
-    <!-- === CẤU HÌNH FIREBASE === -->
+    <div id="login-screen" class="modal is-open">
+        <div class="modal-content glass-panel p-8 rounded-2xl shadow-xl text-center w-full max-w-sm">
+            <h2 class="text-2xl font-bold mb-6">Đăng nhập Giáo viên</h2>
+            <div class="space-y-4 text-left">
+                <div><label for="email-input" class="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" id="email-input" class="input-field"></div>
+                <div><label for="password-input" class="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label><input type="password" id="password-input" class="input-field"></div>
+            </div>
+            <button id="login-btn" class="btn btn-primary w-full mt-6">Đăng nhập</button>
+            <p id="login-error" class="text-red-500 mt-2 h-5"></p>
+        </div>
+    </div>
+
+    <div id="main-content" class="max-w-7xl mx-auto relative z-10" style="display: none;">
+        <header class="flex flex-wrap justify-between items-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800">Bảng Điều Khiển</h1>
+            <button id="logout-btn" class="btn btn-danger">Đăng xuất</button>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-1 glass-panel p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-700">Danh sách Bài tập</h2>
+                    <div id="create-test-buttons" class="flex gap-2">
+                        <button class="btn btn-secondary !p-3" title="Tạo đề trắc nghiệm"><i class="fas fa-file-alt text-lg"></i></button>
+                        <button class="btn btn-secondary !p-3" title="Tạo bài đọc hiểu"><i class="fas fa-book-open text-lg"></i></button>
+                        <button class="btn btn-secondary !p-3" title="Tạo bài thi nghe"><i class="fas fa-headphones text-lg"></i></button>
+                    </div>
+                </div>
+                <div id="test-list" class="space-y-3 max-h-[65vh] overflow-y-auto pr-2">
+                    <div class="text-center py-8"><div class="loader mx-auto"></div></div>
+                </div>
+            </div>
+
+            <div id="details-view" class="lg:col-span-2 glass-panel p-6">
+                <div class="text-center text-gray-500 py-16">
+                    <i class="fas fa-arrow-left text-4xl mb-4"></i>
+                    <p class="text-xl">Chọn một bài tập để xem chi tiết.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="custom-confirm-modal" class="modal"></div>
+
     <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getFirestore, collection, doc, deleteDoc, query, where, setDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
@@ -19,78 +124,46 @@
             appId: "1:948701163187:web:043f2d381d63e741114ac6",
             measurementId: "G-33NHT07JHE"
         };
-        window.firebaseConfig = firebaseConfig;
-    </script>
 
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
-        .btn { font-weight: 600; padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: all 0.2s; border: none; }
-        .btn-primary { background-color: #4f46e5; color: white; }
-        .btn-danger { background-color: #ef4444; color: white; }
-        .btn-green { background-color: #10b981; color: white; }
-        .btn-orange { background-color: #f97316; color: white; }
-        .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #4f46e5; width: 32px; height: 32px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .status-badge { padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
-        .status-not-started { background-color: #e5e7eb; color: #4b5563; }
-        .status-submitted { background-color: #d1fae5; color: #065f46; }
-    </style>
-</head>
-<body class="p-4 sm:p-8">
-    <!-- Màn hình đăng nhập -->
-    <div id="login-screen" class="fixed inset-0 bg-gray-800 bg-opacity-90 flex items-center justify-center z-[200]">
-        <div class="bg-white p-8 rounded-lg shadow-xl text-center w-full max-w-sm">
-            <h2 class="text-2xl font-bold mb-4">Đăng nhập Giáo viên</h2>
-            <div class="space-y-4 text-left">
-                <div><label for="email-input" class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="email-input" class="input-field w-full mt-1"></div>
-                <div><label for="password-input" class="block text-sm font-medium text-gray-700">Mật khẩu</label><input type="password" id="password-input" class="input-field w-full mt-1"></div>
-            </div>
-            <button id="login-btn" class="btn btn-primary w-full mt-6">Đăng nhập</button>
-            <p id="login-error" class="text-red-500 mt-2 h-5"></p>
-        </div>
-    </div>
-
-    <div id="main-content" class="max-w-7xl mx-auto" style="display: none;">
-        <div class="flex justify-between items-center mb-8">
-            <h1 class="text-4xl font-bold text-gray-800">Bảng Điều Khiển</h1>
-            <button id="logout-btn" class="btn btn-danger">Đăng xuất</button>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold text-gray-700">Danh sách Bài tập</h2>
-                    <div class="flex gap-2">
-                        <button onclick="window.open('test-maker.html', '_blank')" class="btn btn-primary" title="Tạo đề trắc nghiệm"><i class="fas fa-file-alt"></i></button>
-                        <button onclick="window.open('reading/reading-test-maker.html', '_blank')" class="btn btn-green" title="Tạo bài đọc hiểu"><i class="fas fa-book-open"></i></button>
-                        <button onclick="window.open('listening/listening-test-maker.html', '_blank')" class="btn btn-orange" title="Tạo bài thi nghe"><i class="fas fa-headphones"></i></button>
-                    </div>
-                </div>
-                <div id="test-list" class="space-y-2">
-                    <div class="text-center py-8"><div class="loader mx-auto"></div></div>
-                </div>
-            </div>
-
-            <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
-                <div id="details-view">
-                    <div class="text-center text-gray-500 py-16">
-                        <i class="fas fa-arrow-left text-4xl mb-4"></i>
-                        <p class="text-xl">Chọn một bài tập từ danh sách để xem chi tiết.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getFirestore, collection, doc, deleteDoc, query, where, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-
-        const app = initializeApp(window.firebaseConfig);
+        const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
         let localTestsCache = [];
+        let unsubscribeSubmissions = null;
+        let timerInterval = null;
+
+        const DOM = {
+            loginScreen: document.getElementById('login-screen'),
+            mainContent: document.getElementById('main-content'),
+            loginBtn: document.getElementById('login-btn'),
+            logoutBtn: document.getElementById('logout-btn'),
+            emailInput: document.getElementById('email-input'),
+            passwordInput: document.getElementById('password-input'),
+            loginError: document.getElementById('login-error'),
+            createTestButtons: document.getElementById('create-test-buttons'),
+            testList: document.getElementById('test-list'),
+            detailsView: document.getElementById('details-view'),
+            confirmModal: document.getElementById('custom-confirm-modal')
+        };
+
+        function showConfirm(message, onConfirm) {
+            DOM.confirmModal.innerHTML = `
+                <div class="modal-content glass-panel text-center p-8">
+                    <p class="text-lg font-medium text-slate-800 mb-6">${message}</p>
+                    <div class="flex justify-center gap-4">
+                        <button id="confirm-no" class="btn btn-secondary">Hủy</button>
+                        <button id="confirm-yes" class="btn btn-danger">Xác nhận</button>
+                    </div>
+                </div>`;
+            DOM.confirmModal.classList.add('is-open');
+            document.getElementById('confirm-yes').onclick = () => {
+                onConfirm();
+                DOM.confirmModal.classList.remove('is-open');
+            };
+            document.getElementById('confirm-no').onclick = () => {
+                DOM.confirmModal.classList.remove('is-open');
+            };
+        }
 
         function listenForData() {
             const collections = {
@@ -105,20 +178,22 @@
                     combinedResults[type] = snapshot.docs.map(doc => ({ id: doc.id, testType: type, ...doc.data() }));
                     localTestsCache = Object.values(combinedResults).flat();
                     renderTestList();
-                    const selectedTestId = document.querySelector('#test-list .bg-indigo-100')?.dataset.testId;
+                    
+                    const selectedTestId = document.querySelector('#test-list .bg-violet-200')?.dataset.testId;
                     if (selectedTestId && localTestsCache.find(t => t.id === selectedTestId)) {
                         listenForSubmissions(selectedTestId);
+                    } else if (!selectedTestId) {
+                        DOM.detailsView.innerHTML = `<div class="text-center text-gray-500 py-16"><i class="fas fa-arrow-left text-4xl mb-4"></i><p class="text-xl">Chọn một bài tập để xem chi tiết.</p></div>`;
                     }
                 });
             });
         }
 
         function renderTestList() {
-            const selectedTestId = document.querySelector('#test-list .bg-indigo-100')?.dataset.testId;
-            const testListEl = document.getElementById('test-list');
-            testListEl.innerHTML = '';
+            const selectedTestId = document.querySelector('#test-list .bg-violet-200')?.dataset.testId;
+            DOM.testList.innerHTML = '';
             if (localTestsCache.length === 0) {
-                testListEl.innerHTML = '<p class="text-gray-500 text-center py-4">Chưa có bài tập nào.</p>';
+                DOM.testList.innerHTML = '<p class="text-gray-500 text-center py-4">Chưa có bài tập nào.</p>';
                 return;
             }
             localTestsCache.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
@@ -130,85 +205,159 @@
                     listening: '<i class="fas fa-headphones text-orange-500"></i>'
                 };
                 const item = document.createElement('div');
-                item.className = `p-3 border rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-100 ${test.id === selectedTestId ? 'bg-indigo-100' : ''}`;
+                item.className = `p-4 border border-transparent rounded-2xl flex justify-between items-center cursor-pointer hover:bg-violet-100 transition-all duration-300 ${test.id === selectedTestId ? 'bg-violet-200 border-violet-400' : 'bg-white/30'}`;
                 item.dataset.testId = test.id;
                 item.dataset.testType = test.testType;
                 item.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <span class="text-xl w-6 text-center">${icons[test.testType]}</span>
-                        <div><p class="font-bold">${test.title}</p><p class="text-sm text-gray-500">${test.id}</p></div>
+                    <div class="flex items-center gap-4">
+                        <span class="text-2xl w-8 text-center">${icons[test.testType]}</span>
+                        <div><p class="font-bold">${test.title}</p><p class="text-sm text-gray-500 font-mono">${test.id}</p></div>
                     </div>
                     <div class="flex gap-2">
-                        <button class="btn-edit-test btn btn-secondary" title="Sửa"><i class="fas fa-edit"></i></button>
-                        <button class="btn-delete-test btn btn-danger" title="Xóa"><i class="fas fa-trash"></i></button>
+                        <button class="btn-edit-test btn-secondary !p-2 !rounded-full" title="Sửa đề thi"><i class="fas fa-edit text-sm"></i></button>
+                        <button class="btn-delete-test btn btn-danger !p-2 !rounded-full" title="Xóa"><i class="fas fa-trash text-sm"></i></button>
                     </div>`;
-                testListEl.appendChild(item);
+                DOM.testList.appendChild(item);
             });
         }
 
         function renderDetailsView(test, submissions) {
-            const detailsViewEl = document.getElementById('details-view');
             if (!test) {
-                detailsViewEl.innerHTML = `<div class="text-center text-gray-500 py-16"><p>Bài tập không tồn tại.</p></div>`;
+                DOM.detailsView.innerHTML = `<div class="text-center text-gray-500 py-16"><p>Bài tập không tồn tại hoặc đã bị xóa.</p></div>`;
                 return;
             }
-
+            
             const studentPage = { 
                 standard: 'student.html', 
                 reading: 'reading/student-reading-test.html', 
                 listening: 'listening/listening-student.html' 
             };
-            detailsViewEl.innerHTML = `
-                <h2 class="text-2xl font-bold text-gray-700">${test.title}</h2>
-                <div class="mb-6 p-4 bg-gray-50 rounded-lg mt-4">
+            
+            const getStatusInfo = (sub) => {
+                if (sub.status === 'submitted') {
+                    return { text: 'Đã nộp', class: 'status-submitted', timer: '-' };
+                }
+                if (sub.startTime) {
+                    const duration = test.duration || 0;
+                    if (duration > 0) {
+                        const endTime = sub.startTime.toDate().getTime() + duration * 60 * 1000;
+                        const remaining = Math.max(0, endTime - Date.now());
+                        if (remaining > 0) {
+                            const minutes = String(Math.floor(remaining / 60000)).padStart(2, '0');
+                            const seconds = String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0');
+                            return { text: 'Đang làm', class: 'status-in-progress', timer: `${minutes}:${seconds}` };
+                        } else {
+                             return { text: 'Hết giờ', class: 'status-in-progress', timer: '00:00' };
+                        }
+                    }
+                    return { text: 'Đang làm', class: 'status-in-progress', timer: 'Không tính giờ' };
+                }
+                return { text: 'Chưa làm', class: 'status-not-started', timer: '-' };
+            };
+
+            DOM.detailsView.innerHTML = `
+                <h2 class="text-3xl font-bold text-gray-700">${test.title}</h2>
+                <div class="my-6 p-4 bg-white/30 rounded-2xl">
                     <h3 class="font-bold mb-2">Thêm học sinh mới</h3>
                     <textarea id="new-student-list" class="input-field" rows="3" placeholder="Dán danh sách tên, mỗi tên một dòng..."></textarea>
                     <button id="add-students-btn" class="btn btn-primary mt-2 w-full">Thêm và tạo mã</button>
                 </div>
                 <div>
                     <h3 class="font-bold mb-2">Danh sách học sinh (${submissions.length})</h3>
-                    <div class="overflow-x-auto">
+                    <div class="overflow-x-auto max-h-[45vh]">
                         <table class="w-full text-left border-collapse">
-                            <thead><tr><th class="p-2 border-b">Tên</th><th class="p-2 border-b">Mã</th><th class="p-2 border-b">Trạng thái</th><th class="p-2 border-b">Điểm</th><th class="p-2 border-b"></th></tr></thead>
-                            <tbody>
-                                ${submissions.map(sub => `
-                                    <tr>
-                                        <td class="p-2 border-b"><a href="${studentPage[test.testType]}?submission_id=${sub.id}" target="_blank" class="text-blue-600 hover:underline">${sub.studentName}</a></td>
-                                        <td class="p-2 border-b font-mono">${sub.id}</td>
-                                        <td class="p-2 border-b"><span class="status-badge ${sub.status === 'submitted' ? 'status-submitted' : 'status-not-started'}">${sub.status === 'submitted' ? 'Đã nộp' : 'Chưa làm'}</span></td>
-                                        <td class="p-2 border-b font-bold">${sub.status === 'submitted' ? `${sub.score} / ${sub.totalPoints}` : '-'}</td>
-                                        <td class="p-2 border-b text-right"><button class="btn-delete-student btn btn-danger btn-sm" data-sub-id="${sub.id}"><i class="fas fa-trash"></i></button></td>
+                            <thead class="sticky top-0 bg-white/50 backdrop-blur-sm"><tr><th class="p-3 border-b border-gray-300">Tên</th><th class="p-3 border-b border-gray-300">Mã</th><th class="p-3 border-b border-gray-300">Trạng thái</th><th class="p-3 border-b border-gray-300">Điểm</th><th class="p-3 border-b border-gray-300">Vi phạm</th><th class="p-3 border-b border-gray-300"></th></tr></thead>
+                            <tbody id="submission-table-body">
+                                ${submissions.map(sub => {
+                                    const statusInfo = getStatusInfo(sub);
+                                    return `
+                                    <tr class="hover:bg-white/40" data-submission-id="${sub.id}">
+                                        <td class="p-3 border-b border-gray-200"><a href="${studentPage[test.testType]}?submission_id=${sub.id}" target="_blank" class="text-violet-700 hover:underline font-semibold">${sub.studentName}</a></td>
+                                        <td class="p-3 border-b border-gray-200 font-mono">${sub.id}</td>
+                                        <td class="p-3 border-b border-gray-200"><span class="status-badge ${statusInfo.class}">${statusInfo.text}</span><br><span class="text-sm font-mono">${statusInfo.timer}</span></td>
+                                        <td class="p-3 border-b border-gray-200 font-bold">${sub.status === 'submitted' ? `${sub.score} / ${sub.totalPoints}` : '-'}</td>
+                                        <td class="p-3 border-b border-gray-200 text-center font-bold ${sub.violationCount > 0 ? 'text-red-500' : ''}">${sub.violationCount || 0}</td>
+                                        <td class="p-3 border-b border-gray-200 text-right"><button class="btn-delete-student btn btn-danger !p-2 !rounded-full" data-sub-id="${sub.id}"><i class="fas fa-trash text-sm"></i></button></td>
                                     </tr>
-                                `).join('')}
+                                `}).join('')}
                             </tbody>
                         </table>
                     </div>
                 </div>`;
         }
         
-        function listenForSubmissions(testId) {
-            onSnapshot(query(collection(db, "submissions"), where("testId", "==", testId)), (snapshot) => {
-                const submissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                const currentTest = localTestsCache.find(t => t.id === testId);
-                renderDetailsView(currentTest, submissions);
+        function updateTimers(test, submissions) {
+            const tableBody = document.getElementById('submission-table-body');
+            if (!tableBody) return;
+
+            submissions.forEach(sub => {
+                if (sub.startTime && sub.status !== 'submitted') {
+                    const duration = test.duration || 0;
+                    if (duration > 0) {
+                        const endTime = sub.startTime.toDate().getTime() + duration * 60 * 1000;
+                        const remaining = Math.max(0, endTime - Date.now());
+                        const minutes = String(Math.floor(remaining / 60000)).padStart(2, '0');
+                        const seconds = String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0');
+                        
+                        const row = tableBody.querySelector(`tr[data-submission-id="${sub.id}"]`);
+                        if (row) {
+                            const timerCell = row.children[2].querySelector('.text-sm');
+                            if (timerCell) timerCell.textContent = `${minutes}:${seconds}`;
+                            if (remaining === 0 && timerCell.textContent !== '00:00') {
+                                // Refresh view if time just ran out
+                                renderDetailsView(test, submissions);
+                            }
+                        }
+                    }
+                }
             });
         }
 
-        // --- Event Listeners & Auth ---
+        function listenForSubmissions(testId) {
+            if (unsubscribeSubmissions) unsubscribeSubmissions();
+            if (timerInterval) clearInterval(timerInterval);
+
+            const q = query(collection(db, "submissions"), where("testId", "==", testId));
+            unsubscribeSubmissions = onSnapshot(q, (snapshot) => {
+                const submissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const currentTest = localTestsCache.find(t => t.id === testId);
+                renderDetailsView(currentTest, submissions);
+
+                if (timerInterval) clearInterval(timerInterval);
+                timerInterval = setInterval(() => {
+                    updateTimers(currentTest, submissions);
+                }, 1000);
+            });
+        }
+
         onAuthStateChanged(auth, user => {
-            document.getElementById('login-screen').style.display = user ? 'none' : 'flex';
-            document.getElementById('main-content').style.display = user ? 'block' : 'none';
-            if (user) listenForData();
+            if (user) {
+                DOM.loginScreen.classList.remove('is-open');
+                DOM.mainContent.style.display = 'block';
+                listenForData();
+            } else {
+                DOM.loginScreen.classList.add('is-open');
+                DOM.mainContent.style.display = 'none';
+            }
         });
         
-        document.getElementById('login-btn').addEventListener('click', async () => {
-             try { await signInWithEmailAndPassword(auth, document.getElementById('email-input').value, document.getElementById('password-input').value); } 
-             catch (e) { document.getElementById('login-error').textContent = 'Đăng nhập thất bại.'; }
+        DOM.loginBtn.addEventListener('click', async () => {
+             try { await signInWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value); } 
+             catch (e) { DOM.loginError.textContent = 'Đăng nhập thất bại.'; }
         });
 
-        document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+        DOM.logoutBtn.addEventListener('click', () => signOut(auth));
 
-        document.getElementById('test-list').addEventListener('click', (e) => {
+        DOM.createTestButtons.addEventListener('click', (e) => {
+            const button = e.target.closest('button');
+            if (!button) return;
+            const title = button.title;
+            if (title.includes('trắc nghiệm')) window.open('test-maker.html', '_blank');
+            else if (title.includes('đọc hiểu')) window.open('reading/reading-test-maker.html', '_blank');
+            else if (title.includes('nghe')) window.open('listening/listening-test-maker.html', '_blank');
+        });
+
+        DOM.testList.addEventListener('click', (e) => {
             const item = e.target.closest('[data-test-id]');
             if (!item) return;
 
@@ -216,38 +365,48 @@
             const deleteBtn = e.target.closest('.btn-delete-test');
             
             if (editBtn) {
+                e.stopPropagation();
                 const testType = item.dataset.testType;
-                const page = { 
+                const testId = item.dataset.testId;
+                const pageMap = { 
                     standard: 'test-maker.html', 
                     reading: 'reading/reading-test-maker.html', 
                     listening: 'listening/listening-test-maker.html' 
                 };
-                window.open(`${page[testType]}`, '_blank'); // Removed edit param for simplicity
+                window.open(`${pageMap[testType]}?edit=${testId}`, '_blank');
             } else if (deleteBtn) {
-                if (!confirm(`Bạn có chắc muốn xóa bài tập này?`)) return;
-                const collectionName = `${item.dataset.testType}_tests`.replace('standard_tests', 'tests');
-                deleteDoc(doc(db, collectionName, item.dataset.testId));
+                e.stopPropagation();
+                showConfirm(`Bạn có chắc muốn xóa bài tập này và tất cả bài làm của học sinh?`, async () => {
+                    const testId = item.dataset.testId;
+                    const collectionName = `${item.dataset.testType}_tests`.replace('standard_tests', 'tests');
+                    const submissionsQuery = query(collection(db, "submissions"), where("testId", "==", testId));
+                    const submissionSnapshot = await getDocs(submissionsQuery);
+                    const deletePromises = submissionSnapshot.docs.map(doc => deleteDoc(doc.ref));
+                    await Promise.all(deletePromises);
+                    await deleteDoc(doc(db, collectionName, testId));
+                    DOM.detailsView.innerHTML = `<div class="text-center text-gray-500 py-16"><p>Bài tập đã được xóa.</p></div>`;
+                });
             } else {
                 listenForSubmissions(item.dataset.testId);
-                document.querySelectorAll('#test-list > div').forEach(el => el.classList.remove('bg-indigo-100'));
-                item.classList.add('bg-indigo-100');
+                document.querySelectorAll('#test-list > div').forEach(el => el.classList.remove('bg-violet-200', 'border-violet-400'));
+                item.classList.add('bg-violet-200', 'border-violet-400');
             }
         });
 
-        document.getElementById('details-view').addEventListener('click', async (e) => {
-            const testId = document.querySelector('#test-list .bg-indigo-100')?.dataset.testId;
+        DOM.detailsView.addEventListener('click', async (e) => {
+            const testId = document.querySelector('#test-list .bg-violet-200')?.dataset.testId;
             if (!testId) return;
 
             if (e.target.closest('#add-students-btn')) {
                 const names = document.getElementById('new-student-list').value.trim().split('\n').filter(Boolean);
                 for (const name of names) {
-                    const code = Math.random().toString().substr(2, 6);
-                    await setDoc(doc(db, "submissions", code), { studentName: name.trim(), testId, status: 'not-started' });
+                    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+                    await setDoc(doc(db, "submissions", code), { studentName: name.trim(), testId, status: 'not-started', violationCount: 0 });
                 }
                 document.getElementById('new-student-list').value = '';
             } else if (e.target.closest('.btn-delete-student')) {
                 const subId = e.target.closest('.btn-delete-student').dataset.subId;
-                if (confirm(`Xóa bài làm của học sinh này?`)) await deleteDoc(doc(db, "submissions", subId));
+                showConfirm(`Xóa bài làm của học sinh này?`, () => deleteDoc(doc(db, "submissions", subId)));
             }
         });
     </script>
