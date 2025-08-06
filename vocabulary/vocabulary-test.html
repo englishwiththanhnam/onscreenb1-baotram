@@ -341,7 +341,7 @@
         .flashcard-container { perspective: 1000px; height: 300px; }
         .flashcard { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.6s; cursor: pointer; }
         .flashcard.is-flipped { transform: rotateY(180deg); }
-        .flashcard-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; border-radius: 16px; padding: 20px; }
+        .flashcard-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction:column; align-items: center; justify-content: center; border-radius: 16px; padding: 20px; text-align: center; }
         .flashcard-front { background-color: rgba(255, 255, 255, 0.8); }
         body.dark .flashcard-front { background-color: rgba(51, 65, 85, 0.8); }
         .flashcard-back { background-color: rgba(230, 230, 255, 0.9); transform: rotateY(180deg); }
@@ -488,7 +488,8 @@
                 
                 progress: { // Student's progress, loaded from and saved to Firebase
                     learnedItems: {}, // { "word_1": true, "structure_s_1_0": true }
-                    lastTestResult: null // { score, total, percentage, date }
+                    lastTestResult: null, // { score, total, percentage, date }
+                    incorrectCounts: {} // { "word_15": 3, "structure_s_20_1": 5 }
                 },
                 
                 // Session-specific state
@@ -505,10 +506,8 @@
                 this.initResponsiveSidebar();
                 
                 try {
-                    // 1. Get submission ID from URL
                     this.data.submissionId = this.getSubmissionIdFromUrl();
                     
-                    // 2. Initialize Firebase
                     const firebaseConfig = {
                         apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
                         authDomain: "b1-baotram.firebaseapp.com",
@@ -520,16 +519,13 @@
                     const firebaseApp = initializeApp(firebaseConfig);
                     this.data.db = getFirestore(firebaseApp);
 
-                    // 3. Load all necessary data from Firebase
                     await this.loadDataFromFirebase();
                     
-                    // 4. Setup UI and event listeners
                     this.initAntiCopy();
                     this.initModals();
                     this.initSidebarNav();
                     this.renderDashboard();
 
-                    // 5. Show the main app content
                     document.querySelector('.app-layout').style.visibility = 'visible';
                     document.getElementById('loader-overlay').classList.remove('is-open');
 
@@ -552,7 +548,6 @@
                 const db = this.data.db;
                 const submissionId = this.data.submissionId;
 
-                // Step 1: Fetch the submission document to get testId and student progress
                 const submissionRef = doc(db, "submissions", submissionId);
                 const submissionSnap = await getDoc(submissionRef);
 
@@ -564,9 +559,11 @@
                 this.data.testId = submissionData.testId;
                 if (submissionData.progress) {
                     this.data.progress = submissionData.progress;
+                    // Ensure progress sub-objects exist
+                    this.data.progress.learnedItems = this.data.progress.learnedItems || {};
+                    this.data.progress.incorrectCounts = this.data.progress.incorrectCounts || {};
                 }
 
-                // Step 2: Fetch the vocabulary set content using the testId
                 const vocabSetRef = doc(db, "vocab_sets", this.data.testId);
                 const vocabSetSnap = await getDoc(vocabSetRef);
 
@@ -578,11 +575,10 @@
                 document.title = vocabSetData.title || "Vocabulary Practice";
                 document.getElementById('sidebar-title').textContent = vocabSetData.title;
 
-                // Step 3: Process and merge the data
                 this.data.words = vocabSetData.wordList || [];
                 this.groupWordFamilies();
-                this.parseAndStoreStructures(); // Create structure items from word list
-                this.applyUserProgress(); // Mark items as learned based on loaded progress
+                this.parseAndStoreStructures();
+                this.applyUserProgress();
             },
             
             applyUserProgress() {
@@ -597,15 +593,9 @@
 
             async saveProgressToFirebase() {
                 if (!this.data.submissionId || !this.data.db) return;
-
-                const progressPayload = {
-                    progress: this.data.progress,
-                    lastAccessed: serverTimestamp() 
-                };
-                
+                const progressPayload = { progress: this.data.progress, lastAccessed: serverTimestamp() };
                 try {
                     const submissionRef = doc(this.data.db, "submissions", this.data.submissionId);
-                    // Use set with merge to avoid overwriting other fields in the document
                     await setDoc(submissionRef, progressPayload, { merge: true });
                 } catch (error) {
                     console.error("Error saving progress:", error);
@@ -613,32 +603,25 @@
                 }
             },
             
-            // --- UI & THEME (Copied and adapted from original) ---
+            // --- UI & THEME ---
             initTheme() {
                 const themeToggleBtn = document.getElementById('theme-toggle-btn');
                 const themeToggleIcon = document.getElementById('theme-toggle-icon');
                 const themeToggleText = document.getElementById('theme-toggle-text');
                 const body = document.body;
-
                 const applyTheme = (theme) => {
                     if (theme === 'dark') {
                         body.classList.add('dark');
-                        themeToggleIcon.classList.remove('fa-moon');
-                        themeToggleIcon.classList.add('fa-sun');
+                        themeToggleIcon.className = 'fas fa-sun';
                         themeToggleText.textContent = 'Light Mode';
                     } else {
                         body.classList.remove('dark');
-                        themeToggleIcon.classList.remove('fa-sun');
-                        themeToggleIcon.classList.add('fa-moon');
+                        themeToggleIcon.className = 'fas fa-moon';
                         themeToggleText.textContent = 'Dark Mode';
                     }
                 };
-
-                const savedTheme = localStorage.getItem('theme');
-                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                const currentTheme = savedTheme || (prefersDark ? 'dark' : 'light');
-                applyTheme(currentTheme);
-
+                const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                applyTheme(savedTheme);
                 themeToggleBtn.addEventListener('click', () => {
                     const newTheme = body.classList.contains('dark') ? 'light' : 'dark';
                     localStorage.setItem('theme', newTheme);
@@ -649,9 +632,7 @@
             initResponsiveSidebar() {
                 const menuToggleBtn = document.getElementById('menu-toggle-btn');
                 const sidebarOverlay = document.getElementById('sidebar-overlay');
-                const sidebarNavButtons = document.querySelectorAll('#sidebar-nav .sidebar-nav-btn');
                 const appLayout = document.querySelector('.app-layout');
-
                 const toggleSidebar = () => {
                     if (window.innerWidth < 1024) {
                         document.body.classList.toggle('sidebar-open');
@@ -659,18 +640,11 @@
                         appLayout.classList.toggle('sidebar-collapsed');
                     }
                 };
-
-                if (menuToggleBtn) {
-                    menuToggleBtn.addEventListener('click', toggleSidebar);
-                }
-                if (sidebarOverlay) {
-                    sidebarOverlay.addEventListener('click', toggleSidebar);
-                }
-                sidebarNavButtons.forEach(btn => {
+                menuToggleBtn?.addEventListener('click', toggleSidebar);
+                sidebarOverlay?.addEventListener('click', toggleSidebar);
+                document.querySelectorAll('#sidebar-nav .sidebar-nav-btn').forEach(btn => {
                     btn.addEventListener('click', () => {
-                        if (window.innerWidth < 1024) {
-                            document.body.classList.remove('sidebar-open');
-                        }
+                        if (window.innerWidth < 1024) document.body.classList.remove('sidebar-open');
                     });
                 });
             },
@@ -678,10 +652,7 @@
             initAntiCopy() {
                 ['contextmenu', 'copy', 'cut', 'paste'].forEach(event => {
                     document.body.addEventListener(event, e => {
-                        // Allow copy/paste in input fields
-                        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-                            return;
-                        }
+                        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
                         e.preventDefault();
                         this.showCustomAlert("Chức năng này đã bị vô hiệu hóa.");
                         return false;
@@ -689,18 +660,13 @@
                 });
             },
 
-            // --- CORE APP LOGIC (Adapted and enhanced) ---
+            // --- CORE APP LOGIC ---
             groupWordFamilies() {
                 const families = {};
                 this.data.words.forEach(word => {
-                    // Simple grouping by the first word part (e.g., 'consider' for 'considerate')
-                    const root = word.word.split(/[\s-]/)[0].toLowerCase(); 
-                    if (!families[root]) {
-                        families[root] = [];
-                    }
-                    if (!families[root].includes(word.id)) {
-                       families[root].push(word.id);
-                    }
+                    const root = word.word.split(/[\s-]/)[0].toLowerCase().replace(/[^a-z]/g, '');
+                    if (!families[root]) families[root] = [];
+                    if (!families[root].includes(word.id)) families[root].push(word.id);
                     word.familyRoot = root;
                 });
                 this.data.wordFamilies = families;
@@ -709,21 +675,16 @@
             parseAndStoreStructures() {
                 this.data.structures = [];
                 this.data.words.forEach(word => {
-                    // The new data structure has a dedicated 'structures' array
                     if (word.structures && Array.isArray(word.structures)) {
                         word.structures.forEach((struct, s_idx) => {
-                            // Create a unique ID for each structure instance
                             const structureId = `s_${word.id}_${s_idx}`;
                             this.data.structures.push({
                                 id: structureId,
                                 rootWordId: word.id,
-                                question: struct.phrase, // The phrase itself can be the question
-                                answer: word.word, // The root word is often the answer
                                 fullStructure: struct.phrase,
                                 translation: struct.meaning,
                                 applicationExamples: struct.applicationExamples || [],
-                                isLearned: false, // Will be updated by applyUserProgress
-                                type: 'collocation' // Default type
+                                isLearned: false,
                             });
                         });
                     }
@@ -732,46 +693,46 @@
             
             findChallengingDistractors(correctItem, count = 3, questionDirection = 'eng_to_vie') {
                 const isVieToEng = questionDirection === 'vie_to_eng';
-                
-                // Priority 1: Use AI-generated distractors if available
                 const aiDistractors = isVieToEng ? correctItem.distractors_en : correctItem.distractors_vi;
                 if (aiDistractors && aiDistractors.length > 0) {
                     return this.shuffleArray([...aiDistractors]).slice(0, count);
                 }
-
-                // Priority 2 (Fallback): Use the old logic of finding similar words
                 let distractors = new Set();
                 const correctItemType = correctItem.type.split('/')[0];
-
                 this.data.words.forEach(word => {
                     if (distractors.size < count && word.id !== correctItem.id && word.type.includes(correctItemType)) {
                         distractors.add(isVieToEng ? word.word : word.meaning);
                     }
                 });
-
-                // Fill up with random words of the same type if still not enough
                 while(distractors.size < count) {
-                    const randomWord = this.shuffleArray(this.data.words.filter(w => w.type.includes(correctItemType)))[0];
+                    const randomWord = this.shuffleArray(this.data.words)[0];
                     if (randomWord && randomWord.id !== correctItem.id) {
                          distractors.add(isVieToEng ? randomWord.word : randomWord.meaning);
-                    } else {
-                        break; // Avoid infinite loop
+                    } else if (this.data.words.length <= count) {
+                        break;
                     }
                 }
-
-                return this.shuffleArray([...distractors]).slice(0, count);
+                return this.shuffleArray([...distractors]);
             },
 
             updateProgress(itemId, itemType, isCorrect) {
                 const progressKey = `${itemType}_${itemId}`;
+                const incorrectCounts = this.data.progress.incorrectCounts || {};
 
                 if (isCorrect) {
                     this.data.progress.learnedItems[progressKey] = true;
+                    // Reset incorrect count on correct answer
+                    if (incorrectCounts[progressKey]) {
+                        delete incorrectCounts[progressKey];
+                    }
+                } else {
+                    incorrectCounts[progressKey] = (incorrectCounts[progressKey] || 0) + 1;
                 }
-                
-                this.saveProgressToFirebase(); // Save progress after every answer
+                this.data.progress.incorrectCounts = incorrectCounts;
+                this.saveProgressToFirebase();
             },
 
+            // --- UI RENDERING ---
             renderDashboard() {
                 this.setActiveNav('nav-dashboard');
                 this.updateHeader('Dashboard', "Welcome back! Here's your learning progress.");
@@ -797,48 +758,37 @@
 
                 main.innerHTML = `
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 fade-in">
-                        <!-- Word Progress -->
                         <div class="card glass-panel">
                             <h3 class="text-xl font-bold text-slate-800 mb-3">Tiến độ Từ vựng</h3>
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="font-semibold">${wordsLearned} / ${totalWords}</span>
-                                <span class="text-sm font-medium">${wordProgress.toFixed(1)}%</span>
-                            </div>
+                            <div class="flex justify-between items-center mb-2"><span class="font-semibold">${wordsLearned} / ${totalWords}</span><span class="text-sm font-medium">${wordProgress.toFixed(1)}%</span></div>
                             <div class="progress-bar"><div class="progress-bar-inner" style="width: ${wordProgress}%;"></div></div>
                             <div class="flex justify-center gap-4 mt-4">
                                 <button data-list-type="learned-words" class="btn btn-secondary text-sm !py-2 !px-4">Đã học</button>
                                 <button data-list-type="not-learned-words" class="btn btn-secondary text-sm !py-2 !px-4">Chưa học</button>
                             </div>
                         </div>
-
-                        <!-- Structure Progress -->
                         <div class="card glass-panel">
                             <h3 class="text-xl font-bold text-slate-800 mb-3">Tiến độ Cấu trúc</h3>
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="font-semibold">${structuresLearned} / ${totalStructures}</span>
-                                <span class="text-sm font-medium">${structureProgress.toFixed(1)}%</span>
-                            </div>
+                            <div class="flex justify-between items-center mb-2"><span class="font-semibold">${structuresLearned} / ${totalStructures}</span><span class="text-sm font-medium">${structureProgress.toFixed(1)}%</span></div>
                             <div class="progress-bar"><div class="progress-bar-inner" style="width: ${structureProgress}%;"></div></div>
                              <div class="flex justify-center gap-4 mt-4">
                                 <button data-list-type="learned-structures" class="btn btn-secondary text-sm !py-2 !px-4">Đã học</button>
                                 <button data-list-type="not-learned-structures" class="btn btn-secondary text-sm !py-2 !px-4">Chưa học</button>
                             </div>
                         </div>
-                        
-                        <!-- Last Test Result -->
                         <div class="card glass-panel lg:col-span-2">
                              <h3 class="text-xl font-bold text-slate-800 mb-2">Kết quả kiểm tra gần nhất</h3>
                              ${testResultHTML}
                         </div>
                     </div>
                 `;
-                
                 main.querySelectorAll('[data-list-type]').forEach(button => {
                     button.addEventListener('click', (e) => this.showFilteredList(e.currentTarget.dataset.listType));
                 });
             },
             
             renderSelectionScreen(mode) {
+                this.setActiveNav(mode === 'study' ? 'nav-study' : 'nav-practice');
                 this.updateHeader(mode.charAt(0).toUpperCase() + mode.slice(1), `Chọn nội dung bạn muốn ${mode}.`);
                 const main = document.getElementById('main-content');
                 main.innerHTML = `
@@ -867,14 +817,16 @@
                 let buttonsHTML = '';
 
                 if (mode === 'study') {
-                     buttonsHTML = `
-                        <button data-mode="flashcard" class="btn btn-main-action"><i class="fas fa-clone"></i> Flashcards</button>
-                        <button data-mode="explorer" class="btn btn-main-action"><i class="fas fa-project-diagram"></i> Khám phá Họ từ</button>
+                     buttonsHTML = type === 'vocab' ? `
+                        <button data-mode="Flashcard" class="btn btn-main-action"><i class="fas fa-clone"></i> Flashcards 2.0</button>
+                        <button data-mode="Word Family Explorer" class="btn btn-main-action"><i class="fas fa-project-diagram"></i> Khám phá Họ từ</button>
+                     ` : `
+                        <button data-mode="Structure Flashcard" class="btn btn-main-action"><i class="fas fa-clone"></i> Flashcards</button>
                      `;
                 } else { // Practice mode
                     const practiceTypes = type === 'vocab' ? 
-                        ['Word Family Matching', 'Contextual MCQ', 'Sentence Unscramble', 'Pronunciation Match', 'Traditional MCQ', 'Reverse Distractor', 'Contextual Clue'] :
-                        ['Gap-Fill', 'Trios of gapped sentence', 'Error Correction', 'Correct/Incorrect Sentence', 'Example Match-Up', 'Structure Building'];
+                        ['Word Family Matching', 'Contextual MCQ', 'Sentence Unscramble', 'Traditional MCQ', 'Reverse Distractor', 'Contextual Clue'] :
+                        ['Gap-Fill', 'Correct/Incorrect Sentence', 'Example Match-Up', 'Structure Building'];
                     
                     buttonsHTML = practiceTypes.map(pType => `<button data-mode="${pType}" class="btn btn-main-action">${pType}</button>`).join('');
                 }
@@ -898,22 +850,21 @@
                 });
             },
 
+            // --- SESSION & EXERCISE LOGIC ---
             startSession(mode) {
                 this.data.mode = mode;
                 let items;
                 
-                // Determine items based on mode
-                if (mode.toLowerCase().includes('structure') || mode.toLowerCase().includes('gap') || mode.toLowerCase().includes('example')) {
-                    items = this.data.structures.filter(s => !s.isLearned);
-                } else {
-                    items = this.data.words.filter(w => !w.isLearned);
-                }
+                const isStudy = ['Flashcard', 'Word Family Explorer', 'Structure Flashcard'].includes(mode);
+                const isStructureMode = ['Structure Flashcard', 'Gap-Fill', 'Correct/Incorrect Sentence', 'Example Match-Up', 'Structure Building'].includes(mode);
 
-                if (mode === 'flashcard' || mode === 'explorer') {
-                    items = mode.includes('structure') ? this.data.structures : this.data.words;
+                if (isStudy) {
+                    items = isStructureMode ? this.data.structures : this.data.words;
+                } else {
+                    items = isStructureMode ? this.data.structures.filter(s => !s.isLearned) : this.data.words.filter(w => !w.isLearned);
                 }
                 
-                if (!items || items.length === 0) {
+                if (items.length === 0) {
                     this.showCustomAlert("Chúc mừng! Bạn đã học hết các mục trong phần này.");
                     this.renderDashboard();
                     return;
@@ -933,21 +884,65 @@
                 const item = this.data.sessionItems[this.data.currentSessionIndex++];
                 if (!item) { this.renderNextInSession(); return; }
 
-                // Render based on the selected mode
+                // Main router for rendering exercises
                 switch(this.data.mode) {
-                    case 'flashcard':
-                        // Logic to differentiate vocab/structure flashcard
-                        break;
-                    case 'Contextual MCQ':
-                        // renderContextualMCQ(item);
-                        break;
-                    // ... add all other cases
-                    default:
-                        // For now, a simple MCQ for any practice
-                        this.renderTraditionalMCQ(item);
+                    case 'Flashcard': this.renderFlashcard(item); break;
+                    case 'Structure Flashcard': this.renderFlashcard(item, true); break;
+                    case 'Word Family Matching': this.renderWordFamilyMatching(item); break;
+                    case 'Contextual MCQ': this.renderContextualMCQ(item); break;
+                    case 'Sentence Unscramble': this.renderSentenceUnscramble(item); break;
+                    case 'Traditional MCQ': this.renderTraditionalMCQ(item); break;
+                    case 'Reverse Distractor': this.renderReverseDistractor(item); break;
+                    case 'Contextual Clue': this.renderContextualClue(item); break;
+                    case 'Gap-Fill': this.renderGapFill(item); break;
+                    case 'Correct/Incorrect Sentence': this.renderCorrectIncorrect(item); break;
+                    case 'Example Match-Up': this.renderExampleMatchUp(item); break;
+                    case 'Structure Building': this.renderStructureBuilding(item); break;
+                    default: this.renderTraditionalMCQ(item);
                 }
             },
             
+            // --- EXERCISE RENDERERS ---
+            renderFlashcard(item, isStructure = false) {
+                this.updateHeader('Study', isStructure ? 'Structure Flashcard' : 'Vocabulary Flashcard');
+                const main = document.getElementById('main-content');
+                
+                const frontHTML = isStructure ? `<p class="text-3xl font-bold text-center">${item.fullStructure}</p>` : `<p class="text-4xl font-bold">${item.word}</p>`;
+                const backHTML = isStructure ? `
+                    <div>
+                        <p class="text-2xl font-semibold text-center">${item.translation}</p>
+                        <p class="text-sm text-slate-600 mt-2 text-center">${item.applicationExamples[0] || ''}</p>
+                    </div>
+                ` : `
+                    <div>
+                        <p class="text-2xl font-semibold">${item.meaning}</p>
+                        <p class="text-lg text-slate-600 mt-2">${item.pronunciation} - (${item.type})</p>
+                        <p class="text-sm text-slate-500 italic mt-4">"${item.exampleSentence}"</p>
+                    </div>
+                `;
+
+                main.innerHTML = `
+                    <div class="fade-in">
+                        <div class="flex justify-between items-center mb-4">
+                            <button id="back-btn" class="btn btn-secondary"><i class="fas fa-arrow-left mr-2"></i> Back</button>
+                            <div class="text-lg font-semibold text-slate-800">${this.data.currentSessionIndex} / ${this.data.sessionItems.length}</div>
+                            <button id="next-btn" class="btn btn-main-action">Next <i class="fas fa-arrow-right ml-2"></i></button>
+                        </div>
+                        <div class="card glass-panel">
+                            <div class="flashcard-container">
+                                <div class="flashcard" id="flashcard">
+                                    <div class="flashcard-face flashcard-front">${frontHTML}</div>
+                                    <div class="flashcard-face flashcard-back">${backHTML}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('back-btn').addEventListener('click', () => this.renderSelectionScreen('study'));
+                document.getElementById('flashcard').addEventListener('click', (e) => e.currentTarget.classList.toggle('is-flipped'));
+                document.getElementById('next-btn').addEventListener('click', () => this.renderNextInSession());
+            },
+
             renderTraditionalMCQ(item) {
                 const isVieToEng = Math.random() > 0.5;
                 const questionText = isVieToEng ? item.meaning : item.word;
@@ -960,6 +955,56 @@
                 this.addSessionEventListeners(item, 'mcq', isVieToEng);
             },
             
+            renderContextualMCQ(item) {
+                if (!item.exampleSentence) { this.renderNextInSession(); return; } // Skip if no example
+                const questionText = item.exampleSentence.replace(new RegExp(`\\b${item.word}\\b`, 'ig'), '______');
+                const correctAnswer = item.word;
+                const familyIds = this.data.wordFamilies[item.familyRoot] || [];
+                const familyWords = familyIds.map(id => this.data.words.find(w => w.id === id)).filter(w => w && w.id !== item.id);
+                
+                let distractors = new Set(item.distractors_en || []);
+                if (familyWords.length > 0) {
+                    distractors.add(familyWords[0].word);
+                }
+                
+                const wrongAnswers = this.shuffleArray([...distractors]).slice(0, 3);
+                const options = this.shuffleArray([correctAnswer, ...wrongAnswers]);
+
+                const questionHTML = `<p class="text-xl font-semibold mb-6 text-slate-800 text-center">${questionText}</p>
+                                      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div>`;
+
+                document.getElementById('main-content').innerHTML = this.getSessionHTML(item, questionHTML, false, false);
+                this.addSessionEventListeners(item, 'mcq', false);
+            },
+            
+            renderReverseDistractor(item) {
+                const questionText = `Một trong những từ này là đáp án đúng cho nghĩa '${item.meaning}', ba từ còn lại là các 'từ gây nhiễu'. Hãy tìm ra đáp án đúng.`;
+                const correctAnswer = item.word;
+                const wrongAnswers = this.findChallengingDistractors(item, 3, 'vie_to_eng');
+                const options = this.shuffleArray([correctAnswer, ...wrongAnswers]);
+                const questionHTML = `<p class="text-lg mb-6 text-slate-600 text-center">${questionText}</p>
+                                      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div>`;
+
+                document.getElementById('main-content').innerHTML = this.getSessionHTML(item, questionHTML, false, true);
+                this.addSessionEventListeners(item, 'mcq', true);
+            },
+
+            renderContextualClue(item) {
+                 if (!item.exampleSentence) { this.renderNextInSession(); return; }
+                 const questionHTML = `
+                    <div class="space-y-4">
+                        <p class="text-lg"><span class="font-semibold">Manh mối 1 (Nghĩa):</span> ${item.meaning}</p>
+                        <p class="text-lg"><span class="font-semibold">Manh mối 2 (Câu):</span> ${item.exampleSentence.replace(new RegExp(`\\b${item.word}\\b`, 'ig'), '______')}</p>
+                    </div>
+                    <form id="quiz-form" class="mt-6">
+                        <input type="text" id="answer-input" class="w-full max-w-md mx-auto p-3 text-lg rounded-lg" placeholder="Gõ đáp án của bạn..." autocomplete="off">
+                        <button type="submit" class="btn btn-main-action mt-4">Check</button>
+                    </form>
+                    <div id="feedback" class="mt-4 h-12"></div>`;
+                document.getElementById('main-content').innerHTML = this.getSessionHTML(item, questionHTML, false, true);
+                this.addSessionEventListeners(item, 'writing', true);
+            },
+
             // --- EVENT LISTENERS & HANDLERS ---
             addSessionEventListeners(item, type, isVieToEng = false) {
                 document.getElementById('back-btn')?.addEventListener('click', () => this.renderSelectionScreen('practice'));
@@ -970,16 +1015,13 @@
                 };
 
                 if (type === 'mcq') {
+                    const correctAnswer = isVieToEng ? item.word : item.meaning;
                     document.querySelectorAll('.answer-option').forEach(button => button.addEventListener('click', e => {
                         const selectedButton = e.currentTarget;
                         if(selectedButton.disabled) return;
-
                         document.querySelectorAll('.answer-option').forEach(btn => btn.disabled = true);
                         selectedButton.classList.add('selected');
-                        
-                        const correctAnswer = isVieToEng ? item.word : item.meaning;
                         const isCorrect = selectedButton.dataset.answer.toLowerCase() === correctAnswer.toLowerCase();
-                        
                         setTimeout(() => {
                             selectedButton.classList.remove('selected');
                             if (isCorrect) {
@@ -993,87 +1035,42 @@
                             }
                         }, 400);
                     }));
-                }
-                
-                document.getElementById('idk-btn')?.addEventListener('click', () => {
-                     document.querySelectorAll('.answer-option').forEach(el => el.disabled = true);
-                     const correctAnswer = isVieToEng ? item.word : item.meaning;
-                     const correctButton = document.querySelector(`.answer-option[data-answer="${correctAnswer}"]`);
-                     if(correctButton) correctButton.classList.add('correct');
-                     handleAnswer(false);
-                });
-            },
-            
-            submitTest() {
-                clearInterval(this.testTimer);
-                this.testTimer = null;
-                let correctCount = 0;
-                this.data.incorrectTestAnswers = [];
-                const questions = document.querySelectorAll('#test-container .card');
-                
-                questions.forEach(q => {
-                    q.style.pointerEvents = 'none';
-                    const id = q.dataset.itemId;
-                    const itemType = q.dataset.itemType;
-                    
-                    let item = itemType === 'word' ? this.data.words.find(w => String(w.id) === id) : this.data.structures.find(s => s.id === id);
-                    let userAnswer, isCorrect = false;
-
-                    const selectedOption = q.querySelector('.answer-option.selected');
-                    const correctAnswer = q.dataset.correctAnswer;
-
-                    if (selectedOption) {
-                        userAnswer = selectedOption.dataset.value;
-                        isCorrect = userAnswer.toLowerCase() === String(correctAnswer).toLowerCase();
-                    } else {
-                        isCorrect = false;
-                        userAnswer = '(No answer)';
-                    }
-
-                    q.querySelectorAll('.answer-option').forEach(opt => {
-                        if (String(opt.dataset.value).toLowerCase() === String(correctAnswer).toLowerCase()) {
-                            opt.classList.add('correct');
+                     document.getElementById('idk-btn')?.addEventListener('click', () => {
+                        document.querySelectorAll('.answer-option').forEach(el => el.disabled = true);
+                        const correctButton = document.querySelector(`.answer-option[data-answer="${correctAnswer}"]`);
+                        if(correctButton) correctButton.classList.add('correct');
+                        handleAnswer(false);
+                    });
+                } else if (type === 'writing') {
+                    const correctAnswer = item.word; // Writing is always Eng
+                     document.getElementById('quiz-form').addEventListener('submit', e => {
+                        e.preventDefault();
+                        const form = e.target;
+                        const feedback = form.nextElementSibling;
+                        const input = form.querySelector('#answer-input');
+                        const userAnswer = input.value.trim().toLowerCase();
+                        if (!userAnswer) return;
+                        const isCorrect = userAnswer === correctAnswer.toLowerCase();
+                        form.querySelector('button').disabled = true;
+                        input.disabled = true;
+                        if (isCorrect) {
+                            feedback.innerHTML = `<p class="text-green-600 font-bold text-lg">Correct!</p>`;
+                            handleAnswer(true);
+                        } else {
+                            feedback.innerHTML = `<p class="text-red-600 font-bold text-lg">Incorrect! The correct answer is: <span class="underline">${correctAnswer}</span></p>`;
+                            handleAnswer(false);
                         }
                     });
-
-                    if (selectedOption && !isCorrect) {
-                        selectedOption.classList.add('incorrect');
-                    }
-                    if (selectedOption) {
-                        selectedOption.classList.remove('selected');
-                    }
-                    
-                    if (isCorrect) {
-                        correctCount++;
-                    } else {
-                        this.data.incorrectTestAnswers.push({item, userAnswer, itemType, correctAnswer});
-                    }
-                });
-
-                // Save test result to Firebase
-                const total = questions.length;
-                this.data.progress.lastTestResult = {
-                    score: correctCount,
-                    total: total,
-                    percentage: total > 0 ? parseFloat(((correctCount / total) * 100).toFixed(1)) : 0,
-                    date: new Date().toISOString()
-                };
-                this.saveProgressToFirebase();
-
-                this.renderTestEnd(correctCount, total);
+                    document.getElementById('idk-btn')?.addEventListener('click', () => {
+                         const form = document.getElementById('quiz-form');
+                         form.querySelector('button').disabled = true;
+                         form.querySelector('input').disabled = true;
+                         form.nextElementSibling.innerHTML = `<p class="text-blue-600 font-bold text-lg">Correct answer: <span class="underline">${correctAnswer}</span></p>`;
+                         handleAnswer(false);
+                    });
+                }
             },
             
-            getTestMCQ_HTML(item, isVieToEng) {
-                const questionText = isVieToEng ? item.meaning : item.word;
-                const correctAnswer = isVieToEng ? item.word : item.meaning;
-                const wrongAnswers = this.findChallengingDistractors(item, 3, isVieToEng ? 'vie_to_eng' : 'eng_to_vie');
-                const options = this.shuffleArray([correctAnswer, ...wrongAnswers]);
-                return `<p class="font-bold text-lg mb-4 text-slate-800">${questionText} <span class="text-slate-600 font-normal">(${item.type})</span></p>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3" data-correct-answer="${correctAnswer}">
-                            ${options.map(opt => `<div role="button" class="answer-option" data-value="${opt}">${opt}</div>`).join('')}
-                        </div>`;
-            },
-
             // --- UTILITY & HELPER FUNCTIONS ---
             showErrorState(message) {
                 document.getElementById('loader-overlay').classList.remove('is-open');
@@ -1096,7 +1093,7 @@
                 document.getElementById('nav-test').addEventListener('click', () => this.openModal('test-setup-modal'));
                 document.getElementById('nav-reset').addEventListener('click', async () => {
                     this.showCustomConfirm("Bạn có chắc muốn xóa toàn bộ tiến trình của bài tập này không?", async () => {
-                        this.data.progress = { learnedItems: {}, lastTestResult: null };
+                        this.data.progress = { learnedItems: {}, lastTestResult: null, incorrectCounts: {} };
                         await this.saveProgressToFirebase();
                         this.applyUserProgress(); // Re-apply the now-empty progress
                         this.renderDashboard();
@@ -1138,7 +1135,7 @@
             getSessionHTML(item, questionHTML, isStructure = false, isVieToEng = false) {
                 let title, subtitle;
                 if (isStructure) {
-                    title = item.word; // Here 'word' is the blanked-out sentence
+                    title = item.word;
                     this.updateHeader('Practice', 'Fill in the blank');
                     subtitle = `<p class="text-slate-600 mb-4">(Meaning: ${item.translation})</p>`;
                 } else {
