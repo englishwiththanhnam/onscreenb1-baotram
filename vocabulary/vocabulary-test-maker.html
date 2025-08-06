@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trình Soạn Thảo Bộ Từ Vựng</title>
+    <title>Trình Soạn Thảo Bộ Từ Vựng (Tối ưu hóa)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -16,8 +16,19 @@
             --shadow-color: rgba(67, 56, 202, 0.15);
             --primary-accent: #6d28d9;
             --text-primary: #0f172a;
+            --text-secondary: #475569;
             --app-bg-start: #f5f7ff;
             --app-bg-end: #e0e7ff;
+        }
+        body.dark {
+            --glass-bg-color: rgba(29, 39, 58, 0.45);
+            --glass-border-color: rgba(255, 255, 255, 0.2);
+            --shadow-color: rgba(0, 0, 0, 0.25);
+            --primary-accent: #a78bfa;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --app-bg-start: #0f172a;
+            --app-bg-end: #1e293b;
         }
         body {
             font-family: 'Be Vietnam Pro', sans-serif;
@@ -25,6 +36,17 @@
             background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%);
             color: var(--text-primary);
         }
+        /* Dark mode text color fixes */
+        body.dark h1, body.dark h2, body.dark h3, body.dark label, body.dark p, body.dark select, body.dark input {
+             color: var(--text-primary);
+        }
+        body.dark .text-gray-700 { color: var(--text-primary) !important; }
+        body.dark .text-gray-600 { color: var(--text-secondary) !important; }
+        body.dark .text-slate-500 { color: var(--text-secondary) !important; }
+        body.dark #dark-mode-label .fa-moon { color: var(--primary-accent); }
+        #dark-mode-label .fa-sun { color: #f59e0b; }
+
+
         .background-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
         .shape { position: absolute; border-radius: 50%; filter: blur(25px); opacity: 0.6; }
         .shape1 { width: 250px; height: 250px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); top: 10%; left: 5%; animation: float 28s infinite alternate ease-in-out; }
@@ -43,11 +65,12 @@
         .btn-primary:hover:not(:disabled) { background: #5b21b6; transform: translateY(-2px); }
         .btn-primary:disabled { background-color: #a5b4fc; cursor: not-allowed; transform: none; box-shadow: none; }
         .btn-secondary { background: rgba(255, 255, 255, 0.4); color: var(--text-primary); border-color: rgba(255, 255, 255, 0.6); }
+        body.dark .btn-secondary { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
         .btn-secondary:hover:not(:disabled) { background: rgba(255, 255, 255, 0.7); transform: translateY(-2px); }
         .btn-danger { background: #ef4444; color: white; }
         .btn-danger:hover { background: #dc2626; transform: translateY(-2px); }
-        .input-field { background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.5); color: var(--text-primary); transition: all 0.2s ease-in-out; width: 100%; padding: 12px; border-radius: 12px; }
-        .input-field:focus { background: rgba(255, 255, 255, 0.7); border-color: var(--primary-accent); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3); outline: none; }
+        .input-field, select.input-field { background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.5); color: var(--text-primary); transition: all 0.2s ease-in-out; width: 100%; padding: 12px; border-radius: 12px; }
+        .input-field:focus, select.input-field:focus { background: rgba(255, 255, 255, 0.7); border-color: var(--primary-accent); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3); outline: none; }
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; }
         .modal.is-open { display: flex; }
         .modal-content { animation: scaleIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
@@ -55,6 +78,8 @@
         .loader { width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid var(--primary-accent); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         #data-table th { position: sticky; top: 0; background-color: rgba(255,255,255,0.6); backdrop-filter: blur(5px); }
+        body.dark #data-table th { background-color: rgba(29, 39, 58, 0.6); }
+        #gemini-usage-bar { transition: width 0.5s ease-in-out; }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -78,7 +103,18 @@
     <div id="main-content" class="max-w-7xl mx-auto relative z-10" style="display: none;">
         <header class="flex justify-between items-center mb-8">
             <h1 id="page-title" class="text-4xl font-bold text-gray-800">Soạn Thảo Bộ Từ Vựng</h1>
-            <button id="logout-btn" class="btn btn-danger">Đăng xuất</button>
+            <div class="flex items-center gap-4">
+                <label id="dark-mode-label" class="flex items-center cursor-pointer text-slate-500">
+                    <i class="fas fa-moon mr-2"></i>
+                    <div class="relative">
+                        <input type="checkbox" id="dark-mode-toggle" class="sr-only">
+                        <div class="block bg-gray-600 w-14 h-8 rounded-full"></div>
+                        <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
+                    </div>
+                    <i class="fas fa-sun ml-2"></i>
+                </label>
+                <button id="logout-btn" class="btn btn-danger">Đăng xuất</button>
+            </div>
         </header>
 
         <div class="glass-panel p-6 mb-8">
@@ -95,26 +131,70 @@
             </div>
         </div>
 
-        <div class="glass-panel p-6">
+        <div class="glass-panel p-6 mb-8">
             <h2 class="text-2xl font-bold text-gray-700 mb-4">2. Dữ liệu đầu vào</h2>
-            <div class="flex items-center gap-4">
-                <label for="csv-upload" class="btn btn-secondary"><i class="fas fa-upload mr-2"></i>Tải lên file CSV</label>
-                <input type="file" id="csv-upload" class="hidden" accept=".csv">
-                <p id="file-name" class="text-gray-600"></p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="vocab-csv-upload" class="block text-sm font-medium text-gray-700 mb-1">File Từ vựng (word,type,pronunciation,meaning)</label>
+                    <label for="vocab-csv-upload" class="btn btn-secondary w-full"><i class="fas fa-upload mr-2"></i>Tải lên file Từ vựng</label>
+                    <input type="file" id="vocab-csv-upload" class="hidden" accept=".csv">
+                    <p id="vocab-file-name" class="text-gray-600 mt-2 text-sm"></p>
+                </div>
+                 <div>
+                    <label for="structures-csv-upload" class="block text-sm font-medium text-gray-700 mb-1">File Cấu trúc (phrase,meaning)</label>
+                    <label for="structures-csv-upload" class="btn btn-secondary w-full"><i class="fas fa-upload mr-2"></i>Tải lên file Cấu trúc</label>
+                    <input type="file" id="structures-csv-upload" class="hidden" accept=".csv">
+                    <p id="structures-file-name" class="text-gray-600 mt-2 text-sm"></p>
+                </div>
+            </div>
+            <div class="text-center mt-4">
+                <button id="process-files-btn" class="btn btn-primary">Xử lý và Ánh xạ Dữ liệu</button>
+            </div>
+        </div>
+        
+        <div class="glass-panel p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4">Quản lý API Key & Hạn mức</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                <div>
+                    <label for="gemini-api-key" class="block text-sm font-medium text-gray-700 mb-1">Google Gemini API Key</label>
+                    <input type="password" id="gemini-api-key" class="input-field" placeholder="Nhập API Key của bạn...">
+                </div>
+                 <div>
+                    <label for="ai-model-select" class="block text-sm font-medium text-gray-700 mb-1">Mô hình Gemini</label>
+                    <select id="ai-model-select" class="input-field w-full">
+                        <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Nhanh)</option>
+                        <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro (Chất lượng cao)</option>
+                    </select>
+                </div>
+            </div>
+             <div id="gemini-usage-tracker" class="space-y-2">
+                <div class="flex flex-wrap justify-between items-center gap-2">
+                    <label class="block text-sm font-medium text-gray-700">Hạn mức Gemini (Chính xác từ Google Cloud)</label>
+                    <button id="refresh-usage-btn" class="btn btn-secondary !py-1 !px-3">
+                        <i class="fas fa-sync-alt"></i> Làm mới
+                    </button>
+                </div>
+                <div class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-4">
+                    <div id="gemini-usage-bar" class="bg-gradient-to-r from-green-400 to-blue-500 h-4 rounded-full" style="width: 0%;"></div>
+                </div>
+                <div class="flex justify-between text-xs font-medium text-gray-600">
+                    <span id="gemini-usage-text">0 / 15,000,000 ký tự</span>
+                </div>
             </div>
         </div>
 
         <div id="data-review-section" class="glass-panel p-6 mt-8 hidden">
-             <h2 class="text-2xl font-bold text-gray-700 mb-4">3. Xem lại & Làm giàu dữ liệu</h2>
-             <div id="table-container" class="max-h-[50vh] overflow-auto rounded-lg border border-white/50">
+             <div class="flex flex-wrap justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-700">3. Xem lại & Làm giàu dữ liệu</h2>
+             </div>
+             <div id="table-container" class="max-h-[60vh] overflow-auto rounded-lg border border-white/50">
                 <table id="data-table" class="w-full text-sm">
                     <thead>
                         <tr class="text-left">
-                            <th class="p-3">Từ vựng</th>
-                            <th class="p-3">Loại từ</th>
-                            <th class="p-3">Phiên âm</th>
+                            <th class="p-3">Từ vựng / Phiên âm</th>
                             <th class="p-3">Nghĩa</th>
-                            <th class="p-3">Cấu trúc liên kết</th>
+                            <th class="p-3">Cấu trúc & Ví dụ</th>
+                            <th class="p-3">Từ gây nhiễu (EN/VI)</th>
                             <th class="p-3 text-center">AI</th>
                         </tr>
                     </thead>
@@ -128,7 +208,7 @@
         </div>
 
         <div class="mt-8 text-center">
-             <button id="upload-btn" class="btn btn-primary text-lg w-full md:w-1/2"><i class="fas fa-cloud-upload-alt mr-2"></i>Lưu Bộ Từ Vựng</button>
+             <button id="upload-btn" class="btn btn-primary text-lg w-full md:w-1-2"><i class="fas fa-cloud-upload-alt mr-2"></i>Lưu Bộ Từ Vựng</button>
              <p id="upload-log" class="font-semibold mt-2 h-5"></p>
         </div>
     </div>
@@ -140,6 +220,7 @@
         import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
+        // --- Firebase Configuration ---
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
@@ -150,12 +231,19 @@
             measurementId: "G-33NHT07JHE"
         };
         
+        // --- Firebase Initialization ---
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+
+        // --- Global State ---
         let isEditMode = false;
         let localWordList = [];
+        let vocabCsvText = '';
+        let structuresCsvText = '';
+        const GEMINI_FREE_TIER_LIMIT = 15000000;
 
+        // --- DOM Element Cache ---
         const DOM = {
             loginScreen: document.getElementById('login-screen'),
             mainContent: document.getElementById('main-content'),
@@ -166,8 +254,6 @@
             loginError: document.getElementById('login-error'),
             testIdInput: document.getElementById('test-id'),
             testTitleInput: document.getElementById('test-title'),
-            csvUploadInput: document.getElementById('csv-upload'),
-            fileNameDisplay: document.getElementById('file-name'),
             dataReviewSection: document.getElementById('data-review-section'),
             dataTableBody: document.getElementById('data-table-body'),
             enrichAiBtn: document.getElementById('enrich-ai-btn'),
@@ -176,12 +262,269 @@
             uploadLog: document.getElementById('upload-log'),
             alertModal: document.getElementById('custom-alert-modal'),
             pageTitle: document.getElementById('page-title'),
+            vocabCsvUploadInput: document.getElementById('vocab-csv-upload'),
+            structuresCsvUploadInput: document.getElementById('structures-csv-upload'),
+            vocabFileNameDisplay: document.getElementById('vocab-file-name'),
+            structuresFileNameDisplay: document.getElementById('structures-file-name'),
+            processFilesBtn: document.getElementById('process-files-btn'),
+            darkModeToggle: document.getElementById('dark-mode-toggle'),
+            aiModelSelect: document.getElementById('ai-model-select'),
+            geminiApiKeyInput: document.getElementById('gemini-api-key'),
+            geminiUsageBar: document.getElementById('gemini-usage-bar'),
+            geminiUsageText: document.getElementById('gemini-usage-text'),
+            refreshUsageBtn: document.getElementById('refresh-usage-btn'),
         };
 
+        // --- Utility Functions ---
         function showAlert(message) {
-            DOM.alertModal.innerHTML = `<div class="modal-content glass-panel text-center p-8"><p class="text-lg font-medium text-slate-800 mb-6">${message}</p><button id="alert-ok-btn" class="btn btn-primary">OK</button></div>`;
+            DOM.alertModal.innerHTML = `<div class="modal-content glass-panel text-center p-8"><p class="text-lg font-medium text-slate-800 dark:text-slate-200 mb-6">${message}</p><button id="alert-ok-btn" class="btn btn-primary">OK</button></div>`;
             DOM.alertModal.classList.add('is-open');
             document.getElementById('alert-ok-btn').onclick = () => DOM.alertModal.classList.remove('is-open');
+        }
+
+        async function callGeminiAPI(prompt, model) {
+            const geminiApiKey = localStorage.getItem('geminiApiKey');
+            if (!geminiApiKey) throw new Error("Vui lòng nhập Google Gemini API Key.");
+            
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: "application/json" }
+            };
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                const errorBody = await response.text();
+                throw new Error(`Gemini API error: ${response.statusText} - ${errorBody}`);
+            }
+            const result = await response.json();
+            const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!responseText) throw new Error("Invalid Gemini API response structure.");
+            
+            // The local counter is now just for immediate feedback after an API call.
+            // The authoritative source is the Cloud Function.
+            updateLocalGeminiUsage(JSON.stringify(payload).length, responseText.length);
+            return JSON.parse(responseText);
+        }
+        
+        // --- Gemini Usage Tracker ---
+        function updateLocalGeminiUsage(inputChars, outputChars) {
+             let usageData = JSON.parse(localStorage.getItem('geminiUsage')) || { count: 0, month: new Date().getMonth() };
+             usageData.count += inputChars + outputChars;
+             localStorage.setItem('geminiUsage', JSON.stringify(usageData));
+             renderGeminiUsage(usageData.count);
+        }
+        
+        function renderGeminiUsage(usage) {
+            const percentage = Math.min(100, (usage / GEMINI_FREE_TIER_LIMIT) * 100);
+            DOM.geminiUsageBar.style.width = `${percentage}%`;
+            DOM.geminiUsageText.textContent = `${usage.toLocaleString('vi-VN')} / ${GEMINI_FREE_TIER_LIMIT.toLocaleString('vi-VN')} ký tự`;
+            
+            if (percentage > 90) {
+                DOM.geminiUsageBar.classList.remove('from-green-400', 'to-blue-500');
+                DOM.geminiUsageBar.classList.add('bg-red-500');
+            } else if (percentage > 70) {
+                 DOM.geminiUsageBar.classList.remove('from-green-400', 'to-blue-500');
+                DOM.geminiUsageBar.classList.add('bg-yellow-500');
+            } else {
+                 DOM.geminiUsageBar.classList.remove('bg-red-500', 'bg-yellow-500');
+                 DOM.geminiUsageBar.classList.add('from-green-400', 'to-blue-500');
+            }
+        }
+
+
+        // --- Core Application Logic ---
+        function parseAndStructureCSV(vocabText, structuresText) {
+            const vocabRows = vocabText.trim().split(/\r?\n/);
+            const vocab = [];
+            vocabRows.forEach(row => {
+                const columns = row.split(',').map(c => c.trim().replace(/"/g, ''));
+                if (columns.length >= 4 && columns[0] && columns[1] && columns[2] && columns[3]) {
+                    vocab.push({ word: columns[0], type: columns[1], pronunciation: columns[2], meaning: columns[3] });
+                }
+            });
+
+            const structureRows = structuresText.trim().split(/\r?\n/);
+            const structures = [];
+            structureRows.forEach(row => {
+                const columns = row.split(',').map(c => c.trim().replace(/"/g, ''));
+                if (columns.length >= 2 && columns[0] && columns[1]) {
+                    structures.push({ phrase: columns[0], meaning: columns[1] });
+                }
+            });
+
+            localWordList = vocab.map((v, index) => {
+                const wordLower = v.word.toLowerCase();
+                const matchRegex = new RegExp(`\\b${wordLower}s?\\b`, 'i');
+                const matchingStructures = structures
+                    .filter(s => matchRegex.test(s.phrase))
+                    .map(s => ({ ...s, applicationExamples: [] }));
+                
+                return {
+                    id: index + 1,
+                    ...v,
+                    structures: matchingStructures,
+                    exampleSentence: '',
+                    distractors_en: [],
+                    distractors_vi: [],
+                    isEnriched: false,
+                };
+            });
+        }
+
+        function renderTable() {
+            DOM.dataTableBody.innerHTML = '';
+            if (localWordList.length === 0) return;
+
+            localWordList.forEach((word, index) => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-white/30 dark:border-slate-700 align-top';
+
+                const structuresHTML = word.structures.map(s => {
+                    const examples = Array.isArray(s.applicationExamples) ? s.applicationExamples : [];
+                    const examplesHTML = examples.length > 0
+                        ? `<ul class="list-disc list-inside mt-1 text-sky-700 dark:text-sky-400">${examples.map(ex => `<li>${ex}</li>`).join('')}</ul>`
+                        : '';
+                    return `
+                    <div class="p-1.5 bg-violet-100 dark:bg-slate-700 rounded-md mb-1">
+                        <p class="font-semibold text-violet-800 dark:text-violet-300">${s.phrase}</p>
+                        <p class="text-xs text-slate-600 dark:text-slate-400">${s.meaning}</p>
+                        ${examplesHTML}
+                    </div>`;
+                }).join('');
+                
+                const exampleHTML = word.exampleSentence ? `
+                    <div class="mt-2 p-1.5 bg-green-100 dark:bg-emerald-900/50 rounded-md">
+                        <p class="font-semibold text-green-800 dark:text-green-300">Ví dụ (Từ vựng):</p>
+                        <p class="text-xs text-slate-600 dark:text-slate-400">${word.exampleSentence}</p>
+                    </div>` : '';
+
+                const distractorsHTML = word.distractors_en.length > 0 ? `
+                    <div class="text-xs">
+                        <p class="font-semibold">EN:</p>
+                        <ul class="list-disc list-inside">
+                            ${word.distractors_en.map(d => `<li>${d}</li>`).join('')}
+                        </ul>
+                        <p class="font-semibold mt-1">VI:</p>
+                        <ul class="list-disc list-inside">
+                            ${word.distractors_vi.map(d => `<li>${d}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : '<span class="text-xs text-gray-400">Chưa có</span>';
+
+                row.innerHTML = `
+                    <td class="p-3">
+                        <p class="font-bold text-base">${word.word}</p>
+                        <p class="font-mono text-sm text-violet-700 dark:text-violet-400">${word.pronunciation}</p>
+                        <p class="text-xs text-slate-500">(${word.type})</p>
+                    </td>
+                    <td class="p-3">${word.meaning}</td>
+                    <td class="p-3 text-xs">${structuresHTML}${exampleHTML}</td>
+                    <td class="p-3">${distractorsHTML}</td>
+                    <td class="p-3 text-center" id="ai-status-${index}">
+                        ${word.isEnriched ? '<i class="fas fa-check-circle text-2xl text-green-500"></i>' : '<i class="fas fa-hourglass-half text-2xl text-gray-400"></i>'}
+                    </td>
+                `;
+                DOM.dataTableBody.appendChild(row);
+            });
+        }
+        
+        async function enrichWithAI() {
+            const wordsToEnrich = localWordList.filter(w => !w.isEnriched);
+            if (wordsToEnrich.length === 0) {
+                showAlert("Tất cả các từ đã được làm giàu dữ liệu.");
+                return;
+            }
+
+            DOM.enrichAiBtn.disabled = true;
+            DOM.enrichAiBtn.innerHTML = `<div class="loader"></div><span class="ml-2">Đang xử lý...</span>`;
+            
+            const BATCH_SIZE = 50;
+            const selectedModel = DOM.aiModelSelect.value;
+            let processedCount = localWordList.length - wordsToEnrich.length;
+
+            for (let i = 0; i < wordsToEnrich.length; i += BATCH_SIZE) {
+                const batch = wordsToEnrich.slice(i, i + BATCH_SIZE);
+                
+                const batchInput = batch.map(wordData => ({
+                    id: wordData.id,
+                    word: wordData.word,
+                    type: wordData.type,
+                    meaning: wordData.meaning,
+                    structures: wordData.structures.map(s => ({ phrase: s.phrase, meaning: s.meaning }))
+                }));
+
+                const prompt = `Bạn là một AI chuyên gia về ngôn ngữ Anh, chuyên tạo tài liệu học tập chất lượng cao.
+Hãy xử lý mảng JSON đầu vào sau đây. Với MỖI object trong mảng, hãy tạo ra một object mới trong mảng kết quả.
+Đầu vào: ${JSON.stringify(batchInput)}
+
+YÊU CẦU:
+Trả về một mảng JSON. Mỗi object trong mảng phải có cấu trúc rút gọn như sau:
+{
+  "id": id_gốc_của_từ,
+  "ex": "Một câu ví dụ cho từ chính",
+  "d_en": ["Từ gây nhiễu 1", "Từ gây nhiễu 2", "Từ gây nhiễu 3"],
+  "d_vi": ["Nghĩa gây nhiễu 1", "Nghĩa gây nhiễu 2", "Nghĩa gây nhiễu 3"],
+  "s": [
+    { "p": "Cấu trúc gốc 1", "exs": ["Ví dụ ứng dụng 1"] },
+    { "p": "Cấu trúc gốc 2", "exs": ["Ví dụ ứng dụng 1"] }
+  ]
+}
+
+YÊU CẦU CHI TIẾT CHO TỪNG TRƯỜNG:
+1.  "id": Giữ nguyên ID từ object đầu vào.
+2.  "ex": Tạo **MỘT** câu ví dụ tiếng Anh tự nhiên, rõ ràng. **Ưu tiên cao**: Câu ví dụ nên có văn phong và chất lượng tương tự như trong từ điển Oxford Advanced Learner's Dictionary (OALD).
+3.  "d_en": Tạo 3 từ tiếng Anh gây nhiễu. Yêu cầu: Cùng loại từ, **KHÔNG được là từ đồng nghĩa**, nhưng phải liên quan về mặt ngữ cảnh hoặc chủ đề. Ví dụ, từ đúng là benefit, thì 1 trong 3 từ gây nhiễu là  achievement.
+4.  "d_vi": Tạo 3 định nghĩa tiếng Việt gây nhiễu, nghe hợp lý nhưng không chính xác. Các từ này không có tiếng nào trùng với tiếng của từ đúng.
+5.  "s": Một mảng các object cấu trúc. Với mỗi cấu trúc đầu vào, tạo một object với:
+    - "p": Cấu trúc gốc chính xác.
+    - "exs": Một mảng chứa **MỘT** câu ví dụ tiếng Anh hoàn chỉnh, chất lượng OALD, thể hiện cách dùng của cấu trúc đó.
+
+CHỈ trả về mảng JSON kết quả, không giải thích gì thêm.`;
+
+                try {
+                    const aiDataArray = await callGeminiAPI(prompt, selectedModel);
+                    
+                    if (Array.isArray(aiDataArray)) {
+                        aiDataArray.forEach(enrichedData => {
+                            const wordToUpdate = localWordList.find(w => w.id === enrichedData.id);
+                            if (wordToUpdate) {
+                                wordToUpdate.exampleSentence = enrichedData.ex || '';
+                                wordToUpdate.distractors_en = enrichedData.d_en || [];
+                                wordToUpdate.distractors_vi = enrichedData.d_vi || [];
+                                if (enrichedData.s && Array.isArray(enrichedData.s)) {
+                                    enrichedData.s.forEach(enrichedStruct => {
+                                        const originalStruct = wordToUpdate.structures.find(s => s.phrase === enrichedStruct.p);
+                                        if (originalStruct) {
+                                            let examples = enrichedStruct.exs || [];
+                                            if (!Array.isArray(examples)) {
+                                                examples = [String(examples)];
+                                            }
+                                            originalStruct.applicationExamples = examples;
+                                        }
+                                    });
+                                }
+                                wordToUpdate.isEnriched = true;
+                            }
+                        });
+                    }
+                    processedCount += batch.length;
+                    DOM.aiLog.textContent = `Đã xử lý ${processedCount}/${localWordList.length} từ...`;
+                    renderTable();
+
+                } catch (error) {
+                    console.error(`Lỗi khi xử lý lô bắt đầu từ từ có ID ${batch[0].id}:`, error);
+                    showAlert(`Đã xảy ra lỗi trong quá trình xử lý. Vui lòng thử lại. Lỗi: ${error.message}`);
+                    break; 
+                }
+            }
+
+            DOM.aiLog.textContent = `Hoàn tất! Đã làm giàu ${processedCount} từ.`;
+            DOM.enrichAiBtn.disabled = false;
+            DOM.enrichAiBtn.innerHTML = `<i class="fas fa-wand-magic-sparkles mr-2"></i>Làm giàu toàn bộ bằng AI`;
         }
 
         async function loadTestData(testId) {
@@ -199,153 +542,13 @@
                 window.location.search = '';
             }
         }
-
-        async function callGeminiAPI(prompt) {
-            const apiKey = "AIzaSyBXE8xq9rQop1vlcGSqD7csklx8kLOTQ9Y"; // <-- PASTE YOUR API KEY HERE
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
-
-            const payload = {
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { responseMimeType: "application/json" }
-            };
-
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                const errorBody = await response.text();
-                throw new Error(`API error: ${response.statusText} - ${errorBody}`);
-            }
-
-            const result = await response.json();
-            if (!result.candidates || !result.candidates[0].content.parts[0].text) {
-                throw new Error("Invalid API response structure.");
-            }
-            return JSON.parse(result.candidates[0].content.parts[0].text);
-        }
-
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            DOM.fileNameDisplay.textContent = file.name;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const text = e.target.result;
-                parseAndStructureCSV(text);
-                renderTable();
-                DOM.dataReviewSection.classList.remove('hidden');
-            };
-            reader.readAsText(file);
-        }
-
-        function parseAndStructureCSV(csvText) {
-            const rows = csvText.trim().split('\n');
-            const vocab = [];
-            const structures = [];
-
-            rows.forEach(row => {
-                const columns = row.split(',').map(c => c.trim().replace(/"/g, ''));
-                if (columns.length >= 4 && columns[0] && columns[1] && columns[2] && columns[3]) {
-                    vocab.push({ word: columns[0], type: columns[1], pronunciation: columns[2], meaning: columns[3] });
-                } else if (columns.length >= 2 && columns[0] && columns[1]) {
-                    structures.push({ phrase: columns[0], meaning: columns[1] });
-                }
-            });
-
-            localWordList = vocab.map((v, index) => {
-                const linkedStructure = structures.find(s => s.phrase.toLowerCase().includes(v.word.toLowerCase()));
-                return {
-                    id: index + 1,
-                    ...v,
-                    structure: linkedStructure ? linkedStructure.phrase : '',
-                    structure_meaning: linkedStructure ? linkedStructure.meaning : '',
-                    distractors_en: [],
-                    distractors_vi: [],
-                    isEnriched: false,
-                };
-            });
-        }
-
-        function renderTable() {
-            DOM.dataTableBody.innerHTML = '';
-            localWordList.forEach((word, index) => {
-                const row = document.createElement('tr');
-                row.className = 'border-b border-white/30';
-                row.innerHTML = `
-                    <td class="p-3 font-semibold">${word.word}</td>
-                    <td class="p-3">${word.type}</td>
-                    <td class="p-3">${word.pronunciation}</td>
-                    <td class="p-3">${word.meaning}</td>
-                    <td class="p-3 text-xs">${word.structure || 'N/A'}</td>
-                    <td class="p-3 text-center" id="ai-status-${index}">
-                        ${word.isEnriched ? '<i class="fas fa-check-circle text-green-500"></i>' : '<i class="fas fa-times-circle text-gray-400"></i>'}
-                    </td>
-                `;
-                DOM.dataTableBody.appendChild(row);
-            });
-        }
-
-        async function enrichWithAI() {
-            if (localWordList.length === 0) {
-                showAlert("Vui lòng tải lên file CSV và xử lý dữ liệu trước.");
-                return;
-            }
-
-            DOM.enrichAiBtn.disabled = true;
-            DOM.enrichAiBtn.innerHTML = `<div class="loader"></div><span class="ml-2">Đang xử lý...</span>`;
-            
-            let processedCount = 0;
-            for (const [index, wordData] of localWordList.entries()) {
-                if (wordData.isEnriched) {
-                    processedCount++;
-                    continue;
-                }
-                try {
-                    const prompt = `Bạn là một chuyên gia từ vựng và AI.
-Với từ vựng:
-- Word: "${wordData.word}"
-- Type: "${wordData.type}"
-- Meaning: "${wordData.meaning}"
-- Linked Structure: "${wordData.structure}"
-
-Hãy thực hiện các tác vụ sau và trả về một đối tượng JSON:
-1.  **analyzedStructure**: Phân tích cấu trúc "${wordData.structure}", xác định từ khóa và trả về chuỗi mới với từ khóa trong dấu sao. Nếu không có cấu trúc, trả về chuỗi rỗng.
-2.  **englishDistractors**: Tạo một mảng 3 từ tiếng Anh gây nhiễu cho "${wordData.word}".
-3.  **vietnameseDistractors**: Tạo một mảng 3 cụm từ tiếng Việt gây nhiễu cho nghĩa "${wordData.meaning}".
-Chỉ trả về đối tượng JSON.`;
-                    
-                    const aiData = await callGeminiAPI(prompt);
-
-                    wordData.structure = aiData.analyzedStructure || wordData.structure;
-                    wordData.distractors_en = aiData.englishDistractors || [];
-                    wordData.distractors_vi = aiData.vietnameseDistractors || [];
-                    wordData.isEnriched = true;
-
-                    processedCount++;
-                    DOM.aiLog.textContent = `Đã xử lý ${processedCount}/${localWordList.length} từ...`;
-                    document.getElementById(`ai-status-${index}`).innerHTML = '<i class="fas fa-check-circle text-green-500"></i>';
-
-                } catch (error) {
-                    console.error(`Lỗi khi xử lý từ "${wordData.word}":`, error);
-                    document.getElementById(`ai-status-${index}`).innerHTML = '<i class="fas fa-exclamation-triangle text-red-500"></i>';
-                }
-            }
-
-            DOM.aiLog.textContent = `Hoàn tất! Đã làm giàu ${processedCount} từ.`;
-            DOM.enrichAiBtn.disabled = false;
-            DOM.enrichAiBtn.innerHTML = `<i class="fas fa-wand-magic-sparkles mr-2"></i>Làm giàu toàn bộ bằng AI`;
-        }
         
         async function uploadToFirebase() {
             const testId = DOM.testIdInput.value.trim();
             const title = DOM.testTitleInput.value.trim();
             
             if (!testId || !title || localWordList.length === 0) {
-                showAlert("Vui lòng nhập ID, Tiêu đề và tải lên dữ liệu từ vựng.");
+                showAlert("Vui lòng nhập ID, Tiêu đề và xử lý dữ liệu từ vựng.");
                 return;
             }
 
@@ -381,6 +584,7 @@ Chỉ trả về đối tượng JSON.`;
             }
         }
         
+        // --- Event Listeners & Initialization ---
         onAuthStateChanged(auth, user => {
             if (user) {
                 DOM.loginScreen.classList.remove('is-open');
@@ -391,6 +595,8 @@ Chỉ trả về đối tượng JSON.`;
                     isEditMode = true;
                     DOM.pageTitle.textContent = "Chỉnh Sửa Bộ Từ Vựng";
                     DOM.testIdInput.disabled = true;
+                    DOM.processFilesBtn.parentElement.classList.add('hidden');
+                    DOM.enrichAiBtn.parentElement.parentElement.classList.add('hidden');
                     loadTestData(testIdToEdit);
                 }
             } else {
@@ -406,7 +612,90 @@ Chỉ trả về đối tượng JSON.`;
         DOM.logoutBtn.addEventListener('click', () => signOut(auth));
         DOM.uploadBtn.addEventListener('click', uploadToFirebase);
         DOM.enrichAiBtn.addEventListener('click', enrichWithAI);
-        DOM.csvUploadInput.addEventListener('change', handleFileUpload);
+
+        const handleFileUpload = (event, type) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (type === 'vocab') {
+                    vocabCsvText = e.target.result;
+                    DOM.vocabFileNameDisplay.textContent = file.name;
+                } else {
+                    structuresCsvText = e.target.result;
+                    DOM.structuresFileNameDisplay.textContent = file.name;
+                }
+            };
+            reader.readAsText(file);
+        };
+        
+        DOM.vocabCsvUploadInput.addEventListener('change', (e) => handleFileUpload(e, 'vocab'));
+        DOM.structuresCsvUploadInput.addEventListener('change', (e) => handleFileUpload(e, 'structures'));
+        
+        DOM.processFilesBtn.addEventListener('click', () => {
+            if (!vocabCsvText) {
+                showAlert("Vui lòng tải lên file Từ vựng chính.");
+                return;
+            }
+            if (!structuresCsvText) {
+                showAlert("Vui lòng tải lên file Cấu trúc.");
+                return;
+            }
+            parseAndStructureCSV(vocabCsvText, structuresCsvText);
+            renderTable();
+            DOM.dataReviewSection.classList.remove('hidden');
+        });
+
+        DOM.darkModeToggle.addEventListener('change', () => {
+            document.body.classList.toggle('dark');
+        });
+        
+        DOM.geminiApiKeyInput.addEventListener('input', (e) => localStorage.setItem('geminiApiKey', e.target.value));
+        
+        DOM.refreshUsageBtn.addEventListener('click', async () => {
+            const button = DOM.refreshUsageBtn;
+            const icon = button.querySelector('i');
+            icon.classList.add('fa-spin');
+            button.disabled = true;
+
+            // !!! IMPORTANT !!!
+            // Replace this URL with the actual URL of your deployed Google Cloud Function
+            const cloudFunctionUrl = 'https://get-gemini-usage-178273661912.europe-west1.run.app';
+
+            try {
+                if (cloudFunctionUrl === 'https://get-gemini-usage-178273661912.europe-west1.run.app') {
+                    throw new Error("URL của Cloud Function chưa được cấu hình.");
+                }
+                const response = await fetch(cloudFunctionUrl);
+                if (!response.ok) {
+                    throw new Error(`Lỗi khi gọi Cloud Function: ${response.statusText}`);
+                }
+                const data = await response.json();
+                if (typeof data.totalCharacters === 'number') {
+                    // Save the official count to local storage
+                    const currentMonth = new Date().getMonth();
+                    localStorage.setItem('geminiUsage', JSON.stringify({ count: data.totalCharacters, month: currentMonth }));
+                    renderGeminiUsage(data.totalCharacters);
+                    showAlert("Đã làm mới hạn mức thành công!");
+                } else {
+                    throw new Error("Phản hồi từ Cloud Function không hợp lệ.");
+                }
+            } catch (error) {
+                console.error("Lỗi khi làm mới hạn mức:", error);
+                showAlert(`Không thể làm mới hạn mức. ${error.message}`);
+            } finally {
+                icon.classList.remove('fa-spin');
+                button.disabled = false;
+            }
+        });
+
+
+        // Initial setup on page load
+        DOM.geminiApiKeyInput.value = localStorage.getItem('geminiApiKey') || '';
+        // Render with locally stored usage first, for speed
+        const initialUsage = JSON.parse(localStorage.getItem('geminiUsage'))?.count || 0;
+        renderGeminiUsage(initialUsage);
+
     </script>
 </body>
 </html>
