@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trình Soạn Thảo Bộ Từ Vựng (Tối ưu hóa)</title>
+    <title>Trình Soạn Thảo Bộ Từ Vựng Chuyên Nghiệp</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -36,7 +36,6 @@
             background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%);
             color: var(--text-primary);
         }
-        /* Dark mode text color fixes */
         body.dark h1, body.dark h2, body.dark h3, body.dark label, body.dark p, body.dark select, body.dark input, body.dark textarea {
              color: var(--text-primary);
         }
@@ -46,8 +45,7 @@
         body.dark #dark-mode-label .fa-moon { color: var(--primary-accent); }
         #dark-mode-label .fa-sun { color: #f59e0b; }
 
-
-        .background-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        .background-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
         .shape { position: absolute; border-radius: 50%; filter: blur(25px); opacity: 0.6; }
         .shape1 { width: 250px; height: 250px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); top: 10%; left: 5%; animation: float 28s infinite alternate ease-in-out; }
         .shape2 { width: 180px; height: 180px; background: linear-gradient(135deg, #14b8a6, #67e8f9); bottom: 15%; right: 10%; animation: float 32s infinite alternate ease-in-out; }
@@ -100,9 +98,9 @@
         </div>
     </div>
 
-    <div id="main-content" class="max-w-7xl mx-auto relative z-10" style="display: none;">
+    <div id="main-content" class="max-w-screen-xl mx-auto" style="display: none;">
         <header class="flex justify-between items-center mb-8">
-            <h1 id="page-title" class="text-4xl font-bold text-gray-800">Soạn Thảo Bộ Từ Vựng</h1>
+            <h1 id="page-title" class="text-4xl font-bold text-gray-800">Trình Soạn Thảo Bộ Từ Vựng</h1>
             <div class="flex items-center gap-4">
                 <label id="dark-mode-label" class="flex items-center cursor-pointer text-slate-500">
                     <i class="fas fa-moon mr-2"></i>
@@ -117,100 +115,120 @@
             </div>
         </header>
 
-        <div class="glass-panel p-6 mb-8">
-            <h2 class="text-2xl font-bold text-gray-700 mb-4">1. Thông tin chung</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label for="test-id" class="block text-sm font-medium text-gray-700 mb-1">Vocabulary Set ID</label>
-                    <input type="text" id="test-id" class="input-field" placeholder="vd: unit_1_family">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <!-- Left Column (Static) -->
+            <aside class="lg:col-span-2 space-y-8">
+                <div class="glass-panel p-6">
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4">1. Thông tin chung</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="test-id" class="block text-sm font-medium text-gray-700 mb-1">Mã định danh (ID)</label>
+                            <input type="text" id="test-id" class="input-field" placeholder="vd: unit_1_family">
+                        </div>
+                        <div>
+                            <label for="test-title" class="block text-sm font-medium text-gray-700 mb-1">Tiêu đề bộ từ vựng</label>
+                            <input type="text" id="test-title" class="input-field" placeholder="vd: Unit 1: Family Life">
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <label for="test-title" class="block text-sm font-medium text-gray-700 mb-1">Tiêu đề</label>
-                    <input type="text" id="test-title" class="input-field" placeholder="vd: Unit 1: Family Life">
+                <div class="glass-panel p-6">
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4">2. Cấu hình AI</h2>
+                     <div class="space-y-4">
+                        <div>
+                            <label for="gemini-api-key" class="block text-sm font-medium text-gray-700 mb-1">Google Gemini API Key</label>
+                            <input type="password" id="gemini-api-key" class="input-field" placeholder="Nhập API Key của bạn...">
+                        </div>
+                         <div>
+                            <label for="ai-model-select" class="block text-sm font-medium text-gray-700 mb-1">Mô hình Gemini</label>
+                            <select id="ai-model-select" class="input-field w-full">
+                                <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Nhanh & Tiết kiệm)</option>
+                                <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro (Chất lượng cao)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="cefr-level-slider" class="block text-sm font-medium text-gray-700 mb-1">Trình độ (CEFR)</label>
+                            <input type="range" id="cefr-level-slider" min="0" max="100" value="50" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700">
+                            <div class="flex justify-between text-xs mt-1">
+                                <span>A1</span>
+                                <span>A2</span>
+                                <span>B1</span>
+                                <span>B2</span>
+                                <span>C1</span>
+                                <span>C2</span>
+                            </div>
+                            <p id="cefr-level-display" class="text-center font-semibold mt-2"></p>
+                        </div>
+                    </div>
+                     <div id="gemini-usage-tracker" class="space-y-2 mt-6">
+                        <div class="flex flex-wrap justify-between items-center gap-2">
+                            <label class="block text-sm font-medium text-gray-700">Hạn mức miễn phí (Ước tính)</label>
+                            <button id="refresh-usage-btn" class="btn btn-secondary !py-1 !px-3">
+                                <i class="fas fa-sync-alt"></i> Làm mới
+                            </button>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-4">
+                            <div id="gemini-usage-bar" class="bg-gradient-to-r from-green-400 to-blue-500 h-4 rounded-full" style="width: 0%;"></div>
+                        </div>
+                        <div class="flex justify-between text-xs font-medium text-gray-600">
+                            <span id="gemini-usage-text">0 / 15,000,000 ký tự</span>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
+            </aside>
 
-        <div class="glass-panel p-6 mb-8">
-            <h2 class="text-2xl font-bold text-gray-700 mb-4">2. Dữ liệu đầu vào</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label for="vocab-csv-upload" class="block text-sm font-medium text-gray-700 mb-1">File Từ vựng (word,type,pronunciation,meaning)</label>
-                    <label for="vocab-csv-upload" class="btn btn-secondary w-full"><i class="fas fa-upload mr-2"></i>Tải lên file Từ vựng</label>
-                    <input type="file" id="vocab-csv-upload" class="hidden" accept=".csv">
-                    <p id="vocab-file-name" class="text-gray-600 mt-2 text-sm"></p>
+            <!-- Right Column (Scrollable) -->
+            <main class="lg:col-span-3 space-y-8">
+                 <div class="glass-panel p-6">
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4">3. Nhập liệu</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="vocab-csv-upload" class="block text-sm font-medium text-gray-700 mb-1">File Từ vựng (.csv)</label>
+                            <label for="vocab-csv-upload" class="btn btn-secondary w-full"><i class="fas fa-upload mr-2"></i>Tải lên</label>
+                            <input type="file" id="vocab-csv-upload" class="hidden" accept=".csv">
+                            <p id="vocab-file-name" class="text-gray-600 mt-2 text-sm text-center"></p>
+                        </div>
+                         <div>
+                            <label for="structures-csv-upload" class="block text-sm font-medium text-gray-700 mb-1">File Cấu trúc (.csv)</label>
+                            <label for="structures-csv-upload" class="btn btn-secondary w-full"><i class="fas fa-upload mr-2"></i>Tải lên</label>
+                            <input type="file" id="structures-csv-upload" class="hidden" accept=".csv">
+                            <p id="structures-file-name" class="text-gray-600 mt-2 text-sm text-center"></p>
+                        </div>
+                    </div>
+                    <div class="text-center mt-4">
+                        <button id="process-files-btn" class="btn btn-primary">Xử lý và Ánh xạ Dữ liệu</button>
+                    </div>
                 </div>
-                 <div>
-                    <label for="structures-csv-upload" class="block text-sm font-medium text-gray-700 mb-1">File Cấu trúc (phrase,meaning)</label>
-                    <label for="structures-csv-upload" class="btn btn-secondary w-full"><i class="fas fa-upload mr-2"></i>Tải lên file Cấu trúc</label>
-                    <input type="file" id="structures-csv-upload" class="hidden" accept=".csv">
-                    <p id="structures-file-name" class="text-gray-600 mt-2 text-sm"></p>
-                </div>
-            </div>
-            <div class="text-center mt-4">
-                <button id="process-files-btn" class="btn btn-primary">Xử lý và Ánh xạ Dữ liệu</button>
-            </div>
-        </div>
-        
-        <div class="glass-panel p-6 mb-8">
-            <h2 class="text-2xl font-bold text-gray-700 mb-4">Quản lý API Key & Hạn mức</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                <div>
-                    <label for="gemini-api-key" class="block text-sm font-medium text-gray-700 mb-1">Google Gemini API Key</label>
-                    <input type="password" id="gemini-api-key" class="input-field" placeholder="Nhập API Key của bạn...">
-                </div>
-                 <div>
-                    <label for="ai-model-select" class="block text-sm font-medium text-gray-700 mb-1">Mô hình Gemini</label>
-                    <select id="ai-model-select" class="input-field w-full">
-                        <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Nhanh)</option>
-                        <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro (Chất lượng cao)</option>
-                    </select>
-                </div>
-            </div>
-             <div id="gemini-usage-tracker" class="space-y-2">
-                <div class="flex flex-wrap justify-between items-center gap-2">
-                    <label class="block text-sm font-medium text-gray-700">Hạn mức Gemini (Chính xác từ Google Cloud)</label>
-                    <button id="refresh-usage-btn" class="btn btn-secondary !py-1 !px-3">
-                        <i class="fas fa-sync-alt"></i> Làm mới
-                    </button>
-                </div>
-                <div class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-4">
-                    <div id="gemini-usage-bar" class="bg-gradient-to-r from-green-400 to-blue-500 h-4 rounded-full" style="width: 0%;"></div>
-                </div>
-                <div class="flex justify-between text-xs font-medium text-gray-600">
-                    <span id="gemini-usage-text">0 / 15,000,000 ký tự</span>
-                </div>
-            </div>
-        </div>
 
-        <div id="data-review-section" class="glass-panel p-6 mt-8 hidden">
-             <div class="flex flex-wrap justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold text-gray-700">3. Xem lại & Làm giàu dữ liệu</h2>
-             </div>
-             <div id="table-container" class="max-h-[60vh] overflow-auto rounded-lg border border-white/50">
-                <table id="data-table" class="w-full text-sm">
-                    <thead>
-                        <tr class="text-left">
-                            <th class="p-3">Từ vựng / Phiên âm</th>
-                            <th class="p-3">Nghĩa</th>
-                            <th class="p-3">Cấu trúc & Ví dụ</th>
-                            <th class="p-3">Từ gây nhiễu (EN/VI)</th>
-                            <th class="p-3 text-center">AI</th>
-                        </tr>
-                    </thead>
-                    <tbody id="data-table-body"></tbody>
-                </table>
-             </div>
-             <div class="mt-6 text-center flex flex-wrap justify-center gap-4">
-                <button id="enrich-ai-btn" class="btn btn-secondary"><i class="fas fa-wand-magic-sparkles mr-2"></i>Làm giàu bằng API</button>
-                <button id="manual-enrich-btn" class="btn btn-secondary"><i class="fas fa-paste mr-2"></i>Tạo Prompt & Nhập thủ công</button>
-                <p id="ai-log" class="text-sm text-gray-600 mt-2 h-5 w-full"></p>
-            </div>
-        </div>
+                <div id="data-review-section" class="glass-panel p-6 hidden">
+                     <div class="flex flex-wrap justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold text-gray-700">4. Bảng dữ liệu & Làm giàu</h2>
+                     </div>
+                     <div id="table-container" class="max-h-[60vh] overflow-auto rounded-lg border border-white/50">
+                        <table id="data-table" class="w-full text-sm">
+                            <thead>
+                                <tr class="text-left">
+                                    <th class="p-3">Từ vựng / Phiên âm</th>
+                                    <th class="p-3">Nghĩa</th>
+                                    <th class="p-3">Cấu trúc & Ví dụ</th>
+                                    <th class="p-3">Từ gây nhiễu (EN/VI)</th>
+                                    <th class="p-3 text-center">AI</th>
+                                </tr>
+                            </thead>
+                            <tbody id="data-table-body"></tbody>
+                        </table>
+                     </div>
+                     <div class="mt-6 text-center flex flex-wrap justify-center gap-4">
+                        <button id="enrich-ai-btn" class="btn btn-secondary"><i class="fas fa-wand-magic-sparkles mr-2"></i>Làm giàu tự động (API)</button>
+                        <button id="manual-enrich-btn" class="btn btn-secondary"><i class="fas fa-paste mr-2"></i>Làm giàu thủ công</button>
+                        <p id="ai-log" class="text-sm text-gray-600 mt-2 h-5 w-full"></p>
+                    </div>
+                </div>
 
-        <div class="mt-8 text-center">
-             <button id="upload-btn" class="btn btn-primary text-lg w-full md:w-1-2"><i class="fas fa-cloud-upload-alt mr-2"></i>Lưu Bộ Từ Vựng</button>
-             <p id="upload-log" class="font-semibold mt-2 h-5"></p>
+                <div class="text-center">
+                     <button id="upload-btn" class="btn btn-primary text-lg w-full"><i class="fas fa-cloud-upload-alt mr-2"></i>Lưu Bộ Từ Vựng</button>
+                     <p id="upload-log" class="font-semibold mt-2 h-5"></p>
+                </div>
+            </main>
         </div>
     </div>
     
@@ -223,7 +241,7 @@
                 <div class="flex flex-col h-full">
                     <label class="font-medium mb-2">Bước 1: Sao chép Prompt này</label>
                     <textarea id="manual-prompt-output" readonly class="input-field flex-grow font-mono text-xs"></textarea>
-                    <button id="copy-prompt-btn" class="btn btn-primary mt-2">Copy Prompt</button>
+                    <button id="copy-prompt-btn" class="btn btn-primary mt-2">Sao chép Prompt</button>
                 </div>
                 <div class="flex flex-col h-full">
                     <label class="font-medium mb-2">Bước 2: Dán kết quả JSON từ Gemini vào đây</label>
@@ -300,6 +318,8 @@
             copyPromptBtn: document.getElementById('copy-prompt-btn'),
             processManualResultBtn: document.getElementById('process-manual-result-btn'),
             closeManualModalBtn: document.getElementById('close-manual-modal-btn'),
+            cefrSlider: document.getElementById('cefr-level-slider'),
+            cefrDisplay: document.getElementById('cefr-level-display'),
         };
 
         // --- Utility Functions ---
@@ -458,6 +478,7 @@
         }
         
         function getPromptForBatch(batch) {
+             const cefrLevel = getCefrLevelDescription();
              const batchInput = batch.map(wordData => ({
                 id: wordData.id,
                 word: wordData.word,
@@ -478,19 +499,22 @@ Trả về một mảng JSON. Mỗi object trong mảng phải có cấu trúc r
   "d_en": ["Từ gây nhiễu 1", "Từ gây nhiễu 2", "Từ gây nhiễu 3"],
   "d_vi": ["Nghĩa gây nhiễu 1", "Nghĩa gây nhiễu 2", "Nghĩa gây nhiễu 3"],
   "s": [
-    { "p": "Cấu trúc gốc 1", "exs": ["Ví dụ ứng dụng 1"] },
-    { "p": "Cấu trúc gốc 2", "exs": ["Ví dụ ứng dụng 1"] }
+    { "p": "Cấu trúc gốc 1", "exs": ["Ví dụ ứng dụng 1"] }
   ]
 }
 
 YÊU CẦU CHI TIẾT CHO TỪNG TRƯỜNG:
 1.  "id": Giữ nguyên ID từ object đầu vào.
-2.  "ex": Tạo **MỘT** câu ví dụ tiếng Anh tự nhiên, rõ ràng. **Ưu tiên cao**: Câu ví dụ nên có văn phong và chất lượng tương tự như trong từ điển Oxford Advanced Learner's Dictionary (OALD).
-3.  "d_en": Tạo 3 từ tiếng Anh gây nhiễu. Yêu cầu: Cùng loại từ, **KHÔNG được là từ đồng nghĩa**, nhưng phải liên quan về mặt ngữ cảnh hoặc chủ đề. Ví dụ, từ đúng là benefit, thì 1 trong 3 từ gây nhiễu là  achievement.
-4.  "d_vi": Tạo 3 định nghĩa tiếng Việt gây nhiễu, nghe hợp lý nhưng không chính xác. Các từ này không có tiếng nào trùng với tiếng của từ đúng.
+2.  "ex": Tạo **MỘT** câu ví dụ tiếng Anh tự nhiên, rõ ràng.
+3.  "d_en": Tạo 3 từ tiếng Anh gây nhiễu. Yêu cầu:
+    - Cùng loại từ (danh từ, động từ, etc.).
+    - **KHÔNG được là từ đồng nghĩa trực tiếp**.
+    - Phải liên quan về mặt chủ đề hoặc ngữ cảnh để tạo sự phân vân hợp lý. Ví dụ: với từ "result" (kết quả), các từ gây nhiễu tốt là "cause" (nguyên nhân), "process" (quá trình), "effort" (nỗ lực). Các từ này đều liên quan đến một hành động và hệ quả của nó nhưng có vai trò khác nhau. "consequence" (hậu quả) là một từ gây nhiễu TỆ vì nghĩa quá gần.
+4.  "d_vi": Tạo 3 định nghĩa tiếng Việt gây nhiễu, nghe hợp lý nhưng không chính xác.
 5.  "s": Một mảng các object cấu trúc. Với mỗi cấu trúc đầu vào, tạo một object với:
     - "p": Cấu trúc gốc chính xác.
-    - "exs": Một mảng chứa **MỘT** câu ví dụ tiếng Anh hoàn chỉnh, chất lượng OALD, thể hiện cách dùng của cấu trúc đó.
+    - "exs": Một mảng chứa **MỘT** câu ví dụ tiếng Anh hoàn chỉnh.
+6. **QUAN TRỌNG NHẤT**: Toàn bộ nội dung (ví dụ, từ gây nhiễu) phải **phù hợp với trình độ ${cefrLevel}** của học sinh.
 
 CHỈ trả về mảng JSON kết quả, không giải thích gì thêm.`;
         }
@@ -615,6 +639,31 @@ CHỈ trả về mảng JSON kết quả, không giải thích gì thêm.`;
             }
         }
         
+        function getCefrLevelDescription() {
+            const value = parseInt(DOM.cefrSlider.value, 10);
+            const levels = ["Pre A1", "A1", "A2", "B1", "B2", "C1", "C2"];
+            const mainLevelIndex = Math.floor(value / (100 / 6));
+            const subLevelValue = (value % (100 / 6)) / (100 / 6);
+
+            const mainLevel = levels[mainLevelIndex];
+            
+            if (value >= 99) return "C2 cao";
+
+            const nextLevel = levels[mainLevelIndex + 1];
+
+            if (subLevelValue < 0.33) {
+                return `${mainLevel} thấp`;
+            } else if (subLevelValue < 0.66) {
+                return `giữa ${mainLevel} và ${nextLevel}`;
+            } else {
+                return `${mainLevel} cao`;
+            }
+        }
+
+        function updateCefrDisplay() {
+            DOM.cefrDisplay.textContent = getCefrLevelDescription();
+        }
+
         // --- Event Listeners & Initialization ---
         onAuthStateChanged(auth, user => {
             if (user) {
@@ -758,10 +807,13 @@ CHỈ trả về mảng JSON kết quả, không giải thích gì thêm.`;
             }
         });
 
+        DOM.cefrSlider.addEventListener('input', updateCefrDisplay);
+
         // Initial setup on page load
         DOM.geminiApiKeyInput.value = localStorage.getItem('geminiApiKey') || '';
         const initialUsage = JSON.parse(localStorage.getItem('geminiUsage'))?.count || 0;
         renderGeminiUsage(initialUsage);
+        updateCefrDisplay();
 
     </script>
 </body>
