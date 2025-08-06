@@ -434,7 +434,6 @@
     <div id="feedback-area" class="text-center"></div>
 
     <script type="module">
-        // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
@@ -509,7 +508,7 @@
                 document.title = vocabSetData.title || "Vocabulary Practice";
                 document.getElementById('sidebar-title').textContent = vocabSetData.title;
 
-                this.data.words = vocabSetData.wordList || [];
+                this.data.words = (vocabSetData.wordList || []).map((word, index) => ({...word, id: word.id || `word_${index}`}));
                 this.groupWordFamilies();
                 this.parseAndStoreStructures();
                 this.applyUserProgress();
@@ -755,8 +754,12 @@
                     this.renderSelectionScreen(modeType);
                     return;
                 }
-                const item = this.data.sessionItems[this.data.currentSessionIndex++];
-                if (!item) { this.renderNextInSession(); return; }
+                const item = this.data.sessionItems[this.data.currentSessionIndex];
+                if (!item) { 
+                    this.data.currentSessionIndex++;
+                    this.renderNextInSession(); 
+                    return; 
+                }
 
                 const renderMap = {
                     'Flashcard': () => this.renderFlashcard(item),
@@ -774,13 +777,208 @@
                 };
                 
                 const renderFunction = renderMap[this.data.mode];
-                if (renderFunction) renderFunction();
-                else this.renderDashboard();
+                if (renderFunction) {
+                    this.data.currentSessionIndex++;
+                    renderFunction();
+                } else {
+                    this.renderDashboard();
+                }
             },
             
-            // --- EXERCISE RENDERERS ---
+            // --- [START] EXERCISE RENDERERS ---
             
-            // ... [All 10 render functions will be placed here] ...
+            renderFlashcard(item, isStructure = false) {
+                this.updateHeader('Study', isStructure ? 'Structure Flashcard' : 'Vocabulary Flashcard');
+                const main = document.getElementById('main-content');
+                
+                const frontHTML = isStructure ? `<p class="text-3xl font-bold text-center">${item.fullStructure}</p>` : `<p class="text-4xl font-bold">${item.word}</p>`;
+                const backHTML = isStructure ? `
+                    <div class="p-4">
+                        <p class="text-2xl font-semibold text-center">${item.translation}</p>
+                        <p class="text-sm text-slate-600 dark:text-slate-400 mt-2 text-center">${(item.applicationExamples || [])[0] || ''}</p>
+                    </div>
+                ` : `
+                    <div class="p-4 text-center">
+                        <p class="text-2xl font-semibold">${item.meaning}</p>
+                        <p class="text-lg text-slate-600 dark:text-slate-400 mt-2">${item.pronunciation} - (${item.type})</p>
+                        <p class="text-sm text-slate-500 dark:text-slate-400 italic mt-4">"${item.exampleSentence}"</p>
+                        <button id="explore-family-btn" class="btn btn-secondary !py-2 !px-4 mt-4 text-sm"><i class="fas fa-project-diagram mr-2"></i>Khám phá họ từ</button>
+                    </div>
+                `;
+
+                main.innerHTML = `
+                    <div class="fade-in">
+                        <div class="flex justify-between items-center mb-4">
+                            <button id="back-btn" class="btn btn-secondary"><i class="fas fa-arrow-left mr-2"></i> Back</button>
+                            <div class="text-lg font-semibold">${this.data.currentSessionIndex} / ${this.data.sessionItems.length}</div>
+                            <button id="next-btn" class="btn btn-main-action">Next <i class="fas fa-arrow-right ml-2"></i></button>
+                        </div>
+                        <div class="card glass-panel flex items-center justify-center">
+                            <div class="flashcard-container">
+                                <div class="flashcard" id="flashcard">
+                                    <div class="flashcard-face flashcard-front">${frontHTML}</div>
+                                    <div class="flashcard-face flashcard-back">${backHTML}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('back-btn').addEventListener('click', () => this.renderSelectionScreen('study'));
+                document.getElementById('flashcard').addEventListener('click', (e) => e.currentTarget.classList.toggle('is-flipped'));
+                document.getElementById('next-btn').addEventListener('click', () => this.renderNextInSession());
+                if (!isStructure) {
+                    document.getElementById('explore-family-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.renderWordFamilyMindmap(item);
+                    });
+                }
+            },
+
+            renderWordFamilyMindmap(item) {
+                this.updateHeader('Study', 'Word Family Explorer');
+                const main = document.getElementById('main-content');
+                const familyRoot = item.familyRoot;
+                const familyWords = this.data.wordFamilies[familyRoot] || [item];
+
+                main.innerHTML = `
+                    <div class="fade-in">
+                        <div class="mb-4">
+                            <button id="back-btn" class="btn btn-secondary"><i class="fas fa-arrow-left mr-2"></i> Back</button>
+                        </div>
+                        <div class="card glass-panel min-h-[60vh] flex flex-col">
+                            <h2 class="text-2xl font-bold text-center mb-4">Họ từ: <span class="text-violet-700 dark:text-violet-300">${familyRoot}</span></h2>
+                            <div class="mindmap-container">
+                                <div class="mindmap" id="mindmap">
+                                    <div class="mindmap-center">${familyRoot}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                const mindmap = document.getElementById('mindmap');
+                const radius = Math.min(mindmap.clientWidth, mindmap.clientHeight) / 2.5 || 150;
+                const angleStep = (2 * Math.PI) / familyWords.length;
+
+                familyWords.forEach((word, index) => {
+                    const angle = index * angleStep;
+                    const x = radius * Math.cos(angle);
+                    const y = radius * Math.sin(angle);
+
+                    const node = document.createElement('div');
+                    node.className = 'mindmap-node';
+                    node.style.transform = `translate(${x}px, ${y}px)`;
+                    node.innerHTML = `<p class="font-bold">${word.word}</p><p class="text-xs text-slate-500">(${word.type})</p>`;
+                    mindmap.appendChild(node);
+                });
+
+                document.getElementById('back-btn').addEventListener('click', () => this.renderSelectionScreen('study'));
+            },
+
+            renderWordFamilyMatching() {
+                const familyRoot = this.shuffleArray(Object.keys(this.data.wordFamilies))[0] || this.data.words[0].familyRoot;
+                this.data.wordFamilyState.familyWords = this.data.wordFamilies[familyRoot];
+                this.data.wordFamilyState.matchedWords = [];
+                this.data.wordFamilyState.selected = { word: null, type: null, meaning: null, pronunciation: null };
+
+                const renderColumns = () => {
+                    const familyWords = this.data.wordFamilyState.familyWords;
+                    const words = this.shuffleArray(familyWords.map(w => ({ text: w.word, id: w.id })));
+                    const types = this.shuffleArray(familyWords.map(w => ({ text: w.type, id: w.id })));
+                    const meanings = this.shuffleArray(familyWords.map(w => ({ text: w.meaning, id: w.id })));
+                    const pronunciations = this.shuffleArray(familyWords.map(w => ({ text: w.pronunciation, id: w.id })));
+
+                    const createColumn = (title, items, category) => `
+                        <div class="flex-1">
+                            <h4 class="font-bold text-center mb-3 text-slate-600">${title}</h4>
+                            <div class="flex flex-col gap-2" data-category="${category}">
+                                ${items.map(item => `<button data-id="${item.id}" class="p-3 rounded-lg text-sm text-center answer-option">${item.text}</button>`).join('')}
+                            </div>
+                        </div>`;
+
+                    document.getElementById('main-content').innerHTML = `
+                        <div class="fade-in">
+                            <h3 class="text-xl font-bold mb-4 text-center text-slate-800">Word Family Matching</h3>
+                            <p class="text-center text-slate-500 mb-6">Nối các mục ở 4 cột để tạo thành các từ đúng trong họ từ "${familyRoot}".</p>
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                ${createColumn('Từ vựng', words, 'word')}
+                                ${createColumn('Loại từ', types, 'type')}
+                                ${createColumn('Nghĩa', meanings, 'meaning')}
+                                ${createColumn('Phiên âm', pronunciations, 'pronunciation')}
+                            </div>
+                            <div class="text-center mt-6">
+                                <button id="check-family-btn" class="btn btn-main-action" disabled>Kiểm tra</button>
+                            </div>
+                        </div>`;
+
+                    document.querySelectorAll('.answer-option').forEach(btn => btn.onclick = (e) => handleFamilySelection(e.target));
+                    document.getElementById('check-family-btn').onclick = checkFamilyMatch;
+                };
+                
+                const handleFamilySelection = (selectedButton) => {
+                    const category = selectedButton.parentElement.dataset.category;
+                    selectedButton.parentElement.querySelectorAll('.answer-option').forEach(btn => btn.classList.remove('selected'));
+                    selectedButton.classList.add('selected');
+                    this.data.wordFamilyState.selected[category] = selectedButton;
+                    const allSelected = Object.values(this.data.wordFamilyState.selected).every(val => val !== null);
+                    document.getElementById('check-family-btn').disabled = !allSelected;
+                };
+
+                const checkFamilyMatch = () => {
+                    const selectedWordId = this.data.wordFamilyState.selected.word.dataset.id;
+                    const isCorrect = Object.values(this.data.wordFamilyState.selected).every(btn => btn.dataset.id === selectedWordId);
+                    const selectedButtons = Object.values(this.data.wordFamilyState.selected);
+                    selectedButtons.forEach(btn => btn.classList.add(isCorrect ? 'correct' : 'incorrect'));
+                    
+                    if (isCorrect) {
+                        this.data.wordFamilyState.matchedWords.push(selectedWordId);
+                        selectedButtons.forEach(btn => { btn.disabled = true; btn.classList.remove('selected'); });
+                        if (this.data.wordFamilyState.matchedWords.length === this.data.wordFamilyState.familyWords.length) {
+                            this.showFeedback(true, `<p class="text-green-600 font-bold text-lg">Hoàn hảo! Bạn đã ghép đúng cả họ từ. <i class="fas fa-award"></i></p>`);
+                        }
+                    } else {
+                        setTimeout(() => selectedButtons.forEach(btn => btn.classList.remove('incorrect', 'selected')), 1000);
+                    }
+                    this.data.wordFamilyState.selected = { word: null, type: null, meaning: null, pronunciation: null };
+                    document.getElementById('check-family-btn').disabled = true;
+                };
+
+                renderColumns();
+            },
+
+            // ... All other 9 render functions will be here ...
+
+            // --- [END] EXERCISE RENDERERS ---
+            
+            showFeedback(isCorrect, customMessage = null) {
+                const feedbackArea = document.getElementById('feedback-area');
+                feedbackArea.innerHTML = '';
+                if (customMessage) {
+                    feedbackArea.innerHTML = customMessage;
+                } else if (isCorrect) {
+                    feedbackArea.innerHTML = `<p class="text-green-600 font-bold text-lg">Chính xác! <i class="fas fa-check-circle"></i></p>`;
+                } else {
+                    feedbackArea.innerHTML = `<p class="text-red-600 font-bold text-lg">Chưa đúng! <i class="fas fa-times-circle"></i> Đáp án đúng là: <strong class="underline">${this.data.currentCorrectAnswer}</strong></p>`;
+                }
+                const nextButton = document.createElement('button');
+                nextButton.textContent = 'Câu tiếp theo';
+                nextButton.className = 'btn btn-main-action mt-4';
+                nextButton.onclick = () => { feedbackArea.innerHTML = ''; this.renderNextInSession(); };
+                feedbackArea.appendChild(nextButton);
+            },
+
+            checkMCQAnswer(selectedOption) {
+                const buttons = document.querySelectorAll('.answer-option');
+                buttons.forEach(btn => btn.disabled = true);
+                const isCorrect = selectedOption.textContent === this.data.currentCorrectAnswer;
+                selectedOption.classList.add(isCorrect ? 'correct' : 'incorrect');
+                if (!isCorrect) {
+                    buttons.forEach(btn => {
+                        if (btn.textContent === this.data.currentCorrectAnswer) btn.classList.add('correct');
+                    });
+                }
+                this.showFeedback(isCorrect);
+            },
 
             // --- UTILITY & HELPER FUNCTIONS ---
             showErrorState(message) {
