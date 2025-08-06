@@ -236,7 +236,7 @@
     </div>
     
     <div id="custom-alert-modal" class="modal"></div>
-    <div id="context-menu" class="glass-panel !rounded-lg !p-2 min-w-[180px] shadow-2xl"></div>
+    <div id="context-menu" class="glass-panel !rounded-lg !p-2 min-w-[250px] shadow-2xl"></div>
 
     <div id="manual-prompt-modal" class="modal">
         <div class="modal-content glass-panel p-8 w-full max-w-4xl max-h-[90vh] flex flex-col">
@@ -930,6 +930,7 @@ CHỈ trả về mảng JSON kết quả, không giải thích gì thêm.`;
         }, true);
         
         document.addEventListener('click', () => { DOM.contextMenu.style.display = 'none'; });
+        
         DOM.dataTableBody.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             const target = e.target.closest('[data-field]');
