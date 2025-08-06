@@ -78,6 +78,9 @@
         #data-table th { position: sticky; top: 0; background-color: rgba(255,255,255,0.6); backdrop-filter: blur(5px); }
         body.dark #data-table th { background-color: rgba(29, 39, 58, 0.6); }
         #gemini-usage-bar { transition: width 0.5s ease-in-out; }
+        [contenteditable]:focus { outline: 2px solid var(--primary-accent); background-color: rgba(255, 255, 255, 0.7); border-radius: 4px; }
+        #context-menu { position: absolute; z-index: 1000; display: none; }
+        .needs-review { border-left: 4px solid #f59e0b; }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -145,19 +148,6 @@
                                 <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro (Chất lượng cao)</option>
                             </select>
                         </div>
-                        <div>
-                            <label for="cefr-level-slider" class="block text-sm font-medium text-gray-700 mb-1">Trình độ (CEFR)</label>
-                            <input type="range" id="cefr-level-slider" min="0" max="100" value="50" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700">
-                            <div class="flex justify-between text-xs mt-1">
-                                <span>A1</span>
-                                <span>A2</span>
-                                <span>B1</span>
-                                <span>B2</span>
-                                <span>C1</span>
-                                <span>C2</span>
-                            </div>
-                            <p id="cefr-level-display" class="text-center font-semibold mt-2"></p>
-                        </div>
                     </div>
                      <div id="gemini-usage-tracker" class="space-y-2 mt-6">
                         <div class="flex flex-wrap justify-between items-center gap-2">
@@ -179,7 +169,7 @@
             <!-- Right Column (Scrollable) -->
             <main class="lg:col-span-3 space-y-8">
                  <div class="glass-panel p-6">
-                    <h2 class="text-2xl font-bold text-gray-700 mb-4">3. Nhập liệu</h2>
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4">3. Nhập liệu & Cài đặt</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label for="vocab-csv-upload" class="block text-sm font-medium text-gray-700 mb-1">File Từ vựng (.csv)</label>
@@ -193,6 +183,19 @@
                             <input type="file" id="structures-csv-upload" class="hidden" accept=".csv">
                             <p id="structures-file-name" class="text-gray-600 mt-2 text-sm text-center"></p>
                         </div>
+                    </div>
+                     <div class="mt-6">
+                        <label for="cefr-level-slider" class="block text-sm font-medium text-gray-700 mb-1">Trình độ (CEFR)</label>
+                        <input type="range" id="cefr-level-slider" min="0" max="100" value="50" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700">
+                        <div class="flex justify-between text-xs mt-1">
+                            <span>A1</span>
+                            <span>A2</span>
+                            <span>B1</span>
+                            <span>B2</span>
+                            <span>C1</span>
+                            <span>C2</span>
+                        </div>
+                        <p id="cefr-level-display" class="text-center font-semibold mt-2"></p>
                     </div>
                     <div class="text-center mt-4">
                         <button id="process-files-btn" class="btn btn-primary">Xử lý và Ánh xạ Dữ liệu</button>
@@ -233,6 +236,7 @@
     </div>
     
     <div id="custom-alert-modal" class="modal"></div>
+    <div id="context-menu" class="glass-panel !rounded-lg !p-2 min-w-[180px] shadow-2xl"></div>
 
     <div id="manual-prompt-modal" class="modal">
         <div class="modal-content glass-panel p-8 w-full max-w-4xl max-h-[90vh] flex flex-col">
@@ -320,13 +324,31 @@
             closeManualModalBtn: document.getElementById('close-manual-modal-btn'),
             cefrSlider: document.getElementById('cefr-level-slider'),
             cefrDisplay: document.getElementById('cefr-level-display'),
+            contextMenu: document.getElementById('context-menu'),
         };
 
         // --- Utility Functions ---
-        function showAlert(message) {
-            DOM.alertModal.innerHTML = `<div class="modal-content glass-panel text-center p-8"><p class="text-lg font-medium text-slate-800 dark:text-slate-200 mb-6">${message}</p><button id="alert-ok-btn" class="btn btn-primary">OK</button></div>`;
-            DOM.alertModal.classList.add('is-open');
-            document.getElementById('alert-ok-btn').onclick = () => DOM.alertModal.classList.remove('is-open');
+        function showAlert(message, isConfirm = false) {
+            return new Promise(resolve => {
+                const buttonsHTML = isConfirm 
+                    ? `<button id="alert-cancel-btn" class="btn btn-secondary">Hủy</button><button id="alert-ok-btn" class="btn btn-primary">Đồng ý</button>`
+                    : `<button id="alert-ok-btn" class="btn btn-primary">OK</button>`;
+                
+                DOM.alertModal.innerHTML = `<div class="modal-content glass-panel text-center p-8"><p class="text-lg font-medium text-slate-800 dark:text-slate-200 mb-6">${message}</p><div class="flex justify-center gap-4">${buttonsHTML}</div></div>`;
+                DOM.alertModal.classList.add('is-open');
+                
+                document.getElementById('alert-ok-btn').onclick = () => {
+                    DOM.alertModal.classList.remove('is-open');
+                    resolve(true);
+                };
+
+                if (isConfirm) {
+                    document.getElementById('alert-cancel-btn').onclick = () => {
+                        DOM.alertModal.classList.remove('is-open');
+                        resolve(false);
+                    };
+                }
+            });
         }
 
         async function callGeminiAPI(prompt, model) {
@@ -416,6 +438,7 @@
                     distractors_en: [],
                     distractors_vi: [],
                     isEnriched: false,
+                    needsReview: false,
                 };
             });
         }
@@ -426,12 +449,12 @@
 
             localWordList.forEach((word, index) => {
                 const row = document.createElement('tr');
-                row.className = 'border-b border-white/30 dark:border-slate-700 align-top';
+                row.className = `border-b border-white/30 dark:border-slate-700 align-top ${word.needsReview ? 'needs-review' : ''}`;
 
-                const structuresHTML = word.structures.map(s => {
+                const structuresHTML = word.structures.map((s, s_idx) => {
                     const examples = Array.isArray(s.applicationExamples) ? s.applicationExamples : [];
                     const examplesHTML = examples.length > 0
-                        ? `<ul class="list-disc list-inside mt-1 text-sky-700 dark:text-sky-400">${examples.map(ex => `<li>${ex}</li>`).join('')}</ul>`
+                        ? `<ul class="list-disc list-inside mt-1 text-sky-700 dark:text-sky-400">${examples.map((ex, ex_idx) => `<li contenteditable="true" data-word-index="${index}" data-structure-index="${s_idx}" data-example-index="${ex_idx}">${ex}</li>`).join('')}</ul>`
                         : '';
                     return `
                     <div class="p-1.5 bg-violet-100 dark:bg-slate-700 rounded-md mb-1">
@@ -444,29 +467,29 @@
                 const exampleHTML = word.exampleSentence ? `
                     <div class="mt-2 p-1.5 bg-green-100 dark:bg-emerald-900/50 rounded-md">
                         <p class="font-semibold text-green-800 dark:text-green-300">Ví dụ (Từ vựng):</p>
-                        <p class="text-xs text-slate-600 dark:text-slate-400">${word.exampleSentence}</p>
+                        <p class="text-xs text-slate-600 dark:text-slate-400" contenteditable="true" data-word-index="${index}" data-field="exampleSentence">${word.exampleSentence}</p>
                     </div>` : '';
 
                 const distractorsHTML = word.distractors_en.length > 0 ? `
                     <div class="text-xs">
                         <p class="font-semibold">EN:</p>
-                        <ul class="list-disc list-inside">
-                            ${word.distractors_en.map(d => `<li>${d}</li>`).join('')}
+                        <ul class="list-disc list-inside" data-word-index="${index}" data-field="distractors_en">
+                            ${word.distractors_en.map((d, d_idx) => `<li contenteditable="true" data-distractor-index="${d_idx}">${d}</li>`).join('')}
                         </ul>
                         <p class="font-semibold mt-1">VI:</p>
-                        <ul class="list-disc list-inside">
-                            ${word.distractors_vi.map(d => `<li>${d}</li>`).join('')}
+                        <ul class="list-disc list-inside" data-word-index="${index}" data-field="distractors_vi">
+                            ${word.distractors_vi.map((d, d_idx) => `<li contenteditable="true" data-distractor-index="${d_idx}">${d}</li>`).join('')}
                         </ul>
                     </div>
                 ` : '<span class="text-xs text-gray-400">Chưa có</span>';
 
                 row.innerHTML = `
                     <td class="p-3">
-                        <p class="font-bold text-base">${word.word}</p>
-                        <p class="font-mono text-sm text-violet-700 dark:text-violet-400">${word.pronunciation}</p>
+                        <p class="font-bold text-base" contenteditable="true" data-word-index="${index}" data-field="word">${word.word}</p>
+                        <p class="font-mono text-sm text-violet-700 dark:text-violet-400" contenteditable="true" data-word-index="${index}" data-field="pronunciation">${word.pronunciation}</p>
                         <p class="text-xs text-slate-500">(${word.type})</p>
                     </td>
-                    <td class="p-3">${word.meaning}</td>
+                    <td class="p-3" contenteditable="true" data-word-index="${index}" data-field="meaning">${word.meaning}</td>
                     <td class="p-3 text-xs">${structuresHTML}${exampleHTML}</td>
                     <td class="p-3">${distractorsHTML}</td>
                     <td class="p-3 text-center" id="ai-status-${index}">
@@ -477,7 +500,7 @@
             });
         }
         
-        function getPromptForBatch(batch) {
+        function getPromptForBatch(batch, isCorrection = false, correctionReason = "") {
              const cefrLevel = getCefrLevelDescription();
              const batchInput = batch.map(wordData => ({
                 id: wordData.id,
@@ -486,9 +509,12 @@
                 meaning: wordData.meaning,
                 structures: wordData.structures.map(s => ({ phrase: s.phrase, meaning: s.meaning }))
             }));
+            
+            const correctionInstruction = isCorrection ? `LƯU Ý SỬA LỖI: Ở lần trước, kết quả của bạn đã không đạt chuẩn vì: "${correctionReason}". Lần này, hãy đặc biệt chú ý để khắc phục các lỗi này.` : "";
 
             return `Bạn là một AI chuyên gia về ngôn ngữ Anh, chuyên tạo tài liệu học tập chất lượng cao.
 Hãy xử lý mảng JSON đầu vào sau đây. Với MỖI object trong mảng, hãy tạo ra một object mới trong mảng kết quả.
+${correctionInstruction}
 Đầu vào: ${JSON.stringify(batchInput)}
 
 YÊU CẦU:
@@ -510,7 +536,7 @@ YÊU CẦU CHI TIẾT CHO TỪNG TRƯỜNG:
     - Cùng loại từ (danh từ, động từ, etc.).
     - **KHÔNG được là từ đồng nghĩa trực tiếp**.
     - Phải liên quan về mặt chủ đề hoặc ngữ cảnh để tạo sự phân vân hợp lý. Ví dụ: với từ "result" (kết quả), các từ gây nhiễu tốt là "cause" (nguyên nhân), "process" (quá trình), "effort" (nỗ lực). Các từ này đều liên quan đến một hành động và hệ quả của nó nhưng có vai trò khác nhau. "consequence" (hậu quả) là một từ gây nhiễu TỆ vì nghĩa quá gần.
-4.  "d_vi": Tạo 3 định nghĩa tiếng Việt gây nhiễu, nghe hợp lý nhưng không chính xác.
+4.  "d_vi": Tạo 3 định nghĩa tiếng Việt gây nhiễu, nghe hợp lý nhưng không chính xác. **KHÔNG được dịch thẳng các từ gây nhiễu tiếng Anh**.
 5.  "s": Một mảng các object cấu trúc. Với mỗi cấu trúc đầu vào, tạo một object với:
     - "p": Cấu trúc gốc chính xác.
     - "exs": Một mảng chứa **MỘT** câu ví dụ tiếng Anh hoàn chỉnh.
@@ -519,36 +545,72 @@ YÊU CẦU CHI TIẾT CHO TỪNG TRƯỜNG:
 CHỈ trả về mảng JSON kết quả, không giải thích gì thêm.`;
         }
 
+        function qualityCheck(wordData, aiData) {
+            const reasons = [];
+            if (!aiData.ex || aiData.ex.trim() === '') reasons.push("Thiếu câu ví dụ cho từ vựng.");
+            if (!aiData.d_en || !Array.isArray(aiData.d_en) || aiData.d_en.length !== 3) reasons.push("Từ gây nhiễu tiếng Anh không đủ 3 mục.");
+            if (!aiData.d_vi || !Array.isArray(aiData.d_vi) || aiData.d_vi.length !== 3) reasons.push("Từ gây nhiễu tiếng Việt không đủ 3 mục.");
+            
+            // Basic translation check
+            if (aiData.d_en && aiData.d_vi && aiData.d_en.length === 3 && aiData.d_vi.length === 3) {
+                if (aiData.d_vi.some(vi => aiData.d_en.includes(vi))) {
+                     reasons.push("Từ gây nhiễu tiếng Việt có vẻ là bản dịch trực tiếp.");
+                }
+            }
+
+            if (wordData.structures.length > 0) {
+                if (!aiData.s || !Array.isArray(aiData.s) || aiData.s.length !== wordData.structures.length) {
+                    reasons.push("Số lượng ví dụ cấu trúc không khớp.");
+                } else {
+                    aiData.s.forEach(struct => {
+                        if (!struct.exs || !Array.isArray(struct.exs) || struct.exs.length === 0 || struct.exs[0].trim() === '') {
+                             reasons.push(`Thiếu ví dụ cho cấu trúc "${struct.p}".`);
+                        }
+                    });
+                }
+            }
+            
+            return { passed: reasons.length === 0, reasons };
+        }
+
         function processAiResults(aiDataArray) {
+            let needsReviewBatch = [];
             if (!Array.isArray(aiDataArray)) {
                 throw new Error("Kết quả trả về không phải là một mảng JSON hợp lệ.");
             }
             aiDataArray.forEach(enrichedData => {
                 const wordToUpdate = localWordList.find(w => w.id === enrichedData.id);
                 if (wordToUpdate) {
-                    wordToUpdate.exampleSentence = enrichedData.ex || '';
-                    wordToUpdate.distractors_en = enrichedData.d_en || [];
-                    wordToUpdate.distractors_vi = enrichedData.d_vi || [];
-                    if (enrichedData.s && Array.isArray(enrichedData.s)) {
-                        enrichedData.s.forEach(enrichedStruct => {
-                            const originalStruct = wordToUpdate.structures.find(s => s.phrase === enrichedStruct.p);
-                            if (originalStruct) {
-                                let examples = enrichedStruct.exs || [];
-                                if (!Array.isArray(examples)) {
-                                    examples = [String(examples)];
+                    const { passed, reasons } = qualityCheck(wordToUpdate, enrichedData);
+                    if (passed) {
+                        wordToUpdate.exampleSentence = enrichedData.ex || '';
+                        wordToUpdate.distractors_en = enrichedData.d_en || [];
+                        wordToUpdate.distractors_vi = enrichedData.d_vi || [];
+                        if (enrichedData.s && Array.isArray(enrichedData.s)) {
+                            enrichedData.s.forEach(enrichedStruct => {
+                                const originalStruct = wordToUpdate.structures.find(s => s.phrase === enrichedStruct.p);
+                                if (originalStruct) {
+                                    let examples = enrichedStruct.exs || [];
+                                    if (!Array.isArray(examples)) examples = [String(examples)];
+                                    originalStruct.applicationExamples = examples;
                                 }
-                                originalStruct.applicationExamples = examples;
-                            }
-                        });
+                            });
+                        }
+                        wordToUpdate.isEnriched = true;
+                        wordToUpdate.needsReview = false;
+                    } else {
+                        wordToUpdate.needsReview = true;
+                        wordToUpdate.reviewReasons = reasons;
+                        needsReviewBatch.push(wordToUpdate);
                     }
-                    wordToUpdate.isEnriched = true;
                 }
             });
             renderTable();
+            return needsReviewBatch;
         }
 
         async function enrichWithAI() {
-            const wordsToEnrich = localWordList.filter(w => !w.isEnriched);
+            let wordsToEnrich = localWordList.filter(w => !w.isEnriched);
             if (wordsToEnrich.length === 0) {
                 showAlert("Tất cả các từ đã được làm giàu dữ liệu.");
                 return;
@@ -560,26 +622,46 @@ CHỈ trả về mảng JSON kết quả, không giải thích gì thêm.`;
             const BATCH_SIZE = 50;
             const selectedModel = DOM.aiModelSelect.value;
             let processedCount = localWordList.length - wordsToEnrich.length;
+            let iteration = 1;
 
-            for (let i = 0; i < wordsToEnrich.length; i += BATCH_SIZE) {
-                const batch = wordsToEnrich.slice(i, i + BATCH_SIZE);
-                const prompt = getPromptForBatch(batch);
+            while(wordsToEnrich.length > 0 && iteration <= 3) { // Limit to 3 retries
+                DOM.aiLog.textContent = `Bắt đầu làm giàu (Lần ${iteration})...`;
+                let allBatchPromises = [];
 
-                try {
-                    const aiDataArray = await callGeminiAPI(prompt, selectedModel);
-                    processAiResults(aiDataArray);
-                    processedCount += batch.length;
-                    DOM.aiLog.textContent = `Đã xử lý ${processedCount}/${localWordList.length} từ...`;
-                } catch (error) {
-                    console.error(`Lỗi khi xử lý lô bắt đầu từ từ có ID ${batch[0].id}:`, error);
-                    showAlert(`Đã xảy ra lỗi trong quá trình xử lý. Vui lòng thử lại. Lỗi: ${error.message}`);
-                    break; 
+                for (let i = 0; i < wordsToEnrich.length; i += BATCH_SIZE) {
+                    const batch = wordsToEnrich.slice(i, i + BATCH_SIZE);
+                    const isCorrection = iteration > 1;
+                    const correctionReason = isCorrection ? batch.map(w => `${w.word}: ${w.reviewReasons.join(', ')}`).join('; ') : "";
+                    const prompt = getPromptForBatch(batch, isCorrection, correctionReason);
+                    
+                    const promise = callGeminiAPI(prompt, selectedModel)
+                        .then(aiDataArray => {
+                            processedCount += batch.length;
+                            DOM.aiLog.textContent = `Đã xử lý ${processedCount}/${localWordList.length} từ...`;
+                            return processAiResults(aiDataArray);
+                        })
+                        .catch(error => {
+                            console.error(`Lỗi khi xử lý lô`, error);
+                            showAlert(`Lỗi API: ${error.message}`);
+                            return []; // Return empty array on error to not break Promise.all
+                        });
+                    allBatchPromises.push(promise);
+                }
+
+                const reviewBatches = await Promise.all(allBatchPromises);
+                wordsToEnrich = reviewBatches.flat();
+
+                if (wordsToEnrich.length > 0) {
+                    const reasonsSummary = wordsToEnrich.map(w => `<li><b>${w.word}</b>: ${w.reviewReasons.join(', ')}</li>`).join('');
+                    const userConfirmed = await showAlert(`Phát hiện ${wordsToEnrich.length} mục chưa đạt chuẩn:<ul class="text-left list-disc list-inside mt-2">${reasonsSummary}</ul>Bạn có muốn tự động gửi lại cho AI sửa không?`, true);
+                    if (!userConfirmed) break;
+                    iteration++;
                 }
             }
 
-            DOM.aiLog.textContent = `Hoàn tất! Đã làm giàu ${processedCount} từ.`;
+            DOM.aiLog.textContent = `Hoàn tất!`;
             DOM.enrichAiBtn.disabled = false;
-            DOM.enrichAiBtn.innerHTML = `<i class="fas fa-wand-magic-sparkles mr-2"></i>Làm giàu bằng API`;
+            DOM.enrichAiBtn.innerHTML = `<i class="fas fa-wand-magic-sparkles mr-2"></i>Làm giàu tự động (API)`;
         }
 
         async function loadTestData(testId) {
@@ -612,10 +694,15 @@ CHỈ trả về mảng JSON kết quả, không giải thích gì thêm.`;
             DOM.uploadLog.className = 'font-semibold mt-2 h-5 text-blue-600';
 
             try {
+                const finalWordList = localWordList.map(word => {
+                    const { needsReview, reviewReasons, ...rest } = word;
+                    return rest;
+                });
+
                 const setData = {
                     title,
-                    wordList: localWordList,
-                    totalWords: localWordList.length,
+                    wordList: finalWordList,
+                    totalWords: finalWordList.length,
                     updatedAt: serverTimestamp(),
                     folderId: null,
                     type: 'assignment'
@@ -641,23 +728,31 @@ CHỈ trả về mảng JSON kết quả, không giải thích gì thêm.`;
         
         function getCefrLevelDescription() {
             const value = parseInt(DOM.cefrSlider.value, 10);
-            const levels = ["Pre A1", "A1", "A2", "B1", "B2", "C1", "C2"];
-            const mainLevelIndex = Math.floor(value / (100 / 6));
-            const subLevelValue = (value % (100 / 6)) / (100 / 6);
+            const levels = ["A1", "A2", "B1", "B2", "C1", "C2"];
+            const markers = [0, 20, 40, 60, 80, 100];
 
-            const mainLevel = levels[mainLevelIndex];
-            
-            if (value >= 99) return "C2 cao";
-
-            const nextLevel = levels[mainLevelIndex + 1];
-
-            if (subLevelValue < 0.33) {
-                return `${mainLevel} thấp`;
-            } else if (subLevelValue < 0.66) {
-                return `giữa ${mainLevel} và ${nextLevel}`;
-            } else {
-                return `${mainLevel} cao`;
+            for (let i = 0; i < markers.length; i++) {
+                if (value === markers[i]) {
+                    return `Trình độ ${levels[i]}`;
+                }
             }
+
+            const segmentIndex = markers.findIndex((marker, i) => value > marker && value < markers[i+1]);
+            
+            if (segmentIndex === -1) { 
+                return `Trình độ ${levels[levels.length - 1]}`;
+            }
+
+            const lowerBound = markers[segmentIndex];
+            const upperBound = markers[segmentIndex + 1];
+            const lowerLevel = levels[segmentIndex];
+            const upperLevel = levels[segmentIndex + 1];
+
+            const positionInSegment = (value - lowerBound) / (upperBound - lowerBound);
+            const upperPercentage = Math.round(positionInSegment * 100);
+            const lowerPercentage = 100 - upperPercentage;
+
+            return `Trình độ ${lowerPercentage}% ${lowerLevel} và ${upperPercentage}% ${upperLevel}`;
         }
 
         function updateCefrDisplay() {
@@ -796,7 +891,6 @@ CHỈ trả về mảng JSON kết quả, không giải thích gì thêm.`;
                 return;
             }
             try {
-                // Clean the input from markdown code block syntax
                 const cleanedText = resultText.replace(/^```json\s*|```\s*$/g, '');
                 const aiDataArray = JSON.parse(cleanedText);
                 processAiResults(aiDataArray);
@@ -808,6 +902,79 @@ CHỈ trả về mảng JSON kết quả, không giải thích gì thêm.`;
         });
 
         DOM.cefrSlider.addEventListener('input', updateCefrDisplay);
+
+        DOM.dataTableBody.addEventListener('blur', (e) => {
+            const target = e.target;
+            if (target.hasAttribute('contenteditable')) {
+                const wordIndex = parseInt(target.dataset.wordIndex, 10);
+                const field = target.dataset.field;
+                const newText = target.textContent;
+
+                if (isNaN(wordIndex)) return;
+                const wordData = localWordList[wordIndex];
+                if (!wordData) return;
+
+                if (field === 'distractors_en' || field === 'distractors_vi') {
+                    const distractorIndex = parseInt(target.dataset.distractorIndex, 10);
+                    if (!isNaN(distractorIndex)) wordData[field][distractorIndex] = newText;
+                } else if (target.dataset.structureIndex !== undefined) {
+                    const structureIndex = parseInt(target.dataset.structureIndex, 10);
+                    const exampleIndex = parseInt(target.dataset.exampleIndex, 10);
+                    if (!isNaN(structureIndex) && !isNaN(exampleIndex)) {
+                        wordData.structures[structureIndex].applicationExamples[exampleIndex] = newText;
+                    }
+                } else if (field) {
+                    wordData[field] = newText;
+                }
+            }
+        }, true);
+        
+        document.addEventListener('click', () => { DOM.contextMenu.style.display = 'none'; });
+        DOM.dataTableBody.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            const target = e.target.closest('[data-field]');
+            if (!target) return;
+
+            const wordIndex = parseInt(target.closest('tr').querySelector('[data-word-index]').dataset.wordIndex, 10);
+            const field = target.dataset.field;
+
+            DOM.contextMenu.innerHTML = `<div class="p-2 hover:bg-violet-200 dark:hover:bg-slate-600 rounded-md cursor-pointer" data-action="regenerate" data-word-index="${wordIndex}" data-field="${field}">Sửa bằng AI...</div>`;
+            DOM.contextMenu.style.display = 'block';
+            DOM.contextMenu.style.left = `${e.pageX}px`;
+            DOM.contextMenu.style.top = `${e.pageY}px`;
+        });
+
+        DOM.contextMenu.addEventListener('click', async (e) => {
+            const target = e.target.closest('[data-action="regenerate"]');
+            if (!target) return;
+
+            const wordIndex = parseInt(target.dataset.wordIndex, 10);
+            const field = target.dataset.field;
+            const wordData = localWordList[wordIndex];
+            
+            const instruction = prompt(`Nhập yêu cầu sửa cho "${field}" của từ "${wordData.word}":`);
+            if (!instruction) return;
+
+            const selectedModel = DOM.aiModelSelect.value;
+            const cefrLevel = getCefrLevelDescription();
+
+            const regenPrompt = `Bạn là một AI chuyên gia ngôn ngữ. Với từ sau:
+- Word: ${JSON.stringify(wordData)}
+- Yêu cầu của người dùng: "${instruction}"
+
+Hãy tạo lại chỉ riêng trường "${field}" theo yêu cầu. Toàn bộ kết quả phải phù hợp với trình độ ${cefrLevel}.
+CHỈ trả về giá trị mới cho trường đó (một chuỗi hoặc một mảng chuỗi), không trả về JSON hay giải thích gì thêm.`;
+            
+            try {
+                const resultText = await callGeminiAPI(regenPrompt, selectedModel);
+                // The API is instructed not to return JSON, so we handle the raw text/array
+                wordData[field] = resultText;
+                renderTable();
+                showAlert("Đã cập nhật thành công!");
+            } catch (error) {
+                 showAlert(`Lỗi khi sửa bằng AI: ${error.message}`);
+            }
+        });
 
         // Initial setup on page load
         DOM.geminiApiKeyInput.value = localStorage.getItem('geminiApiKey') || '';
