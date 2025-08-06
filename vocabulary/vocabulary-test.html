@@ -23,88 +23,191 @@
         :root { --blur-intensity: 12px; --saturation-intensity: 150%; --glass-bg-color: rgba(255, 255, 255, 0.45); --glass-border-color: rgba(255, 255, 255, 0.6); --shadow-color: rgba(67, 56, 202, 0.15); --primary-accent: #6d28d9; --text-primary: #0f172a; --text-secondary: #475569; --app-bg-start: #f5f7ff; --app-bg-end: #e0e7ff; }
         body.dark { --glass-bg-color: rgba(29, 39, 58, 0.45); --glass-border-color: rgba(255, 255, 255, 0.2); --shadow-color: rgba(0, 0, 0, 0.25); --primary-accent: #a78bfa; --text-primary: #f1f5f9; --text-secondary: #94a3b8; --app-bg-start: #0f172a; --app-bg-end: #1e293b; }
         body { font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--app-bg-start); background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%); color: var(--text-primary); overflow-x: hidden; position: relative; }
-        body.sidebar-open { overflow: hidden; }
-        .background-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+        .background-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none;}
         .shape { position: absolute; border-radius: 50%; box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1); filter: blur(15px); transition: opacity 0.5s ease; }
         .shape1 { width: 250px; height: 250px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); top: 10%; left: 5%; animation: float 28s infinite alternate ease-in-out; }
         .shape2 { width: 180px; height: 180px; background: linear-gradient(135deg, #14b8a6, #67e8f9); bottom: 15%; right: 10%; animation: float 32s infinite alternate ease-in-out; }
-        .shape3 { width: 120px; height: 120px; background: linear-gradient(135deg, #a78bfa, #c4b5fd); top: 20%; right: 25%; animation: float 24s infinite alternate ease-in-out; }
-        .shape4 { width: 80px; height: 80px; background: linear-gradient(135deg, #93c5fd, #bfdbfe); bottom: 5%; left: 30%; animation: float 20s infinite alternate ease-in-out; }
-        body.dark .shape { opacity: 0.4; }
         @keyframes float { from { transform: translateY(20px) scale(1) rotate(0deg); } to { transform: translateY(-20px) scale(1.05) rotate(20deg); } }
-        .app-layout { display: flex; height: 100vh; width: 100vw; position: relative; z-index: 1; transition: padding-left 0.3s ease-in-out; }
-        .glass-panel { position: relative; background: var(--glass-bg-color); backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity)); -webkit-backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity)); border-radius: 24px; border: 1px solid var(--glass-border-color); box-shadow: 0 8px 32px 0 var(--shadow-color), inset 0 2px 4px rgba(255, 255, 255, 0.2); transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); overflow: hidden; }
-        .card { padding: 1.5rem; }
-        #sidebar { position: fixed; top: 0; left: 0; height: 100%; width: 260px; padding: 1.5rem; z-index: 40; transform: translateX(-100%); transition: transform 0.3s ease-in-out; display: flex; flex-direction: column; }
-        body.sidebar-open #sidebar { transform: translateX(0); }
-        @media (min-width: 1024px) { #sidebar { position: relative; transform: translateX(0); flex-shrink: 0; } .app-layout.sidebar-collapsed #sidebar { transform: translateX(-100%); margin-left: -260px; } }
-        #sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 30; opacity: 0; visibility: hidden; transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out; }
-        body.sidebar-open #sidebar-overlay { opacity: 1; visibility: visible; }
-        @media (min-width: 1024px) { #sidebar-overlay { display: none; } }
-        .sidebar-nav-btn { display: flex; align-items: center; padding: 12px 16px; border-radius: 12px; font-weight: 600; color: var(--text-secondary); transition: all 0.2s ease-in-out; margin-bottom: 8px; }
-        .sidebar-nav-btn i { width: 20px; margin-right: 16px; text-align: center; }
-        .sidebar-nav-btn:hover { background-color: rgba(255, 255, 255, 0.4); color: var(--text-primary); transform: translateX(5px) scale(1.03); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        .sidebar-nav-btn.active { background-color: var(--primary-accent); color: white; box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3); transform: translateX(5px) scale(1.03); }
-        body.dark .sidebar-nav-btn.active { color: #1e293b; box-shadow: 0 4px 12px rgba(167, 139, 250, 0.3); }
-        body.dark .sidebar-nav-btn:hover { background-color: rgba(255, 255, 255, 0.1); }
-        #app { flex-grow: 1; height: 100vh; overflow-y: auto; padding: 1.5rem; transition: margin-left 0.3s ease-in-out; }
-        @media (min-width: 1024px) { #app { padding: 2rem; } }
-        .main-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }
-        #menu-toggle-btn { background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(4px); border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: var(--text-primary); flex-shrink: 0; }
-        .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; transform: translateY(0); }
-        .btn-main-action { background: var(--primary-accent); color: white; border-color: rgba(255, 255, 255, 0.2); box-shadow: 0 4px 15px rgba(91, 33, 182, 0.25); }
-        body.dark .btn-main-action { color: #1e293b; }
-        .btn-main-action:hover { background: #5b21b6; transform: translateY(-3px); box-shadow: 0 7px 20px rgba(91, 33, 182, 0.4); }
-        body.dark .btn-main-action:hover { background: #9333ea; }
-        .btn-secondary { background: rgba(255, 255, 255, 0.4); color: var(--text-primary); border-color: rgba(255, 255, 255, 0.6); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .btn-secondary:hover { background: rgba(255, 255, 255, 0.7); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        body.dark .btn-secondary { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
-        body.dark .btn-secondary:hover { background: rgba(255, 255, 255, 0.2); }
-        .btn:disabled { background-color: rgba(200, 200, 200, 0.7) !important; cursor: not-allowed; opacity: 0.7; transform: none !important; box-shadow: none !important; }
-        body.dark .btn:disabled { background-color: rgba(71, 85, 105, 0.7) !important; }
-        .answer-option { background: rgba(255, 255, 255, 0.3); border: 1px solid rgba(255, 255, 255, 0.4); padding: 12px; border-radius: 12px; cursor: pointer; transition: all 0.2s ease-in-out; text-align: center; color: var(--text-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .answer-option.correct { background-color: #dcfce7 !important; border-color: #22c55e !important; color: #15803d !important; cursor: not-allowed; }
-        body.dark .answer-option.correct { background-color: #052e16 !important; border-color: #16a34a !important; color: #a7f3d0 !important; }
-        .answer-option.incorrect { background-color: #fee2e2 !important; border-color: #ef4444 !important; color: #b91c1c !important; animation: shake 0.5s; }
-        body.dark .answer-option.incorrect { background-color: #450a0a !important; border-color: #dc2626 !important; color: #fecaca !important; }
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .glass-panel { position: relative; background: var(--glass-bg-color); backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity)); -webkit-backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity)); border-radius: 24px; border: 1px solid var(--glass-border-color); box-shadow: 0 8px 32px 0 var(--shadow-color); transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }
+        .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; }
+        .btn-primary { background: var(--primary-accent); color: white; box-shadow: 0 4px 15px rgba(91, 33, 182, 0.25); }
+        .btn-primary:hover { background: #5b21b6; transform: translateY(-3px); box-shadow: 0 7px 20px rgba(91, 33, 182, 0.4); }
+        .progress-bar { transition: width 0.5s ease-in-out; }
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); align-items: center; justify-content: center; }
         .modal.is-open { display: flex; }
         .modal-content { animation: scaleIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .no-select { -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
     </style>
 </head>
-<body>
-    <div id="loader-overlay" class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-[200]">
+<body oncontextmenu="return false;" class="no-select">
+    <div class="background-shapes">
+        <div class="shape shape1"></div>
+        <div class="shape shape2"></div>
+    </div>
+    
+    <div id="loader-overlay" class="modal is-open">
         <div class="w-16 h-16 border-8 border-t-violet-500 border-gray-200 rounded-full animate-spin"></div>
     </div>
     
+    <div id="custom-modal" class="modal"></div>
+
+    <div id="start-screen" class="hidden min-h-screen flex items-center justify-center p-4 relative z-10">
+        <div class="glass-panel p-8 rounded-2xl shadow-xl w-full max-w-2xl text-center">
+            <h1 id="vocab-set-title" class="text-3xl font-bold mb-2"></h1>
+            <p id="student-name" class="text-lg text-gray-600 dark:text-gray-300 mb-8"></p>
+            
+            <div class="glass-panel !rounded-xl p-6 space-y-4">
+                 <h2 class="text-xl font-bold text-left">Tiến độ học tập</h2>
+                 <div>
+                    <div class="flex justify-between font-semibold mb-1">
+                        <span>Kết quả gần nhất</span>
+                        <span id="latest-score">N/A</span>
+                    </div>
+                 </div>
+                 <div>
+                    <div class="flex justify-between font-semibold mb-1">
+                        <span>Từ vựng đã học</span>
+                        <span id="words-progress-text">0/0</span>
+                    </div>
+                    <div class="w-full bg-gray-200/50 rounded-full h-2.5"><div id="words-progress-bar" class="progress-bar bg-violet-600 h-2.5 rounded-full" style="width: 0%"></div></div>
+                 </div>
+                 <div>
+                    <div class="flex justify-between font-semibold mb-1">
+                        <span>Cấu trúc đã học</span>
+                        <span id="structures-progress-text">0/0</span>
+                    </div>
+                    <div class="w-full bg-gray-200/50 rounded-full h-2.5"><div id="structures-progress-bar" class="progress-bar bg-teal-500 h-2.5 rounded-full" style="width: 0%"></div></div>
+                 </div>
+            </div>
+
+            <button id="start-learning-btn" class="btn btn-primary text-xl mt-8">Bắt đầu học</button>
+        </div>
+    </div>
+
     <div id="app-container" class="hidden">
-        <!-- The full vocabulary app UI from template.html will be injected here by script -->
+        <!-- Main App UI will be injected here -->
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
         const db = getFirestore(initializeApp(window.firebaseConfig));
         let submissionId = null;
-        
-        const VocabApp = {
-            // ... Full JS from template.html, modified for Firestore ...
+        let submissionData = null;
+        let vocabSetData = null;
+
+        const DOM = {
+            loaderOverlay: document.getElementById('loader-overlay'),
+            customModal: document.getElementById('custom-modal'),
+            startScreen: document.getElementById('start-screen'),
+            vocabSetTitle: document.getElementById('vocab-set-title'),
+            studentName: document.getElementById('student-name'),
+            latestScore: document.getElementById('latest-score'),
+            wordsProgressText: document.getElementById('words-progress-text'),
+            wordsProgressBar: document.getElementById('words-progress-bar'),
+            structuresProgressText: document.getElementById('structures-progress-text'),
+            structuresProgressBar: document.getElementById('structures-progress-bar'),
+            startLearningBtn: document.getElementById('start-learning-btn'),
+            appContainer: document.getElementById('app-container'),
         };
 
-        async function main() {
+        function showAlert(message) {
+            DOM.customModal.innerHTML = `<div class="modal-content glass-panel text-center p-8"><p class="text-lg font-medium">${message}</p><button id="alert-ok-btn" class="btn btn-primary mt-4">OK</button></div>`;
+            DOM.customModal.classList.add('is-open');
+            document.getElementById('alert-ok-btn').onclick = () => DOM.customModal.classList.remove('is-open');
+        }
+
+        function renderStartScreen() {
+            DOM.vocabSetTitle.textContent = vocabSetData.title;
+            DOM.studentName.textContent = `Học viên: ${submissionData.studentName}`;
+
+            const progress = submissionData.progress || { learnedWords: [], learnedStructures: [], latestQuizResult: null };
+            
+            // Score
+            DOM.latestScore.textContent = progress.latestQuizResult ? `${progress.latestQuizResult.score}/${progress.latestQuizResult.total}` : "Chưa có";
+
+            // Words
+            const totalWords = vocabSetData.wordList.length;
+            const learnedWordsCount = progress.learnedWords.length;
+            DOM.wordsProgressText.textContent = `${learnedWordsCount}/${totalWords}`;
+            DOM.wordsProgressBar.style.width = totalWords > 0 ? `${(learnedWordsCount / totalWords) * 100}%` : '0%';
+
+            // Structures
+            const totalStructures = vocabSetData.wordList.reduce((sum, word) => sum + word.structures.length, 0);
+            const learnedStructuresCount = progress.learnedStructures.length;
+            DOM.structuresProgressText.textContent = `${learnedStructuresCount}/${totalStructures}`;
+            DOM.structuresProgressBar.style.width = totalStructures > 0 ? `${(learnedStructuresCount / totalStructures) * 100}%` : '0%';
+            
+            DOM.startScreen.classList.remove('hidden');
+        }
+
+        async function loadInitialData(id) {
+            try {
+                const submissionRef = doc(db, 'submissions', id);
+                const submissionSnap = await getDoc(submissionRef);
+
+                if (!submissionSnap.exists()) {
+                    throw new Error("Mã truy cập không hợp lệ.");
+                }
+                submissionData = submissionSnap.data();
+
+                if (!submissionData.testSnapshot) {
+                     const testRef = doc(db, 'vocab_sets', submissionData.testId);
+                     const testSnap = await getDoc(testRef);
+                     if (!testSnap.exists()) throw new Error("Không tìm thấy bộ từ vựng tương ứng.");
+                     vocabSetData = testSnap.data();
+                     await updateDoc(submissionRef, { testSnapshot: vocabSetData, startTime: serverTimestamp() });
+                } else {
+                    vocabSetData = submissionData.testSnapshot;
+                }
+
+                if (!submissionData.progress) {
+                    await updateDoc(submissionRef, { progress: { learnedWords: [], learnedStructures: [], latestQuizResult: null } });
+                    submissionData.progress = { learnedWords: [], learnedStructures: [], latestQuizResult: null };
+                }
+                
+                renderStartScreen();
+
+            } catch (error) {
+                showAlert(`Lỗi tải dữ liệu: ${error.message}`);
+            } finally {
+                DOM.loaderOverlay.classList.remove('is-open');
+            }
+        }
+
+        function startApp() {
+            DOM.startScreen.classList.add('hidden');
+            DOM.appContainer.classList.remove('hidden');
+            // Here you would inject the full app UI and initialize it
+            DOM.appContainer.innerHTML = `
+                <div class="text-center p-8">
+                    <h1 class="text-3xl font-bold">App học từ vựng sẽ được triển khai tại đây</h1>
+                    <p class="mt-4">Các chức năng như Flashcards, Luyện tập sẽ được xây dựng dựa trên dữ liệu đã có.</p>
+                </div>
+            `;
+        }
+
+        function initSecurity() {
+            ['copy', 'paste', 'cut'].forEach(event => {
+                document.addEventListener(event, e => e.preventDefault());
+            });
+        }
+
+        function main() {
             const params = new URLSearchParams(window.location.search);
             submissionId = params.get('submission_id');
             if (submissionId) {
-                // VocabApp.init(submissionId); // This will be the entry point
+                loadInitialData(submissionId);
             } else {
-                document.getElementById('loader-overlay').innerHTML = `<p class="text-white text-xl font-bold">Lỗi: Không tìm thấy mã truy cập.</p>`;
+                DOM.loaderOverlay.innerHTML = `<p class="text-white text-xl font-bold">Lỗi: Không tìm thấy mã truy cập.</p>`;
             }
+            DOM.startLearningBtn.addEventListener('click', startApp);
+            initSecurity();
         }
         
-        // main(); // Will be implemented fully
+        main();
     </script>
 </body>
 </html>
