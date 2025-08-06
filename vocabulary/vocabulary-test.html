@@ -484,6 +484,7 @@
                 
                 words: [], // Full list of word objects from Firebase
                 structures: [], // Full list of structure objects, parsed from words
+                wordFamilies: {}, // Grouped word families
                 
                 progress: { // Student's progress, loaded from and saved to Firebase
                     learnedItems: {}, // { "word_1": true, "structure_s_1_0": true }
@@ -579,6 +580,7 @@
 
                 // Step 3: Process and merge the data
                 this.data.words = vocabSetData.wordList || [];
+                this.groupWordFamilies();
                 this.parseAndStoreStructures(); // Create structure items from word list
                 this.applyUserProgress(); // Mark items as learned based on loaded progress
             },
@@ -676,6 +678,10 @@
             initAntiCopy() {
                 ['contextmenu', 'copy', 'cut', 'paste'].forEach(event => {
                     document.body.addEventListener(event, e => {
+                        // Allow copy/paste in input fields
+                        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                            return;
+                        }
                         e.preventDefault();
                         this.showCustomAlert("Chức năng này đã bị vô hiệu hóa.");
                         return false;
@@ -684,6 +690,22 @@
             },
 
             // --- CORE APP LOGIC (Adapted and enhanced) ---
+            groupWordFamilies() {
+                const families = {};
+                this.data.words.forEach(word => {
+                    // Simple grouping by the first word part (e.g., 'consider' for 'considerate')
+                    const root = word.word.split(/[\s-]/)[0].toLowerCase(); 
+                    if (!families[root]) {
+                        families[root] = [];
+                    }
+                    if (!families[root].includes(word.id)) {
+                       families[root].push(word.id);
+                    }
+                    word.familyRoot = root;
+                });
+                this.data.wordFamilies = families;
+            },
+            
             parseAndStoreStructures() {
                 this.data.structures = [];
                 this.data.words.forEach(word => {
@@ -713,7 +735,7 @@
                 
                 // Priority 1: Use AI-generated distractors if available
                 const aiDistractors = isVieToEng ? correctItem.distractors_en : correctItem.distractors_vi;
-                if (aiDistractors && aiDistractors.length >= count) {
+                if (aiDistractors && aiDistractors.length > 0) {
                     return this.shuffleArray([...aiDistractors]).slice(0, count);
                 }
 
@@ -727,17 +749,25 @@
                     }
                 });
 
+                // Fill up with random words of the same type if still not enough
+                while(distractors.size < count) {
+                    const randomWord = this.shuffleArray(this.data.words.filter(w => w.type.includes(correctItemType)))[0];
+                    if (randomWord && randomWord.id !== correctItem.id) {
+                         distractors.add(isVieToEng ? randomWord.word : randomWord.meaning);
+                    } else {
+                        break; // Avoid infinite loop
+                    }
+                }
+
                 return this.shuffleArray([...distractors]).slice(0, count);
             },
 
             updateProgress(itemId, itemType, isCorrect) {
-                let item;
                 const progressKey = `${itemType}_${itemId}`;
 
                 if (isCorrect) {
                     this.data.progress.learnedItems[progressKey] = true;
                 }
-                // We don't track incorrect answers persistently in this model, only for session review
                 
                 this.saveProgressToFirebase(); // Save progress after every answer
             },
@@ -757,7 +787,7 @@
                 
                 const lastTest = this.data.progress.lastTestResult;
                 let testResultHTML = `<p class="text-slate-600">Chưa có bài kiểm tra nào.</p>`;
-                if (lastTest) {
+                if (lastTest && lastTest.date) {
                     const testDate = new Date(lastTest.date).toLocaleDateString('vi-VN');
                     testResultHTML = `
                         <p class="text-2xl font-bold text-violet-800">${lastTest.score}/${lastTest.total} (${lastTest.percentage}%)</p>
@@ -808,67 +838,138 @@
                 });
             },
             
-            renderMCQ(item) {
-                const isVieToEng = Math.random() > 0.5;
-                const correctAnswer = isVieToEng ? item.word : item.meaning;
-                const wrongAnswers = this.findChallengingDistractors(item, 3, isVieToEng ? 'vie_to_eng' : 'eng_to_vie');
+            renderSelectionScreen(mode) {
+                this.updateHeader(mode.charAt(0).toUpperCase() + mode.slice(1), `Chọn nội dung bạn muốn ${mode}.`);
+                const main = document.getElementById('main-content');
+                main.innerHTML = `
+                    <div class="fade-in">
+                        <div class="mb-4">
+                            <button id="back-to-dashboard-btn" class="btn btn-secondary"><i class="fas fa-arrow-left mr-2"></i> Dashboard</button>
+                        </div>
+                        <div class="card glass-panel text-center">
+                            <h2 class="text-2xl font-bold text-slate-800 mb-6">Bạn muốn ${mode} gì?</h2>
+                            <div class="flex flex-wrap justify-center gap-4">
+                                <button id="select-vocab-btn" class="btn btn-main-action"><i class="fas fa-book"></i> Từ vựng</button>
+                                <button id="select-structure-btn" class="btn btn-main-action"><i class="fas fa-sitemap"></i> Cấu trúc</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.renderDashboard());
+                document.getElementById('select-vocab-btn').addEventListener('click', () => this.renderModeSelection(mode, 'vocab'));
+                document.getElementById('select-structure-btn').addEventListener('click', () => this.renderModeSelection(mode, 'structure'));
+            },
 
-                // Ensure wrongAnswers doesn't include the correct answer
-                const finalWrongAnswers = wrongAnswers.filter(ans => ans !== correctAnswer);
-                while (finalWrongAnswers.length < 3) {
-                    finalWrongAnswers.push(`dummy_answer_${finalWrongAnswers.length}`); // Add placeholders if needed
+            renderModeSelection(mode, type) {
+                const typeText = type === 'vocab' ? 'Từ vựng' : 'Cấu trúc';
+                this.updateHeader(mode.charAt(0).toUpperCase() + mode.slice(1), `Chọn hình thức ${mode} cho ${typeText}.`);
+                const main = document.getElementById('main-content');
+                let buttonsHTML = '';
+
+                if (mode === 'study') {
+                     buttonsHTML = `
+                        <button data-mode="flashcard" class="btn btn-main-action"><i class="fas fa-clone"></i> Flashcards</button>
+                        <button data-mode="explorer" class="btn btn-main-action"><i class="fas fa-project-diagram"></i> Khám phá Họ từ</button>
+                     `;
+                } else { // Practice mode
+                    const practiceTypes = type === 'vocab' ? 
+                        ['Word Family Matching', 'Contextual MCQ', 'Sentence Unscramble', 'Pronunciation Match', 'Traditional MCQ', 'Reverse Distractor', 'Contextual Clue'] :
+                        ['Gap-Fill', 'Trios of gapped sentence', 'Error Correction', 'Correct/Incorrect Sentence', 'Example Match-Up', 'Structure Building'];
+                    
+                    buttonsHTML = practiceTypes.map(pType => `<button data-mode="${pType}" class="btn btn-main-action">${pType}</button>`).join('');
                 }
 
-                const options = this.shuffleArray([correctAnswer, ...finalWrongAnswers]);
-                const questionHTML = `<div id="mcq-options" class="grid grid-cols-1 md:grid-cols-2 gap-4">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div>`;
+                main.innerHTML = `
+                     <div class="fade-in">
+                         <div class="mb-4">
+                             <button id="back-btn" class="btn btn-secondary"><i class="fas fa-arrow-left mr-2"></i> Quay lại</button>
+                         </div>
+                         <div class="card glass-panel text-center">
+                             <h2 class="text-2xl font-bold text-slate-800 mb-6">Chọn hình thức ${mode}: ${typeText}</h2>
+                             <div class="flex flex-wrap justify-center gap-4">
+                                ${buttonsHTML}
+                             </div>
+                         </div>
+                     </div>
+                `;
+                document.getElementById('back-btn').addEventListener('click', () => this.renderSelectionScreen(mode));
+                main.querySelectorAll('[data-mode]').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.startSession(e.currentTarget.dataset.mode));
+                });
+            },
+
+            startSession(mode) {
+                this.data.mode = mode;
+                let items;
+                
+                // Determine items based on mode
+                if (mode.toLowerCase().includes('structure') || mode.toLowerCase().includes('gap') || mode.toLowerCase().includes('example')) {
+                    items = this.data.structures.filter(s => !s.isLearned);
+                } else {
+                    items = this.data.words.filter(w => !w.isLearned);
+                }
+
+                if (mode === 'flashcard' || mode === 'explorer') {
+                    items = mode.includes('structure') ? this.data.structures : this.data.words;
+                }
+                
+                if (!items || items.length === 0) {
+                    this.showCustomAlert("Chúc mừng! Bạn đã học hết các mục trong phần này.");
+                    this.renderDashboard();
+                    return;
+                }
+                
+                this.data.sessionItems = this.shuffleArray(items);
+                this.data.currentSessionIndex = 0;
+                this.renderNextInSession();
+            },
+
+            renderNextInSession() {
+                if (this.data.currentSessionIndex >= this.data.sessionItems.length) {
+                    this.showCustomAlert("Bạn đã hoàn thành vòng luyện tập!");
+                    this.renderSelectionScreen('practice');
+                    return;
+                }
+                const item = this.data.sessionItems[this.data.currentSessionIndex++];
+                if (!item) { this.renderNextInSession(); return; }
+
+                // Render based on the selected mode
+                switch(this.data.mode) {
+                    case 'flashcard':
+                        // Logic to differentiate vocab/structure flashcard
+                        break;
+                    case 'Contextual MCQ':
+                        // renderContextualMCQ(item);
+                        break;
+                    // ... add all other cases
+                    default:
+                        // For now, a simple MCQ for any practice
+                        this.renderTraditionalMCQ(item);
+                }
+            },
+            
+            renderTraditionalMCQ(item) {
+                const isVieToEng = Math.random() > 0.5;
+                const questionText = isVieToEng ? item.meaning : item.word;
+                const correctAnswer = isVieToEng ? item.word : item.meaning;
+                const wrongAnswers = this.findChallengingDistractors(item, 3, isVieToEng ? 'vie_to_eng' : 'eng_to_vie');
+                const options = this.shuffleArray([correctAnswer, ...wrongAnswers]);
+                const questionHTML = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div>`;
+                
                 document.getElementById('main-content').innerHTML = this.getSessionHTML(item, questionHTML, false, isVieToEng);
                 this.addSessionEventListeners(item, 'mcq', isVieToEng);
             },
-
-            renderWriting(item) {
-                // Use the rich example sentence for context
-                const questionText = item.exampleSentence ? item.exampleSentence.replace(new RegExp(`\\b${item.word}\\b`, 'ig'), '______') : `What is the word for "${item.meaning}"?`;
-                const questionHTML = `
-                    <p class="text-xl font-semibold mb-4 text-slate-800 text-center">${questionText}</p>
-                    <form id="quiz-form">
-                        <input type="text" id="answer-input" class="w-full max-w-md mx-auto p-3 text-lg rounded-lg" placeholder="Enter the English word..." autocomplete="off">
-                        <button type="submit" class="btn btn-main-action mt-6">Check</button>
-                    </form>
-                    <div id="feedback" class="mt-4 h-12"></div>
-                `;
-                document.getElementById('main-content').innerHTML = this.getSessionHTML(item, questionHTML, false, false);
-                this.addSessionEventListeners(item, 'writing');
-            },
             
-            renderStructureMCQ(item) {
-                // Find an example and blank it out
-                const example = item.applicationExamples?.[0] || item.fullStructure;
-                const questionText = example.replace(new RegExp(`\\b${item.answer}\\b`, 'ig'), '______');
-                
-                const correctAnswer = item.answer;
-                const rootWord = this.data.words.find(w => w.id === item.rootWordId);
-                const wrongAnswers = this.findChallengingDistractors(rootWord, 3, 'vie_to_eng');
-
-                const options = this.shuffleArray([correctAnswer, ...wrongAnswers]);
-                const questionHTML = `<div id="mcq-options" class="grid grid-cols-2 md:grid-cols-3 gap-4">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div>`;
-                document.getElementById('main-content').innerHTML = this.getSessionHTML({ ...item, word: questionText }, questionHTML, true);
-                this.addSessionEventListeners(item, 'structure_mcq');
-            },
-
             // --- EVENT LISTENERS & HANDLERS ---
             addSessionEventListeners(item, type, isVieToEng = false) {
-                document.getElementById('back-btn')?.addEventListener('click', () => this.renderPracticeModeSelection());
+                document.getElementById('back-btn')?.addEventListener('click', () => this.renderSelectionScreen('practice'));
 
-                const handleCorrect = () => {
-                    this.updateProgress(item.id, type.includes('structure') ? 'structure' : 'word', true);
-                    setTimeout(() => this.renderNextInSession(), 1200);
-                };
-                const handleIncorrect = () => {
-                    this.updateProgress(item.id, type.includes('structure') ? 'structure' : 'word', false);
-                    setTimeout(() => this.renderNextInSession(), 2500);
+                const handleAnswer = (isCorrect) => {
+                    this.updateProgress(item.id, type.includes('structure') ? 'structure' : 'word', isCorrect);
+                    setTimeout(() => this.renderNextInSession(), isCorrect ? 1200 : 2500);
                 };
 
-                if (type === 'mcq' || type === 'structure_mcq') {
+                if (type === 'mcq') {
                     document.querySelectorAll('.answer-option').forEach(button => button.addEventListener('click', e => {
                         const selectedButton = e.currentTarget;
                         if(selectedButton.disabled) return;
@@ -876,57 +977,30 @@
                         document.querySelectorAll('.answer-option').forEach(btn => btn.disabled = true);
                         selectedButton.classList.add('selected');
                         
-                        const correctAnswer = type.includes('structure') ? item.answer : (isVieToEng ? item.word : item.meaning);
+                        const correctAnswer = isVieToEng ? item.word : item.meaning;
                         const isCorrect = selectedButton.dataset.answer.toLowerCase() === correctAnswer.toLowerCase();
                         
                         setTimeout(() => {
                             selectedButton.classList.remove('selected');
                             if (isCorrect) {
                                 selectedButton.classList.add('correct');
-                                handleCorrect();
+                                handleAnswer(true);
                             } else {
                                 selectedButton.classList.add('incorrect');
                                 const correctButton = document.querySelector(`.answer-option[data-answer="${correctAnswer}"]`);
                                 if (correctButton) correctButton.classList.add('correct');
-                                handleIncorrect();
+                                handleAnswer(false);
                             }
                         }, 400);
                     }));
-                } else if (type === 'writing') {
-                      document.getElementById('quiz-form').addEventListener('submit', e => {
-                          e.preventDefault();
-                          const form = e.target;
-                          const feedback = form.nextElementSibling;
-                          const input = form.querySelector('#answer-input');
-                          const userAnswer = input.value.trim().toLowerCase();
-                          if (!userAnswer) return;
-
-                          const correctAnswer = item.word.toLowerCase();
-                          const isCorrect = userAnswer === correctAnswer;
-                          
-                          form.querySelector('button').disabled = true;
-                          input.disabled = true;
-                          
-                          if (isCorrect) {
-                              feedback.innerHTML = `<p class="text-green-600 font-bold text-lg">Correct!</p>`;
-                              handleCorrect();
-                          } else {
-                              feedback.innerHTML = `<p class="text-red-600 font-bold text-lg">Incorrect! The correct answer is: <span class="underline">${correctAnswer}</span></p>`;
-                              handleIncorrect();
-                          }
-                      });
                 }
                 
                 document.getElementById('idk-btn')?.addEventListener('click', () => {
-                     document.querySelectorAll('.answer-option, #quiz-form button, #quiz-form input').forEach(el => el.disabled = true);
-                     const correctAnswer = type.includes('structure') ? item.answer : (isVieToEng ? item.word : item.meaning);
+                     document.querySelectorAll('.answer-option').forEach(el => el.disabled = true);
+                     const correctAnswer = isVieToEng ? item.word : item.meaning;
                      const correctButton = document.querySelector(`.answer-option[data-answer="${correctAnswer}"]`);
                      if(correctButton) correctButton.classList.add('correct');
-                     else {
-                         const feedback = document.querySelector('#feedback');
-                         if(feedback) feedback.innerHTML = `<p class="text-blue-600 font-bold text-lg">Correct answer: <span class="underline">${correctAnswer}</span></p>`;
-                     }
-                     handleIncorrect();
+                     handleAnswer(false);
                 });
             },
             
@@ -981,7 +1055,7 @@
                 this.data.progress.lastTestResult = {
                     score: correctCount,
                     total: total,
-                    percentage: total > 0 ? ((correctCount / total) * 100).toFixed(1) : 0,
+                    percentage: total > 0 ? parseFloat(((correctCount / total) * 100).toFixed(1)) : 0,
                     date: new Date().toISOString()
                 };
                 this.saveProgressToFirebase();
@@ -1015,19 +1089,10 @@
                 `;
             },
             
-            // Other helper functions (shuffleArray, showCustomAlert, etc.) are copied from the original template
-            // and adapted where necessary. The following are included for completeness.
-            
-            // ... [ The rest of the functions like initSidebarNav, renderStudyTypeSelection, startSession, etc. would go here ]
-            // ... [ They are largely the same as the original template, but now they operate on Firebase-backed data ]
-            // ... [ For brevity, I will only include the most critical modified/new functions above. ]
-            // ... [ The full set of functions from the template should be included here, adapted for the new data flow. ]
-            
-            // --- ABRIDGED HELPER FUNCTIONS (Assume full implementation from template) ---
             initSidebarNav() {
                 document.getElementById('nav-dashboard').addEventListener('click', () => this.renderDashboard());
-                document.getElementById('nav-study').addEventListener('click', () => this.renderStudyTypeSelection());
-                document.getElementById('nav-practice').addEventListener('click', () => this.renderPracticeModeSelection());
+                document.getElementById('nav-study').addEventListener('click', () => this.renderSelectionScreen('study'));
+                document.getElementById('nav-practice').addEventListener('click', () => this.renderSelectionScreen('practice'));
                 document.getElementById('nav-test').addEventListener('click', () => this.openModal('test-setup-modal'));
                 document.getElementById('nav-reset').addEventListener('click', async () => {
                     this.showCustomConfirm("Bạn có chắc muốn xóa toàn bộ tiến trình của bài tập này không?", async () => {
@@ -1070,39 +1135,6 @@
                 table.innerHTML = headers + `<tbody>${rows}</tbody>`;
                 this.openModal('word-list-modal');
             },
-            renderStudyTypeSelection() { /* ... as in template ... */ },
-            renderPracticeModeSelection() { /* ... as in template ... */ },
-            startSession(mode) {
-                this.data.mode = mode;
-                let items;
-                if (mode === 'vocab') items = this.data.words.filter(w => !w.isLearned);
-                else if (mode === 'structure') items = this.data.structures.filter(s => !s.isLearned);
-                else if (mode === 'flashcard-vocab') items = this.data.words;
-                else if (mode === 'flashcard-structure') items = this.data.structures;
-                
-                if (!items || items.length === 0) { this.showCustomAlert("Chúc mừng! Bạn đã học hết các mục trong phần này."); this.renderDashboard(); return; }
-                
-                this.data.sessionItems = this.shuffleArray(items);
-                this.data.currentSessionIndex = 0;
-                this.renderNextInSession();
-            },
-            renderNextInSession() {
-                if (this.data.currentSessionIndex >= this.data.sessionItems.length) {
-                    this.showCustomAlert("Bạn đã hoàn thành vòng luyện tập!");
-                    this.startSession(this.data.mode);
-                    return;
-                }
-                const item = this.data.sessionItems[this.data.currentSessionIndex++];
-                if (!item) { this.renderNextInSession(); return; }
-                
-                if (this.data.mode.includes('flashcard')) {
-                    this.data.mode === 'flashcard-vocab' ? this.renderVocabFlashcard(item) : this.renderStructureFlashcard(item);
-                } else {
-                    this.data.mode === 'vocab' ? this.renderMCQ(item) : this.renderStructureMCQ(item);
-                }
-            },
-            renderVocabFlashcard(item) { /* ... as in template, but adapted for new data structure ... */ },
-            renderStructureFlashcard(item) { /* ... as in template, but adapted for new data structure ... */ },
             getSessionHTML(item, questionHTML, isStructure = false, isVieToEng = false) {
                 let title, subtitle;
                 if (isStructure) {
@@ -1138,14 +1170,40 @@
                 document.getElementById('exit-test-btn').addEventListener('click', () => { this.showCustomConfirm("Bạn có chắc muốn thoát? Tiến trình sẽ không được lưu.", () => this.renderDashboard(), 'Thoát', 'Ở lại'); });
                 document.querySelectorAll('#test-container .answer-option').forEach(option => {
                     option.addEventListener('click', (e) => {
-                        const qCard = e.currentTarget.closest('.grid');
+                        const qCard = e.currentTarget.closest('[data-correct-answer]');
                         qCard.querySelectorAll('.answer-option').forEach(opt => opt.classList.remove('selected'));
                         e.currentTarget.classList.add('selected');
                     });
                 });
             },
-            renderTestEnd(correct, total) { /* ... as in template ... */ },
-            renderReviewView() { /* ... as in template ... */ },
+            renderTestEnd(correct, total) {
+                const main = document.getElementById('main-content');
+                const percentage = total > 0 ? ((correct / total) * 100).toFixed(1) : 0;
+                this.updateHeader('Test Complete!', `Your score: ${percentage}%`);
+                main.innerHTML = `<div class="card glass-panel text-center fade-in"><i class="fas fa-trophy text-6xl text-yellow-400 mb-4"></i><h2 class="text-3xl font-bold text-slate-800">Test Complete!</h2><p class="text-slate-600 mt-2 mb-6">Your result:</p><p class="text-5xl font-bold text-violet-700">${correct} / ${total}</p><p class="text-2xl font-semibold text-slate-700 mt-2">(${percentage}%)</p><div class="flex flex-wrap justify-center gap-4 mt-8"><button id="review-incorrect-btn" class="btn btn-secondary">Review Incorrect</button><button id="back-to-dash-btn" class="btn btn-main-action">Back to Dashboard</button></div></div>`;
+                document.getElementById('back-to-dash-btn').addEventListener('click', () => this.renderDashboard());
+                const reviewBtn = document.getElementById('review-incorrect-btn');
+                if (this.data.incorrectTestAnswers.length > 0) {
+                    reviewBtn.addEventListener('click', () => this.renderReviewView());
+                } else {
+                    reviewBtn.style.display = 'none';
+                }
+            },
+            renderReviewView() {
+                const main = document.getElementById('main-content');
+                this.updateHeader('Review', 'Check your incorrect answers.');
+                let reviewHTML = `<div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-bold text-slate-800">Incorrect Answers</h2><button id="back-to-dash-btn" class="btn btn-secondary">Back to Dashboard</button></div>`;
+                this.data.incorrectTestAnswers.forEach(({item, userAnswer, correctAnswer}) => {
+                    const questionText = item.word;
+                    reviewHTML += `<div class="card glass-panel mb-4 bg-red-400/10 border-l-4 border-red-500 fade-in">
+                        <p class="font-bold text-slate-800">${questionText || 'Error: Question not found'}</p>
+                        <p class="text-sm text-slate-600">Your answer: <span class="font-semibold text-red-800">${userAnswer || '<i>(empty)</i>'}</span></p>
+                        <p class="text-sm text-slate-600">Correct answer: <span class="font-semibold text-green-800">${correctAnswer}</span></p>
+                    </div>`;
+                });
+                main.innerHTML = reviewHTML;
+                document.getElementById('back-to-dash-btn').addEventListener('click', () => this.renderDashboard());
+            },
             showCustomAlert(message) {
                 const alertId = 'custom-alert-box';
                 document.getElementById(alertId)?.remove();
