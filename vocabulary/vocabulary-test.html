@@ -222,13 +222,13 @@
             border-color: rgba(255, 255, 255, 0.15);
         }
 
-        .answer-option:hover:not(:disabled) {
+        .answer-option:hover:not(.disabled) {
             background: rgba(255, 255, 255, 0.6);
             border-color: rgba(255, 255, 255, 0.8);
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.3);
         }
-        body.dark .answer-option:hover:not(:disabled) {
+        body.dark .answer-option:hover:not(.disabled) {
             background: rgba(255, 255, 255, 0.1);
             border-color: rgba(255, 255, 255, 0.3);
         }
@@ -267,8 +267,15 @@
             border-color: #dc2626 !important;
             color: #fecaca !important;
         }
+        .answer-option.disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
 
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        @keyframes scaleOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.9); } }
+
 
         .modal { 
             display: none; 
@@ -317,11 +324,18 @@
         body.dark .progress-bar { background-color: #4b5563; }
         .progress-bar-inner { background-color: var(--primary-accent); height: 100%; transition: width 0.5s ease-in-out; }
 
-        .word-token { cursor: pointer; background-color: #e0e7ff; color: #3730a3; }
+        .word-token-area { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; min-height: 50px; padding: 10px; border-radius: 12px; }
+        .unscramble-area { border: 2px dashed var(--glass-border-color); }
+        .word-token { cursor: pointer; background-color: #e0e7ff; color: #3730a3; padding: 8px 12px; border-radius: 8px; font-weight: 500; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         body.dark .word-token { background-color: #3730a3; color: #e0e7ff; }
-        .clickable-word { cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background-color 0.2s; }
+        .word-token:hover { transform: translateY(-2px); background-color: #c7d2fe; }
+        body.dark .word-token:hover { background-color: #4338ca; }
+        
+        .clickable-word { cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background-color 0.2s, color 0.2s; }
         .clickable-word:hover { background-color: #e0e7ff; }
+        body.dark .clickable-word:hover { background-color: #3730a3; }
         .clickable-word.selected { background-color: #fbbf24; color: #78350f; }
+        body.dark .clickable-word.selected { background-color: #f59e0b; color: #422006; }
         
         .mindmap-container { display: flex; justify-content: center; align-items: center; flex-grow: 1; padding: 1rem; }
         .mindmap { position: relative; display: flex; justify-content: center; align-items: center; }
@@ -337,10 +351,27 @@
         .mindmap-node:hover { transform: scale(1.1); z-index: 20; }
         
         body.dark .text-slate-800, body.dark .text-slate-700, body.dark .text-violet-800 { color: var(--text-primary); }
-        body.dark .text-slate-600 { color: var(--text-secondary); }
-        body.dark .text-red-500 { color: #ef4444; }
+        body.dark .text-slate-600, body.dark .text-slate-500 { color: var(--text-secondary); }
+        body.dark .text-red-500 { color: #f87171; }
         body.dark .hover\:bg-red-100:hover { background-color: rgb(220 38 38 / 0.2); }
-        body.dark .hover\:text-red-700:hover { color: #ef4444; }
+        body.dark .hover\:text-red-700:hover { color: #f87171; }
+
+        .text-input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border-color);
+            background: var(--glass-bg-color);
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+        .text-input:focus {
+            outline: none;
+            border-color: var(--primary-accent);
+            box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.3);
+        }
+
     </style>
 </head>
 <body>
@@ -362,7 +393,7 @@
         <nav id="sidebar" class="glass-panel">
             <div>
                 <div class="text-center mb-10">
-                    <h1 id="sidebar-title" class="text-2xl font-bold text-slate-800">Vocab App</h1>
+                    <h1 id="sidebar-title" class="text-2xl font-bold">Vocab App</h1>
                     <p class="text-sm text-slate-600">by Thành Nam</p>
                 </div>
                 <div id="sidebar-nav" class="flex-grow">
@@ -379,9 +410,9 @@
                         <span id="theme-toggle-text">Dark Mode</span>
                     </button>
                 </div>
-                 <button id="nav-reset" class="sidebar-nav-btn w-full justify-center text-red-500 hover:bg-red-100 hover:text-red-700">
-                     <i class="fas fa-trash-alt mr-2"></i> Reset Progress
-                 </button>
+                <button id="nav-reset" class="sidebar-nav-btn w-full justify-center text-red-500 hover:bg-red-100 hover:text-red-700">
+                   <i class="fas fa-trash-alt mr-2"></i> Reset Progress
+                </button>
             </div>
         </nav>
         
@@ -389,24 +420,23 @@
 
         <main id="app">
              <header class="main-header">
-                 <button id="menu-toggle-btn">
+                 <button id="menu-toggle-btn" class="lg:hidden">
                      <i class="fas fa-bars text-xl"></i>
                  </button>
                  <div class="text-left">
-                     <h1 id="app-title" class="text-3xl lg:text-4xl font-bold text-slate-800">Dashboard</h1>
+                     <h1 id="app-title" class="text-3xl lg:text-4xl font-bold">Dashboard</h1>
                      <p id="app-subtitle" class="text-slate-600 mt-1 lg:mt-2">Welcome back! Here's your learning progress.</p>
                  </div>
              </header>
              <div id="main-content">
-                <!-- Content will be rendered by JavaScript -->
-             </div>
+                </div>
         </main>
     </div>
 
     <div id="word-list-modal" class="modal">
         <div class="modal-content glass-panel" style="max-width: 1200px; height: 80vh; display: flex; flex-direction: column;">
             <div class="modal-header pb-4 mb-4">
-                <h2 id="modal-title" class="text-2xl font-bold text-slate-800">List</h2>
+                <h2 id="modal-title" class="text-2xl font-bold">List</h2>
                 <span id="close-word-modal-btn" class="close-button">&times;</span>
             </div>
             <div id="word-table-container" class="overflow-y-auto flex-grow">
@@ -418,12 +448,12 @@
     <div id="test-setup-modal" class="modal">
         <div class="modal-content glass-panel">
             <div class="modal-header pb-4 mb-4">
-                <h2 class="text-2xl font-bold text-slate-800">Test Setup</h2>
+                <h2 class="text-2xl font-bold">Test Setup</h2>
                 <span id="close-test-modal-btn" class="close-button">&times;</span>
             </div>
             <div>
-                <label for="question-count" class="block mb-2 font-medium text-slate-700">Number of questions:</label>
-                <input type="number" id="question-count" class="w-full p-2 rounded-lg" min="5" max="100" value="10">
+                <label for="question-count" class="block mb-2 font-medium">Number of questions:</label>
+                <input type="number" id="question-count" class="w-full p-2 rounded-lg text-input" min="5" max="100" value="10">
                 <div class="mt-6">
                     <button id="start-test-fixed-btn" class="btn btn-main-action w-full">Start with selected count</button>
                     <button id="start-test-all-btn" class="btn btn-secondary w-full mt-3">Test all items</button>
@@ -431,7 +461,10 @@
             </div>
         </div>
     </div>
-    <div id="feedback-area" class="text-center"></div>
+    <div id="feedback-container" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl p-4 z-50 pointer-events-none">
+        <div id="feedback-area" class="glass-panel card text-center transform translate-y-full transition-transform duration-500 pointer-events-auto"></div>
+    </div>
+
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
@@ -448,10 +481,13 @@
                 progress: { learnedItems: {}, lastTestResult: null, incorrectCounts: {} },
                 sessionItems: [],
                 currentSessionIndex: 0,
+                currentSessionCorrect: 0,
+                currentSessionTotal: 0,
                 mode: null,
                 currentCorrectAnswer: null,
                 findAndFixState: {},
                 wordFamilyState: {},
+                isPracticeSession: false,
             },
 
             async init() {
@@ -459,6 +495,7 @@
                 this.initResponsiveSidebar();
                 try {
                     this.data.submissionId = this.getSubmissionIdFromUrl();
+                    // IMPORTANT: Replace with your actual Firebase config
                     const firebaseConfig = {
                         apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
                         authDomain: "b1-baotram.firebaseapp.com",
@@ -515,7 +552,7 @@
             },
             
             applyUserProgress() {
-                const learnedItems = this.data.progress.learnedItems || {};
+                const { learnedItems } = this.data.progress;
                 this.data.words.forEach(word => { word.isLearned = !!learnedItems[`word_${word.id}`]; });
                 this.data.structures.forEach(structure => { structure.isLearned = !!learnedItems[`structure_${structure.id}`]; });
             },
@@ -523,7 +560,10 @@
             async saveProgressToFirebase() {
                 if (!this.data.submissionId || !this.data.db) return;
                 try {
-                    await setDoc(doc(this.data.db, "submissions", this.data.submissionId), { progress: this.data.progress, lastAccessed: serverTimestamp() }, { merge: true });
+                    await setDoc(doc(this.data.db, "submissions", this.data.submissionId), { 
+                        progress: this.data.progress, 
+                        lastAccessed: serverTimestamp() 
+                    }, { merge: true });
                 } catch (error) {
                     console.error("Error saving progress:", error);
                     this.showCustomAlert("Lỗi: Không thể lưu tiến trình.");
@@ -599,8 +639,9 @@
                             this.data.structures.push({
                                 id: `s_${word.id}_${s_idx}`,
                                 rootWordId: word.id,
-                                fullStructure: struct.phrase,
-                                translation: struct.meaning,
+                                word: word.word,
+                                phrase: struct.phrase,
+                                meaning: struct.meaning,
                                 applicationExamples: struct.applicationExamples || [],
                                 isLearned: false,
                             });
@@ -611,14 +652,28 @@
 
             updateProgress(itemId, itemType, isCorrect) {
                 const progressKey = `${itemType}_${itemId}`;
-                const incorrectCounts = this.data.progress.incorrectCounts || {};
+                const { incorrectCounts, learnedItems } = this.data.progress;
+
                 if (isCorrect) {
-                    this.data.progress.learnedItems[progressKey] = true;
-                    delete incorrectCounts[progressKey];
+                    learnedItems[progressKey] = true;
+                    // If the item was previously incorrect, remove it from the list
+                    if (incorrectCounts[progressKey]) {
+                        delete incorrectCounts[progressKey];
+                    }
                 } else {
+                    // Item is incorrect, increment the count
                     incorrectCounts[progressKey] = (incorrectCounts[progressKey] || 0) + 1;
+                    // An incorrect answer means it's not fully "learned" yet
+                    delete learnedItems[progressKey];
                 }
-                this.data.progress.incorrectCounts = incorrectCounts;
+                
+                // Update the main data objects to reflect the change immediately
+                const itemCache = itemType === 'word' ? this.data.words : this.data.structures;
+                const itemToUpdate = itemCache.find(i => i.id === itemId);
+                if (itemToUpdate) {
+                    itemToUpdate.isLearned = isCorrect;
+                }
+
                 this.saveProgressToFirebase();
             },
 
@@ -636,7 +691,7 @@
                 const structureProgress = totalStructures > 0 ? (structuresLearned / totalStructures) * 100 : 0;
                 
                 const lastTest = this.data.progress.lastTestResult;
-                let testResultHTML = `<p class="text-slate-600 dark:text-slate-400">Chưa có bài kiểm tra nào.</p>`;
+                let testResultHTML = `<p class="text-slate-600">Chưa có bài kiểm tra nào.</p>`;
                 if (lastTest && lastTest.date) {
                     const testDate = new Date(lastTest.date).toLocaleDateString('vi-VN');
                     testResultHTML = `<p class="text-2xl font-bold text-violet-800">${lastTest.score}/${lastTest.total} (${lastTest.percentage}%)</p><p class="text-sm text-slate-600">Làm ngày: ${testDate}</p>`;
@@ -645,7 +700,7 @@
                 main.innerHTML = `
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 fade-in">
                         <div class="card glass-panel">
-                            <h3 class="text-xl font-bold text-slate-800 mb-3">Tiến độ Từ vựng</h3>
+                            <h3 class="text-xl font-bold mb-3">Tiến độ Từ vựng</h3>
                             <div class="flex justify-between items-center mb-2"><span class="font-semibold">${wordsLearned}/${totalWords}</span><span class="text-sm font-medium">${wordProgress.toFixed(1)}%</span></div>
                             <div class="progress-bar"><div class="progress-bar-inner" style="width: ${wordProgress}%;"></div></div>
                             <div class="flex justify-center gap-4 mt-4">
@@ -654,7 +709,7 @@
                             </div>
                         </div>
                         <div class="card glass-panel">
-                            <h3 class="text-xl font-bold text-slate-800 mb-3">Tiến độ Cấu trúc</h3>
+                            <h3 class="text-xl font-bold mb-3">Tiến độ Cấu trúc</h3>
                             <div class="flex justify-between items-center mb-2"><span class="font-semibold">${structuresLearned}/${totalStructures}</span><span class="text-sm font-medium">${structureProgress.toFixed(1)}%</span></div>
                             <div class="progress-bar"><div class="progress-bar-inner" style="width: ${structureProgress}%;"></div></div>
                              <div class="flex justify-center gap-4 mt-4">
@@ -663,7 +718,7 @@
                             </div>
                         </div>
                         <div class="card glass-panel lg:col-span-2">
-                             <h3 class="text-xl font-bold text-slate-800 mb-2">Kết quả kiểm tra gần nhất</h3>
+                             <h3 class="text-xl font-bold mb-2">Kết quả kiểm tra gần nhất</h3>
                              ${testResultHTML}
                         </div>
                     </div>`;
@@ -673,85 +728,87 @@
             },
             
             renderSelectionScreen(mode) {
-                this.setActiveNav(mode === 'study' ? 'nav-study' : 'nav-practice');
-                this.updateHeader(mode.charAt(0).toUpperCase() + mode.slice(1), `Chọn nội dung bạn muốn ${mode}.`);
+                this.data.isPracticeSession = (mode === 'practice' || mode === 'test');
+                this.setActiveNav(mode === 'study' ? 'nav-study' : (mode === 'test' ? 'nav-test' : 'nav-practice'));
+                const modeText = mode.charAt(0).toUpperCase() + mode.slice(1);
+                this.updateHeader(modeText, `Chọn nội dung bạn muốn ${mode}.`);
                 const main = document.getElementById('main-content');
+                
+                let practiceButton = '';
+                if (this.data.isPracticeSession) {
+                    const weakItemsCount = Object.keys(this.data.progress.incorrectCounts).length;
+                    practiceButton = `
+                     <div class="w-full mt-6 pt-6 border-t border-white/20">
+                         <button id="select-adaptive-btn" class="btn btn-main-action bg-amber-500 hover:bg-amber-600 w-full md:w-auto" ${weakItemsCount === 0 ? 'disabled' : ''}>
+                             <i class="fas fa-star"></i> Ôn tập điểm yếu (${weakItemsCount} mục)
+                         </button>
+                         <p class="text-xs text-slate-500 mt-2 ${weakItemsCount > 0 ? 'hidden' : ''}">Tuyệt vời! Bạn không có điểm yếu nào cần ôn tập.</p>
+                     </div>
+                    `;
+                }
+
                 main.innerHTML = `
                     <div class="fade-in">
                         <div class="mb-4"><button id="back-to-dashboard-btn" class="btn btn-secondary"><i class="fas fa-arrow-left mr-2"></i> Dashboard</button></div>
                         <div class="card glass-panel text-center">
-                            <h2 class="text-2xl font-bold text-slate-800 mb-6">Bạn muốn ${mode} gì?</h2>
+                            <h2 class="text-2xl font-bold mb-6">Bạn muốn ${mode} gì?</h2>
                             <div class="flex flex-wrap justify-center gap-4">
                                 <button id="select-vocab-btn" class="btn btn-main-action"><i class="fas fa-book"></i> Từ vựng</button>
-                                <button id="select-structure-btn" class="btn btn-main-action"><i class="fas fa-sitemap"></i> Cấu trúc</button>
+                                <button id="select-structure-btn" class="btn btn-main-action" ${this.data.structures.length === 0 ? 'disabled' : ''}><i class="fas fa-sitemap"></i> Cấu trúc</button>
                             </div>
+                            ${practiceButton}
                         </div>
                     </div>`;
                 document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.renderDashboard());
-                document.getElementById('select-vocab-btn').addEventListener('click', () => this.renderModeSelection(mode, 'vocab'));
-                document.getElementById('select-structure-btn').addEventListener('click', () => this.renderModeSelection(mode, 'structure'));
+                document.getElementById('select-vocab-btn').addEventListener('click', () => this.startSession('all', 'word', mode));
+                document.getElementById('select-structure-btn').addEventListener('click', () => this.startSession('all', 'structure', mode));
+                if (this.data.isPracticeSession) {
+                    document.getElementById('select-adaptive-btn')?.addEventListener('click', () => this.startSession('adaptive', 'all', mode));
+                }
             },
 
-            renderModeSelection(mode, type) {
-                const typeText = type === 'vocab' ? 'Từ vựng' : 'Cấu trúc';
-                this.updateHeader(mode.charAt(0).toUpperCase() + mode.slice(1), `Chọn hình thức ${mode} cho ${typeText}.`);
-                const main = document.getElementById('main-content');
-                let buttonsHTML = '';
+            startSession(selection, type, mode) {
+                this.data.mode = mode; // 'study', 'practice', 'test'
+                this.data.currentSessionIndex = 0;
+                this.data.currentSessionCorrect = 0;
+                this.data.currentSessionTotal = 0;
+                let items = [];
 
-                if (mode === 'study') {
-                     buttonsHTML = type === 'vocab' ? `
-                        <button data-mode="Flashcard" class="btn btn-main-action"><i class="fas fa-clone"></i> Flashcards 2.0</button>
-                        <button data-mode="Word Family Explorer" class="btn btn-main-action"><i class="fas fa-project-diagram"></i> Khám phá Họ từ</button>
-                     ` : `<button data-mode="Structure Flashcard" class="btn btn-main-action"><i class="fas fa-clone"></i> Flashcards</button>`;
+                if (selection === 'adaptive') {
+                    this.updateHeader("Ôn tập điểm yếu", "Tập trung vào các mục bạn hay sai nhất");
+                    const incorrect = this.data.progress.incorrectCounts || {};
+                    const weakItems = Object.keys(incorrect)
+                        .map(key => ({ key, count: incorrect[key] }))
+                        .sort((a, b) => b.count - a.count);
+
+                    items = weakItems.map(item => {
+                        const [itemType, ...itemIdParts] = item.key.split('_');
+                        const itemId = itemIdParts.join('_');
+                        const source = itemType === 'word' ? this.data.words : this.data.structures;
+                        const fullItem = source.find(i => i.id === itemId);
+                        return { ...fullItem, type: itemType }; // Add type info for dispatcher
+                    }).filter(Boolean); // Filter out any items that might not be found
                 } else {
-                    const practiceTypes = type === 'vocab' ? 
-                        ['Word Family Matching', 'Contextual MCQ', 'Sentence Unscramble', 'Pronunciation Match', 'Audio Listening', 'Traditional MCQ', 'Trios of Gapped Sentence'] :
-                        ['Gap-Fill', 'Find and Fix Error'];
-                    buttonsHTML = practiceTypes.map(pType => `<button data-mode="${pType}" class="btn btn-main-action">${pType}</button>`).join('');
-                    buttonsHTML += `<button data-mode="Adaptive Practice" class="btn btn-main-action bg-amber-500 hover:bg-amber-600"><i class="fas fa-star mr-2"></i>Ôn tập điểm yếu</button>`;
+                    const source = type === 'word' ? this.data.words : this.data.structures;
+                    // For study, use all items. For practice/test, use unlearned items first.
+                    const unlearned = source.filter(i => !i.isLearned);
+                    items = (this.data.isPracticeSession && unlearned.length > 0) ? unlearned : source;
+                    this.updateHeader(`${mode.charAt(0).toUpperCase() + mode.slice(1)} ${type.charAt(0).toUpperCase() + type.slice(1)}`, `Luyện tập nào!`);
                 }
 
-                main.innerHTML = `
-                     <div class="fade-in">
-                         <div class="mb-4"><button id="back-btn" class="btn btn-secondary"><i class="fas fa-arrow-left mr-2"></i> Quay lại</button></div>
-                         <div class="card glass-panel text-center">
-                             <h2 class="text-2xl font-bold text-slate-800 mb-6">Chọn hình thức ${mode}: ${typeText}</h2>
-                             <div class="flex flex-wrap justify-center gap-4">${buttonsHTML}</div>
-                         </div>
-                     </div>`;
-                document.getElementById('back-btn').addEventListener('click', () => this.renderSelectionScreen(mode));
-                main.querySelectorAll('[data-mode]').forEach(btn => {
-                    btn.addEventListener('click', (e) => this.startSession(e.currentTarget.dataset.mode, type));
-                });
-            },
-
-            startSession(mode, type) {
-                this.data.mode = mode;
-                let items;
-                const isStudy = ['Flashcard', 'Word Family Explorer', 'Structure Flashcard'].includes(mode);
-
-                if(mode === 'Adaptive Practice') { this.renderAdaptivePractice(); return; }
-
-                items = type === 'structure' 
-                    ? (isStudy ? this.data.structures : this.data.structures.filter(s => !s.isLearned))
-                    : (isStudy ? this.data.words : this.data.words.filter(w => !w.isLearned));
-                
                 if (items.length === 0) {
                     this.showCustomAlert("Chúc mừng! Bạn đã học hết các mục trong phần này.");
                     this.renderDashboard();
                     return;
                 }
-                
+
                 this.data.sessionItems = this.shuffleArray(items);
-                this.data.currentSessionIndex = 0;
                 this.renderNextInSession();
             },
 
             renderNextInSession() {
                 if (this.data.currentSessionIndex >= this.data.sessionItems.length) {
-                    this.showCustomAlert("Bạn đã hoàn thành vòng luyện tập!");
-                    const modeType = this.data.mode.includes('Flashcard') || this.data.mode.includes('Explorer') ? 'study' : 'practice';
-                    this.renderSelectionScreen(modeType);
+                    this.showSessionEndSummary();
                     return;
                 }
                 const item = this.data.sessionItems[this.data.currentSessionIndex];
@@ -761,47 +818,66 @@
                     return; 
                 }
 
+                // Determine item type for adaptive mode
+                const itemType = item.type === 'word' || !item.type ? 'word' : 'structure';
+
+                let exercisePool;
+                if(this.data.mode === 'study') {
+                     exercisePool = itemType === 'word' ? ['Flashcard', 'Word Family Explorer'] : ['Structure Flashcard'];
+                } else { // Practice or Test mode
+                    if (itemType === 'word') {
+                        exercisePool = ['Traditional MCQ', 'Contextual MCQ', 'Sentence Unscramble', 'Audio Listening'];
+                        if (this.data.wordFamilies[item.familyRoot]?.length > 1) exercisePool.push('Word Family Matching');
+                    } else { // structure
+                        exercisePool = ['Gap-Fill', 'Find and Fix Error', 'Correct/Incorrect Sentence'];
+                    }
+                }
+                
+                const exercise = this.shuffleArray(exercisePool)[0];
                 const renderMap = {
                     'Flashcard': () => this.renderFlashcard(item),
                     'Structure Flashcard': () => this.renderFlashcard(item, true),
                     'Word Family Explorer': () => this.renderWordFamilyMindmap(item),
-                    'Word Family Matching': () => this.renderWordFamilyMatching(),
+                    'Word Family Matching': () => this.renderWordFamilyMatching(item),
                     'Contextual MCQ': () => this.renderContextualMCQ(item),
                     'Sentence Unscramble': () => this.renderSentenceUnscramble(item),
                     'Pronunciation Match': () => this.renderPronunciationMatch(item),
                     'Audio Listening': () => this.renderAudioListening(item),
                     'Traditional MCQ': () => this.renderTraditionalMCQ(item),
-                    'Trios of Gapped Sentence': () => this.renderTriosOfGappedSentence(),
+                    'Trios of Gapped Sentence': () => this.renderTriosOfGappedSentence(item),
                     'Gap-Fill': () => this.renderGapFill(item),
                     'Find and Fix Error': () => this.renderFindAndFixError(item),
+                    'Correct/Incorrect Sentence': () => this.renderCorrectIncorrectSentence(item),
                 };
-                
-                const renderFunction = renderMap[this.data.mode];
+
+                const renderFunction = renderMap[exercise];
                 if (renderFunction) {
-                    this.data.currentSessionIndex++;
                     renderFunction();
                 } else {
-                    this.renderDashboard();
+                    // Fallback if no exercise could be generated
+                    this.data.currentSessionIndex++;
+                    this.renderNextInSession();
                 }
             },
             
             // --- [START] EXERCISE RENDERERS ---
             
             renderFlashcard(item, isStructure = false) {
+                const sessionType = isStructure ? 'structure' : 'word';
                 this.updateHeader('Study', isStructure ? 'Structure Flashcard' : 'Vocabulary Flashcard');
                 const main = document.getElementById('main-content');
                 
-                const frontHTML = isStructure ? `<p class="text-3xl font-bold text-center">${item.fullStructure}</p>` : `<p class="text-4xl font-bold">${item.word}</p>`;
+                const frontHTML = isStructure ? `<p class="text-3xl font-bold text-center">${item.phrase}</p>` : `<p class="text-4xl font-bold">${item.word}</p>`;
                 const backHTML = isStructure ? `
                     <div class="p-4">
-                        <p class="text-2xl font-semibold text-center">${item.translation}</p>
-                        <p class="text-sm text-slate-600 dark:text-slate-400 mt-2 text-center">${(item.applicationExamples || [])[0] || ''}</p>
+                        <p class="text-2xl font-semibold text-center">${item.meaning}</p>
+                        <p class="text-sm text-slate-600 mt-2 text-center">${(item.applicationExamples || [])[0] || ''}</p>
                     </div>
                 ` : `
                     <div class="p-4 text-center">
                         <p class="text-2xl font-semibold">${item.meaning}</p>
-                        <p class="text-lg text-slate-600 dark:text-slate-400 mt-2">${item.pronunciation} - (${item.type})</p>
-                        <p class="text-sm text-slate-500 dark:text-slate-400 italic mt-4">"${item.exampleSentence}"</p>
+                        <p class="text-lg text-slate-600 mt-2">${item.pronunciation} - (${item.type})</p>
+                        <p class="text-sm text-slate-500 italic mt-4">"${item.exampleSentence}"</p>
                         <button id="explore-family-btn" class="btn btn-secondary !py-2 !px-4 mt-4 text-sm"><i class="fas fa-project-diagram mr-2"></i>Khám phá họ từ</button>
                     </div>
                 `;
@@ -809,8 +885,8 @@
                 main.innerHTML = `
                     <div class="fade-in">
                         <div class="flex justify-between items-center mb-4">
-                            <button id="back-btn" class="btn btn-secondary"><i class="fas fa-arrow-left mr-2"></i> Back</button>
-                            <div class="text-lg font-semibold">${this.data.currentSessionIndex} / ${this.data.sessionItems.length}</div>
+                            <button id="back-btn" class="btn btn-secondary"><i class="fas fa-arrow-left mr-2"></i> Quit</button>
+                            <div class="text-lg font-semibold">${this.data.currentSessionIndex + 1} / ${this.data.sessionItems.length}</div>
                             <button id="next-btn" class="btn btn-main-action">Next <i class="fas fa-arrow-right ml-2"></i></button>
                         </div>
                         <div class="card glass-panel flex items-center justify-center">
@@ -825,7 +901,10 @@
                 `;
                 document.getElementById('back-btn').addEventListener('click', () => this.renderSelectionScreen('study'));
                 document.getElementById('flashcard').addEventListener('click', (e) => e.currentTarget.classList.toggle('is-flipped'));
-                document.getElementById('next-btn').addEventListener('click', () => this.renderNextInSession());
+                document.getElementById('next-btn').addEventListener('click', () => {
+                    this.data.currentSessionIndex++;
+                    this.renderNextInSession();
+                });
                 if (!isStructure) {
                     document.getElementById('explore-family-btn').addEventListener('click', (e) => {
                         e.stopPropagation();
@@ -842,11 +921,12 @@
 
                 main.innerHTML = `
                     <div class="fade-in">
-                        <div class="mb-4">
+                        <div class="mb-4 flex justify-between">
                             <button id="back-btn" class="btn btn-secondary"><i class="fas fa-arrow-left mr-2"></i> Back</button>
+                            <button id="next-btn" class="btn btn-main-action">Continue <i class="fas fa-arrow-right ml-2"></i></button>
                         </div>
                         <div class="card glass-panel min-h-[60vh] flex flex-col">
-                            <h2 class="text-2xl font-bold text-center mb-4">Họ từ: <span class="text-violet-700 dark:text-violet-300">${familyRoot}</span></h2>
+                            <h2 class="text-2xl font-bold text-center mb-4">Họ từ: <span class="text-violet-700">${familyRoot}</span></h2>
                             <div class="mindmap-container">
                                 <div class="mindmap" id="mindmap">
                                     <div class="mindmap-center">${familyRoot}</div>
@@ -873,16 +953,28 @@
                 });
 
                 document.getElementById('back-btn').addEventListener('click', () => this.renderSelectionScreen('study'));
+                 document.getElementById('next-btn').addEventListener('click', () => {
+                    this.data.currentSessionIndex++;
+                    this.renderNextInSession();
+                });
             },
 
-            renderWordFamilyMatching() {
-                const familyRoot = this.shuffleArray(Object.keys(this.data.wordFamilies))[0] || this.data.words[0].familyRoot;
-                this.data.wordFamilyState.familyWords = this.data.wordFamilies[familyRoot];
+            renderWordFamilyMatching(item) {
+                const familyRoot = item.familyRoot;
+                const familyWords = this.data.wordFamilies[familyRoot];
+
+                if (!familyWords || familyWords.length < 2) {
+                    // This exercise is not suitable, skip to the next one
+                    this.data.currentSessionIndex++;
+                    this.renderNextInSession();
+                    return;
+                }
+
+                this.data.wordFamilyState.familyWords = familyWords;
                 this.data.wordFamilyState.matchedWords = [];
                 this.data.wordFamilyState.selected = { word: null, type: null, meaning: null, pronunciation: null };
 
                 const renderColumns = () => {
-                    const familyWords = this.data.wordFamilyState.familyWords;
                     const words = this.shuffleArray(familyWords.map(w => ({ text: w.word, id: w.id })));
                     const types = this.shuffleArray(familyWords.map(w => ({ text: w.type, id: w.id })));
                     const meanings = this.shuffleArray(familyWords.map(w => ({ text: w.meaning, id: w.id })));
@@ -898,99 +990,408 @@
 
                     document.getElementById('main-content').innerHTML = `
                         <div class="fade-in">
-                            <h3 class="text-xl font-bold mb-4 text-center text-slate-800">Word Family Matching</h3>
+                             <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-xl font-bold text-slate-800">Word Family Matching</h3>
+                                <div class="text-lg font-semibold">${this.data.currentSessionIndex + 1} / ${this.data.sessionItems.length}</div>
+                            </div>
                             <p class="text-center text-slate-500 mb-6">Nối các mục ở 4 cột để tạo thành các từ đúng trong họ từ "${familyRoot}".</p>
-                            <div class="flex flex-col sm:flex-row gap-4">
-                                ${createColumn('Từ vựng', words, 'word')}
-                                ${createColumn('Loại từ', types, 'type')}
-                                ${createColumn('Nghĩa', meanings, 'meaning')}
-                                ${createColumn('Phiên âm', pronunciations, 'pronunciation')}
+                            <div class="card glass-panel">
+                               <div class="flex flex-col sm:flex-row gap-4">
+                                    ${createColumn('Từ vựng', words, 'word')}
+                                    ${createColumn('Loại từ', types, 'type')}
+                                    ${createColumn('Nghĩa', meanings, 'meaning')}
+                                    ${createColumn('Phiên âm', pronunciations, 'pronunciation')}
+                                </div>
                             </div>
-                            <div class="text-center mt-6">
-                                <button id="check-family-btn" class="btn btn-main-action" disabled>Kiểm tra</button>
-                            </div>
+                            <div id="feedback-placeholder" class="text-center mt-6"></div>
                         </div>`;
 
                     document.querySelectorAll('.answer-option').forEach(btn => btn.onclick = (e) => handleFamilySelection(e.target));
-                    document.getElementById('check-family-btn').onclick = checkFamilyMatch;
                 };
                 
                 const handleFamilySelection = (selectedButton) => {
                     const category = selectedButton.parentElement.dataset.category;
+                    // Deselect previous in the same column
                     selectedButton.parentElement.querySelectorAll('.answer-option').forEach(btn => btn.classList.remove('selected'));
+                    // Select new one
                     selectedButton.classList.add('selected');
                     this.data.wordFamilyState.selected[category] = selectedButton;
+                    
                     const allSelected = Object.values(this.data.wordFamilyState.selected).every(val => val !== null);
-                    document.getElementById('check-family-btn').disabled = !allSelected;
+                    if (allSelected) {
+                        checkFamilyMatch();
+                    }
                 };
 
                 const checkFamilyMatch = () => {
                     const selectedWordId = this.data.wordFamilyState.selected.word.dataset.id;
                     const isCorrect = Object.values(this.data.wordFamilyState.selected).every(btn => btn.dataset.id === selectedWordId);
                     const selectedButtons = Object.values(this.data.wordFamilyState.selected);
-                    selectedButtons.forEach(btn => btn.classList.add(isCorrect ? 'correct' : 'incorrect'));
                     
                     if (isCorrect) {
+                        this.updateProgress(selectedWordId, 'word', true);
                         this.data.wordFamilyState.matchedWords.push(selectedWordId);
-                        selectedButtons.forEach(btn => { btn.disabled = true; btn.classList.remove('selected'); });
+                        selectedButtons.forEach(btn => {
+                             btn.classList.add('correct');
+                             btn.classList.remove('selected');
+                             btn.disabled = true; 
+                        });
+                        
                         if (this.data.wordFamilyState.matchedWords.length === this.data.wordFamilyState.familyWords.length) {
-                            this.showFeedback(true, `<p class="text-green-600 font-bold text-lg">Hoàn hảo! Bạn đã ghép đúng cả họ từ. <i class="fas fa-award"></i></p>`);
+                             this.showFeedback(true, `Hoàn hảo! Bạn đã ghép đúng cả họ từ.`);
                         }
                     } else {
+                        // All words in family are marked as incorrect for this attempt
+                        this.updateProgress(item.id, 'word', false);
+                        selectedButtons.forEach(btn => btn.classList.add('incorrect'));
                         setTimeout(() => selectedButtons.forEach(btn => btn.classList.remove('incorrect', 'selected')), 1000);
                     }
+                    // Reset selection for next try
                     this.data.wordFamilyState.selected = { word: null, type: null, meaning: null, pronunciation: null };
-                    document.getElementById('check-family-btn').disabled = true;
                 };
 
                 renderColumns();
             },
+            
+            renderTraditionalMCQ(item) {
+                const isEngToViet = Math.random() > 0.5;
+                const question = isEngToViet ? item.word : item.meaning;
+                const correctAnswer = isEngToViet ? item.meaning : item.word;
+                this.data.currentCorrectAnswer = correctAnswer;
+                
+                const distractorPool = isEngToViet ? this.data.words.map(w => w.meaning) : this.data.words.map(w => w.word);
+                const distractors = this.shuffleArray(distractorPool.filter(d => d !== correctAnswer)).slice(0, 3);
+                
+                const options = this.shuffleArray([correctAnswer, ...distractors]);
+                
+                this.renderMCQBase('Traditional MCQ', question, options, () => {
+                    this.updateProgress(item.id, 'word', this.data.wasCorrect);
+                });
+            },
+            
+            renderContextualMCQ(item) {
+                if (!item.exampleSentence) { return this.renderNextInSession(); }
 
-            // ... All other 9 render functions will be here ...
+                const question = item.exampleSentence.replace(new RegExp(`\\b${item.word}\\b`, 'i'), '<strong class="text-2xl">____</strong>');
+                const correctAnswer = item.word;
+                this.data.currentCorrectAnswer = correctAnswer;
 
+                let distractors = [];
+                // Priority 1: Same family
+                const familyDistractors = (this.data.wordFamilies[item.familyRoot] || []).filter(w => w.id !== item.id).map(w => w.word);
+                distractors.push(...this.shuffleArray(familyDistractors).slice(0, 1));
+
+                // Priority 2: Pre-defined distractors
+                distractors.push(...(item.distractors_en || []));
+
+                // Priority 3: Random words of same type
+                if (distractors.length < 3) {
+                    const randomDistractors = this.data.words
+                        .filter(w => w.type === item.type && w.id !== item.id && !distractors.includes(w.word))
+                        .map(w => w.word);
+                    distractors.push(...this.shuffleArray(randomDistractors));
+                }
+                
+                const finalDistractors = this.shuffleArray([...new Set(distractors)]).slice(0, 3);
+                const options = this.shuffleArray([correctAnswer, ...finalDistractors]);
+
+                this.renderMCQBase('Contextual MCQ', question, options, () => {
+                    this.updateProgress(item.id, 'word', this.data.wasCorrect);
+                });
+            },
+
+            renderAudioListening(item) {
+                if (typeof SpeechSynthesisUtterance === "undefined") {
+                    this.showCustomAlert("Trình duyệt của bạn không hỗ trợ API âm thanh.");
+                    return this.renderNextInSession();
+                }
+
+                const correctAnswer = item.word;
+                this.data.currentCorrectAnswer = correctAnswer;
+                const distractors = this.shuffleArray(this.data.words.filter(w => w.id !== item.id).map(w => w.word)).slice(0, 3);
+                const options = this.shuffleArray([correctAnswer, ...distractors]);
+
+                this.renderMCQBase('Audio Listening', 'Nghe và chọn từ đúng.', options, () => {
+                    this.updateProgress(item.id, 'word', this.data.wasCorrect);
+                }, `
+                    <button id="play-audio-btn" class="btn btn-secondary mx-auto mb-6">
+                        <i class="fas fa-volume-up text-xl"></i> Phát âm
+                    </button>
+                `);
+
+                const utterance = new SpeechSynthesisUtterance(item.word);
+                utterance.lang = 'en-US';
+                document.getElementById('play-audio-btn').onclick = () => {
+                    window.speechSynthesis.speak(utterance);
+                };
+            },
+
+            renderSentenceUnscramble(item) {
+                 if (!item.exampleSentence) { return this.renderNextInSession(); }
+                 
+                 this.updateHeader('Practice', 'Sentence Unscramble');
+                 const main = document.getElementById('main-content');
+                 const originalSentence = item.exampleSentence.replace(/[.,!?]/g, '');
+                 const words = this.shuffleArray(originalSentence.split(/\s+/));
+                 
+                 main.innerHTML = `
+                    <div class="fade-in text-center">
+                        <div class="flex justify-between items-center mb-4">
+                           <h3 class="text-xl font-bold text-slate-800">Sắp xếp lại câu</h3>
+                           <div class="text-lg font-semibold">${this.data.currentSessionIndex + 1} / ${this.data.sessionItems.length}</div>
+                        </div>
+                        <div class="card glass-panel">
+                            <p class="mb-4 text-slate-600">Sắp xếp các từ dưới đây để tạo thành một câu có nghĩa.</p>
+                            <div id="unscramble-drop-area" class="unscramble-area word-token-area mb-6 p-4"></div>
+                            <div id="unscramble-source-area" class="word-token-area bg-black/5 rounded-xl">
+                                ${words.map((word, index) => `<button data-index="${index}" class="word-token">${word}</button>`).join('')}
+                            </div>
+                        </div>
+                        <div id="feedback-placeholder" class="mt-6">
+                           <button id="check-unscramble-btn" class="btn btn-main-action" disabled>Kiểm tra</button>
+                        </div>
+                    </div>
+                 `;
+
+                 const dropArea = document.getElementById('unscramble-drop-area');
+                 const sourceArea = document.getElementById('unscramble-source-area');
+                 const checkBtn = document.getElementById('check-unscramble-btn');
+
+                 sourceArea.addEventListener('click', e => {
+                    if (e.target.classList.contains('word-token')) {
+                        dropArea.appendChild(e.target);
+                        checkBtn.disabled = false;
+                    }
+                 });
+
+                 dropArea.addEventListener('click', e => {
+                    if (e.target.classList.contains('word-token')) {
+                        sourceArea.appendChild(e.target);
+                        checkBtn.disabled = dropArea.children.length === 0;
+                    }
+                 });
+
+                 checkBtn.addEventListener('click', () => {
+                    const userAnswer = Array.from(dropArea.children).map(el => el.textContent).join(' ');
+                    const isCorrect = userAnswer.toLowerCase() === originalSentence.toLowerCase();
+                    this.updateProgress(item.id, 'word', isCorrect);
+                    this.data.currentCorrectAnswer = item.exampleSentence;
+                    this.showFeedback(isCorrect);
+                 });
+            },
+
+            renderGapFill(item) { // For structures
+                if (!item.applicationExamples || item.applicationExamples.length === 0) { return this.renderNextInSession(); }
+                
+                const sentence = item.applicationExamples[0];
+                const structureParts = item.phrase.split(/\s+|(\/)/).filter(p => p && p !== '/'); // Split by space or slash
+                const prepositions = ['of', 'to', 'for', 'in', 'on', 'at', 'with', 'by', 'from', 'about'];
+                
+                let wordToHide = this.shuffleArray(structureParts.filter(p => prepositions.includes(p.toLowerCase())))[0];
+                if (!wordToHide || !sentence.includes(wordToHide)) {
+                    wordToHide = this.shuffleArray(structureParts.filter(p => isNaN(p) && p.length > 2))[0]; // Fallback
+                }
+                if (!wordToHide) { return this.renderNextInSession(); } // Cannot generate question
+
+                this.data.currentCorrectAnswer = wordToHide;
+                const questionHTML = sentence.replace(new RegExp(`\\b${wordToHide}\\b`, 'i'), '<strong class="text-2xl">____</strong>');
+
+                this.renderInputBase('Gap-Fill', questionHTML, `Điền từ còn thiếu vào chỗ trống. Gợi ý: ${item.phrase}`, () => {
+                    const userAnswer = document.getElementById('user-input').value.trim();
+                    const isCorrect = userAnswer.toLowerCase() === wordToHide.toLowerCase();
+                    this.updateProgress(item.id, 'structure', isCorrect);
+                    this.showFeedback(isCorrect);
+                });
+            },
+
+            renderFindAndFixError(item) { // For structures
+                if (!item.applicationExamples || item.applicationExamples.length === 0) { return this.renderNextInSession(); }
+                
+                const sentence = item.applicationExamples[0];
+                const prepositionsInSentence = sentence.split(' ').filter(word => ['of', 'to', 'for', 'in', 'on', 'at', 'with'].includes(word.toLowerCase()));
+                if(prepositionsInSentence.length === 0) { return this.renderNextInSession(); } // Cannot generate error
+
+                const originalPreposition = this.shuffleArray(prepositionsInSentence)[0];
+                const wrongPreposition = this.shuffleArray(['of', 'to', 'for', 'in', 'on', 'at', 'with'].filter(p => p !== originalPreposition.toLowerCase()))[0];
+                const incorrectSentence = sentence.replace(new RegExp(`\\b${originalPreposition}\\b`, 'i'), `<span class="text-red-500 font-bold">${wrongPreposition}</span>`);
+                const questionHTML = incorrectSentence.split(' ').map((word, i) => `<span class="clickable-word" data-word="${word.replace(/[.,!?]/g, '')}" data-index="${i}">${word}</span>`).join(' ');
+
+                this.data.currentCorrectAnswer = `${wrongPreposition} -> ${originalPreposition}`;
+                this.renderInputBase('Find and Fix Error', `<p class="text-lg leading-relaxed">${questionHTML}</p>`, 'Click vào từ sai, sau đó gõ từ đúng để sửa.', () => {
+                    const selectedWordEl = document.querySelector('.clickable-word.selected');
+                    if (!selectedWordEl) { this.showCustomAlert("Vui lòng chọn từ bạn cho là sai."); return; }
+                    
+                    const typedCorrection = document.getElementById('user-input').value.trim();
+                    const selectedWord = selectedWordEl.dataset.word;
+                    
+                    const isCorrect = selectedWord.toLowerCase() === wrongPreposition.toLowerCase() && typedCorrection.toLowerCase() === originalPreposition.toLowerCase();
+                    this.updateProgress(item.id, 'structure', isCorrect);
+                    this.showFeedback(isCorrect);
+                }, `
+                    <input type="text" id="user-input" class="text-input text-center mt-4" placeholder="Gõ từ đúng vào đây">
+                `);
+
+                document.querySelectorAll('.clickable-word').forEach(wordEl => {
+                    wordEl.onclick = () => {
+                        document.querySelectorAll('.clickable-word').forEach(el => el.classList.remove('selected'));
+                        wordEl.classList.add('selected');
+                    }
+                });
+            },
+            
+            renderCorrectIncorrectSentence(item) { // For structures
+                 if (!item.applicationExamples || item.applicationExamples.length === 0) { return this.renderNextInSession(); }
+                 
+                 let sentence = item.applicationExamples[0];
+                 const isCorrect = Math.random() > 0.5;
+                 
+                 if (!isCorrect) {
+                    const prepositionsInSentence = sentence.split(' ').filter(word => ['of', 'to', 'for', 'in', 'on', 'at', 'with'].includes(word.toLowerCase()));
+                    if(prepositionsInSentence.length > 0) {
+                        const originalPreposition = this.shuffleArray(prepositionsInSentence)[0];
+                        const wrongPreposition = this.shuffleArray(['of', 'to', 'for', 'in', 'on', 'at', 'with'].filter(p => p !== originalPreposition.toLowerCase()))[0];
+                        sentence = sentence.replace(new RegExp(`\\b${originalPreposition}\\b`, 'i'), wrongPreposition);
+                    }
+                 }
+                 this.data.currentCorrectAnswer = isCorrect ? "Đúng" : "Sai";
+
+                 const options = ["Đúng", "Sai"];
+                 this.renderMCQBase('Correct/Incorrect Sentence', `<p class="text-lg italic">"${sentence}"</p>`, options, () => {
+                     this.updateProgress(item.id, 'structure', this.data.wasCorrect);
+                 }, '<p class="mb-4 text-slate-600">Câu dưới đây đúng hay sai?</p>');
+            },
+            
             // --- [END] EXERCISE RENDERERS ---
+
+            // --- [START] RENDER HELPERS ---
+            
+            renderMCQBase(title, questionHTML, options, onCheck, preQuestionHTML = '') {
+                this.updateHeader('Practice', title);
+                const main = document.getElementById('main-content');
+                main.innerHTML = `
+                    <div class="fade-in text-center">
+                        <div class="flex justify-between items-center mb-4">
+                           <h3 class="text-xl font-bold text-slate-800">${title}</h3>
+                           <div class="text-lg font-semibold">${this.data.currentSessionIndex + 1} / ${this.data.sessionItems.length}</div>
+                        </div>
+                        <div class="card glass-panel">
+                           ${preQuestionHTML}
+                           <div class="mb-8 text-xl font-semibold min-h-[60px] flex items-center justify-center">${questionHTML}</div>
+                           <div id="answer-options" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             ${options.map(opt => `<button class="answer-option p-4">${opt}</button>`).join('')}
+                           </div>
+                        </div>
+                        <div id="feedback-placeholder" class="mt-6"></div>
+                    </div>
+                `;
+
+                document.getElementById('answer-options').addEventListener('click', e => {
+                    if (e.target.classList.contains('answer-option')) {
+                        const selectedOption = e.target;
+                        const isCorrect = selectedOption.textContent.trim() === this.data.currentCorrectAnswer.trim();
+                        this.data.wasCorrect = isCorrect;
+                        
+                        document.querySelectorAll('.answer-option').forEach(btn => {
+                            btn.disabled = true;
+                            btn.classList.add('disabled');
+                            if(btn.textContent.trim() === this.data.currentCorrectAnswer.trim()){
+                                btn.classList.add('correct');
+                            }
+                        });
+
+                        if (!isCorrect) {
+                            selectedOption.classList.add('incorrect');
+                        }
+                        
+                        onCheck();
+                        this.showFeedback(isCorrect);
+                    }
+                });
+            },
+
+            renderInputBase(title, questionHTML, instruction, onCheck, inputHTML = null) {
+                this.updateHeader('Practice', title);
+                const main = document.getElementById('main-content');
+                main.innerHTML = `
+                     <div class="fade-in text-center">
+                        <div class="flex justify-between items-center mb-4">
+                           <h3 class="text-xl font-bold text-slate-800">${title}</h3>
+                           <div class="text-lg font-semibold">${this.data.currentSessionIndex + 1} / ${this.data.sessionItems.length}</div>
+                        </div>
+                        <div class="card glass-panel">
+                            <p class="mb-4 text-slate-600">${instruction}</p>
+                            <div class="mb-6 text-xl font-semibold">${questionHTML}</div>
+                            ${inputHTML || `<input type="text" id="user-input" class="text-input text-center" placeholder="Gõ câu trả lời...">`}
+                        </div>
+                        <div id="feedback-placeholder" class="mt-6">
+                            <button id="check-btn" class="btn btn-main-action">Kiểm tra</button>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('check-btn').onclick = onCheck;
+                document.getElementById('user-input')?.addEventListener('keyup', e => {
+                    if (e.key === 'Enter') onCheck();
+                });
+            },
+
+            // --- [END] RENDER HELPERS ---
             
             showFeedback(isCorrect, customMessage = null) {
                 const feedbackArea = document.getElementById('feedback-area');
-                feedbackArea.innerHTML = '';
+                document.getElementById('feedback-placeholder')?.remove(); // Remove button placeholder
+                
+                let messageHTML;
                 if (customMessage) {
-                    feedbackArea.innerHTML = customMessage;
-                } else if (isCorrect) {
-                    feedbackArea.innerHTML = `<p class="text-green-600 font-bold text-lg">Chính xác! <i class="fas fa-check-circle"></i></p>`;
+                    messageHTML = `<p class="${isCorrect ? 'text-green-600' : 'text-red-600'} font-bold text-lg">${customMessage}</p>`;
                 } else {
-                    feedbackArea.innerHTML = `<p class="text-red-600 font-bold text-lg">Chưa đúng! <i class="fas fa-times-circle"></i> Đáp án đúng là: <strong class="underline">${this.data.currentCorrectAnswer}</strong></p>`;
+                    if (isCorrect) {
+                        messageHTML = `<p class="text-green-600 font-bold text-lg">Chính xác! <i class="fas fa-check-circle"></i></p>`;
+                    } else {
+                        messageHTML = `<p class="text-red-600 font-bold text-lg">Chưa đúng! <i class="fas fa-times-circle"></i> Đáp án đúng là: <strong class="underline">${this.data.currentCorrectAnswer}</strong></p>`;
+                    }
                 }
-                const nextButton = document.createElement('button');
-                nextButton.textContent = 'Câu tiếp theo';
-                nextButton.className = 'btn btn-main-action mt-4';
-                nextButton.onclick = () => { feedbackArea.innerHTML = ''; this.renderNextInSession(); };
-                feedbackArea.appendChild(nextButton);
+                
+                feedbackArea.innerHTML = `
+                    ${messageHTML}
+                    <button id="next-session-btn" class="btn btn-main-action mt-4">Câu tiếp theo</button>
+                `;
+                feedbackArea.parentElement.style.transform = 'translate(-50%, 0)'; // Slide up
+
+                document.getElementById('next-session-btn').onclick = () => {
+                    feedbackArea.parentElement.style.transform = 'translate(-50%, 150%)'; // Slide down
+                    this.data.currentSessionIndex++;
+                    this.renderNextInSession(); 
+                };
             },
 
-            checkMCQAnswer(selectedOption) {
-                const buttons = document.querySelectorAll('.answer-option');
-                buttons.forEach(btn => btn.disabled = true);
-                const isCorrect = selectedOption.textContent === this.data.currentCorrectAnswer;
-                selectedOption.classList.add(isCorrect ? 'correct' : 'incorrect');
-                if (!isCorrect) {
-                    buttons.forEach(btn => {
-                        if (btn.textContent === this.data.currentCorrectAnswer) btn.classList.add('correct');
-                    });
-                }
-                this.showFeedback(isCorrect);
+            showSessionEndSummary() {
+                 this.updateHeader('Hoàn thành!', "Bạn đã kết thúc phiên luyện tập.");
+                 const main = document.getElementById('main-content');
+                 main.innerHTML = `
+                    <div class="fade-in text-center">
+                        <div class="card glass-panel">
+                            <i class="fas fa-trophy text-5xl text-amber-400 mb-4"></i>
+                            <h2 class="text-3xl font-bold mb-4">Chúc mừng!</h2>
+                            <p class="text-lg text-slate-600 mb-6">Bạn đã hoàn thành phiên luyện tập này.</p>
+                             <button id="back-to-dashboard-btn" class="btn btn-main-action">Về trang chính</button>
+                        </div>
+                    </div>
+                 `;
+                 document.getElementById('back-to-dashboard-btn').onclick = () => this.renderDashboard();
             },
 
             // --- UTILITY & HELPER FUNCTIONS ---
             showErrorState(message) {
                 document.getElementById('loader-overlay').classList.remove('is-open');
-                document.body.innerHTML = `<div class="flex items-center justify-center min-h-screen"><div class="text-center p-8 glass-panel max-w-lg"><i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i><h2 class="text-2xl font-bold text-red-700">Đã xảy ra lỗi</h2><p class="text-slate-600 mt-2">${message}</p><button onclick="window.location.href='/'" class="btn btn-main-action mt-6">Quay lại trang chủ</button></div></div>`;
+                document.body.innerHTML = `<div class="flex items-center justify-center min-h-screen bg-red-100"><div class="text-center p-8 bg-white/70 backdrop-blur-md rounded-2xl shadow-lg max-w-lg"><i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i><h2 class="text-2xl font-bold text-red-700">Đã xảy ra lỗi</h2><p class="text-slate-600 mt-2">${message}</p><button onclick="window.location.href='/'" class="btn btn-main-action mt-6">Quay lại trang chủ</button></div></div>`;
             },
             
             initSidebarNav() {
                 document.getElementById('nav-dashboard').addEventListener('click', () => this.renderDashboard());
                 document.getElementById('nav-study').addEventListener('click', () => this.renderSelectionScreen('study'));
                 document.getElementById('nav-practice').addEventListener('click', () => this.renderSelectionScreen('practice'));
-                document.getElementById('nav-test').addEventListener('click', () => this.openModal('test-setup-modal'));
+                document.getElementById('nav-test').addEventListener('click', () => this.renderSelectionScreen('test'));
                 document.getElementById('nav-reset').addEventListener('click', () => {
                     this.showCustomConfirm("Bạn có chắc muốn xóa toàn bộ tiến trình của bài tập này không?", async () => {
                         this.data.progress = { learnedItems: {}, lastTestResult: null, incorrectCounts: {} };
@@ -1020,16 +1421,16 @@
                 
                 if (isStruct) {
                     items = this.data.structures.filter(i => i.isLearned === isLearned);
-                    title.textContent = `${isLearned ? 'Đã học' : 'Chưa học'} Cấu trúc`;
-                    headers = `<thead><tr class="text-xs text-slate-800 uppercase"><th class="px-6 py-3">Structure</th><th class="px-6 py-3">Meaning</th></tr></thead>`;
-                    rows = items.map(i => `<tr class="border-b border-slate-200/50"><td class="px-6 py-4 font-medium">${i.fullStructure}</td><td class="px-6 py-4">${i.translation}</td></tr>`).join('');
+                    title.textContent = `${isLearned ? 'Đã học' : 'Chưa học'} Cấu trúc (${items.length})`;
+                    headers = `<thead><tr class="text-xs uppercase"><th class="px-6 py-3">Structure</th><th class="px-6 py-3">Meaning</th></tr></thead>`;
+                    rows = items.map(i => `<tr class="border-b border-slate-200/50 dark:border-slate-700/50"><td class="px-6 py-4 font-medium">${i.phrase}</td><td class="px-6 py-4">${i.meaning}</td></tr>`).join('');
                 } else {
                     items = this.data.words.filter(i => i.isLearned === isLearned);
-                    title.textContent = `${isLearned ? 'Đã học' : 'Chưa học'} Từ vựng`;
-                    headers = `<thead><tr class="text-xs text-slate-800 uppercase"><th class="px-6 py-3">Word</th><th class="px-6 py-3">Type</th><th class="px-6 py-3">Meaning</th></tr></thead>`;
-                    rows = items.map(i => `<tr class="border-b border-slate-200/50"><td class="px-6 py-4 font-medium">${i.word}</td><td class="px-6 py-4">${i.type}</td><td class="px-6 py-4">${i.meaning}</td></tr>`).join('');
+                    title.textContent = `${isLearned ? 'Đã học' : 'Chưa học'} Từ vựng (${items.length})`;
+                    headers = `<thead><tr class="text-xs uppercase"><th class="px-6 py-3">Word</th><th class="px-6 py-3">Type</th><th class="px-6 py-3">Meaning</th></tr></thead>`;
+                    rows = items.map(i => `<tr class="border-b border-slate-200/50 dark:border-slate-700/50"><td class="px-6 py-4 font-medium">${i.word}</td><td class="px-6 py-4">${i.type}</td><td class="px-6 py-4">${i.meaning}</td></tr>`).join('');
                 }
-                table.innerHTML = headers + `<tbody>${rows}</tbody>`;
+                table.innerHTML = headers + `<tbody>${rows.length > 0 ? rows : `<tr><td colspan="3" class="text-center p-8 text-slate-500">Không có mục nào.</td></tr>`}</tbody>`;
                 this.openModal('word-list-modal');
             },
             showCustomAlert(message) {
@@ -1038,7 +1439,7 @@
                 const alertBox = document.createElement('div');
                 alertBox.id = alertId;
                 alertBox.className = 'glass-panel';
-                alertBox.style.cssText = `position:fixed; top:20px; left:50%; transform:translateX(-50%); padding:16px 24px; border-radius:16px; z-index:200; font-weight:600; color:var(--text-primary); animation:fadeIn 0.5s ease forwards;`;
+                alertBox.style.cssText = `position:fixed; top:20px; left:50%; transform:translateX(-50%); padding:16px 24px; border-radius:16px; z-index:200; font-weight:600; color:var(--text-primary); animation:fadeIn 0.5s ease forwards; box-shadow: 0 5px 20px rgba(0,0,0,0.2);`;
                 alertBox.innerHTML = message;
                 document.body.appendChild(alertBox);
                 setTimeout(() => { alertBox.style.animation = 'scaleOut 0.5s ease forwards'; setTimeout(() => alertBox.remove(), 500); }, 3000);
@@ -1049,7 +1450,7 @@
                 const confirmBox = document.createElement('div');
                 confirmBox.id = confirmId;
                 confirmBox.className = 'modal is-open';
-                confirmBox.innerHTML = `<div class="modal-content glass-panel text-center"><p class="text-lg font-medium text-slate-800 mb-6">${message}</p><div class="flex justify-center gap-4"><button id="confirm-no" class="btn btn-secondary">${cancelText}</button><button id="confirm-yes" class="btn btn-main-action bg-red-500 hover:bg-red-600">${confirmText}</button></div></div>`;
+                confirmBox.innerHTML = `<div class="modal-content glass-panel text-center"><p class="text-lg font-medium mb-6">${message}</p><div class="flex justify-center gap-4"><button id="confirm-no" class="btn btn-secondary">${cancelText}</button><button id="confirm-yes" class="btn btn-main-action bg-red-500 hover:bg-red-600">${confirmText}</button></div></div>`;
                 document.body.appendChild(confirmBox);
                 const close = () => { confirmBox.classList.add('is-closing'); setTimeout(() => confirmBox.remove(), 300); };
                 document.getElementById('confirm-yes').onclick = () => { onConfirm(); close(); };
