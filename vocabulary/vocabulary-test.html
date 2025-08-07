@@ -236,13 +236,11 @@
             processData() {
                 this.data.structures = [];
                 this.data.words.forEach(word => {
-                    // Ensure each word object has an itemType property
                     word.itemType = 'word'; 
                     if (word.structures && Array.isArray(word.structures)) {
                         word.structures.forEach((struct, s_idx) => {
                             this.data.structures.push({ 
                                 ...struct, 
-                                // Create a unique ID for the structure that matches Firebase progress keys
                                 id: `s_${word.id}_${s_idx}`, 
                                 itemType: 'structure', 
                                 rootWordId: word.id 
@@ -252,7 +250,6 @@
                 });
                 const families = {}; 
                 this.data.words.forEach(word => { 
-                    // Generate a familyRoot if it doesn't exist from Firebase
                     if (!word.familyRoot) {
                         word.familyRoot = word.word.toLowerCase();
                     }
