@@ -25,6 +25,7 @@
     <style>
         :root {
             --primary-color: #6d28d9; --primary-hover: #5b21b6;
+            --correct-color: #16a34a; --incorrect-color: #dc2626;
             --bg-light: #f5f7ff; --bg-card: #ffffff; --text-primary: #0f172a;
             --text-secondary: #475569; --border-color: #e5e7eb;
         }
@@ -45,13 +46,24 @@
         .flashcard.is-flipped { transform: rotateY(180deg); }
         .flashcard-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: var(--bg-card); border-radius: 1rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07); padding: 2rem; text-align: center; }
         .flashcard-back { transform: rotateY(180deg); }
-        .flashcard-nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; }
-
+        
         /* Mindmap Styles */
         .mindmap-node { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 50%; text-align: center; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.3s ease; }
         .mindmap-node.center { width: 150px; height: 150px; background-color: var(--primary-color); color: white; font-weight: bold; font-size: 1.25rem; z-index: 10; }
         .mindmap-node.child { width: 110px; height: 110px; font-size: 0.9rem; cursor: pointer; background-color: #eef2ff; color: #4338ca; }
         .mindmap-line { position: absolute; height: 2px; background-color: #cbd5e1; transform-origin: 0 50%; z-index: 1; }
+        
+        /* Practice Styles */
+        .answer-option { display: block; width: 100%; padding: 1rem; border: 2px solid var(--border-color); border-radius: 0.75rem; background-color: var(--bg-card); text-align: left; font-weight: 500; }
+        .answer-option:hover:not(.disabled) { border-color: var(--primary-color); background-color: #f5f3ff; }
+        .answer-option.disabled { cursor: not-allowed; }
+        .answer-option.correct { border-color: var(--correct-color); background-color: #f0fdf4; color: #14532d; }
+        .answer-option.incorrect { border-color: var(--incorrect-color); background-color: #fef2f2; color: #991b1b; }
+        .token-area { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 1rem; border: 2px dashed #cbd5e1; border-radius: 0.5rem; min-height: 80px; }
+        .word-token { padding: 0.5rem 1rem; background-color: #eef2ff; color: #4338ca; border-radius: 0.5rem; font-weight: 500; cursor: pointer; }
+        .matching-item { padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 0.5rem; margin-bottom: 0.5rem; cursor: pointer; transition: all 0.2s; background-color: #fff; }
+        .matching-item.selected { border-color: var(--primary-color); background-color: #eef2ff; font-weight: 600; }
+        .matching-item.correct-match { background-color: #dcfce7; border-color: #22c55e; opacity: 0.6; cursor: default; }
 
         .fade-in { animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -64,7 +76,6 @@
             <p class="text-lg font-semibold text-white mt-4">Đang tải dữ liệu bài học...</p>
         </div>
     </div>
-
     <div id="app-container" class="max-w-4xl mx-auto p-4 sm:p-8 hidden">
         <header id="app-header" class="mb-8"></header>
         <main id="app-main"></main>
@@ -75,42 +86,30 @@
         import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
         const App = {
-            // Trạng thái tập trung của ứng dụng
             state: {
-                db: null,
-                submissionId: null,
-                studentName: '',
-                testData: {},
-                wordList: [],
-                structureList: [],
-                wordFamilies: {},
-                flashcardQueue: [],
-                currentIndex: 0,
-                progress: {
-                    learnedItems: new Set(),
-                },
+                db: null, submissionId: null, studentName: '',
+                testData: {}, wordList: [], structureList: [], wordFamilies: {},
+                currentSessionItems: [], currentIndex: 0, currentScore: 0,
+                currentCorrectAnswer: null,
+                progress: { learnedItems: new Set(), incorrectCounts: {} },
+                session: {},
                 isSubmitting: false,
             },
-
-            // Cache các đối tượng DOM
-            DOM: {
-                loader: document.getElementById('loader-overlay'),
-                container: document.getElementById('app-container'),
-                header: document.getElementById('app-header'),
-                main: document.getElementById('app-main'),
-            },
+            DOM: {},
 
             // --- 1. CORE LOGIC ---
-
             async init() {
+                this.DOM = {
+                    loader: document.getElementById('loader-overlay'),
+                    container: document.getElementById('app-container'),
+                    header: document.getElementById('app-header'),
+                    main: document.getElementById('app-main'),
+                };
                 this.state.db = getFirestore(initializeApp(window.firebaseConfig));
                 const params = new URLSearchParams(window.location.search);
                 const submissionId = params.get('submission_id');
 
-                if (!submissionId) {
-                    this.showModal("Lỗi", "Không tìm thấy mã dự thi. Vui lòng truy cập lại từ cổng chính.");
-                    return;
-                }
+                if (!submissionId) { this.showModal("Lỗi", "Không tìm thấy mã dự thi."); return; }
                 
                 this.state.submissionId = submissionId;
                 await this.startSession(submissionId);
@@ -144,28 +143,22 @@
                     
                     this.renderHeader();
                     this.renderDashboard();
-                } catch (error) {
-                    this.showModal("Lỗi", error.message);
-                }
+                } catch (error) { this.showModal("Lỗi", error.message); }
             },
             
             processData() {
-                const structures = [];
-                const families = {};
+                const structures = []; const families = {};
                 this.state.wordList.forEach(word => {
                     word.itemType = 'word';
+                    // Chuẩn hóa ID của word để tiện tra cứu
+                    word.id = `word_${word.id}`;
                     if (word.structures && Array.isArray(word.structures)) {
                         word.structures.forEach((struct, index) => {
-                            structures.push({
-                                ...struct,
-                                id: `structure_${word.id}_${index}`,
-                                itemType: 'structure',
-                                rootWord: word.word
-                            });
+                            structures.push({ ...struct, id: `structure_${word.id}_${index}`, itemType: 'structure', rootWord: word.word });
                         });
                     }
-                    // Tự suy luận familyRoot nếu API chưa cung cấp
-                    const root = word.familyRoot || word.word.toLowerCase();
+                    const root = this.findRoot(word.word);
+                    word.familyRoot = root;
                     if (!families[root]) families[root] = [];
                     families[root].push(word);
                 });
@@ -174,26 +167,25 @@
             },
 
             // --- 2. PROGRESS MANAGEMENT ---
-
             loadProgress() {
                 const progressKey = `vocabProgress_${this.state.submissionId}`;
                 const savedProgress = localStorage.getItem(progressKey);
                 if (savedProgress) {
                     const parsed = JSON.parse(savedProgress);
                     this.state.progress.learnedItems = new Set(parsed.learnedItems || []);
+                    this.state.progress.incorrectCounts = parsed.incorrectCounts || {};
                 }
             },
 
             saveProgress() {
                 const progressKey = `vocabProgress_${this.state.submissionId}`;
-                const progressToSave = {
+                localStorage.setItem(progressKey, JSON.stringify({
                     learnedItems: [...this.state.progress.learnedItems],
-                };
-                localStorage.setItem(progressKey, JSON.stringify(progressToSave));
+                    incorrectCounts: this.state.progress.incorrectCounts,
+                }));
             },
-
+            
             // --- 3. UI RENDERING ---
-
             renderHeader() {
                  this.DOM.header.innerHTML = `
                     <div class="flex flex-wrap justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
@@ -205,17 +197,15 @@
                     </div>`;
                 document.getElementById('submit-final-btn').addEventListener('click', () => {
                     this.showModal(
-                        "Xác nhận Hoàn thành",
-                        "Bạn có chắc muốn kết thúc và lưu tiến độ học tập không? Thao tác này sẽ ghi nhận kết quả cuối cùng.",
-                        true, // showCancel
-                        () => this.submitToFirebase(true) // onConfirm
+                        "Xác nhận Hoàn thành", "Bạn có chắc muốn kết thúc và lưu tiến độ học tập không? Thao tác này sẽ ghi nhận kết quả cuối cùng.",
+                        true, () => this.submitToFirebase(true)
                     );
                 });
             },
 
             renderDashboard() {
                 const { wordList, structureList, progress } = this.state;
-                const vocabLearned = wordList.filter(w => progress.learnedItems.has(`word_${w.id}`)).length;
+                const vocabLearned = wordList.filter(w => progress.learnedItems.has(w.id)).length;
                 const structLearned = structureList.filter(s => progress.learnedItems.has(s.id)).length;
                 const vocabProgress = wordList.length > 0 ? (vocabLearned / wordList.length * 100) : 0;
                 const structProgress = structureList.length > 0 ? (structLearned / structureList.length * 100) : 0;
@@ -223,13 +213,12 @@
                 this.DOM.main.innerHTML = `
                     <div class="space-y-8 fade-in">
                         <div class="bg-white p-6 rounded-xl shadow-sm">
-                            <h2 class="text-xl font-bold mb-4">Tổng quan Tiến độ</h2>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                             <h2 class="text-xl font-bold mb-4">Tổng quan Tiến độ</h2>
+                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div><p class="font-medium mb-1">Từ vựng đã học</p><div class="progress-bar"><div class="progress-bar-fill" style="width: ${vocabProgress.toFixed(0)}%;"></div></div><p class="text-right text-sm mt-1">${vocabLearned}/${wordList.length}</p></div>
                                 <div><p class="font-medium mb-1">Cấu trúc đã học</p><div class="progress-bar"><div class="progress-bar-fill" style="width: ${structProgress.toFixed(0)}%;"></div></div><p class="text-right text-sm mt-1">${structLearned}/${structureList.length}</p></div>
                             </div>
                         </div>
-
                         <div class="bg-white p-6 rounded-xl shadow-sm">
                             <h2 class="text-xl font-bold mb-4">Học tập 📚</h2>
                             <div id="study-buttons" class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -238,22 +227,39 @@
                                 <button data-study-mode="struct-flashcard" class="btn btn-secondary !p-4 !items-start text-left"><div class="text-lg"><i class="fas fa-sitemap w-6 text-emerald-500"></i></div><div><p class="font-bold">Flashcard Cấu trúc</p><p class="text-xs font-normal">Học các cấu trúc câu quan trọng.</p></div></button>
                             </div>
                         </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm">
+                            <h2 class="text-xl font-bold mb-4">Luyện tập 🏋️‍♀️</h2>
+                            <p class="text-sm text-slate-600 mb-4">Hệ thống sẽ trộn ngẫu nhiên các dạng bài tập khác nhau để thử thách bạn.</p>
+                            <div id="practice-buttons" class="flex flex-col sm:flex-row gap-4">
+                               <button data-practice-mode="normal" class="btn btn-primary flex-1"><i class="fas fa-random mr-2"></i> Luyện tập thông thường</button>
+                               <button data-practice-mode="weakness" class="btn btn-secondary flex-1 border-amber-500 text-amber-600 hover:bg-amber-50"><i class="fas fa-star-half-alt mr-2"></i> Ôn tập điểm yếu</button>
+                            </div>
+                        </div>
                     </div>`;
 
                 document.getElementById('study-buttons').addEventListener('click', e => {
                     const button = e.target.closest('button');
-                    if (!button) return;
+                    if (!button || !button.dataset.studyMode) return;
                     const mode = button.dataset.studyMode;
                     if (mode === 'vocab-flashcard') this.startFlashcardSession('word');
                     if (mode === 'struct-flashcard') this.startFlashcardSession('structure');
                     if (mode === 'mindmap') this.renderMindmapFamilySelection();
                 });
+
+                const practiceButtons = document.getElementById('practice-buttons');
+                practiceButtons.addEventListener('click', e => {
+                    const button = e.target.closest('button');
+                    if (button && button.dataset.practiceMode) this.startPractice(button.dataset.practiceMode);
+                });
+                if (Object.keys(this.state.progress.incorrectCounts).length === 0) {
+                     practiceButtons.querySelector('[data-practice-mode="weakness"]').disabled = true;
+                }
             },
-            
-            // --- 4. STUDY IMPLEMENTATION: FLASHCARD ---
+
+            // --- 4. STUDY IMPLEMENTATION ---
             startFlashcardSession(type) {
-                this.state.flashcardQueue = type === 'word' ? this.state.wordList : this.state.structureList;
-                if(this.state.flashcardQueue.length === 0) {
+                this.state.currentSessionItems = type === 'word' ? this.state.wordList : this.state.structureList;
+                if(this.state.currentSessionItems.length === 0) {
                     this.showModal("Thông báo", "Không có dữ liệu cho phần học này.");
                     return;
                 }
@@ -286,13 +292,11 @@
             },
 
             updateFlashcardView() {
-                const item = this.state.flashcardQueue[this.state.currentIndex];
+                const item = this.state.currentSessionItems[this.state.currentIndex];
                 const card = document.getElementById('flashcard');
                 if (!item || !card) return;
 
-                // Đánh dấu là đã học khi xem flashcard
-                const itemId = item.itemType === 'word' ? `word_${item.id}` : item.id;
-                this.state.progress.learnedItems.add(itemId);
+                this.state.progress.learnedItems.add(item.id);
                 this.saveProgress();
 
                 card.classList.remove('is-flipped');
@@ -303,25 +307,22 @@
                     : `<div class="text-2xl font-semibold">${item.meaning}</div><p class="text-slate-500 mt-2">${item.pronunciation} <span class="mx-2">&bull;</span> ${item.type}</p><p class="text-slate-500 mt-4 italic">"${item.exampleSentence || ''}"</p>`;
                 
                 setTimeout(() => { card.innerHTML = `<div class="flashcard-face flashcard-front">${frontHTML}</div><div class="flashcard-face flashcard-back">${backHTML}</div>`; }, 100);
-                document.getElementById('card-counter').textContent = `${this.state.currentIndex + 1} / ${this.state.flashcardQueue.length}`;
+                document.getElementById('card-counter').textContent = `${this.state.currentIndex + 1} / ${this.state.currentSessionItems.length}`;
             },
 
             navigateCard(direction) {
                 const newIndex = this.state.currentIndex + direction;
-                const total = this.state.flashcardQueue.length;
-                this.state.currentIndex = (newIndex + total) % total; // Vòng lặp
+                const total = this.state.currentSessionItems.length;
+                this.state.currentIndex = (newIndex + total) % total;
                 this.updateFlashcardView();
             },
 
-            // --- 5. STUDY IMPLEMENTATION: MINDMAP ---
             renderMindmapFamilySelection() {
                 const familiesWithMultipleMembers = Object.entries(this.state.wordFamilies).filter(([root, members]) => members.length > 1);
-
                 if (familiesWithMultipleMembers.length === 0) {
                     this.showModal("Thông báo", "Không có đủ họ từ để tạo sơ đồ.");
                     return;
                 }
-
                 this.DOM.main.innerHTML = `
                 <div class="bg-white p-6 rounded-xl shadow-sm fade-in">
                     <div class="flex items-center mb-6">
@@ -334,20 +335,16 @@
                         `).join('')}
                     </div>
                 </div>`;
-
                 document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.renderDashboard());
                 document.getElementById('family-list').addEventListener('click', e => {
                     const button = e.target.closest('button');
-                    if (button && button.dataset.familyRoot) {
-                        this.renderMindmap(button.dataset.familyRoot);
-                    }
+                    if (button && button.dataset.familyRoot) this.renderMindmap(button.dataset.familyRoot);
                 });
             },
 
             renderMindmap(familyRoot) {
                 const family = this.state.wordFamilies[familyRoot];
                 const centerWord = family[0];
-
                 this.DOM.main.innerHTML = `
                 <div class="bg-white p-6 rounded-xl shadow-sm fade-in">
                     <div class="flex items-center mb-6">
@@ -378,9 +375,257 @@
                 container.innerHTML = html;
             },
 
-            // --- 6. SUBMISSION & UTILITIES ---
+            // --- 5. PRACTICE IMPLEMENTATION ---
+            startPractice(mode, count = 10) {
+                this.state.currentIndex = 0;
+                this.state.currentScore = 0;
+                let itemsToPractice = [];
+                const allItems = [...this.state.wordList, ...this.state.structureList];
+
+                if (mode === 'weakness') {
+                    const weakItemIds = Object.keys(this.state.progress.incorrectCounts)
+                        .sort((a,b) => this.state.progress.incorrectCounts[b] - this.state.progress.incorrectCounts[a]);
+                    itemsToPractice = weakItemIds.map(id => allItems.find(item => item.id === id)).filter(Boolean);
+                } else {
+                    itemsToPractice = allItems;
+                }
+
+                if (itemsToPractice.length === 0) {
+                    this.showModal("Tuyệt vời!", mode === 'weakness' ? "Bạn không có điểm yếu nào cần ôn tập." : "Bạn đã học hết bài!");
+                    return;
+                }
+                
+                this.state.currentSessionItems = this.shuffleArray(itemsToPractice).slice(0, count);
+                this.renderPracticeView();
+            },
+
+            renderPracticeView() {
+                const total = this.state.currentSessionItems.length;
+                const progressPercent = total > 0 ? (this.state.currentIndex / total * 100) : 0;
+                this.DOM.main.innerHTML = `
+                    <div class="bg-white p-6 rounded-xl shadow-sm fade-in">
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-2">
+                                <p class="text-sm font-medium">Câu ${this.state.currentIndex + 1} / ${total}</p>
+                                <button id="exit-practice-btn" class="text-sm font-semibold text-gray-600 hover:text-red-500"><i class="fas fa-times mr-1"></i> Thoát</button>
+                            </div>
+                            <div class="progress-bar"><div class="progress-bar-fill" style="width: ${progressPercent}%;"></div></div>
+                        </div>
+                        <div id="question-container" class="min-h-[300px]"></div>
+                        <div id="feedback-container" class="mt-4"></div>
+                    </div>`;
+                
+                document.getElementById('exit-practice-btn').addEventListener('click', () => this.renderDashboard());
+                this.renderNextQuestion();
+            },
+
+            renderNextQuestion() {
+                if (this.state.currentIndex >= this.state.currentSessionItems.length) {
+                    this.renderSummary();
+                    return;
+                }
+                const item = this.state.currentSessionItems[this.state.currentIndex];
+                const qContainer = document.getElementById('question-container');
+                if (!qContainer) return;
+                
+                const possibleTypes = this.getPossibleExerciseTypes(item);
+                const exerciseType = this.shuffleArray(possibleTypes)[0];
+                item.exerciseType = exerciseType;
+
+                const renderFunction = this[`get${exerciseType}HTML`];
+                qContainer.innerHTML = renderFunction.call(this, item);
+                this.attachPracticeEventListeners(item);
+            },
+            
+            getPossibleExerciseTypes(item) {
+                const types = [];
+                if (item.itemType === 'word') {
+                    if (item.distractors_vi?.length >= 3) types.push('TraditionalMCQ');
+                    if (item.exampleSentence && item.distractors_en?.length >=3) types.push('ContextualMCQ');
+                    if (item.exampleSentence) types.push('SentenceUnscramble');
+                    if ((this.state.wordFamilies[item.familyRoot]?.length || 0) > 1) types.push('WordFamilyMCQ');
+                    if (this.findSentencesWithWord(item.word).length >= 3) types.push('TriosOfGappedSentence');
+                    if (typeof SpeechSynthesisUtterance !== 'undefined') types.push('AudioListening');
+                } else { // structure
+                    const sentence = item.applicationExamples?.[0];
+                    if (sentence) {
+                        const phraseParts = item.phrase.split(/\s+/);
+                        const blank = phraseParts.find(p => !['be', 'of', 'to', 'sb', 'sth'].includes(p.toLowerCase()) && p.length > 1 && p.length < 5);
+                        if (blank) {
+                            item.gapFill = { blank, sentence: sentence.replace(new RegExp(`\\b${blank}\\b`, 'i'), '___') };
+                            types.push('GapFill');
+                        }
+                    }
+                }
+                return types.length > 0 ? types : ['TraditionalMCQ'];
+            },
+
+            renderSummary() {
+                const score = this.state.currentScore;
+                const total = this.state.currentSessionItems.length;
+                const percentage = total > 0 ? (score / total * 100).toFixed(0) : 0;
+                this.DOM.main.innerHTML = `
+                    <div class="text-center max-w-lg mx-auto bg-white p-8 rounded-xl shadow-sm fade-in">
+                        <h1 class="text-3xl font-bold mb-4">Hoàn thành Lượt luyện tập!</h1>
+                        <p class="text-lg text-slate-600">Điểm của bạn:</p>
+                        <p class="text-6xl font-bold my-4 text-indigo-600">${percentage}%</p>
+                        <p class="font-semibold">${score} / ${total} câu đúng</p>
+                        <div class="mt-8">
+                            <button id="back-to-dashboard-btn" class="w-full btn btn-primary">Quay về Bảng điều khiển</button>
+                        </div>
+                    </div>`;
+                document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.renderDashboard());
+            },
+
+            // --- 6. QUESTION GENERATION & EVENT LISTENERS ---
+            getTraditionalMCQHTML(item) {
+                const isEngToViet = Math.random() > 0.5;
+                const question = isEngToViet ? `${item.word} <span class="text-base font-normal text-slate-500">(${item.type})</span>` : item.meaning;
+                this.state.currentCorrectAnswer = isEngToViet ? item.meaning : item.word;
+                
+                const distractors = this.shuffleArray(isEngToViet ? [...item.distractors_vi] : [...item.distractors_en]).slice(0, 3);
+                const options = this.shuffleArray([this.state.currentCorrectAnswer, ...distractors]);
+
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Trắc nghiệm: Chọn đáp án đúng</h2><div class="text-2xl font-bold min-h-[60px] mb-8">${question}</div><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+            },
+            
+            getContextualMCQHTML(item) {
+                this.state.currentCorrectAnswer = item.word;
+                const sentence = item.exampleSentence.replace(new RegExp(`\\b${item.word}\\b`, 'gi'), '<span class="font-bold text-indigo-600">[...]</span>');
+                const distractors = this.shuffleArray([...item.distractors_en]).slice(0, 3);
+                const options = this.shuffleArray([this.state.currentCorrectAnswer, ...distractors]);
+
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Trắc nghiệm: Hoàn thành câu</h2><p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+            },
+
+            getWordFamilyMCQHTML(item) {
+                const family = this.state.wordFamilies[item.familyRoot];
+                if (!family || family.length < 2) return this.getContextualMCQHTML(item);
+
+                this.state.currentCorrectAnswer = item.word;
+                const sentence = item.exampleSentence.replace(new RegExp(`\\b${item.word}\\b`, 'gi'), '<span class="font-bold text-indigo-600">[...]</span>');
+                
+                const distractors = this.shuffleArray(family.filter(w => w.id !== item.id)).slice(0, 3).map(w => w.word);
+                const options = this.shuffleArray([this.state.currentCorrectAnswer, ...distractors]);
+
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Trắc nghiệm: Họ từ</h2><p class="text-slate-600 mb-4">Chọn từ đúng trong họ từ "<strong>${item.familyRoot}</strong>" để hoàn thành câu.</p><p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+            },
+
+            getAudioListeningHTML(item) {
+                this.state.currentCorrectAnswer = item.word;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Luyện nghe: Gõ lại từ</h2><div class="text-center mb-8"><button id="play-audio-btn" data-text="${item.word}" class="text-5xl text-indigo-500 hover:text-indigo-700 transition-colors"><i class="fas fa-volume-up"></i></button></div><div class="flex gap-2"><input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-indigo-500 focus:ring-indigo-500" placeholder="Gõ từ bạn nghe được..."><button id="check-btn" class="btn btn-primary !py-3">Kiểm tra</button></div></div>`;
+            },
+            
+            getSentenceUnscrambleHTML(item) {
+                this.state.currentCorrectAnswer = item.exampleSentence;
+                const words = this.shuffleArray(item.exampleSentence.split(' '));
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Sắp xếp câu</h2><p class="text-slate-600 mb-4">Nhấn vào các từ theo đúng thứ tự để tạo thành câu hoàn chỉnh.</p><div id="unscramble-answer-area" class="token-area mb-4"></div><div id="unscramble-source-area" class="token-area bg-slate-50">${words.map(word => `<span class="word-token">${word}</span>`).join('')}</div><div class="mt-6 text-right"><button id="check-btn" class="btn btn-primary">Kiểm tra</button></div></div>`;
+            },
+
+            getGapFillHTML(item) {
+                this.state.currentCorrectAnswer = item.gapFill.blank;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Điền vào chỗ trống</h2><p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${item.gapFill.sentence}"</p><div class="flex gap-2"><input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-indigo-500 focus:ring-indigo-500" placeholder="Gõ từ còn thiếu..."><button id="check-btn" class="btn btn-primary !py-3">Kiểm tra</button></div></div>`;
+            },
+
+            getTriosOfGappedSentenceHTML(item) {
+                this.state.currentCorrectAnswer = item.word;
+                const sentences = this.findSentencesWithWord(item.word);
+                const gappedSentences = this.shuffleArray(sentences).slice(0, 3).map(s => s.replace(new RegExp(`\\b${item.word}\\b`, 'gi'), '______'));
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Tìm từ chung</h2><p class="text-slate-600 mb-6">Một từ duy nhất có thể điền vào cả 3 chỗ trống dưới đây?</p><div class="space-y-4 mb-6">${gappedSentences.map((s, i) => `<p class="text-lg font-serif italic text-slate-700">${i + 1}. "${s}"</p>`).join('')}</div><div class="flex gap-2"><input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg" placeholder="Gõ từ chung..."><button id="check-btn" class="btn btn-primary !py-3">Kiểm tra</button></div></div>`;
+            },
+            
+            attachPracticeEventListeners(item) {
+                const qContainer = document.getElementById('question-container');
+                if (!qContainer) return;
+                switch(item.exerciseType) {
+                    case 'TraditionalMCQ':
+                    case 'ContextualMCQ':
+                    case 'WordFamilyMCQ':
+                        qContainer.querySelectorAll('.answer-option').forEach(option => {
+                            option.addEventListener('click', (e) => this.checkAnswer(e.target.closest('.answer-option').dataset.answer));
+                        });
+                        break;
+                    case 'AudioListening':
+                    case 'GapFill':
+                    case 'TriosOfGappedSentence':
+                        const input = qContainer.querySelector('#text-input');
+                        const checkBtn = qContainer.querySelector('#check-btn');
+                        qContainer.querySelector('#play-audio-btn')?.addEventListener('click', (e) => {
+                           if (typeof SpeechSynthesisUtterance !== 'undefined') {
+                                const utterance = new SpeechSynthesisUtterance(e.currentTarget.dataset.text);
+                                utterance.lang = 'en-US';
+                                window.speechSynthesis.speak(utterance);
+                            }
+                        });
+                        if (input && checkBtn) {
+                            const doCheck = () => this.checkAnswer(input.value);
+                            checkBtn.addEventListener('click', doCheck);
+                            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') doCheck(); });
+                        }
+                        break;
+                    case 'SentenceUnscramble':
+                        const answerArea = qContainer.querySelector('#unscramble-answer-area');
+                        const sourceArea = qContainer.querySelector('#unscramble-source-area');
+                        const moveToken = (e) => {
+                            if (e.target.classList.contains('word-token')) {
+                                const isFromSource = e.currentTarget.id === 'unscramble-source-area';
+                                (isFromSource ? answerArea : sourceArea).appendChild(e.target);
+                            }
+                        };
+                        sourceArea.addEventListener('click', moveToken);
+                        answerArea.addEventListener('click', moveToken);
+                        qContainer.querySelector('#check-btn')?.addEventListener('click', () => {
+                            const answer = Array.from(answerArea.querySelectorAll('.word-token')).map(t => t.textContent).join(' ');
+                            this.checkAnswer(answer);
+                        });
+                        break;
+                }
+            },
+            
+            // --- 7. ANSWER CHECKING ---
+            checkAnswer(userAnswer) {
+                const item = this.state.currentSessionItems[this.state.currentIndex];
+                const correctAnswer = this.state.currentCorrectAnswer;
+                const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
+
+                this.DOM.main.querySelectorAll('button, input').forEach(el => el.disabled = true);
+                
+                const itemId = item.id;
+                if (isCorrect) {
+                    this.state.currentScore++;
+                    this.state.progress.learnedItems.add(itemId);
+                    delete this.state.progress.incorrectCounts[itemId];
+                } else {
+                    this.state.progress.incorrectCounts[itemId] = (this.state.progress.incorrectCounts[itemId] || 0) + 1;
+                }
+                
+                this.saveProgress();
+                this.showFeedback(isCorrect, correctAnswer);
+            },
+
+            showFeedback(isCorrect, correctAnswer) {
+                const container = document.getElementById('feedback-container');
+                if (!container) return;
+                const bgColor = isCorrect ? 'bg-green-100' : 'bg-red-100';
+                const textColor = isCorrect ? 'text-green-800' : 'text-red-800';
+                let message = isCorrect ? 'Chính xác!' : `Sai rồi! Đáp án đúng là: <strong class="font-bold">${correctAnswer}</strong>`;
+
+                container.innerHTML = `
+                    <div class="${bgColor} ${textColor} p-4 rounded-lg flex justify-between items-center fade-in">
+                        <p class="font-semibold">${message}</p>
+                        <button id="next-question-btn" class="btn btn-secondary !py-2 !px-4">Tiếp theo <i class="fas fa-arrow-right ml-2"></i></button>
+                    </div>`;
+                const nextBtn = document.getElementById('next-question-btn');
+                nextBtn.focus();
+                nextBtn.addEventListener('click', () => {
+                    this.state.currentIndex++;
+                    this.renderPracticeView(); 
+                });
+            },
+
+            // --- 8. SUBMISSION & UTILITIES ---
             async submitToFirebase(isFinal = false) {
-                 if (this.state.isSubmitting) return;
+                if (this.state.isSubmitting) return;
                 this.state.isSubmitting = true;
                 this.DOM.loader.classList.remove('hidden');
 
@@ -388,24 +633,29 @@
                 const totalItems = this.state.wordList.length + this.state.structureList.length;
                 const score = totalItems > 0 ? Math.round((learnedCount / totalItems) * 100) : 0;
                 
-                const finalSubmission = {
+                const submissionPayload = {
                     score: score, totalPoints: 100,
                     status: isFinal ? 'submitted' : 'in-progress',
-                    answers: { learnedCount, totalItems },
+                    answers: { 
+                        learnedCount, 
+                        totalItems,
+                        incorrectCounts: this.state.progress.incorrectCounts 
+                    },
                     endTime: isFinal ? serverTimestamp() : null,
                 };
 
                 try {
-                    await updateDoc(doc(this.state.db, 'submissions', this.state.submissionId), finalSubmission);
+                    await updateDoc(doc(this.state.db, 'submissions', this.state.submissionId), submissionPayload);
                     if (isFinal) {
                         localStorage.removeItem(`vocabProgress_${this.state.submissionId}`);
                         this.showModal("Thành công!", `Đã nộp bài thành công với tiến độ ${score}%.`, false, () => window.location.href='index.html');
                     }
-                } catch(error) { this.showModal("Lỗi", "Không thể lưu tiến độ: " + error.message); }
-                 finally { 
+                } catch(error) { 
+                    this.showModal("Lỗi", "Không thể lưu tiến độ: " + error.message); 
+                } finally { 
                     this.state.isSubmitting = false;
                     this.DOM.loader.classList.add('hidden');
-                 }
+                }
             },
             
             shuffleArray(array) {
@@ -414,6 +664,17 @@
                     [array[i], array[j]] = [array[j], array[i]];
                 }
                 return array;
+            },
+
+            findRoot(word) {
+                // Đây là một hàm đơn giản hóa. Trong thực tế cần một thư viện chuyên dụng hơn.
+                const endings = ['s', 'es', 'ing', 'ed', 'er', 'est', 'ly', 'tion', 'sion', 'ment', 'able', 'ible', 'al', 'ial', 'ive', 'ous', 'ness'];
+                for (const ending of endings) {
+                    if (word.length > ending.length + 3 && word.endsWith(ending)) {
+                        return word.slice(0, -ending.length);
+                    }
+                }
+                return word;
             },
 
             showModal(title, message, showCancel = false, onConfirm = null) {
@@ -436,16 +697,34 @@
                 const confirmBtn = modalContainer.querySelector('#modal-confirm-btn');
                 const cancelBtn = modalContainer.querySelector('#modal-cancel-btn');
 
+                const closeModal = () => modalContainer.remove();
+
                 confirmBtn.onclick = () => {
-                    modalContainer.remove();
+                    closeModal();
                     if (onConfirm) onConfirm();
                 };
                 if(cancelBtn) {
-                    cancelBtn.onclick = () => modalContainer.remove();
+                    cancelBtn.onclick = closeModal;
                 }
+            },
+
+            findSentencesWithWord(word) {
+                const sentences = new Set();
+                const regex = new RegExp(`\\b${word}\\b`, 'i');
+                this.state.wordList.forEach(w => {
+                    if (w.exampleSentence && regex.test(w.exampleSentence)) sentences.add(w.exampleSentence);
+                    if (w.structures) {
+                        w.structures.forEach(s => {
+                            if (s.applicationExamples) s.applicationExamples.forEach(ex => {
+                                if (regex.test(ex)) sentences.add(ex);
+                            });
+                        });
+                    }
+                });
+                return [...sentences];
             }
         };
-
+        
         document.addEventListener('DOMContentLoaded', () => App.init());
     </script>
 </body>
