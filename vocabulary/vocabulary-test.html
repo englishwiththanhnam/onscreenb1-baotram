@@ -7,7 +7,23 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        // Firebase config from your system
+        const firebaseConfig = {
+            apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
+            authDomain: "b1-baotram.firebaseapp.com",
+            projectId: "b1-baotram",
+            storageBucket: "b1-baotram.appspot.com",
+            messagingSenderId: "948701163187",
+            appId: "1:948701163187:web:043f2d381d63e741114ac6",
+            measurementId: "G-33NHT07JHE"
+        };
+        window.firebaseConfig = firebaseConfig;
+    </script>
+
     <style>
+        /* --- STYLES FROM YOUR SYSTEM FOR CONSISTENCY --- */
         :root {
             --blur-intensity: 12px;
             --saturation-intensity: 150%;
@@ -21,363 +37,83 @@
             --app-bg-end: #e0e7ff;
         }
 
-        body.dark {
-            --glass-bg-color: rgba(29, 39, 58, 0.45);
-            --glass-border-color: rgba(255, 255, 255, 0.2);
-            --shadow-color: rgba(0, 0, 0, 0.25);
-            --primary-accent: #a78bfa;
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --app-bg-start: #0f172a;
-            --app-bg-end: #1e293b;
-        }
-
         body {
             font-family: 'Be Vietnam Pro', sans-serif;
             background-color: var(--app-bg-start);
             background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%);
             color: var(--text-primary);
             overflow-x: hidden;
-            position: relative;
-        }
-        
-        body.sidebar-open {
-            overflow: hidden;
-        }
-        
-        .no-select {
-            -webkit-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
         }
 
-        .background-shapes {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 0;
-            pointer-events: none;
-        }
-
-        .shape {
-            position: absolute;
-            border-radius: 50%;
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
-            filter: blur(15px);
-            transition: opacity 0.5s ease;
-        }
-
+        .background-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        .shape { position: absolute; border-radius: 50%; filter: blur(25px); opacity: 0.6; }
         .shape1 { width: 250px; height: 250px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); top: 10%; left: 5%; animation: float 28s infinite alternate ease-in-out; }
         .shape2 { width: 180px; height: 180px; background: linear-gradient(135deg, #14b8a6, #67e8f9); bottom: 15%; right: 10%; animation: float 32s infinite alternate ease-in-out; }
-        .shape3 { width: 120px; height: 120px; background: linear-gradient(135deg, #a78bfa, #c4b5fd); top: 20%; right: 25%; animation: float 24s infinite alternate ease-in-out; }
-        .shape4 { width: 80px; height: 80px; background: linear-gradient(135deg, #93c5fd, #bfdbfe); bottom: 5%; left: 30%; animation: float 20s infinite alternate ease-in-out; }
-
-        body.dark .shape {
-            opacity: 0.4;
-        }
-
-        @keyframes float {
-            from { transform: translateY(20px) scale(1) rotate(0deg); }
-            to { transform: translateY(-20px) scale(1.05) rotate(20deg); }
-        }
-
-        .app-layout { display: flex; height: 100vh; width: 100vw; position: relative; z-index: 1; transition: padding-left 0.3s ease-in-out; }
+        @keyframes float { from { transform: translateY(20px) scale(1); } to { transform: translateY(-20px) scale(1.05); } }
 
         .glass-panel {
-            position: relative;
             background: var(--glass-bg-color);
             backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity));
-            -webkit-backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity));
             border-radius: 24px;
             border: 1px solid var(--glass-border-color);
-            box-shadow: 0 8px 32px 0 var(--shadow-color), inset 0 2px 4px rgba(255, 255, 255, 0.2);
-            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-            overflow: hidden;
+            box-shadow: 0 8px 32px 0 var(--shadow-color);
         }
 
-        .card { padding: 1.5rem; }
+        .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; }
+        .btn-primary { background: var(--primary-accent); color: white; box-shadow: 0 4px 15px rgba(91, 33, 182, 0.25); }
+        .btn-primary:hover:not(:disabled) { background: #5b21b6; transform: translateY(-2px); }
+        .btn-secondary { background: rgba(255, 255, 255, 0.4); color: var(--text-primary); border-color: rgba(255, 255, 255, 0.6); }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.7); transform: translateY(-2px); }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; transform: translateY(-2px); }
+        .btn:disabled { background-color: #a5b4fc; cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.7; }
+        
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; }
+        .modal.is-open { display: flex; }
+        .modal-content { animation: scaleIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 
-        #sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100%;
-            width: 260px;
-            padding: 1.5rem;
-            z-index: 40;
-            transform: translateX(-100%);
-            transition: transform 0.3s ease-in-out;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        body.sidebar-open #sidebar {
-            transform: translateX(0);
-        }
-
-        @media (min-width: 1024px) {
-            #sidebar {
-                position: relative;
-                transform: translateX(0);
-                flex-shrink: 0;
-            }
-            .app-layout.sidebar-collapsed #sidebar {
-                transform: translateX(-100%);
-                margin-left: -260px;
-            }
-        }
-        
-        #sidebar-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 30;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
-        }
-        
-        body.sidebar-open #sidebar-overlay {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        @media (min-width: 1024px) {
-            #sidebar-overlay {
-                display: none;
-            }
-        }
+        /* --- STYLES FOR VOCABULARY APP --- */
+        .app-layout { display: flex; height: 100vh; }
+        #sidebar { width: 260px; flex-shrink: 0; }
+        #app-container { flex-grow: 1; height: 100vh; overflow-y: auto; padding: 2rem; }
+        #app-container::-webkit-scrollbar { width: 6px; }
+        #app-container::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.2); border-radius: 3px; }
 
         .sidebar-nav-btn { display: flex; align-items: center; padding: 12px 16px; border-radius: 12px; font-weight: 600; color: var(--text-secondary); transition: all 0.2s ease-in-out; margin-bottom: 8px; }
         .sidebar-nav-btn i { width: 20px; margin-right: 16px; text-align: center; }
-        .sidebar-nav-btn:hover { background-color: rgba(255, 255, 255, 0.4); color: var(--text-primary); transform: translateX(5px) scale(1.03); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        .sidebar-nav-btn.active { background-color: var(--primary-accent); color: white; box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3); transform: translateX(5px) scale(1.03); }
+        .sidebar-nav-btn:hover:not(:disabled) { background-color: rgba(255, 255, 255, 0.4); color: var(--text-primary); transform: translateX(5px); }
+        .sidebar-nav-btn.active { background-color: var(--primary-accent); color: white; box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3); transform: translateX(5px); }
+        .sidebar-nav-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; background: none; box-shadow: none; }
+
+        .progress-bar-bg { background-color: rgba(255,255,255,0.3); border-radius: 9999px; overflow: hidden; height: 0.75rem; }
+        .progress-bar-fill { background-color: var(--primary-accent); height: 100%; transition: width 0.5s ease-in-out; }
         
-        body.dark .sidebar-nav-btn.active {
-            color: #1e293b;
-            box-shadow: 0 4px 12px rgba(167, 139, 250, 0.3);
-        }
-        body.dark .sidebar-nav-btn:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        #app { flex-grow: 1; height: 100vh; overflow-y: auto; padding: 1.5rem; transition: margin-left 0.3s ease-in-out; }
-        @media (min-width: 1024px) {
-            #app { padding: 2rem; }
-        }
-        #app::-webkit-scrollbar { width: 8px; }
-        #app::-webkit-scrollbar-track { background: transparent; }
-        #app::-webkit-scrollbar-thumb { background-color: rgba(0, 0, 0, 0.1); border-radius: 10px; border: 2px solid transparent; background-clip: content-box; }
-        #app::-webkit-scrollbar-thumb:hover { background-color: rgba(0, 0, 0, 0.2); }
-
-        .main-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-        #menu-toggle-btn {
-            background: rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(4px);
-            border-radius: 50%;
-            width: 44px;
-            height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-primary);
-            flex-shrink: 0;
-        }
-
-        .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; transform: translateY(0); }
-        .btn-main-action { background: var(--primary-accent); color: white; border-color: rgba(255, 255, 255, 0.2); box-shadow: 0 4px 15px rgba(91, 33, 182, 0.25); }
-        body.dark .btn-main-action { color: #1e293b; }
-        .btn-main-action:hover:not(:disabled) { background: #5b21b6; transform: translateY(-3px); box-shadow: 0 7px 20px rgba(91, 33, 182, 0.4); }
-        body.dark .btn-main-action:hover:not(:disabled) { background: #9333ea; }
-
-        .btn-secondary { background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); color: var(--text-primary); border-color: rgba(255, 255, 255, 0.6); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .btn-secondary:hover:not(:disabled) { background: rgba(255, 255, 255, 0.7); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        body.dark .btn-secondary { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
-        body.dark .btn-secondary:hover:not(:disabled) { background: rgba(255, 255, 255, 0.2); }
-
-        .btn:disabled { background-color: rgba(200, 200, 200, 0.7) !important; cursor: not-allowed; opacity: 0.7; transform: none !important; box-shadow: none !important; }
-        body.dark .btn:disabled { background-color: rgba(71, 85, 105, 0.7) !important; }
-
-        .answer-option {
-            background: rgba(255, 255, 255, 0.3);
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            padding: 12px;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.2s ease-in-out;
-            text-align: center;
-            color: var(--text-primary);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.2);
-        }
-        body.dark .answer-option {
-            background: rgba(255, 255, 255, 0.05);
-            border-color: rgba(255, 255, 255, 0.15);
-        }
-
-        .answer-option:hover:not(.disabled) {
-            background: rgba(255, 255, 255, 0.6);
-            border-color: rgba(255, 255, 255, 0.8);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.3);
-        }
-        body.dark .answer-option:hover:not(.disabled) {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.3);
-        }
-
-        .answer-option.selected {
-            background-color: var(--primary-accent) !important;
-            border-color: var(--primary-accent) !important;
-            color: white !important;
-            transform: translateY(-4px) scale(1.05);
-            box-shadow: 0 6px 20px rgba(91, 33, 182, 0.3);
-        }
-        body.dark .answer-option.selected {
-            color: #1e293b !important;
-        }
-
-        .answer-option.correct {
-            background-color: #dcfce7 !important;
-            border-color: #22c55e !important;
-            color: #15803d !important;
-        }
-        body.dark .answer-option.correct {
-            background-color: #052e16 !important;
-            border-color: #16a34a !important;
-            color: #a7f3d0 !important;
-        }
-
-        .answer-option.incorrect {
-            background-color: #fee2e2 !important;
-            border-color: #ef4444 !important;
-            color: #b91c1c !important;
-            animation: shake 0.5s;
-        }
-        body.dark .answer-option.incorrect {
-            background-color: #450a0a !important;
-            border-color: #dc2626 !important;
-            color: #fecaca !important;
-        }
-        .answer-option.disabled {
-            cursor: not-allowed;
-            opacity: 0.7;
-        }
-
+        .answer-option { background: rgba(255, 255, 255, 0.3); border: 1px solid rgba(255, 255, 255, 0.4); transition: all 0.2s ease-in-out; }
+        .answer-option:hover:not(.disabled) { background: rgba(255, 255, 255, 0.6); border-color: var(--primary-accent); transform: translateY(-2px); }
+        .answer-option.correct { background-color: #dcfce7 !important; border-color: #22c55e !important; color: #15803d !important; }
+        .answer-option.incorrect { background-color: #fee2e2 !important; border-color: #ef4444 !important; color: #b91c1c !important; animation: shake 0.5s; }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-        @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-        @keyframes scaleOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.9); } }
 
-        .modal { 
-            display: none; 
-            position: fixed; 
-            z-index: 100; 
-            left: 0; 
-            top: 0; 
-            width: 100%; 
-            height: 100%; 
-            background-color: rgba(0, 0, 0, 0.2); 
-            backdrop-filter: blur(8px); 
-            -webkit-backdrop-filter: blur(8px); 
-            align-items: center; 
-            justify-content: center; 
-        }
-        .modal.is-open {
-            display: flex;
-        }
-        .modal-content { 
-            padding: 24px; 
-            width: 90%; 
-            max-width: 500px; 
-            animation: scaleIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
-        }
-        .modal.is-closing .modal-content {
-            animation: scaleOut 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
-        }
+        .token-area { border: 2px dashed rgba(255,255,255,0.6); min-height: 100px; }
+        .word-token { background-color: #eef2ff; color: #4338ca; }
+        .word-token:hover { background-color: #c7d2fe; }
 
-        .modal-header { border-bottom: 1px solid rgba(255,255,255,0.3); display: flex; justify-content: space-between; align-items: center; }
-        .close-button { color: var(--text-secondary); font-size: 28px; font-weight: bold; cursor: pointer; transition: color 0.2s; }
-        .close-button:hover { color: var(--text-primary); }
-
-        .flashcard-container { perspective: 1000px; min-height: 250px; }
+        .matching-item.selected { border-color: var(--primary-accent); background-color: #eef2ff; }
+        .matching-item.correct-match { background-color: #dcfce7; border-color: #22c55e; }
+        
+        .flashcard-container { perspective: 1000px; height: 350px; }
         .flashcard { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.6s; cursor: pointer; }
         .flashcard.is-flipped { transform: rotateY(180deg); }
         .flashcard-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction:column; align-items: center; justify-content: center; border-radius: 16px; padding: 20px; text-align: center; }
-        .flashcard-front { background-color: rgba(255, 255, 255, 0.8); }
-        body.dark .flashcard-front { background-color: rgba(51, 65, 85, 0.8); }
-        .flashcard-back { background-color: rgba(230, 230, 255, 0.9); transform: rotateY(180deg); overflow-y: auto; }
-        body.dark .flashcard-back { background-color: rgba(71, 85, 105, 0.9); }
-        
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .fade-in { animation: fadeIn 0.5s ease forwards; }
-        
-        .progress-bar { background-color: #e5e7eb; border-radius: 9999px; overflow: hidden; height: 1rem; }
-        body.dark .progress-bar { background-color: #4b5563; }
-        .progress-bar-inner { background-color: var(--primary-accent); height: 100%; transition: width 0.5s ease-in-out; }
-
-        .word-token-area { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; min-height: 50px; padding: 10px; border-radius: 12px; }
-        .unscramble-area { border: 2px dashed var(--glass-border-color); }
-        .word-token { cursor: pointer; background-color: #e0e7ff; color: #3730a3; padding: 8px 12px; border-radius: 8px; font-weight: 500; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        body.dark .word-token { background-color: #3730a3; color: #e0e7ff; }
-        .word-token:hover { transform: translateY(-2px); background-color: #c7d2fe; }
-        body.dark .word-token:hover { background-color: #4338ca; }
-        
-        .clickable-word { cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background-color 0.2s, color 0.2s; }
-        .clickable-word:hover { background-color: #e0e7ff; }
-        body.dark .clickable-word:hover { background-color: #3730a3; }
-        .clickable-word.selected { background-color: #fbbf24; color: #78350f; }
-        body.dark .clickable-word.selected { background-color: #f59e0b; color: #422006; }
-        
-        .mindmap-container { display: flex; justify-content: center; align-items: center; flex-grow: 1; padding: 1rem; }
-        .mindmap { position: relative; display: flex; justify-content: center; align-items: center; }
-        .mindmap-center {
-            padding: 1rem 1.5rem; background-color: var(--primary-accent); color: white; border-radius: 50px; font-weight: bold; z-index: 10;
-        }
-        body.dark .mindmap-center { color: #1e293b; }
-        .mindmap-node {
-            position: absolute; padding: 0.5rem 1rem; background: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.9); border-radius: 20px; text-align: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.3s ease;
-        }
-        body.dark .mindmap-node { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
-        .mindmap-node:hover { transform: scale(1.1); z-index: 20; }
-        
-        body.dark .text-slate-800, body.dark .text-slate-700, body.dark .text-violet-800 { color: var(--text-primary); }
-        body.dark .text-slate-600, body.dark .text-slate-500 { color: var(--text-secondary); }
-        body.dark .text-red-500 { color: #f87171; }
-        body.dark .hover\:bg-red-100:hover { background-color: rgb(220 38 38 / 0.2); }
-        body.dark .hover\:text-red-700:hover { color: #f87171; }
-
-        .text-input {
-            width: 100%;
-            padding: 12px 16px;
-            border-radius: 12px;
-            border: 1px solid var(--glass-border-color);
-            background: var(--glass-bg-color);
-            color: var(--text-primary);
-            font-size: 1rem;
-            transition: all 0.2s ease;
-        }
-        .text-input:focus {
-            outline: none;
-            border-color: var(--primary-accent);
-            box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.3);
-        }
+        .flashcard-front { background: rgba(255,255,255,0.7); }
+        .flashcard-back { background: rgba(230, 230, 255, 0.9); transform: rotateY(180deg); }
     </style>
 </head>
-<body>
+<body class="no-select">
     <div class="background-shapes">
         <div class="shape shape1"></div>
         <div class="shape shape2"></div>
-        <div class="shape shape3"></div>
-        <div class="shape shape4"></div>
     </div>
 
     <div id="loader-overlay" class="modal is-open">
@@ -386,79 +122,32 @@
             <p id="loader-text" class="text-lg font-semibold text-white mt-4">Đang tải dữ liệu...</p>
         </div>
     </div>
+    <div id="custom-modal" class="modal"></div>
 
     <div class="app-layout" style="visibility: hidden;">
-        <nav id="sidebar" class="glass-panel">
-            <div>
-                <div class="text-center mb-10">
-                    <h1 id="sidebar-title" class="text-2xl font-bold">Vocab App</h1>
-                    <p class="text-sm text-slate-600">by Thành Nam</p>
-                </div>
-                <div id="sidebar-nav" class="flex-grow">
-                    <button id="nav-dashboard" class="sidebar-nav-btn active"><i class="fas fa-chart-pie"></i> Dashboard</button>
-                    <button id="nav-study" class="sidebar-nav-btn"><i class="fas fa-book-open"></i> Study</button>
-                    <button id="nav-practice" class="sidebar-nav-btn"><i class="fas fa-dumbbell"></i> Practice</button>
-                    <button id="nav-test" class="sidebar-nav-btn"><i class="fas fa-graduation-cap"></i> Test</button>
-                </div>
+        <nav id="sidebar" class="glass-panel p-6">
+            <div class="text-center mb-10">
+                <h1 id="sidebar-title" class="text-2xl font-bold">Vocab Engine</h1>
+                <p id="student-name-display" class="text-sm text-slate-600 mt-1"></p>
             </div>
-            <div class="mt-auto">
-                 <div class="pt-4 border-t border-white/20">
-                    <button id="theme-toggle-btn" class="sidebar-nav-btn w-full">
-                        <i id="theme-toggle-icon" class="fas fa-moon"></i>
-                        <span id="theme-toggle-text">Dark Mode</span>
-                    </button>
-                </div>
-                <button id="nav-reset" class="sidebar-nav-btn w-full justify-center text-red-500 hover:bg-red-100 hover:text-red-700">
-                   <i class="fas fa-trash-alt mr-2"></i> Reset Progress
-                </button>
+            <div id="sidebar-nav" class="flex-grow">
+                <button data-view="dashboard" class="sidebar-nav-btn active"><i class="fas fa-chart-pie"></i> Dashboard</button>
+                <button data-view="study" class="sidebar-nav-btn"><i class="fas fa-book-open"></i> Study</button>
+                <button data-view="practice" class="sidebar-nav-btn"><i class="fas fa-dumbbell"></i> Practice</button>
+                <button data-view="test" class="sidebar-nav-btn" disabled><i class="fas fa-graduation-cap"></i> Test</button>
+            </div>
+             <div class="mt-auto pt-4 border-t border-white/30">
+                 <button id="nav-reset" class="sidebar-nav-btn w-full justify-center !text-red-500 hover:!bg-red-100 hover:!text-red-700">
+                     <i class="fas fa-trash-alt mr-2"></i> Reset Progress
+                 </button>
             </div>
         </nav>
-        
-        <div id="sidebar-overlay"></div>
 
-        <main id="app">
-             <header class="main-header">
-                 <button id="menu-toggle-btn" class="lg:hidden">
-                     <i class="fas fa-bars text-xl"></i>
-                 </button>
-                 <div class="text-left flex-grow">
-                     <h1 id="app-title" class="text-3xl lg:text-4xl font-bold">Dashboard</h1>
-                     <p id="app-subtitle" class="text-slate-600 mt-1 lg:mt-2">Welcome back! Here's your learning progress.</p>
-                 </div>
-             </header>
-             <div id="main-content">
-                </div>
+        <main id="app-container">
+            <div id="main-content">
+                <!-- App content will be rendered here -->
+            </div>
         </main>
-    </div>
-
-    <div id="word-list-modal" class="modal">
-        <div class="modal-content glass-panel" style="max-width: 1200px; height: 80vh; display: flex; flex-direction: column;">
-            <div class="modal-header pb-4 mb-4">
-                <h2 id="modal-title" class="text-2xl font-bold">List</h2>
-                <span id="close-word-modal-btn" class="close-button">&times;</span>
-            </div>
-            <div id="word-table-container" class="overflow-y-auto flex-grow">
-                <table id="word-table" class="w-full text-sm text-left">
-                </table>
-            </div>
-        </div>
-    </div>
-    
-    <div id="test-setup-modal" class="modal">
-        <div class="modal-content glass-panel">
-            <div class="modal-header pb-4 mb-4">
-                <h2 class="text-2xl font-bold">Test Setup</h2>
-                <span id="close-test-modal-btn" class="close-button">&times;</span>
-            </div>
-            <div>
-                <label for="question-count" class="block mb-2 font-medium">Number of questions:</label>
-                <input type="number" id="question-count" class="w-full p-2 rounded-lg text-input" min="5" max="100" value="10">
-                <div class="mt-6">
-                    <button id="start-test-fixed-btn" class="btn btn-main-action w-full">Start with selected count</button>
-                    <button id="start-test-all-btn" class="btn btn-secondary w-full mt-3">Test all items</button>
-                </div>
-            </div>
-        </div>
     </div>
 
     <script type="module">
@@ -473,60 +162,52 @@
                 words: [],
                 structures: [],
                 wordFamilies: {},
-                progress: { learnedItems: {}, lastTestResult: null, incorrectCounts: {} },
-                sessionItems: [],
-                currentSessionIndex: 0,
-                mode: null, // 'study', 'practice', 'test'
-                currentCorrectAnswer: null,
-                wasCorrect: false, // State for the latest answer
+                progress: {
+                    learnedItems: {},
+                    lastTestResult: null,
+                    incorrectCounts: {}
+                },
+                session: {
+                    items: [],
+                    currentIndex: 0,
+                    correctAnswers: 0,
+                    currentCorrectAnswer: null,
+                    isSentenceActuallyIncorrect: false,
+                    matchedItems: [],
+                    currentMatchingSelection: { word: null, type: null, pronunciation: null, meaning: null },
+                }
             },
 
             async init() {
-                this.initTheme();
-                this.initResponsiveSidebar();
                 try {
-                    this.data.submissionId = this.getSubmissionIdFromUrl();
-                    // --- QUAN TRỌNG: Thay thế bằng Firebase config của bạn ---
-                    const firebaseConfig = {
-                        apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
-                        authDomain: "b1-baotram.firebaseapp.com",
-                        projectId: "b1-baotram",
-                        storageBucket: "b1-baotram.appspot.com",
-                        messagingSenderId: "948701163187",
-                        appId: "1:948701163187:web:043f2d381d63e741114ac6"
-                    };
-                    // --- HẾT PHẦN THAY THẾ ---
-                    const firebaseApp = initializeApp(firebaseConfig);
+                    this.data.submissionId = new URLSearchParams(window.location.search).get('submission_id');
+                    if (!this.data.submissionId) throw new Error("Mã truy cập không hợp lệ.");
+
+                    const firebaseApp = initializeApp(window.firebaseConfig);
                     this.data.db = getFirestore(firebaseApp);
+
                     await this.loadDataFromFirebase();
-                    this.initAntiCopy();
-                    this.initModals();
-                    this.initSidebarNav();
-                    this.renderDashboard();
+                    
+                    this.setupEventListeners();
+                    this.navigateTo('dashboard');
+
                     document.querySelector('.app-layout').style.visibility = 'visible';
                     document.getElementById('loader-overlay').classList.remove('is-open');
+
                 } catch (error) {
-                    console.error("Initialization failed:", error);
-                    this.showErrorState(error.message);
+                    console.error("Initialization Error:", error);
+                    document.getElementById('loader-text').textContent = `Lỗi: ${error.message}`;
                 }
             },
             
-            getSubmissionIdFromUrl() {
-                const params = new URLSearchParams(window.location.search);
-                const id = params.get('submission_id');
-                if (!id) throw new Error("Mã truy cập (submission_id) không tồn tại trên URL.");
-                return id;
-            },
-
             async loadDataFromFirebase() {
-                const loaderText = document.getElementById('loader-text');
-                loaderText.textContent = 'Đang tải thông tin bài làm...';
-                const submissionSnap = await getDoc(doc(this.data.db, "submissions", this.data.submissionId));
-                if (!submissionSnap.exists()) throw new Error("Không tìm thấy bài làm với mã truy cập này.");
-                
+                const submissionRef = doc(this.data.db, "submissions", this.data.submissionId);
+                const submissionSnap = await getDoc(submissionRef);
+                if (!submissionSnap.exists()) throw new Error("Không tìm thấy bài làm với mã này.");
+
                 const submissionData = submissionSnap.data();
                 this.data.testId = submissionData.testId;
-                if (!this.data.testId) throw new Error("Dữ liệu bài làm không hợp lệ (thiếu testId).");
+                document.getElementById('student-name-display').textContent = submissionData.studentName;
 
                 if (submissionData.progress) {
                     this.data.progress = submissionData.progress;
@@ -534,684 +215,502 @@
                     this.data.progress.incorrectCounts = this.data.progress.incorrectCounts || {};
                 }
 
-                loaderText.textContent = 'Đang tải bộ từ vựng...';
-                const vocabSetSnap = await getDoc(doc(this.data.db, "vocab_sets", this.data.testId));
-                if (!vocabSetSnap.exists()) throw new Error(`Không tìm thấy bộ từ vựng với mã: ${this.data.testId}`);
+                const vocabSetRef = doc(this.data.db, "vocab_sets", this.data.testId);
+                const vocabSetSnap = await getDoc(vocabSetRef);
+                if (!vocabSetSnap.exists()) throw new Error("Không tìm thấy bộ từ vựng tương ứng.");
                 
                 const vocabSetData = vocabSetSnap.data();
                 document.title = vocabSetData.title || "Vocabulary Practice";
                 document.getElementById('sidebar-title').textContent = vocabSetData.title;
-
-                this.data.words = (vocabSetData.wordList || []).map((word, index) => ({...word, id: word.id || `word_${index}`, itemType: 'word'}));
-                this.groupWordFamilies();
-                this.parseAndStoreStructures();
-                this.applyUserProgress();
-            },
-            
-            applyUserProgress() {
-                const { learnedItems } = this.data.progress;
-                if (!learnedItems) return;
-                this.data.words.forEach(word => { word.isLearned = !!learnedItems[word.id]; });
-                this.data.structures.forEach(structure => { structure.isLearned = !!learnedItems[structure.id]; });
+                this.data.words = vocabSetData.wordList || [];
+                
+                this.processData();
             },
 
             async saveProgressToFirebase() {
-                if (!this.data.submissionId || !this.data.db) return;
-                try {
-                    // Chỉ cập nhật field progress và lastAccessed để tránh ghi đè dữ liệu khác
-                    await setDoc(doc(this.data.db, "submissions", this.data.submissionId), { 
-                        progress: this.data.progress, 
-                        lastAccessed: serverTimestamp() 
-                    }, { merge: true });
-                } catch (error) {
-                    console.error("Error saving progress:", error);
-                    this.showCustomAlert("Lỗi: Không thể lưu tiến trình.", 'error');
-                }
-            },
-            
-            initTheme() {
-                const themeToggleBtn = document.getElementById('theme-toggle-btn');
-                const themeToggleIcon = document.getElementById('theme-toggle-icon');
-                const themeToggleText = document.getElementById('theme-toggle-text');
-                const body = document.body;
-                const applyTheme = (theme) => {
-                    body.classList.toggle('dark', theme === 'dark');
-                    themeToggleIcon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-                    themeToggleText.textContent = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
-                };
-                const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-                applyTheme(savedTheme);
-                themeToggleBtn.addEventListener('click', () => {
-                    const newTheme = body.classList.contains('dark') ? 'light' : 'dark';
-                    localStorage.setItem('theme', newTheme);
-                    applyTheme(newTheme);
-                });
+                const submissionRef = doc(this.data.db, "submissions", this.data.submissionId);
+                await setDoc(submissionRef, { progress: this.data.progress, lastAccessed: serverTimestamp() }, { merge: true });
             },
 
-            initResponsiveSidebar() {
-                const menuToggleBtn = document.getElementById('menu-toggle-btn');
-                const sidebarOverlay = document.getElementById('sidebar-overlay');
-                const appLayout = document.querySelector('.app-layout');
-                const toggleSidebar = () => {
-                    if (window.innerWidth < 1024) {
-                        document.body.classList.toggle('sidebar-open');
-                    } else {
-                        appLayout.classList.toggle('sidebar-collapsed');
-                    }
-                };
-                menuToggleBtn?.addEventListener('click', toggleSidebar);
-                sidebarOverlay?.addEventListener('click', toggleSidebar);
-                document.querySelectorAll('#sidebar-nav .sidebar-nav-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        if (window.innerWidth < 1024) document.body.classList.remove('sidebar-open');
-                    });
-                });
-            },
-            
-            initAntiCopy() {
-                ['contextmenu', 'copy', 'cut', 'paste'].forEach(event => {
-                    document.body.addEventListener(event, e => {
-                        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-                        e.preventDefault();
-                        this.showCustomAlert("Chức năng này đã bị vô hiệu hóa.", 'info');
-                        return false;
-                    });
-                });
-            },
-
-            groupWordFamilies() {
-                const families = {};
-                this.data.words.forEach(word => {
-                    const root = (word.familyRoot || word.word.split(/[\s-]/)[0]).toLowerCase().replace(/[^a-z]/g, '');
-                    if (!families[root]) families[root] = [];
-                    if (!families[root].some(w => w.id === word.id)) families[root].push(word);
-                    word.familyRoot = root;
-                });
-                this.data.wordFamilies = families;
-            },
-            
-            parseAndStoreStructures() {
+            processData() {
                 this.data.structures = [];
                 this.data.words.forEach(word => {
+                    word.itemType = 'word';
                     if (word.structures && Array.isArray(word.structures)) {
                         word.structures.forEach((struct, s_idx) => {
-                            this.data.structures.push({
-                                ...struct, // phrase, meaning, applicationExamples
-                                id: `structure_${word.id}_${s_idx}`,
-                                itemType: 'structure',
-                                rootWordId: word.id,
-                                rootWord: word.word,
-                                isLearned: false,
-                            });
+                            this.data.structures.push({ ...struct, id: `structure_${word.id}_${s_idx}`, itemType: 'structure', rootWord: word.word });
                         });
                     }
                 });
+                const families = {}; this.data.words.forEach(word => { const root = word.familyRoot; if (!families[root]) families[root] = []; families[root].push(word); });
+                this.data.wordFamilies = families;
             },
 
-            updateProgress(itemId, isCorrect) {
-                const { incorrectCounts, learnedItems } = this.data.progress;
-                if (isCorrect) {
-                    learnedItems[itemId] = true;
-                    delete incorrectCounts[itemId];
-                } else {
-                    incorrectCounts[itemId] = (incorrectCounts[itemId] || 0) + 1;
-                    delete learnedItems[itemId];
-                }
-                
-                // Cập nhật trạng thái isLearned ngay trong bộ nhớ để UI phản ánh tức thì
-                const itemInWords = this.data.words.find(i => i.id === itemId);
-                if (itemInWords) { itemInWords.isLearned = isCorrect; }
-                const itemInStructures = this.data.structures.find(i => i.id === itemId);
-                if (itemInStructures) { itemInStructures.isLearned = isCorrect; }
-                
-                this.saveProgressToFirebase();
+            setupEventListeners() {
+                document.getElementById('sidebar-nav').addEventListener('click', (e) => {
+                    const btn = e.target.closest('.sidebar-nav-btn');
+                    if (btn && !btn.disabled) this.navigateTo(btn.dataset.view);
+                });
+                 document.getElementById('nav-reset').addEventListener('click', async () => {
+                    const confirmed = await this.showModal("Xác nhận", "Bạn có chắc muốn xóa toàn bộ tiến trình học tập của mình không? Thao tác này không thể hoàn tác.", null, true);
+                    if (confirmed) {
+                        this.data.progress = { learnedItems: {}, lastTestResult: null, incorrectCounts: {} };
+                        await this.saveProgressToFirebase();
+                        this.navigateTo('dashboard');
+                    }
+                });
             },
 
+            navigateTo(view) {
+                document.querySelectorAll('#sidebar-nav .sidebar-nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
+                
+                if (view === 'dashboard') this.renderDashboard();
+                else if (view === 'study') this.renderStudyTypeSelection();
+                else if (view === 'practice') this.renderPracticeTypeSelection();
+                else if (view === 'test') this.renderTestStartScreen();
+            },
+            
             renderDashboard() {
-                this.setActiveNav('nav-dashboard');
-                this.updateHeader('Dashboard', "Tổng quan tiến trình học tập của bạn.");
                 const main = document.getElementById('main-content');
+                const allItems = [...this.data.words, ...this.data.structures];
+                const learnedItems = Object.keys(this.data.progress.learnedItems);
                 
-                const wordsLearned = this.data.words.filter(w => w.isLearned).length;
+                const wordsLearned = learnedItems.filter(k => k.startsWith('word_')).length;
                 const totalWords = this.data.words.length;
                 const wordProgress = totalWords > 0 ? (wordsLearned / totalWords) * 100 : 0;
-
-                const structuresLearned = this.data.structures.filter(s => s.isLearned).length;
+                
+                const structuresLearned = learnedItems.filter(k => k.startsWith('structure_')).length;
                 const totalStructures = this.data.structures.length;
                 const structureProgress = totalStructures > 0 ? (structuresLearned / totalStructures) * 100 : 0;
                 
-                const lastTest = this.data.progress.lastTestResult;
-                let testResultHTML = `<p class="text-slate-600">Chưa có bài kiểm tra nào.</p>`;
-                if (lastTest && lastTest.date) {
-                    const testDate = new Date(lastTest.date).toLocaleDateString('vi-VN');
-                    testResultHTML = `<p class="text-2xl font-bold text-violet-800">${lastTest.score}/${lastTest.total} (${lastTest.percentage}%)</p><p class="text-sm text-slate-600">Làm ngày: ${testDate}</p>`;
-                }
-
+                const overallProgress = allItems.length > 0 ? (learnedItems.length / allItems.length) * 100 : 0;
+                
                 main.innerHTML = `
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 fade-in">
-                        <div class="card glass-panel">
-                            <h3 class="text-xl font-bold mb-3">Tiến độ Từ vựng</h3>
-                            <div class="flex justify-between items-center mb-2"><span class="font-semibold">${wordsLearned}/${totalWords}</span><span class="text-sm font-medium">${wordProgress.toFixed(1)}%</span></div>
-                            <div class="progress-bar"><div class="progress-bar-inner" style="width: ${wordProgress}%;"></div></div>
-                            <div class="flex justify-center gap-4 mt-4">
-                                <button data-list-type="learned-words" class="btn btn-secondary text-sm !py-2 !px-4">Đã học</button>
-                                <button data-list-type="not-learned-words" class="btn btn-secondary text-sm !py-2 !px-4">Chưa học</button>
-                            </div>
-                        </div>
-                        <div class="card glass-panel">
-                            <h3 class="text-xl font-bold mb-3">Tiến độ Cấu trúc</h3>
-                            <div class="flex justify-between items-center mb-2"><span class="font-semibold">${structuresLearned}/${totalStructures}</span><span class="text-sm font-medium">${structureProgress.toFixed(1)}%</span></div>
-                            <div class="progress-bar"><div class="progress-bar-inner" style="width: ${structureProgress}%;"></div></div>
-                             <div class="flex justify-center gap-4 mt-4">
-                                <button data-list-type="learned-structures" class="btn btn-secondary text-sm !py-2 !px-4">Đã học</button>
-                                <button data-list-type="not-learned-structures" class="btn btn-secondary text-sm !py-2 !px-4">Chưa học</button>
-                            </div>
-                        </div>
-                        <div class="card glass-panel lg:col-span-2">
-                             <h3 class="text-xl font-bold mb-2">Kết quả kiểm tra gần nhất</h3>
-                             ${testResultHTML}
-                        </div>
-                    </div>`;
-                main.querySelectorAll('[data-list-type]').forEach(button => {
-                    button.addEventListener('click', (e) => this.showFilteredList(e.currentTarget.dataset.listType));
-                });
-            },
-            
-            renderSelectionScreen(mode) {
-                this.data.mode = mode; // 'study', 'practice', 'test'
-                this.setActiveNav(`nav-${mode}`);
-                const modeText = mode.charAt(0).toUpperCase() + mode.slice(1);
-                this.updateHeader(modeText, `Chọn nội dung bạn muốn ${mode}.`);
-                const main = document.getElementById('main-content');
-                
-                let practiceButton = '';
-                // Chế độ Ôn tập điểm yếu chỉ có ở 'practice' và 'test'
-                if (mode === 'practice' || mode === 'test') {
-                    const weakItemsCount = Object.keys(this.data.progress.incorrectCounts).length;
-                    practiceButton = `
-                     <div class="w-full mt-6 pt-6 border-t border-white/20 dark:border-white/10">
-                         <button id="select-adaptive-btn" class="btn btn-main-action bg-amber-500 hover:bg-amber-600 w-full md:w-auto" ${weakItemsCount === 0 ? 'disabled' : ''}>
-                             <i class="fas fa-star"></i> Ôn tập điểm yếu (${weakItemsCount} mục)
-                         </button>
-                         <p class="text-xs text-slate-500 mt-2 ${weakItemsCount > 0 ? 'hidden' : ''}">Tuyệt vời! Bạn không có điểm yếu nào cần ôn tập.</p>
-                     </div>
-                    `;
-                }
-
-                main.innerHTML = `
-                    <div class="fade-in">
-                        <div class="mb-4"><button id="back-to-dashboard-btn" class="btn btn-secondary"><i class="fas fa-arrow-left mr-2"></i> Dashboard</button></div>
-                        <div class="card glass-panel text-center">
-                            <h2 class="text-2xl font-bold mb-6">Bạn muốn ${mode} gì?</h2>
-                            <div class="flex flex-wrap justify-center gap-4">
-                                <button id="select-vocab-btn" class="btn btn-main-action"><i class="fas fa-book"></i> Từ vựng</button>
-                                <button id="select-structure-btn" class="btn btn-main-action" ${this.data.structures.length === 0 ? 'disabled' : ''}><i class="fas fa-sitemap"></i> Cấu trúc</button>
-                            </div>
-                            ${practiceButton}
-                        </div>
-                    </div>`;
-                document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.renderDashboard());
-                document.getElementById('select-vocab-btn').addEventListener('click', () => this.startSession('all', 'word'));
-                document.getElementById('select-structure-btn').addEventListener('click', () => this.startSession('all', 'structure'));
-                if (mode === 'practice' || mode === 'test') {
-                    document.getElementById('select-adaptive-btn')?.addEventListener('click', () => this.startSession('adaptive', 'all'));
-                }
-            },
-
-            startSession(selection, type) {
-                this.data.currentSessionIndex = 0;
-                let items = [];
-
-                if (selection === 'adaptive') {
-                    this.updateHeader("Ôn tập điểm yếu", "Tập trung vào các mục bạn hay sai nhất");
-                    const incorrect = this.data.progress.incorrectCounts || {};
-                    const weakItemIds = Object.keys(incorrect)
-                        .map(key => ({ id: key, count: incorrect[key] }))
-                        .sort((a, b) => b.count - a.count)
-                        .map(item => item.id);
-                    
-                    items = weakItemIds.map(id => {
-                        return this.data.words.find(i => i.id === id) || this.data.structures.find(i => i.id === id);
-                    }).filter(Boolean);
-                } else {
-                    const source = type === 'word' ? this.data.words : this.data.structures;
-                    // Đối với study, dùng tất cả. Đối với practice/test, ưu tiên các mục chưa học.
-                    const unlearned = source.filter(i => !i.isLearned);
-                    items = (this.data.mode !== 'study' && unlearned.length > 0) ? unlearned : source;
-                    this.updateHeader(`${this.data.mode.charAt(0).toUpperCase() + this.data.mode.slice(1)} ${type.charAt(0).toUpperCase() + type.slice(1)}`, `Hãy bắt đầu nào!`);
-                }
-
-                if (items.length === 0) {
-                    this.showCustomAlert("Chúc mừng! Bạn đã học hết các mục trong phần này.", 'success');
-                    this.renderDashboard();
-                    return;
-                }
-                this.data.sessionItems = this.shuffleArray(items);
-                this.renderNextInSession();
-            },
-
-            renderNextInSession() {
-                if (this.data.currentSessionIndex >= this.data.sessionItems.length) {
-                    this.showSessionEndSummary();
-                    return;
-                }
-                const item = this.data.sessionItems[this.data.currentSessionIndex];
-                
-                // An a robust check to ensure item exists and has a type
-                if (!item || !item.itemType) { 
-                    this.data.currentSessionIndex++;
-                    this.renderNextInSession(); 
-                    return; 
-                }
-
-                // Chọn ngẫu nhiên một dạng bài tập phù hợp
-                let exercisePool = this.getExercisePoolForItem(item);
-                
-                // If no valid exercise can be generated, skip.
-                if (exercisePool.length === 0) {
-                    this.data.currentSessionIndex++;
-                    this.renderNextInSession();
-                    return;
-                }
-                
-                const exercise = this.shuffleArray(exercisePool)[0];
-
-                const renderMap = {
-                    'Flashcard': () => this.renderFlashcard(item),
-                    'Structure Flashcard': () => this.renderFlashcard(item, true),
-                    'Word Family Explorer': () => this.renderWordFamilyMindmap(item),
-                    'Word Family Matching': () => this.renderWordFamilyMatching(item),
-                    'Contextual MCQ': () => this.renderContextualMCQ(item),
-                    'Sentence Unscramble': () => this.renderSentenceUnscramble(item),
-                    'Pronunciation Match': () => this.renderPronunciationMatch(item),
-                    'Audio Listening': () => this.renderAudioListening(item),
-                    'Traditional MCQ': () => this.renderTraditionalMCQ(item),
-                    'Trios of Gapped Sentence': () => this.renderTriosOfGappedSentence(item),
-                    'Gap-Fill': () => this.renderGapFill(item),
-                    'Error Correction': () => this.renderFindAndFixError(item),
-                    'Correct/Incorrect Sentence': () => this.renderCorrectIncorrectSentence(item),
-                };
-
-                const renderFunction = renderMap[exercise];
-                if (renderFunction) {
-                    renderFunction();
-                } else {
-                    // Fallback an toàn
-                    this.data.currentSessionIndex++;
-                    this.renderNextInSession();
-                }
-            },
-            
-            getExercisePoolForItem(item) {
-                const itemType = item.itemType;
-                let pool = [];
-
-                if (this.data.mode === 'study') {
-                    if (itemType === 'word') {
-                        pool = ['Flashcard'];
-                        if (this.data.wordFamilies[item.familyRoot]?.length > 1) pool.push('Word Family Explorer');
-                    } else { // structure
-                        pool = ['Structure Flashcard'];
-                    }
-                } else { // practice or test mode
-                    if (itemType === 'word') {
-                        pool.push('Traditional MCQ'); // Luôn có thể tạo
-                        if (item.exampleSentence) {
-                             pool.push('Contextual MCQ');
-                             pool.push('Sentence Unscramble');
-                             pool.push('Trios of Gapped Sentence'); // Check condition inside
-                        }
-                        if (item.pronunciation) pool.push('Pronunciation Match');
-                        pool.push('Audio Listening');
-                        if (this.data.wordFamilies[item.familyRoot]?.length > 1) pool.push('Word Family Matching');
-                    } else { // structure
-                        if (item.applicationExamples && item.applicationExamples.length > 0) {
-                             pool.push('Gap-Fill');
-                             pool.push('Error Correction');
-                             pool.push('Correct/Incorrect Sentence');
-                        }
-                    }
-                }
-                return pool;
-            },
-
-            // --- [START] EXERCISE RENDERERS ---
-            // Các hàm render chi tiết cho từng loại bài tập
-            
-            renderFlashcard(item, isStructure = false) {
-                const main = document.getElementById('main-content');
-                const frontHTML = isStructure ? `<p class="text-3xl font-bold text-center">${item.phrase}</p>` : `<p class="text-4xl font-bold">${item.word}</p>`;
-                const backHTML = isStructure ? `
-                    <div class="p-4">
-                        <p class="text-2xl font-semibold text-center">${item.meaning}</p>
-                        <p class="text-sm text-slate-600 mt-2 text-center">${(item.applicationExamples || [])[0] || ''}</p>
-                    </div>` : `
-                    <div class="p-4 text-center">
-                        <p class="text-2xl font-semibold">${item.meaning}</p>
-                        <p class="text-lg text-slate-600 mt-2">${item.pronunciation} - (${item.type})</p>
-                        <p class="text-sm text-slate-500 italic mt-4">"${item.exampleSentence || ''}"</p>
-                        <button id="explore-family-btn" class="btn btn-secondary !py-2 !px-4 mt-4 text-sm"><i class="fas fa-project-diagram mr-2"></i>Khám phá họ từ</button>
-                    </div>`;
-
-                main.innerHTML = `
-                    <div class="fade-in">
-                        <div class="flex justify-between items-center mb-4">
-                            <button id="back-btn" class="btn btn-secondary"><i class="fas fa-arrow-left mr-2"></i> Quit</button>
-                            <div class="text-lg font-semibold">${this.data.currentSessionIndex + 1} / ${this.data.sessionItems.length}</div>
-                            <button id="next-btn" class="btn btn-main-action">Next <i class="fas fa-arrow-right ml-2"></i></button>
-                        </div>
-                        <div class="card glass-panel flex items-center justify-center">
-                            <div class="flashcard-container">
-                                <div class="flashcard" id="flashcard">
-                                    <div class="flashcard-face flashcard-front">${frontHTML}</div>
-                                    <div class="flashcard-face flashcard-back">${backHTML}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
-                document.getElementById('back-btn').addEventListener('click', () => this.renderSelectionScreen('study'));
-                document.getElementById('flashcard').addEventListener('click', (e) => e.currentTarget.classList.toggle('is-flipped'));
-                document.getElementById('next-btn').addEventListener('click', () => {
-                    this.data.currentSessionIndex++;
-                    this.renderNextInSession();
-                });
-                if (!isStructure) {
-                    const exploreBtn = document.getElementById('explore-family-btn');
-                    if (this.data.wordFamilies[item.familyRoot]?.length > 1) {
-                         exploreBtn.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            this.renderWordFamilyMindmap(item);
-                        });
-                    } else {
-                        exploreBtn.style.display = 'none';
-                    }
-                }
-            },
-
-            renderWordFamilyMindmap(item) { /* Giữ nguyên từ phiên bản trước, đã ổn định */ },
-
-            renderWordFamilyMatching(item) {
-                const familyRoot = item.familyRoot;
-                const familyWords = this.data.wordFamilies[familyRoot];
-                if (!familyWords || familyWords.length < 2) { return this.renderNextInSession(); }
-
-                let selected = { word: null, type: null, meaning: null, pronunciation: null };
-                let matchedCount = 0;
-
-                const renderColumns = () => {
-                    const words = this.shuffleArray(familyWords.map(w => ({ text: w.word, id: w.id })));
-                    const types = this.shuffleArray(familyWords.map(w => ({ text: w.type, id: w.id })));
-                    const meanings = this.shuffleArray(familyWords.map(w => ({ text: w.meaning, id: w.id })));
-                    const pronunciations = this.shuffleArray(familyWords.map(w => ({ text: w.pronunciation, id: w.id })));
-
-                    const createColumn = (title, items, category) => `
-                        <div class="flex-1">
-                            <h4 class="font-bold text-center mb-3 text-slate-600">${title}</h4>
-                            <div class="flex flex-col gap-2" data-category="${category}">
-                                ${items.map(i => `<button data-id="${i.id}" class="answer-option p-3 rounded-lg text-sm text-center">${i.text}</button>`).join('')}
-                            </div>
-                        </div>`;
-                    
-                    document.getElementById('main-content').innerHTML = `
-                        <div class="fade-in">
-                            <div class="flex justify-between items-center mb-4">
-                               <h3 class="text-xl font-bold text-slate-800">Word Family Matching</h3>
-                               <div class="text-lg font-semibold">${this.data.currentSessionIndex + 1} / ${this.data.sessionItems.length}</div>
-                            </div>
-                            <p class="text-center text-slate-500 mb-6">Nối các mục ở 4 cột để tạo thành các từ đúng trong họ từ "${familyRoot}".</p>
-                            <div class="card glass-panel">
-                               <div class="flex flex-col sm:flex-row gap-4">
-                                    ${createColumn('Từ vựng', words, 'word')}
-                                    ${createColumn('Loại từ', types, 'type')}
-                                    ${createColumn('Nghĩa', meanings, 'meaning')}
-                                    ${createColumn('Phiên âm', pronunciations, 'pronunciation')}
-                                </div>
-                                <div id="feedback-placeholder" class="text-center mt-6"></div>
-                            </div>
-                        </div>`;
-                    document.querySelectorAll('.answer-option').forEach(btn => btn.onclick = (e) => handleFamilySelection(e.target));
-                };
-                
-                const handleFamilySelection = (selectedButton) => {
-                    const category = selectedButton.parentElement.dataset.category;
-                    selectedButton.parentElement.querySelectorAll('.answer-option').forEach(btn => btn.classList.remove('selected'));
-                    selectedButton.classList.add('selected');
-                    selected[category] = selectedButton;
-                    if (Object.values(selected).every(val => val !== null)) checkFamilyMatch();
-                };
-
-                const checkFamilyMatch = () => {
-                    const selectedWordId = selected.word.dataset.id;
-                    const isCorrect = Object.values(selected).every(btn => btn.dataset.id === selectedWordId);
-                    const selectedButtons = Object.values(selected);
-                    
-                    this.updateProgress(selectedWordId, isCorrect);
-                    
-                    if (isCorrect) {
-                        matchedCount++;
-                        selectedButtons.forEach(btn => {
-                             btn.classList.add('correct');
-                             btn.classList.remove('selected');
-                             btn.disabled = true; 
-                        });
-                        if (matchedCount === familyWords.length) {
-                             this.showFeedback(true, `Hoàn hảo! Bạn đã ghép đúng cả họ từ.`);
-                        }
-                    } else {
-                        selectedButtons.forEach(btn => btn.classList.add('incorrect'));
-                        setTimeout(() => selectedButtons.forEach(btn => btn.classList.remove('incorrect', 'selected')), 1000);
-                    }
-                    selected = { word: null, type: null, meaning: null, pronunciation: null };
-                };
-
-                renderColumns();
-            },
-            
-            renderTraditionalMCQ(item) {
-                const isEngToViet = Math.random() > 0.5;
-                const question = isEngToViet ? item.word : item.meaning;
-                const correctAnswer = isEngToViet ? item.meaning : item.word;
-                this.data.currentCorrectAnswer = correctAnswer;
-                
-                const distractorPool = isEngToViet 
-                    ? (item.distractors_vi || this.data.words.map(w => w.meaning))
-                    : (item.distractors_en || this.data.words.map(w => w.word));
-                const distractors = this.shuffleArray(distractorPool.filter(d => d !== correctAnswer)).slice(0, 3);
-                const options = this.shuffleArray([correctAnswer, ...distractors]);
-                
-                this.renderMCQBase('Traditional MCQ', question, options);
-            },
-            
-            renderContextualMCQ(item) {
-                if (!item.exampleSentence) { return this.renderNextInSession(); }
-                const question = item.exampleSentence.replace(new RegExp(`\\b${item.word}\\b`, 'gi'), '<strong class="text-2xl">____</strong>');
-                this.data.currentCorrectAnswer = item.word;
-                let distractors = [];
-                distractors.push(...this.shuffleArray((this.data.wordFamilies[item.familyRoot] || []).filter(w => w.id !== item.id).map(w => w.word)).slice(0,1));
-                distractors.push(...(item.distractors_en || []));
-                if (distractors.length < 3) {
-                    distractors.push(...this.shuffleArray(this.data.words.filter(w => w.type === item.type && w.id !== item.id).map(w => w.word)));
-                }
-                const finalDistractors = this.shuffleArray([...new Set(distractors.filter(d => d !== item.word))]).slice(0, 3);
-                const options = this.shuffleArray([item.word, ...finalDistractors]);
-                this.renderMCQBase('Contextual MCQ', question, options);
-            },
-
-            renderAudioListening(item) {
-                if (typeof SpeechSynthesisUtterance === "undefined") {
-                    this.showCustomAlert("Trình duyệt không hỗ trợ API âm thanh.", 'error');
-                    return this.renderNextInSession();
-                }
-                this.data.currentCorrectAnswer = item.word;
-                const distractors = this.shuffleArray(this.data.words.filter(w => w.id !== item.id).map(w => w.word)).slice(0, 3);
-                const options = this.shuffleArray([item.word, ...distractors]);
-                this.renderMCQBase('Audio Listening', 'Nghe và chọn từ đúng.', options, `
-                    <button id="play-audio-btn" class="btn btn-secondary mx-auto mb-6">
-                        <i class="fas fa-volume-up text-xl"></i> Phát âm
-                    </button>
-                `);
-                const utterance = new SpeechSynthesisUtterance(item.word);
-                utterance.lang = 'en-US';
-                document.getElementById('play-audio-btn').onclick = () => window.speechSynthesis.speak(utterance);
-            },
-            
-            renderPronunciationMatch(item) {
-                if (!item.pronunciation) { return this.renderNextInSession(); }
-                this.data.currentCorrectAnswer = item.pronunciation;
-                const distractors = this.shuffleArray(this.data.words.filter(w => w.id !== item.id && w.pronunciation).map(w => w.pronunciation)).slice(0, 3);
-                if (distractors.length < 3) { return this.renderNextInSession(); } // Not enough data
-                const options = this.shuffleArray([item.pronunciation, ...distractors]);
-                this.renderMCQBase('Pronunciation Match', `<p class="text-2xl font-bold">${item.word}</p>`, options);
-            },
-
-            renderSentenceUnscramble(item) { /* Giữ nguyên từ phiên bản trước, đã ổn định */ },
-
-            renderTriosOfGappedSentence(item) {
-                const keyword = item.word;
-                let sentences = [item.exampleSentence];
-                // Tìm thêm 2 câu khác chứa keyword
-                this.data.words.forEach(word => {
-                    if (sentences.length >= 3) return;
-                    if (word.id !== item.id && word.exampleSentence?.includes(keyword)) {
-                        sentences.push(word.exampleSentence);
-                    }
-                });
-                if (sentences.length < 3) { // Không đủ 3 câu, bỏ qua bài này
-                    return this.renderNextInSession();
-                }
-                this.data.currentCorrectAnswer = keyword;
-                const questionHTML = sentences.map(s => 
-                    `<p class="text-lg leading-relaxed my-2">... ${s.replace(new RegExp(`\\b${keyword}\\b`, 'gi'), '_____')} ...</p>`
-                ).join('');
-
-                this.renderInputBase(
-                    'Trios of Gapped Sentence', 
-                    questionHTML, 
-                    'Một từ duy nhất có thể điền vào cả 3 chỗ trống dưới đây. Đó là từ gì?',
-                    () => {
-                        const userAnswer = document.getElementById('user-input').value.trim();
-                        this.data.wasCorrect = userAnswer.toLowerCase() === this.data.currentCorrectAnswer.toLowerCase();
-                        this.updateProgress(item.id, this.data.wasCorrect);
-                        this.showFeedback(this.data.wasCorrect);
-                    }
-                );
-            },
-
-            renderGapFill(item) { /* Giữ nguyên từ phiên bản trước, đã ổn định */ },
-            renderFindAndFixError(item) { /* Giữ nguyên từ phiên bản trước, đã ổn định */ },
-            renderCorrectIncorrectSentence(item) { /* Giữ nguyên từ phiên bản trước, đã ổn định */ },
-            
-            // --- [END] EXERCISE RENDERERS ---
-
-            // --- [START] RENDER HELPERS ---
-            
-            renderMCQBase(title, questionHTML, options, preQuestionHTML = '') {
-                const main = document.getElementById('main-content');
-                main.innerHTML = `
-                    <div class="fade-in text-center">
-                        <div class="flex justify-between items-center mb-4">
-                           <h3 class="text-xl font-bold text-slate-800">${title}</h3>
-                           <div class="text-lg font-semibold">${this.data.currentSessionIndex + 1} / ${this.data.sessionItems.length}</div>
-                        </div>
-                        <div class="card glass-panel">
-                           ${preQuestionHTML}
-                           <div class="mb-8 text-xl font-semibold min-h-[60px] flex items-center justify-center">${questionHTML}</div>
-                           <div id="answer-options" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             ${options.map(opt => `<button class="answer-option p-4">${opt}</button>`).join('')}
-                           </div>
-                           <div id="feedback-placeholder" class="text-center mt-6"></div>
-                        </div>
-                    </div>`;
-
-                document.getElementById('answer-options').addEventListener('click', e => {
-                    if (e.target.matches('.answer-option:not(.disabled)')) {
-                        const selectedOption = e.target;
-                        this.data.wasCorrect = selectedOption.textContent.trim() === this.data.currentCorrectAnswer.trim();
-                        this.updateProgress(this.data.sessionItems[this.data.currentSessionIndex].id, this.data.wasCorrect);
-                        
-                        document.querySelectorAll('.answer-option').forEach(btn => {
-                            btn.classList.add('disabled');
-                            if(btn.textContent.trim() === this.data.currentCorrectAnswer.trim()){
-                                btn.classList.add('correct');
-                            }
-                        });
-
-                        if (!this.data.wasCorrect) {
-                            selectedOption.classList.add('incorrect');
-                        }
-                        this.showFeedback(this.data.wasCorrect);
-                    }
-                });
-            },
-
-            renderInputBase(title, questionHTML, instruction, onCheck, inputHTML = null) { /* Giữ nguyên, đã ổn định */ },
-
-            showFeedback(isCorrect, customMessage = null) {
-                const feedbackPlaceholder = document.getElementById('feedback-placeholder');
-                if(!feedbackPlaceholder) return;
-                let messageHTML;
-                if (customMessage) {
-                    messageHTML = `<p class="${isCorrect ? 'text-green-600' : 'text-red-600'} dark:text-${isCorrect ? 'green-400' : 'red-400'} font-bold text-lg">${customMessage}</p>`;
-                } else {
-                    if (isCorrect) {
-                        messageHTML = `<p class="text-green-600 dark:text-green-400 font-bold text-lg">Chính xác! <i class="fas fa-check-circle"></i></p>`;
-                    } else {
-                        messageHTML = `<p class="text-red-600 dark:text-red-400 font-bold text-lg">Chưa đúng! <i class="fas fa-times-circle"></i> Đáp án là: <strong class="underline">${this.data.currentCorrectAnswer}</strong></p>`;
-                    }
-                }
-                
-                feedbackPlaceholder.innerHTML = `
-                    <div class="fade-in">
-                        ${messageHTML}
-                        <button id="next-session-btn" class="btn btn-main-action mt-4">Tiếp tục</button>
+                    <h1 class="text-3xl font-bold mb-6">Dashboard</h1>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="glass-panel p-6"><h3 class="text-lg font-semibold mb-3">Vocabulary Progress</h3><div class="flex justify-between items-center mb-2 text-sm"><span class="font-medium text-slate-600">${wordsLearned} / ${totalWords}</span><span class="font-semibold text-violet-600">${wordProgress.toFixed(0)}%</span></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${wordProgress}%;"></div></div></div>
+                        <div class="glass-panel p-6"><h3 class="text-lg font-semibold mb-3">Structure Progress</h3><div class="flex justify-between items-center mb-2 text-sm"><span class="font-medium text-slate-600">${structuresLearned} / ${totalStructures}</span><span class="font-semibold text-violet-600">${structureProgress.toFixed(0)}%</span></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${structureProgress}%;"></div></div></div>
+                    </div>
+                     <div class="mt-8 glass-panel p-6">
+                        <h3 class="text-lg font-semibold mb-3">Quy tắc làm bài Test</h3>
+                        <p class="text-slate-600">✨ Bạn có thể mở khóa bài Test cuối kỳ khi tiến độ học tập chung (từ vựng và cấu trúc) đạt <strong class="font-bold text-violet-600">80%</strong>.</p>
                     </div>
                 `;
-
-                document.getElementById('next-session-btn').onclick = () => {
-                    this.data.currentSessionIndex++;
-                    this.renderNextInSession(); 
-                };
+                
+                const testButton = document.querySelector('[data-view="test"]');
+                if (testButton) testButton.disabled = overallProgress < 80;
             },
-
-            showSessionEndSummary() { /* Giữ nguyên, đã ổn định */ },
-
-            // --- UTILITY & HELPER FUNCTIONS ---
-            showErrorState(message) { /* Giữ nguyên, đã ổn định */ },
-            initSidebarNav() { /* Giữ nguyên, đã ổn định */ },
-            setActiveNav(navId) { document.querySelectorAll('.sidebar-nav-btn').forEach(b => b.classList.remove('active')); document.getElementById(navId)?.classList.add('active'); },
-            updateHeader(title, subtitle) { document.getElementById('app-title').textContent = title; document.getElementById('app-subtitle').textContent = subtitle; },
-            initModals() { /* Giữ nguyên, đã ổn định */ },
-            openModal(id) { document.getElementById(id)?.classList.add('is-open'); },
-            closeModal(id) { const m = document.getElementById(id); if(m) { m.classList.add('is-closing'); setTimeout(() => m.classList.remove('is-open', 'is-closing'), 300); } },
-            showFilteredList(listType) { /* Giữ nguyên, đã ổn định */ },
-            showCustomAlert(message, type = 'info') {
-                const alertId = 'custom-alert-box';
-                document.getElementById(alertId)?.remove();
-                const alertBox = document.createElement('div');
-                const colors = {
-                    info: 'text-violet-800 dark:text-violet-200',
-                    success: 'text-green-800 dark:text-green-200',
-                    error: 'text-red-800 dark:text-red-200',
-                };
-                alertBox.id = alertId;
-                alertBox.className = `glass-panel ${colors[type]}`;
-                alertBox.style.cssText = `position:fixed; top:20px; left:50%; transform:translateX(-50%); padding:16px 24px; border-radius:16px; z-index:200; font-weight:600; animation:fadeIn 0.5s ease forwards; box-shadow: 0 5px 20px rgba(0,0,0,0.2);`;
-                alertBox.innerHTML = message;
-                document.body.appendChild(alertBox);
-                setTimeout(() => { alertBox.style.animation = 'scaleOut 0.5s ease forwards'; setTimeout(() => alertBox.remove(), 500); }, 3000);
-            },
-            showCustomConfirm(message, onConfirm, confirmText = 'Yes', cancelText = 'Cancel') { /* Giữ nguyên, đã ổn định */ },
-            shuffleArray(array) { 
-                const a = [...array];
-                for (let i = a.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [a[i], a[j]] = [a[j], a[i]];
+            
+            renderStudyTypeSelection() {
+                const main = document.getElementById('main-content');
+                main.innerHTML = `<h1 class="text-3xl font-bold mb-6">Study</h1><div class="glass-panel p-8 text-center"><h2 class="text-xl font-bold mb-6">What do you want to study?</h2><div class="flex flex-wrap justify-center gap-4"><button id="study-type-vocab-btn" class="btn btn-primary"><i class="fas fa-book mr-2"></i> Vocabulary</button><button id="study-type-structure-btn" class="btn btn-primary ${this.data.structures.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${this.data.structures.length === 0 ? 'disabled' : ''}><i class="fas fa-sitemap mr-2"></i> Structures</button></div></div>`;
+                document.getElementById('study-type-vocab-btn').addEventListener('click', () => this.renderStudyMethodSelection());
+                if(this.data.structures.length > 0) {
+                    document.getElementById('study-type-structure-btn').addEventListener('click', () => this.startFlashcardSession('structure'));
                 }
-                return a;
-            }
-        };
+            },
 
-        document.addEventListener('DOMContentLoaded', () => App.init());
+            renderStudyMethodSelection() {
+                 const main = document.getElementById('main-content');
+                 main.innerHTML = `<div class="flex items-center mb-6"><button id="back-to-study-type" class="btn btn-secondary !p-3 !rounded-full"><i class="fas fa-arrow-left"></i></button><h1 class="text-3xl font-bold ml-4">Study Vocabulary</h1></div><div class="glass-panel p-8 text-center"><h2 class="text-xl font-bold mb-6">Choose a study method</h2><div class="flex flex-wrap justify-center gap-4"><button id="study-method-flashcard-btn" class="btn btn-primary"><i class="fas fa-clone mr-2"></i> Flashcards</button><button id="study-method-mindmap-btn" class="btn btn-primary"><i class="fas fa-project-diagram mr-2"></i> Mindmap</button></div></div>`;
+                 document.getElementById('back-to-study-type').addEventListener('click', () => this.renderStudyTypeSelection());
+                 document.getElementById('study-method-flashcard-btn').addEventListener('click', () => this.startFlashcardSession('word'));
+                 document.getElementById('study-method-mindmap-btn').addEventListener('click', () => this.startMindmapSession());
+            },
+            
+            startFlashcardSession(type) {
+                this.data.session.items = (type === 'word') ? this.data.words : this.data.structures;
+                this.data.session.currentIndex = 0;
+                this.renderFlashcardViewer();
+            },
+            
+            renderFlashcardViewer() {
+                const main = document.getElementById('main-content');
+                main.innerHTML = `<div class="max-w-3xl mx-auto"><div class="flex justify-between items-center mb-4"><button id="back-to-study-menu" class="btn btn-secondary"><i class="fas fa-times mr-2"></i> Exit</button></div><div class="flashcard-container"><div class="flashcard" id="flashcard"></div></div><div class="flex justify-between items-center mt-4"><button id="prev-card-btn" class="btn btn-secondary !p-4 !rounded-full"><i class="fas fa-arrow-left"></i></button><div id="card-counter" class="font-semibold"></div><button id="next-card-btn" class="btn btn-secondary !p-4 !rounded-full"><i class="fas fa-arrow-right"></i></button></div></div>`;
+                this.updateFlashcardView();
+                document.getElementById('flashcard').addEventListener('click', e => e.currentTarget.classList.toggle('is-flipped'));
+                document.getElementById('prev-card-btn').addEventListener('click', () => this.navigateCard(-1));
+                document.getElementById('next-card-btn').addEventListener('click', () => this.navigateCard(1));
+                const backTarget = this.data.session.items[0].itemType === 'word' ? 'renderStudyMethodSelection' : 'renderStudyTypeSelection';
+                document.getElementById('back-to-study-menu').addEventListener('click', () => this[backTarget]());
+            },
+            
+            updateFlashcardView() {
+                const item = this.data.session.items[this.data.session.currentIndex];
+                const card = document.getElementById('flashcard');
+                if (!item || !card) return;
+                card.classList.remove('is-flipped');
+                const isStructure = item.itemType === 'structure';
+                const frontHTML = `<div class="text-3xl font-bold">${isStructure ? item.phrase : item.word}</div>`;
+                const backHTML = isStructure ? `<div class="text-xl font-semibold">${item.meaning}</div><p class="text-slate-500 mt-4 italic">"${item.applicationExamples[0] || ''}"</p>` : `<div class="text-xl font-semibold">${item.meaning}</div><p class="text-slate-500 mt-2">${item.pronunciation} <span class="mx-2">&bull;</span> ${item.type}</p><p class="text-slate-500 mt-4 italic">"${item.exampleSentence || ''}"</p>`;
+                setTimeout(() => { card.innerHTML = `<div class="flashcard-face flashcard-front">${frontHTML}</div><div class="flashcard-face flashcard-back">${backHTML}</div>`; }, 100);
+                document.getElementById('card-counter').textContent = `${this.data.session.currentIndex + 1} / ${this.data.session.items.length}`;
+            },
+            
+            navigateCard(direction) {
+                const newIndex = this.data.session.currentIndex + direction;
+                const total = this.data.session.items.length;
+                this.data.session.currentIndex = (newIndex < 0) ? total - 1 : (newIndex >= total) ? 0 : newIndex;
+                this.updateFlashcardView();
+            },
+
+            startMindmapSession() {
+                this.showModal("Thông báo", "Chức năng Mindmap đang được phát triển và sẽ sớm ra mắt!");
+            },
+
+            renderPracticeTypeSelection() {
+                const main = document.getElementById('main-content');
+                const hasWeaknesses = Object.keys(this.data.progress.incorrectCounts).length > 0;
+                main.innerHTML = `<h1 class="text-3xl font-bold mb-6">Practice</h1>
+                <div class="glass-panel p-8 text-center">
+                    <h2 class="text-xl font-bold mb-6">Choose your practice mode</h2>
+                    <div class="flex flex-col md:flex-row justify-center gap-4">
+                        <button id="practice-normal-btn" class="btn btn-primary">
+                            <i class="fas fa-random mr-2"></i> Luyện tập thông thường
+                        </button>
+                        <button id="practice-weakness-btn" class="btn btn-primary !bg-amber-500 hover:!bg-amber-600 ${!hasWeaknesses ? 'opacity-50 cursor-not-allowed' : ''}" ${!hasWeaknesses ? 'disabled' : ''}>
+                            <i class="fas fa-star-half-alt mr-2"></i> Ôn tập điểm yếu
+                        </button>
+                    </div>
+                    ${!hasWeaknesses ? '<p class="text-slate-500 mt-4 text-sm">Bạn chưa có điểm yếu nào. Hãy luyện tập để hệ thống ghi nhận nhé!</p>' : ''}
+                </div>`;
+                document.getElementById('practice-normal-btn').addEventListener('click', () => this.startPracticeSession('normal'));
+                if (hasWeaknesses) {
+                    document.getElementById('practice-weakness-btn').addEventListener('click', () => this.startPracticeSession('weakness'));
+                }
+            },
+
+            startPracticeSession(mode = 'normal', count = 10) {
+                let practiceItems = [];
+                if (mode === 'weakness') {
+                    const weakItemIds = Object.keys(this.data.progress.incorrectCounts)
+                        .sort((a, b) => this.data.progress.incorrectCounts[b] - this.data.progress.incorrectCounts[a]);
+                    const allItems = [...this.data.words, ...this.data.structures];
+                    weakItemIds.forEach(id => {
+                        const itemType = id.split('_')[0];
+                        const itemId = id.substring(id.indexOf('_') + 1);
+                        const item = (itemType === 'word') ? allItems.find(i => i.itemType === 'word' && i.id == itemId) : allItems.find(i => i.itemType === 'structure' && i.id == itemId);
+                        if (item) practiceItems.push(item);
+                    });
+                } else { 
+                    const allItems = [...this.data.words, ...this.data.structures];
+                    const unlearnedKeys = allItems.map(item => `${item.itemType}_${item.id}`).filter(key => !this.data.progress.learnedItems[key]);
+                    if (unlearnedKeys.length === 0) {
+                        practiceItems = this.shuffleArray(allItems);
+                    } else {
+                        practiceItems = this.shuffleArray(unlearnedKeys.map(key => {
+                            const [itemType, itemId] = key.split('_');
+                            return allItems.find(i => i.itemType === itemType && i.id == itemId);
+                        }));
+                    }
+                }
+                if (practiceItems.length === 0) { this.showModal("Chúc mừng!", "Bạn đã học hết tất cả các mục!"); return; }
+                this.data.session.items = practiceItems.slice(0, count);
+                this.data.session.currentIndex = 0;
+                this.data.session.correctAnswers = 0;
+                this.renderNextQuestionItem();
+            },
+
+            renderNextQuestionItem() {
+                if (this.data.session.currentIndex >= this.data.session.items.length) { this.renderSessionSummary(); return; }
+                const main = document.getElementById('main-content');
+                const item = this.data.session.items[this.data.session.currentIndex];
+                const progress = (this.data.session.currentIndex / this.data.session.items.length) * 100;
+                const questionHTML = this.getQuestionHTML(item, this.data.session.currentIndex);
+                main.innerHTML = `
+                    <div class="max-w-3xl mx-auto">
+                        <div class="mb-4 glass-panel p-4">
+                             <div class="flex justify-between items-center mb-2 text-sm"><span class="font-medium">Question ${this.data.session.currentIndex + 1} of ${this.data.session.items.length}</span></div>
+                             <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${progress}%;"></div></div>
+                        </div>
+                        <div id="question-container" class="glass-panel p-6">${questionHTML}</div>
+                        <div id="feedback-container" class="mt-6"></div>
+                    </div>`;
+                this.attachPracticeEventListeners(item);
+            },
+
+            getQuestionHTML(item, index) {
+                let possibleTypes = [];
+                if (item.itemType === 'word') {
+                    possibleTypes.push('TraditionalMCQ');
+                    if (item.exampleSentence) possibleTypes.push('ContextualMCQ', 'SentenceUnscramble', 'TriosOfGappedSentence');
+                    if ((this.data.wordFamilies[item.familyRoot]?.length || 0) > 1) possibleTypes.push('WordFamilyMatching', 'WordFamilyMCQ');
+                    if (item.pronunciation) possibleTypes.push('PronunciationMatch', 'AudioListening');
+                } else {
+                    if (item.gapFill) possibleTypes.push('GapFill');
+                    if (item.errorCorrection) possibleTypes.push('ErrorCorrection');
+                }
+                const uniqueTypes = [...new Set(possibleTypes)].filter(Boolean);
+                const exerciseType = this.shuffleArray(uniqueTypes)[0] || 'TraditionalMCQ';
+                item.exerciseType = exerciseType;
+                const renderFunction = this[`get${exerciseType}HTML`];
+                if (typeof renderFunction === 'function') return renderFunction.call(this, item, index);
+                return this.getTraditionalMCQHTML(item, index);
+            },
+
+            attachPracticeEventListeners(item) {
+                const container = document.getElementById('question-container');
+                if (!container) return;
+                switch(item.exerciseType) {
+                    case 'TraditionalMCQ': case 'ContextualMCQ': case 'WordFamilyMCQ': case 'PronunciationMatch':
+                        container.querySelectorAll('.answer-option').forEach(option => option.addEventListener('click', (e) => this.checkAnswer(e.target.closest('.answer-option').dataset.answer)));
+                        break;
+                    case 'AudioListening': case 'GapFill': case 'TriosOfGappedSentence':
+                        const input = container.querySelector('#text-input');
+                        const checkBtn = container.querySelector('#check-btn');
+                        container.querySelector('#play-audio-btn')?.addEventListener('click', (e) => {
+                            const textToSpeak = e.currentTarget.dataset.text;
+                            if (textToSpeak) window.speechSynthesis.speak(new SpeechSynthesisUtterance(textToSpeak));
+                        });
+                        if (input && checkBtn) {
+                            const checkFunc = () => this.checkAnswer(input.value);
+                            checkBtn.addEventListener('click', checkFunc);
+                            input.addEventListener('keypress', (e) => { if(e.key === 'Enter') checkFunc(); });
+                        }
+                        break;
+                    case 'SentenceUnscramble':
+                        const answerArea = container.querySelector('#unscramble-answer-area');
+                        const sourceArea = container.querySelector('#unscramble-source-area');
+                        if (answerArea && sourceArea) {
+                            const moveToken = (e) => { if (e.target.classList.contains('word-token')) (e.currentTarget.id === 'unscramble-source-area' ? answerArea : sourceArea).appendChild(e.target); }
+                            sourceArea.addEventListener('click', moveToken);
+                            answerArea.addEventListener('click', moveToken);
+                        }
+                        container.querySelector('#check-btn')?.addEventListener('click', () => { if (answerArea) this.checkAnswer(Array.from(answerArea.querySelectorAll('.word-token')).map(t => t.textContent).join(' ')); });
+                        break;
+                    case 'ErrorCorrection':
+                        container.querySelectorAll('.choice-btn').forEach(btn => btn.addEventListener('click', (e) => this.checkErrorCorrectionStep1(e.target.closest('.choice-btn').dataset.choice === 'correct')));
+                        const correctionInput = container.querySelector('#error-correction-input');
+                        const correctionBtn = container.querySelector('#error-correction-check-btn');
+                        if (correctionInput && correctionBtn) {
+                            const checkFunc = () => this.checkAnswer(correctionInput.value);
+                            correctionBtn.addEventListener('click', checkFunc);
+                            correctionInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') checkFunc(); });
+                        }
+                        break;
+                    case 'WordFamilyMatching':
+                        container.querySelectorAll('.matching-item').forEach(el => el.addEventListener('click', (e) => this.handleMatchingClick(e.currentTarget)));
+                        break;
+                }
+            },
+            
+            // --- HTML Generation Functions ---
+            getTraditionalMCQHTML(item, index) {
+                const isEngToViet = Math.random() > 0.5;
+                const question = isEngToViet ? `${item.word} <span class="text-base font-normal text-slate-500">(${item.type})</span>` : item.meaning;
+                const correctAnswer = isEngToViet ? item.meaning : item.word;
+                const distractorPool = isEngToViet ? this.data.words.map(w => w.meaning) : this.data.words.map(w => w.word);
+                const distractors = this.shuffleArray(distractorPool.filter(d => d !== correctAnswer)).slice(0, 3);
+                const options = this.shuffleArray([correctAnswer, ...distractors]);
+                this.data.session.currentCorrectAnswer = correctAnswer;
+                return `<h2 class="text-sm font-semibold text-violet-600 mb-2">Question ${index + 1}: Choose the correct meaning</h2><div class="text-2xl font-bold min-h-[60px] mb-8">${question}</div><div id="answer-options" class="grid grid-cols-1 md:grid-cols-2 gap-3">${options.map(opt => `<button class="answer-option p-4" data-answer="${opt}">${opt}</button>`).join('')}</div>`;
+            },
+            
+            getContextualMCQHTML(item, index) {
+                const correctAnswer = item.word;
+                const sentence = item.exampleSentence.replace(new RegExp(`\\b${item.word}\\b`, 'gi'), '<span class="font-bold text-violet-600">[...]</span>');
+                let distractors = [];
+                const familyWords = this.data.wordFamilies[item.familyRoot]?.filter(w => w.id !== item.id) || [];
+                if (familyWords.length > 0) distractors.push(this.shuffleArray(familyWords)[0].word);
+                if (item.distractors_en && item.distractors_en.length > 0) distractors.push(...this.shuffleArray([...item.distractors_en]));
+                const otherWords = this.data.words.filter(w => w.type === item.type && w.id !== item.id && !distractors.includes(w.word));
+                distractors.push(...this.shuffleArray(otherWords).map(w => w.word));
+                const finalDistractors = [...new Set(distractors)].slice(0, 3);
+                const options = this.shuffleArray([correctAnswer, ...finalDistractors]);
+                this.data.session.currentCorrectAnswer = correctAnswer;
+                return `<h2 class="text-sm font-semibold text-violet-600 mb-2">Question ${index + 1}: Choose the word that best fits the sentence</h2><p class="text-xl font-serif italic min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="grid grid-cols-1 md:grid-cols-2 gap-3">${options.map(opt => `<button class="answer-option p-4" data-answer="${opt}">${opt}</button>`).join('')}</div>`;
+            },
+            
+            getWordFamilyMCQHTML(item, index) {
+                const family = this.data.wordFamilies[item.familyRoot];
+                if (!family || family.length < 2) return this.getContextualMCQHTML(item, index);
+                const correctAnswer = item.word;
+                const sentence = item.exampleSentence.replace(new RegExp(`\\b${item.word}\\b`, 'gi'), '<span class="font-bold text-violet-600">[...]</span>');
+                const distractors = this.shuffleArray(family.filter(w => w.id !== item.id)).slice(0, 3).map(w => w.word);
+                while (distractors.length < 3) distractors.push("... (filler)");
+                const options = this.shuffleArray([correctAnswer, ...distractors]);
+                this.data.session.currentCorrectAnswer = correctAnswer;
+                return `<h2 class="text-sm font-semibold text-violet-600 mb-2">Question ${index + 1}: Word Family Quiz</h2><p class="text-slate-600 mb-4">Choose the correct word from the "<strong>${item.familyRoot}</strong>" family.</p><p class="text-xl font-serif italic min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="grid grid-cols-1 md:grid-cols-2 gap-3">${options.map(opt => `<button class="answer-option p-4" data-answer="${opt}">${opt}</button>`).join('')}</div>`;
+            },
+
+            getAudioListeningHTML(item, index) {
+                this.data.session.currentCorrectAnswer = item.word;
+                return `<h2 class="text-sm font-semibold text-violet-600 mb-2">Question ${index + 1}: Listen and type the word</h2><div class="text-center mb-8"><button id="play-audio-btn" data-text="${item.word}" class="text-5xl text-violet-500 hover:text-violet-700 transition-colors"><i class="fas fa-volume-up"></i></button></div><div class="flex gap-2"><input type="text" id="text-input" class="input-field p-4 text-center text-lg rounded-lg" placeholder="Type what you hear..."><button id="check-btn" class="btn btn-primary">Check</button></div>`;
+            },
+            
+            getPronunciationMatchHTML(item, index) {
+                this.data.session.currentCorrectAnswer = item.pronunciation;
+                const distractorPool = this.data.words.filter(w => w.id !== item.id && w.pronunciation).map(w => w.pronunciation);
+                const distractors = this.shuffleArray(distractorPool).slice(0, 3);
+                const options = this.shuffleArray([item.pronunciation, ...distractors]);
+                return `<h2 class="text-sm font-semibold text-violet-600 mb-2">Question ${index + 1}: Match the pronunciation</h2><div class="text-2xl font-bold text-center min-h-[60px] mb-8">${item.word}</div><div id="answer-options" class="grid grid-cols-1 md:grid-cols-2 gap-3">${options.map(opt => `<button class="answer-option p-4 font-mono" data-answer="${opt}">${opt}</button>`).join('')}</div>`;
+            },
+
+            getErrorCorrectionHTML(item, index) {
+                const isActuallyIncorrect = Math.random() > 0.5;
+                const sentenceToShow = isActuallyIncorrect ? item.errorCorrection.incorrect : item.errorCorrection.correct;
+                this.data.session.currentCorrectAnswer = item.errorCorrection.correct;
+                this.data.session.isSentenceActuallyIncorrect = isActuallyIncorrect;
+                return `<div id="error-correction-block"><h2 class="text-sm font-semibold text-violet-600 mb-2">Question ${index + 1}: Find and correct the error</h2><p class="text-xl font-serif italic min-h-[60px] mb-8">"${sentenceToShow}"</p><div id="error-step-1"><p class="text-center font-semibold mb-4">Is this sentence correct or incorrect?</p><div class="flex justify-center gap-4"><button data-choice="correct" class="choice-btn btn btn-primary !bg-green-500 hover:!bg-green-600">Correct</button><button data-choice="incorrect" class="choice-btn btn btn-primary !bg-red-500 hover:!bg-red-600">Incorrect</button></div></div><div id="error-step-2" class="hidden"><p class="font-semibold mb-2">Correct the sentence:</p><div class="flex gap-2"><input type="text" id="error-correction-input" class="input-field p-4 rounded-lg" value="${sentenceToShow}"><button id="error-correction-check-btn" class="btn btn-primary">Submit</button></div></div></div>`;
+            },
+            
+            getGapFillHTML(item, index) {
+                this.data.session.currentCorrectAnswer = item.gapFill.blank;
+                const sentence = item.gapFill.sentence.replace('___', '<span class="font-bold text-violet-600">[&hellip;]</span>');
+                return `<h2 class="text-sm font-semibold text-violet-600 mb-2">Question ${index + 1}: Fill in the blank</h2><p class="text-xl font-serif italic min-h-[60px] mb-8">"${sentence}"</p><div class="flex gap-2"><input type="text" id="text-input" class="input-field p-4 text-center rounded-lg" placeholder="Type the missing word..."><button id="check-btn" class="btn btn-primary">Check</button></div>`;
+            },
+
+            getSentenceUnscrambleHTML(item, index) {
+                this.data.session.currentCorrectAnswer = item.exampleSentence;
+                const words = this.shuffleArray(item.exampleSentence.split(' '));
+                return `<h2 class="text-sm font-semibold text-violet-600 mb-2">Question ${index + 1}: Unscramble the sentence</h2><p class="text-slate-600 mb-4">Click the words in the correct order.</p><div id="unscramble-answer-area" class="token-area mb-4 p-4 rounded-lg"></div><div id="unscramble-source-area" class="token-area bg-white/20 p-4 rounded-lg">${words.map(word => `<span class="word-token p-2 rounded-md">${word}</span>`).join('')}</div><div class="mt-6 text-right"><button id="check-btn" class="btn btn-primary">Check</button></div>`;
+            },
+
+            getWordFamilyMatchingHTML(item, index) {
+                const family = this.data.wordFamilies[item.familyRoot];
+                if (!family || family.length < 2) return this.getTraditionalMCQHTML(item, index);
+                this.data.session.matchedItems = [];
+                this.data.session.currentMatchingSelection = { word: null, type: null, pronunciation: null, meaning: null };
+                const words = this.shuffleArray([...family]);
+                const types = this.shuffleArray(family.map(w => w.type));
+                const pronunciations = this.shuffleArray(family.map(w => w.pronunciation));
+                const meanings = this.shuffleArray(family.map(w => w.meaning));
+                const renderColumn = (title, items, category) => `<div class="matching-column"><h3>${title}</h3><div>${items.map(i => `<div class="matching-item p-3 rounded-lg bg-white/30 border border-white/40" data-category="${category}" data-value="${i}">${i}</div>`).join('')}</div></div>`;
+                return `<h2 class="text-sm font-semibold text-violet-600 mb-2">Question ${index + 1}: Word Family Matching</h2><p class="text-slate-600 mb-6">Match the items for the word family: <strong class="text-violet-700">${item.familyRoot}</strong></p><div id="matching-game" class="matching-game-container grid grid-cols-2 md:grid-cols-4 gap-4">${renderColumn('Từ vựng', words.map(w => w.word), 'word')}${renderColumn('Loại từ', types, 'type')}${renderColumn('Phiên âm', pronunciations, 'pronunciation')}${renderColumn('Nghĩa', meanings, 'meaning')}</div><div id="matching-feedback" class="mt-4 text-center font-semibold h-5"></div>`;
+            },
+
+            getTriosOfGappedSentenceHTML(item, index) {
+                const keyword = item.word;
+                let sentences = new Set();
+                this.data.words.forEach(w => { if (w.exampleSentence && w.exampleSentence.toLowerCase().includes(keyword.toLowerCase())) sentences.add(w.exampleSentence); });
+                if (sentences.size < 3) return this.getContextualMCQHTML(item, index);
+                const finalSentences = this.shuffleArray([...sentences]).slice(0, 3);
+                const gappedSentences = finalSentences.map(s => s.replace(new RegExp(`\\b${keyword}\\b`, 'gi'), '______'));
+                this.data.session.currentCorrectAnswer = keyword;
+                return `<h2 class="text-sm font-semibold text-violet-600 mb-2">Question ${index + 1}: Find the common word</h2><p class="text-slate-600 mb-6">What single word fits in all three blanks?</p><div class="space-y-4 mb-6">${gappedSentences.map((s, i) => `<p class="text-lg font-serif italic">${i + 1}. "${s}"</p>`).join('')}</div><div class="flex gap-2"><input type="text" id="text-input" class="input-field p-4 rounded-lg" placeholder="Type the common word..."><button id="check-btn" class="btn btn-primary">Check</button></div>`;
+            },
+            
+            checkErrorCorrectionStep1(userThinksIsCorrect) {
+                const isActuallyCorrect = !this.data.session.isSentenceActuallyIncorrect;
+                if (userThinksIsCorrect === isActuallyCorrect) {
+                    if (isActuallyCorrect) this.checkAnswer(this.data.session.currentCorrectAnswer);
+                    else {
+                        document.getElementById('error-step-1')?.classList.add('hidden');
+                        document.getElementById('error-step-2')?.classList.remove('hidden');
+                        document.getElementById('error-correction-input')?.focus();
+                    }
+                } else this.checkAnswer("user-was-wrong-about-correctness");
+            },
+
+            handleMatchingClick(element) {
+                const category = element.dataset.category;
+                const value = element.dataset.value;
+                if (element.classList.contains('correct-match')) return;
+                this.data.session.currentMatchingSelection[category] = value;
+                document.querySelectorAll(`.matching-item[data-category="${category}"]`).forEach(item => item.classList.remove('selected'));
+                element.classList.add('selected');
+                const selection = this.data.session.currentMatchingSelection;
+                if (Object.values(selection).every(v => v !== null)) {
+                    const family = this.data.wordFamilies[this.data.session.items[this.data.session.currentIndex].familyRoot];
+                    const matchedWord = family.find(w => w.word === selection.word && w.type === selection.type && w.pronunciation === selection.pronunciation && w.meaning === selection.meaning);
+                    const feedbackEl = document.getElementById('matching-feedback');
+                    if (matchedWord) {
+                        this.data.session.matchedItems.push(matchedWord.id);
+                        feedbackEl.textContent = "Correct Match!";
+                        feedbackEl.className = 'mt-4 text-center font-semibold text-green-600';
+                        Object.keys(selection).forEach(cat => document.querySelector(`.matching-item[data-category="${cat}"].selected`)?.classList.add('correct-match'));
+                        this.data.session.currentMatchingSelection = { word: null, type: null, pronunciation: null, meaning: null };
+                        if (this.data.session.matchedItems.length === family.length) this.checkAnswer("all matched");
+                    } else {
+                        feedbackEl.textContent = "Incorrect, try again.";
+                        feedbackEl.className = 'mt-4 text-center font-semibold text-red-600';
+                    }
+                }
+            },
+
+            checkAnswer(selectedAnswer) {
+                const currentItem = this.data.session.items[this.data.session.currentIndex];
+                let isCorrect = false;
+                if (currentItem.exerciseType === 'WordFamilyMatching') isCorrect = selectedAnswer === "all matched";
+                else isCorrect = selectedAnswer.trim().toLowerCase() === this.data.session.currentCorrectAnswer.trim().toLowerCase();
+                
+                this.updateProgress(currentItem.id, currentItem.itemType, isCorrect);
+                if (isCorrect) this.data.session.correctAnswers++;
+                
+                const questionContainer = document.getElementById('question-container');
+                if (questionContainer) {
+                    questionContainer.querySelectorAll('.answer-option, #check-btn, #text-input, .choice-btn, .matching-item, #error-correction-check-btn').forEach(el => { el.disabled = true; el.classList.add('disabled', 'opacity-75'); });
+                    if (questionContainer.querySelector('#answer-options')) {
+                        questionContainer.querySelectorAll('#answer-options .answer-option').forEach(btn => {
+                            if (btn.dataset.answer.trim().toLowerCase() === this.data.session.currentCorrectAnswer.trim().toLowerCase()) btn.classList.add('correct');
+                            else if (btn.dataset.answer.trim().toLowerCase() === selectedAnswer.trim().toLowerCase()) btn.classList.add('incorrect');
+                        });
+                    }
+                }
+                this.showFeedback(isCorrect);
+            },
+
+            showFeedback(isCorrect) {
+                const container = document.getElementById('feedback-container');
+                if (!container) return;
+                const bgColor = isCorrect ? 'bg-green-100' : 'bg-red-100';
+                const textColor = isCorrect ? 'text-green-800' : 'text-red-800';
+                let message = isCorrect ? 'Correct!' : `Incorrect! The correct answer is: <strong class="font-bold">${this.data.session.currentCorrectAnswer}</strong>`;
+                container.innerHTML = `<div class="glass-panel p-4 rounded-lg flex justify-between items-center ${bgColor} ${textColor}"><p class="font-semibold">${message}</p><button id="next-question-btn" class="btn btn-primary">Next <i class="fas fa-arrow-right ml-2"></i></button></div>`;
+                const nextButton = document.getElementById('next-question-btn');
+                nextButton?.addEventListener('click', () => { this.data.session.currentIndex++; this.renderNextQuestionItem(); });
+                nextButton?.focus();
+            },
+            
+            renderSessionSummary() {
+                const main = document.getElementById('main-content');
+                const score = this.data.session.correctAnswers;
+                const total = this.data.session.items.length;
+                const percentage = total > 0 ? (score / total * 100).toFixed(0) : 0;
+                main.innerHTML = `<div class="text-center max-w-lg mx-auto"><h1 class="text-3xl font-bold mb-4">Practice Complete!</h1><div class="glass-panel p-8"><p class="text-lg">Your score:</p><p class="text-6xl font-bold my-4 text-violet-600">${percentage}%</p><p class="font-semibold">${score} / ${total} correct</p><div class="mt-8"><button id="practice-again-btn" class="btn btn-primary w-full">Practice Again</button><button id="back-to-dashboard-btn" class="btn btn-secondary w-full mt-3">Back to Dashboard</button></div></div></div>`;
+                document.getElementById('practice-again-btn').addEventListener('click', () => this.renderPracticeTypeSelection());
+                document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.navigateTo('dashboard'));
+            },
+
+            renderTestStartScreen() {
+                this.showModal("Thông báo", "Chức năng Test đang được phát triển và sẽ sớm ra mắt!");
+            },
+
+            showModal(title, message, onConfirm, showCancel = false) {
+                return new Promise(resolve => {
+                    const modal = document.getElementById('custom-modal');
+                    modal.innerHTML = `
+                        <div class="modal-content glass-panel text-center p-8 w-full max-w-sm">
+                            <h3 class="text-xl font-bold mb-4">${title}</h3>
+                            <p class="mb-6">${message}</p>
+                            <div class="flex gap-4 justify-center">
+                                ${showCancel ? '<button id="modal-cancel-btn" class="btn btn-secondary">Hủy</button>' : ''}
+                                <button id="modal-confirm-btn" class="btn btn-primary">Đồng ý</button>
+                            </div>
+                        </div>`;
+                    modal.classList.add('is-open');
+                    document.getElementById('modal-confirm-btn').onclick = () => {
+                        modal.classList.remove('is-open');
+                        if (onConfirm) onConfirm();
+                        resolve(true);
+                    };
+                    if (showCancel) {
+                        document.getElementById('modal-cancel-btn').onclick = () => {
+                            modal.classList.remove('is-open');
+                            resolve(false);
+                        };
+                    }
+                });
+            },
+
+            shuffleArray(array) {
+                let currentIndex = array.length, randomIndex;
+                while (currentIndex != 0) { randomIndex = Math.floor(Math.random() * currentIndex); currentIndex--; [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]]; }
+                return array;
+            },
+        };
+        
+        App.init();
     </script>
 </body>
 </html>
