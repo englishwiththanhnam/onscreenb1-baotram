@@ -222,7 +222,12 @@
                 const vocabSetData = vocabSetSnap.data();
                 document.title = vocabSetData.title || "Vocabulary Practice";
                 document.getElementById('sidebar-title').textContent = vocabSetData.title;
-                this.data.words = vocabSetData.wordList || [];
+                
+                // *** FIX: Assign unique IDs to words loaded from Firebase ***
+                this.data.words = (vocabSetData.wordList || []).map((word, index) => ({
+                    ...word,
+                    id: `word_${index + 1}` // Create a consistent ID format
+                }));
                 
                 this.processData();
             },
@@ -382,27 +387,17 @@
 
             startPracticeSession(mode = 'normal', count = 10) {
                 let practiceItems = [];
+                const allItems = [...this.data.words, ...this.data.structures];
                 if (mode === 'weakness') {
                     const weakItemIds = Object.keys(this.data.progress.incorrectCounts)
                         .sort((a, b) => this.data.progress.incorrectCounts[b] - this.data.progress.incorrectCounts[a]);
-                    const allItems = [...this.data.words, ...this.data.structures];
                     weakItemIds.forEach(id => {
-                        const itemType = id.split('_')[0];
-                        const itemId = id.substring(id.indexOf('_') + 1);
-                        const item = (itemType === 'word') ? allItems.find(i => i.itemType === 'word' && i.id == itemId) : allItems.find(i => i.itemType === 'structure' && i.id == itemId);
+                        const item = allItems.find(i => `${i.itemType}_${i.id}` === id);
                         if (item) practiceItems.push(item);
                     });
                 } else { 
-                    const allItems = [...this.data.words, ...this.data.structures];
-                    const unlearnedKeys = allItems.map(item => `${item.itemType}_${item.id}`).filter(key => !this.data.progress.learnedItems[key]);
-                    if (unlearnedKeys.length === 0) {
-                        practiceItems = this.shuffleArray(allItems);
-                    } else {
-                        practiceItems = this.shuffleArray(unlearnedKeys.map(key => {
-                            const [itemType, itemId] = key.split('_');
-                            return allItems.find(i => i.itemType === itemType && i.id == itemId);
-                        }));
-                    }
+                    const unlearnedItems = allItems.filter(item => !this.data.progress.learnedItems[`${item.itemType}_${item.id}`]);
+                    practiceItems = this.shuffleArray(unlearnedItems.length > 0 ? unlearnedItems : allItems);
                 }
                 if (practiceItems.length === 0) { this.showModal("Chúc mừng!", "Bạn đã học hết tất cả các mục!"); return; }
                 this.data.session.items = practiceItems.slice(0, count);
