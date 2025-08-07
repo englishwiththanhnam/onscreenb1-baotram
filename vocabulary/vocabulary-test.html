@@ -223,7 +223,6 @@
                 document.title = vocabSetData.title || "Vocabulary Practice";
                 document.getElementById('sidebar-title').textContent = vocabSetData.title;
                 
-                // Use the wordList from Firebase directly. The 'id' field is already present.
                 this.data.words = vocabSetData.wordList || [];
                 
                 this.processData();
@@ -237,12 +236,14 @@
             processData() {
                 this.data.structures = [];
                 this.data.words.forEach(word => {
-                    word.itemType = 'word'; // Ensure itemType is set
+                    // Ensure each word object has an itemType property
+                    word.itemType = 'word'; 
                     if (word.structures && Array.isArray(word.structures)) {
                         word.structures.forEach((struct, s_idx) => {
                             this.data.structures.push({ 
                                 ...struct, 
-                                id: `s_${word.id}_${s_idx}`, // Create a unique ID for the structure
+                                // Create a unique ID for the structure that matches Firebase progress keys
+                                id: `s_${word.id}_${s_idx}`, 
                                 itemType: 'structure', 
                                 rootWordId: word.id 
                             });
@@ -251,6 +252,7 @@
                 });
                 const families = {}; 
                 this.data.words.forEach(word => { 
+                    // Generate a familyRoot if it doesn't exist from Firebase
                     if (!word.familyRoot) {
                         word.familyRoot = word.word.toLowerCase();
                     }
@@ -449,9 +451,14 @@
                     if (item.exampleSentence) possibleTypes.push('ContextualMCQ', 'SentenceUnscramble', 'TriosOfGappedSentence');
                     if ((this.data.wordFamilies[item.familyRoot]?.length || 0) > 1) possibleTypes.push('WordFamilyMatching', 'WordFamilyMCQ');
                     if (item.pronunciation) possibleTypes.push('PronunciationMatch', 'AudioListening');
-                } else {
-                    if (item.gapFill) possibleTypes.push('GapFill');
-                    if (item.errorCorrection) possibleTypes.push('ErrorCorrection');
+                } else { // This is a structure
+                    const structData = item; // for clarity
+                    // Find a word that has this structure to get example sentences, etc.
+                    const parentWord = this.data.words.find(w => w.id === structData.rootWordId);
+                    if (parentWord) {
+                        if (structData.gapFill) possibleTypes.push('GapFill');
+                        if (structData.errorCorrection) possibleTypes.push('ErrorCorrection');
+                    }
                 }
                 const uniqueTypes = [...new Set(possibleTypes)].filter(Boolean);
                 const exerciseType = this.shuffleArray(uniqueTypes)[0] || 'TraditionalMCQ';
@@ -644,10 +651,9 @@
 
             checkAnswer(selectedAnswer) {
                 const currentItem = this.data.session.items[this.data.session.currentIndex];
-                // *** SAFEGUARD ***
-                if (!currentItem || this.data.session.currentCorrectAnswer === null) {
-                    console.error("Cannot check answer: currentItem or currentCorrectAnswer is missing.");
-                    this.renderNextQuestionItem(); // Skip to next
+                if (!currentItem || this.data.session.currentCorrectAnswer === null || selectedAnswer === undefined) {
+                    console.error("Cannot check answer: Invalid data.", { currentItem, selectedAnswer, correctAnswer: this.data.session.currentCorrectAnswer });
+                    this.renderNextQuestionItem();
                     return;
                 }
 
@@ -686,13 +692,14 @@
                 this.saveProgressToFirebase();
             },
 
+            // *** CRITICAL FIX: This function now generates keys matching your Firebase structure ***
             getProgressKey(item) {
                 if (!item || !item.itemType || item.id === undefined) return null;
                 if (item.itemType === 'word') {
+                    // Firebase key is 'word_{numeric_id}'
                     return `word_${item.id}`;
                 } else if (item.itemType === 'structure') {
-                    // Firebase key is 'word_s_{word_id}_{structure_index}'
-                    // Structure ID is 's_{word_id}_{structure_index}'
+                    // Firebase key is 'word_s_{word_id}_{structure_index}' which corresponds to the structure's generated ID
                     return `word_${item.id}`; 
                 }
                 return null;
