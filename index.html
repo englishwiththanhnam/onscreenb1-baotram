@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Luyện tập Từ vựng</title>
+    <title>Học và Luyện tập Từ vựng</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <script>
+        // Cấu hình Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
@@ -74,14 +75,24 @@
         import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
         const App = {
+            // Trạng thái tập trung của ứng dụng
             state: {
-                db: null, submissionId: null, studentName: '',
-                testData: {}, wordList: [], structureList: [], wordFamilies: {},
-                flashcardQueue: [], currentIndex: 0,
-                progress: { learnedItems: new Set(), incorrectCounts: {} },
+                db: null,
+                submissionId: null,
+                studentName: '',
+                testData: {},
+                wordList: [],
+                structureList: [],
+                wordFamilies: {},
+                flashcardQueue: [],
+                currentIndex: 0,
+                progress: {
+                    learnedItems: new Set(),
+                },
                 isSubmitting: false,
             },
 
+            // Cache các đối tượng DOM
             DOM: {
                 loader: document.getElementById('loader-overlay'),
                 container: document.getElementById('app-container'),
@@ -89,20 +100,23 @@
                 main: document.getElementById('app-main'),
             },
 
+            // --- 1. CORE LOGIC ---
+
             async init() {
-                // ... (Hàm init giữ nguyên như phiên bản trước)
                 this.state.db = getFirestore(initializeApp(window.firebaseConfig));
                 const params = new URLSearchParams(window.location.search);
                 const submissionId = params.get('submission_id');
 
-                if (!submissionId) { this.showError("Lỗi", "Không tìm thấy mã dự thi."); return; }
+                if (!submissionId) {
+                    this.showModal("Lỗi", "Không tìm thấy mã dự thi. Vui lòng truy cập lại từ cổng chính.");
+                    return;
+                }
                 
                 this.state.submissionId = submissionId;
                 await this.startSession(submissionId);
             },
             
             async startSession(submissionId) {
-                // ... (Hàm startSession giữ nguyên như phiên bản trước, nhưng gọi thêm processData)
                 try {
                     const submissionRef = doc(this.state.db, 'submissions', submissionId);
                     const submissionSnap = await getDoc(submissionRef);
@@ -110,7 +124,7 @@
 
                     let submissionData = submissionSnap.data();
                     if (submissionData.status === 'submitted') {
-                        this.showError("Thông báo", "Bạn đã hoàn thành bài học này.", true);
+                        this.showModal("Thông báo", "Bạn đã hoàn thành bài học này.", false, () => window.location.href='index.html');
                         return;
                     }
                     
@@ -122,7 +136,7 @@
                     this.state.testData = testSnap.data();
                     this.state.wordList = this.state.testData.wordList || [];
                     
-                    this.processData(); // Xử lý dữ liệu để tách cấu trúc và họ từ
+                    this.processData();
                     this.loadProgress();
                     
                     this.DOM.loader.classList.add('hidden');
@@ -130,15 +144,16 @@
                     
                     this.renderHeader();
                     this.renderDashboard();
-                } catch (error) { this.showError("Lỗi", error.message); }
+                } catch (error) {
+                    this.showModal("Lỗi", error.message);
+                }
             },
             
             processData() {
                 const structures = [];
                 const families = {};
                 this.state.wordList.forEach(word => {
-                    word.itemType = 'word'; // Thêm itemType để flashcard nhận diện
-                    // Tách cấu trúc
+                    word.itemType = 'word';
                     if (word.structures && Array.isArray(word.structures)) {
                         word.structures.forEach((struct, index) => {
                             structures.push({
@@ -149,7 +164,7 @@
                             });
                         });
                     }
-                    // Nhóm họ từ (tự suy luận familyRoot nếu không có)
+                    // Tự suy luận familyRoot nếu API chưa cung cấp
                     const root = word.familyRoot || word.word.toLowerCase();
                     if (!families[root]) families[root] = [];
                     families[root].push(word);
@@ -158,7 +173,9 @@
                 this.state.wordFamilies = families;
             },
 
-            loadProgress() { /* Giữ nguyên */
+            // --- 2. PROGRESS MANAGEMENT ---
+
+            loadProgress() {
                 const progressKey = `vocabProgress_${this.state.submissionId}`;
                 const savedProgress = localStorage.getItem(progressKey);
                 if (savedProgress) {
@@ -167,7 +184,7 @@
                 }
             },
 
-            saveProgress() { /* Giữ nguyên */
+            saveProgress() {
                 const progressKey = `vocabProgress_${this.state.submissionId}`;
                 const progressToSave = {
                     learnedItems: [...this.state.progress.learnedItems],
@@ -175,8 +192,9 @@
                 localStorage.setItem(progressKey, JSON.stringify(progressToSave));
             },
 
-            // --- UI RENDERING (ĐÃ TÁI CẤU TRÚC) ---
-            renderHeader() { /* Giữ nguyên */
+            // --- 3. UI RENDERING ---
+
+            renderHeader() {
                  this.DOM.header.innerHTML = `
                     <div class="flex flex-wrap justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
                         <div>
@@ -185,7 +203,14 @@
                         </div>
                         <button id="submit-final-btn" class="btn btn-primary"><i class="fas fa-check-circle mr-2"></i> Hoàn thành & Lưu tiến độ</button>
                     </div>`;
-                document.getElementById('submit-final-btn').addEventListener('click', () => this.submitToFirebase(true));
+                document.getElementById('submit-final-btn').addEventListener('click', () => {
+                    this.showModal(
+                        "Xác nhận Hoàn thành",
+                        "Bạn có chắc muốn kết thúc và lưu tiến độ học tập không? Thao tác này sẽ ghi nhận kết quả cuối cùng.",
+                        true, // showCancel
+                        () => this.submitToFirebase(true) // onConfirm
+                    );
+                });
             },
 
             renderDashboard() {
@@ -225,11 +250,11 @@
                 });
             },
             
-            // --- FLASHCARD IMPLEMENTATION ---
+            // --- 4. STUDY IMPLEMENTATION: FLASHCARD ---
             startFlashcardSession(type) {
                 this.state.flashcardQueue = type === 'word' ? this.state.wordList : this.state.structureList;
                 if(this.state.flashcardQueue.length === 0) {
-                    this.showError("Thông báo", "Không có dữ liệu cho phần học này.");
+                    this.showModal("Thông báo", "Không có dữ liệu cho phần học này.");
                     return;
                 }
                 this.state.currentIndex = 0;
@@ -266,7 +291,7 @@
                 if (!item || !card) return;
 
                 // Đánh dấu là đã học khi xem flashcard
-                const itemId = item.id || `word_${item.id}`;
+                const itemId = item.itemType === 'word' ? `word_${item.id}` : item.id;
                 this.state.progress.learnedItems.add(itemId);
                 this.saveProgress();
 
@@ -284,18 +309,16 @@
             navigateCard(direction) {
                 const newIndex = this.state.currentIndex + direction;
                 const total = this.state.flashcardQueue.length;
-                if (newIndex < 0) this.state.currentIndex = total - 1;
-                else if (newIndex >= total) this.state.currentIndex = 0;
-                else this.state.currentIndex = newIndex;
+                this.state.currentIndex = (newIndex + total) % total; // Vòng lặp
                 this.updateFlashcardView();
             },
 
-            // --- MINDMAP IMPLEMENTATION ---
+            // --- 5. STUDY IMPLEMENTATION: MINDMAP ---
             renderMindmapFamilySelection() {
                 const familiesWithMultipleMembers = Object.entries(this.state.wordFamilies).filter(([root, members]) => members.length > 1);
 
                 if (familiesWithMultipleMembers.length === 0) {
-                    this.showError("Thông báo", "Không có đủ họ từ để tạo sơ đồ.");
+                    this.showModal("Thông báo", "Không có đủ họ từ để tạo sơ đồ.");
                     return;
                 }
 
@@ -323,7 +346,7 @@
 
             renderMindmap(familyRoot) {
                 const family = this.state.wordFamilies[familyRoot];
-                const centerWord = family[0]; // Lấy từ đầu tiên làm trung tâm
+                const centerWord = family[0];
 
                 this.DOM.main.innerHTML = `
                 <div class="bg-white p-6 rounded-xl shadow-sm fade-in">
@@ -355,7 +378,7 @@
                 container.innerHTML = html;
             },
 
-            // --- SUBMISSION & UTILITIES ---
+            // --- 6. SUBMISSION & UTILITIES ---
             async submitToFirebase(isFinal = false) {
                  if (this.state.isSubmitting) return;
                 this.state.isSubmitting = true;
@@ -368,7 +391,7 @@
                 const finalSubmission = {
                     score: score, totalPoints: 100,
                     status: isFinal ? 'submitted' : 'in-progress',
-                    answers: { learnedCount, totalItems }, // Lưu lại tiến độ chi tiết
+                    answers: { learnedCount, totalItems },
                     endTime: isFinal ? serverTimestamp() : null,
                 };
 
@@ -376,35 +399,53 @@
                     await updateDoc(doc(this.state.db, 'submissions', this.state.submissionId), finalSubmission);
                     if (isFinal) {
                         localStorage.removeItem(`vocabProgress_${this.state.submissionId}`);
-                        this.showError("Thành công!", `Đã nộp bài thành công với tiến độ ${score}%.`, true);
-                    } else {
-                         this.showError("Thành công!", `Đã lưu tiến độ học tập.`, false);
+                        this.showModal("Thành công!", `Đã nộp bài thành công với tiến độ ${score}%.`, false, () => window.location.href='index.html');
                     }
-                } catch(error) { this.showError("Lỗi", "Không thể lưu tiến độ: " + error.message); }
+                } catch(error) { this.showModal("Lỗi", "Không thể lưu tiến độ: " + error.message); }
                  finally { 
                     this.state.isSubmitting = false;
                     this.DOM.loader.classList.add('hidden');
                  }
             },
-            showError(title, message, isRedirect = false) {
-                // ... Giữ nguyên như phiên bản trước
-                 this.DOM.loader.classList.add('hidden');
-                const modal = document.createElement('div');
-                modal.className = "fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50";
-                modal.innerHTML = `
-                    <div class="bg-white p-8 rounded-xl shadow-lg text-center w-full max-w-sm fade-in">
-                        <h3 class="text-xl font-bold text-gray-900 mb-2">${title}</h3>
-                        <p class="text-gray-600 mb-6">${message}</p>
-                        <button class="btn btn-primary w-full">Đã hiểu</button>
-                    </div>`;
-                document.body.appendChild(modal);
-                modal.querySelector('button').onclick = () => {
-                    modal.remove();
-                    if (isRedirect) window.location.href = 'index.html';
-                };
+            
+            shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
             },
-            // Giữ lại các hàm tiện ích khác như shuffleArray
+
+            showModal(title, message, showCancel = false, onConfirm = null) {
+                this.DOM.loader.classList.add('hidden');
+                const modalContainer = document.createElement('div');
+                modalContainer.className = "fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50";
+                
+                const buttonsHTML = showCancel 
+                    ? `<button id="modal-cancel-btn" class="btn btn-secondary">Hủy</button><button id="modal-confirm-btn" class="btn btn-primary">Đồng ý</button>`
+                    : `<button id="modal-confirm-btn" class="btn btn-primary w-full">Đã hiểu</button>`;
+                
+                modalContainer.innerHTML = `
+                    <div class="bg-white p-8 rounded-xl shadow-lg text-center w-full max-w-sm fade-in">
+                        <h3 class="text-xl font-bold text-gray-900 mb-4">${title}</h3>
+                        <p class="text-gray-600 mb-6">${message}</p>
+                        <div class="flex gap-4 justify-center">${buttonsHTML}</div>
+                    </div>`;
+                document.body.appendChild(modalContainer);
+
+                const confirmBtn = modalContainer.querySelector('#modal-confirm-btn');
+                const cancelBtn = modalContainer.querySelector('#modal-cancel-btn');
+
+                confirmBtn.onclick = () => {
+                    modalContainer.remove();
+                    if (onConfirm) onConfirm();
+                };
+                if(cancelBtn) {
+                    cancelBtn.onclick = () => modalContainer.remove();
+                }
+            }
         };
+
         document.addEventListener('DOMContentLoaded', () => App.init());
     </script>
 </body>
