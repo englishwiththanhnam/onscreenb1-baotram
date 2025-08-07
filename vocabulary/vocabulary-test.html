@@ -223,6 +223,7 @@
                 document.title = vocabSetData.title || "Vocabulary Practice";
                 document.getElementById('sidebar-title').textContent = vocabSetData.title;
                 
+                // Use the wordList from Firebase directly. The 'id' field is already present.
                 this.data.words = vocabSetData.wordList || [];
                 
                 this.processData();
@@ -250,7 +251,7 @@
                 });
                 const families = {}; 
                 this.data.words.forEach(word => { 
-                    if (!word.familyRoot) { // Generate familyRoot if it doesn't exist
+                    if (!word.familyRoot) {
                         word.familyRoot = word.word.toLowerCase();
                     }
                     if (!families[word.familyRoot]) families[word.familyRoot] = []; 
@@ -288,7 +289,7 @@
                 const allItems = [...this.data.words, ...this.data.structures];
                 const learnedItems = Object.keys(this.data.progress.learnedItems);
                 
-                const wordsLearned = learnedItems.filter(k => k.startsWith('word_')).length;
+                const wordsLearned = learnedItems.filter(k => k.startsWith('word_') && !k.includes('_s_')).length;
                 const totalWords = this.data.words.length;
                 const wordProgress = totalWords > 0 ? (wordsLearned / totalWords) * 100 : 0;
                 
@@ -418,6 +419,15 @@
                 if (this.data.session.currentIndex >= this.data.session.items.length) { this.renderSessionSummary(); return; }
                 const main = document.getElementById('main-content');
                 const item = this.data.session.items[this.data.session.currentIndex];
+
+                // *** SAFEGUARD ***
+                if (!item) {
+                    console.error("Skipping undefined item at index:", this.data.session.currentIndex);
+                    this.data.session.currentIndex++;
+                    this.renderNextQuestionItem();
+                    return;
+                }
+
                 const progress = (this.data.session.currentIndex / this.data.session.items.length) * 100;
                 const questionHTML = this.getQuestionHTML(item, this.data.session.currentIndex);
                 main.innerHTML = `
@@ -456,7 +466,7 @@
                 if (!container) return;
                 switch(item.exerciseType) {
                     case 'TraditionalMCQ': case 'ContextualMCQ': case 'WordFamilyMCQ': case 'PronunciationMatch':
-                        container.querySelectorAll('.answer-option').forEach(option => option.addEventListener('click', (e) => this.checkAnswer(e.target.closest('.answer-option').dataset.answer)));
+                        container.querySelectorAll('.answer-option').forEach(option => option.addEventListener('click', (e) => this.checkAnswer(e.currentTarget.dataset.answer)));
                         break;
                     case 'AudioListening': case 'GapFill': case 'TriosOfGappedSentence':
                         const input = container.querySelector('#text-input');
@@ -513,7 +523,8 @@
                 const correctAnswer = item.word;
                 const sentence = item.exampleSentence.replace(new RegExp(`\\b${item.word}\\b`, 'gi'), '<span class="font-bold text-violet-600">[...]</span>');
                 let distractors = [];
-                const familyWords = this.data.wordFamilies[item.familyRoot]?.filter(w => w.id !== item.id) || [];
+                const family = this.data.wordFamilies[item.familyRoot] || [];
+                const familyWords = family.filter(w => w.id !== item.id);
                 if (familyWords.length > 0) distractors.push(this.shuffleArray(familyWords)[0].word);
                 if (item.distractors_en && item.distractors_en.length > 0) distractors.push(...this.shuffleArray([...item.distractors_en]));
                 const otherWords = this.data.words.filter(w => w.type === item.type && w.id !== item.id && !distractors.includes(w.word));
@@ -633,6 +644,13 @@
 
             checkAnswer(selectedAnswer) {
                 const currentItem = this.data.session.items[this.data.session.currentIndex];
+                // *** SAFEGUARD ***
+                if (!currentItem || this.data.session.currentCorrectAnswer === null) {
+                    console.error("Cannot check answer: currentItem or currentCorrectAnswer is missing.");
+                    this.renderNextQuestionItem(); // Skip to next
+                    return;
+                }
+
                 let isCorrect = false;
                 if (currentItem.exerciseType === 'WordFamilyMatching') isCorrect = selectedAnswer === "all matched";
                 else isCorrect = selectedAnswer.trim().toLowerCase() === this.data.session.currentCorrectAnswer.trim().toLowerCase();
@@ -669,11 +687,13 @@
             },
 
             getProgressKey(item) {
-                if (!item || !item.itemType) return null;
+                if (!item || !item.itemType || item.id === undefined) return null;
                 if (item.itemType === 'word') {
                     return `word_${item.id}`;
                 } else if (item.itemType === 'structure') {
-                    return `word_${item.id}`; // Matches the format `word_s_...`
+                    // Firebase key is 'word_s_{word_id}_{structure_index}'
+                    // Structure ID is 's_{word_id}_{structure_index}'
+                    return `word_${item.id}`; 
                 }
                 return null;
             },
