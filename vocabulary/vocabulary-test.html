@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vocabulary Practice Engine</title>
+    <title>Luyện tập Từ vựng</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <script>
-        // Firebase config from your system
+        // Cấu hình Firebase được giữ nguyên từ hệ thống gốc của bạn
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
@@ -23,746 +23,487 @@
     </script>
 
     <style>
-        /* --- STYLES FROM YOUR SYSTEM FOR CONSISTENCY --- */
         :root {
-            --blur-intensity: 12px;
-            --saturation-intensity: 150%;
-            --glass-bg-color: rgba(255, 255, 255, 0.45);
-            --glass-border-color: rgba(255, 255, 255, 0.6);
-            --shadow-color: rgba(67, 56, 202, 0.15);
-            --primary-accent: #6d28d9;
+            --primary-color: #6d28d9;
+            --primary-hover: #5b21b6;
+            --correct-color: #16a34a;
+            --incorrect-color: #dc2626;
+            --bg-light: #f5f7ff;
+            --bg-card: #ffffff;
             --text-primary: #0f172a;
             --text-secondary: #475569;
-            --app-bg-start: #f5f7ff;
-            --app-bg-end: #e0e7ff;
+            --border-color: #e5e7eb;
         }
+        body { font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--bg-light); color: var(--text-primary); }
+        .btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-primary:hover:not(:disabled) { background-color: var(--primary-hover); }
+        .btn-secondary { background-color: var(--bg-card); color: var(--text-secondary); border-color: var(--border-color); }
+        .btn-secondary:hover { background-color: #f9fafb; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-        body {
-            font-family: 'Be Vietnam Pro', sans-serif;
-            background-color: var(--app-bg-start);
-            background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%);
-            color: var(--text-primary);
-            overflow-x: hidden;
-        }
-
-        .background-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
-        .shape { position: absolute; border-radius: 50%; filter: blur(25px); opacity: 0.6; }
-        .shape1 { width: 250px; height: 250px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); top: 10%; left: 5%; animation: float 28s infinite alternate ease-in-out; }
-        .shape2 { width: 180px; height: 180px; background: linear-gradient(135deg, #14b8a6, #67e8f9); bottom: 15%; right: 10%; animation: float 32s infinite alternate ease-in-out; }
-        @keyframes float { from { transform: translateY(20px) scale(1); } to { transform: translateY(-20px) scale(1.05); } }
-
-        .glass-panel {
-            background: var(--glass-bg-color);
-            backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity));
-            border-radius: 24px;
-            border: 1px solid var(--glass-border-color);
-            box-shadow: 0 8px 32px 0 var(--shadow-color);
-        }
-
-        .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; }
-        .btn-primary { background: var(--primary-accent); color: white; box-shadow: 0 4px 15px rgba(91, 33, 182, 0.25); }
-        .btn-primary:hover:not(:disabled) { background: #5b21b6; transform: translateY(-2px); }
-        .btn-secondary { background: rgba(255, 255, 255, 0.4); color: var(--text-primary); border-color: rgba(255, 255, 255, 0.6); }
-        .btn-secondary:hover { background: rgba(255, 255, 255, 0.7); transform: translateY(-2px); }
-        .btn-danger { background: #ef4444; color: white; }
-        .btn-danger:hover { background: #dc2626; transform: translateY(-2px); }
-        .btn:disabled { background-color: #a5b4fc; cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.7; }
+        .progress-bar { background-color: #e5e7eb; border-radius: 9999px; height: 8px; overflow: hidden; }
+        .progress-bar-fill { background-color: var(--primary-color); height: 100%; transition: width 0.4s ease; }
         
-        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; }
-        .modal.is-open { display: flex; }
-        .modal-content { animation: scaleIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
-        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-
-        /* --- STYLES FOR VOCABULARY APP --- */
-        .app-layout { display: flex; height: 100vh; }
-        #sidebar { width: 260px; flex-shrink: 0; }
-        #app-container { flex-grow: 1; height: 100vh; overflow-y: auto; padding: 2rem; }
-        #app-container::-webkit-scrollbar { width: 6px; }
-        #app-container::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.2); border-radius: 3px; }
-
-        .sidebar-nav-btn { display: flex; align-items: center; padding: 12px 16px; border-radius: 12px; font-weight: 600; color: var(--text-secondary); transition: all 0.2s ease-in-out; margin-bottom: 8px; }
-        .sidebar-nav-btn i { width: 20px; margin-right: 16px; text-align: center; }
-        .sidebar-nav-btn:hover:not(:disabled) { background-color: rgba(255, 255, 255, 0.4); color: var(--text-primary); transform: translateX(5px); }
-        .sidebar-nav-btn.active { background-color: var(--primary-accent); color: white; box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3); transform: translateX(5px); }
-        .sidebar-nav-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; background: none; box-shadow: none; }
-
-        .progress-bar-bg { background-color: rgba(255,255,255,0.3); border-radius: 9999px; overflow: hidden; height: 0.75rem; }
-        .progress-bar-fill { background-color: var(--primary-accent); height: 100%; transition: width 0.5s ease-in-out; }
+        .answer-option { display: block; width: 100%; padding: 1rem; border: 2px solid var(--border-color); border-radius: 0.75rem; background-color: var(--bg-card); text-align: left; font-weight: 500; }
+        .answer-option:hover:not(.disabled) { border-color: var(--primary-color); background-color: #f5f3ff; }
+        .answer-option.disabled { cursor: not-allowed; }
+        .answer-option.correct { border-color: var(--correct-color); background-color: #f0fdf4; color: #14532d; }
+        .answer-option.incorrect { border-color: var(--incorrect-color); background-color: #fef2f2; color: #991b1b; }
         
-        .answer-option { background: rgba(255, 255, 255, 0.3); border: 1px solid rgba(255, 255, 255, 0.4); transition: all 0.2s ease-in-out; }
-        .answer-option:hover:not(.disabled) { background: rgba(255, 255, 255, 0.6); border-color: var(--primary-accent); transform: translateY(-2px); }
-        .answer-option.correct { background-color: #dcfce7 !important; border-color: #22c55e !important; color: #15803d !important; }
-        .answer-option.incorrect { background-color: #fee2e2 !important; border-color: #ef4444 !important; color: #b91c1c !important; animation: shake 0.5s; }
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-
-        .token-area { border: 2px dashed rgba(255,255,255,0.6); min-height: 100px; }
-        .word-token { background-color: #eef2ff; color: #4338ca; }
-        .word-token:hover { background-color: #c7d2fe; }
-
-        .matching-item.selected { border-color: var(--primary-accent); background-color: #eef2ff; }
-        .matching-item.correct-match { background-color: #dcfce7; border-color: #22c55e; }
-        
-        .flashcard-container { perspective: 1000px; height: 350px; }
-        .flashcard { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.6s; cursor: pointer; }
-        .flashcard.is-flipped { transform: rotateY(180deg); }
-        .flashcard-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction:column; align-items: center; justify-content: center; border-radius: 16px; padding: 20px; text-align: center; }
-        .flashcard-front { background: rgba(255,255,255,0.7); }
-        .flashcard-back { background: rgba(230, 230, 255, 0.9); transform: rotateY(180deg); }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="no-select">
-    <div class="background-shapes">
-        <div class="shape shape1"></div>
-        <div class="shape shape2"></div>
-    </div>
-
-    <div id="loader-overlay" class="modal is-open">
+<body>
+    <div id="loader-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
         <div class="text-center">
             <div class="w-16 h-16 border-8 border-t-violet-500 border-gray-200 rounded-full animate-spin"></div>
-            <p id="loader-text" class="text-lg font-semibold text-white mt-4">Đang tải dữ liệu...</p>
+            <p class="text-lg font-semibold text-white mt-4">Đang tải dữ liệu bài học...</p>
         </div>
     </div>
-    <div id="custom-modal" class="modal"></div>
+    <div id="custom-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50"></div>
 
-    <div class="app-layout" style="visibility: hidden;">
-        <nav id="sidebar" class="glass-panel p-6">
-            <div class="text-center mb-10">
-                <h1 id="sidebar-title" class="text-2xl font-bold">Vocab Engine</h1>
-                <p id="student-name-display" class="text-sm text-slate-600 mt-1"></p>
-            </div>
-            <div id="sidebar-nav" class="flex-grow">
-                <button data-view="dashboard" class="sidebar-nav-btn active"><i class="fas fa-chart-pie"></i> Dashboard</button>
-                <button data-view="study" class="sidebar-nav-btn"><i class="fas fa-book-open"></i> Study</button>
-                <button data-view="practice" class="sidebar-nav-btn"><i class="fas fa-dumbbell"></i> Practice</button>
-                <button data-view="test" class="sidebar-nav-btn" disabled><i class="fas fa-graduation-cap"></i> Test</button>
-            </div>
-             <div class="mt-auto pt-4 border-t border-white/30">
-                 <button id="nav-reset" class="sidebar-nav-btn w-full justify-center !text-red-500 hover:!bg-red-100 hover:!text-red-700">
-                     <i class="fas fa-trash-alt mr-2"></i> Reset Progress
-                 </button>
-            </div>
-        </nav>
-
-        <main id="app-container">
-            <div id="main-content">
-                <!-- App content will be rendered here -->
-            </div>
-        </main>
+    <div id="app-container" class="max-w-4xl mx-auto p-4 sm:p-8 hidden">
+        <header id="app-header" class="mb-8"></header>
+        <main id="app-main"></main>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
         const App = {
-            data: {
+            // Trạng thái tập trung của ứng dụng
+            state: {
                 db: null,
                 submissionId: null,
-                testId: null,
-                words: [],
-                structures: [],
-                wordFamilies: {},
+                studentName: '',
+                testData: {},
+                wordList: [],
+                practiceQueue: [],
+                currentIndex: 0,
+                currentScore: 0,
+                currentCorrectAnswer: null,
+                currentMode: '',
                 progress: {
-                    learnedItems: {},
-                    lastTestResult: null,
+                    learnedItems: new Set(),
                     incorrectCounts: {}
                 },
-                session: {
-                    items: [],
-                    currentIndex: 0,
-                    correctAnswers: 0,
-                    currentCorrectAnswer: null,
-                    isSentenceActuallyIncorrect: false,
-                    matchedItems: [],
-                    currentMatchingSelection: { word: null, type: null, pronunciation: null, meaning: null },
-                }
+                isSubmitting: false,
             },
+
+            // Cache các đối tượng DOM
+            DOM: {
+                loader: document.getElementById('loader-overlay'),
+                modal: document.getElementById('custom-modal'),
+                container: document.getElementById('app-container'),
+                header: document.getElementById('app-header'),
+                main: document.getElementById('app-main'),
+            },
+
+            // --- CORE LOGIC ---
 
             async init() {
+                this.state.db = getFirestore(initializeApp(window.firebaseConfig));
+                const params = new URLSearchParams(window.location.search);
+                const submissionId = params.get('submission_id');
+
+                if (!submissionId) {
+                    this.showError("Lỗi", "Không tìm thấy mã dự thi. Vui lòng truy cập lại từ cổng chính.");
+                    return;
+                }
+                
+                this.state.submissionId = submissionId;
+                await this.startSession(submissionId);
+            },
+            
+            async startSession(submissionId) {
                 try {
-                    this.data.submissionId = new URLSearchParams(window.location.search).get('submission_id');
-                    if (!this.data.submissionId) throw new Error("Mã truy cập không hợp lệ.");
+                    const submissionRef = doc(this.state.db, 'submissions', submissionId);
+                    const submissionSnap = await getDoc(submissionRef);
+                    if (!submissionSnap.exists()) throw new Error("Mã truy cập không hợp lệ.");
 
-                    const firebaseApp = initializeApp(window.firebaseConfig);
-                    this.data.db = getFirestore(firebaseApp);
-
-                    await this.loadDataFromFirebase();
+                    let submissionData = submissionSnap.data();
+                    if (submissionData.status === 'submitted') {
+                        this.showError("Thông báo", "Bạn đã hoàn thành bài luyện tập này. Kết quả đã được ghi nhận.", true);
+                        return;
+                    }
                     
-                    this.setupEventListeners();
-                    this.navigateTo('dashboard');
+                    const testRef = doc(this.state.db, 'vocab_sets', submissionData.testId);
+                    const testSnap = await getDoc(testRef);
+                    if (!testSnap.exists()) throw new Error("Không tìm thấy bộ từ vựng tương ứng.");
 
-                    document.querySelector('.app-layout').style.visibility = 'visible';
-                    document.getElementById('loader-overlay').classList.remove('is-open');
+                    this.state.studentName = submissionData.studentName;
+                    this.state.testData = testSnap.data();
+                    this.state.wordList = this.state.testData.wordList || [];
+                    
+                    this.loadProgress(); // Tải tiến độ từ localStorage
+                    this.DOM.loader.classList.add('hidden');
+                    this.DOM.container.classList.remove('hidden');
+                    
+                    this.renderHeader();
+                    this.renderDashboard();
 
                 } catch (error) {
-                    console.error("Initialization Error:", error);
-                    document.getElementById('loader-text').textContent = `Lỗi: ${error.message}`;
-                }
-            },
-            
-            async loadDataFromFirebase() {
-                const submissionRef = doc(this.data.db, "submissions", this.data.submissionId);
-                const submissionSnap = await getDoc(submissionRef);
-                if (!submissionSnap.exists()) throw new Error("Không tìm thấy bài làm với mã này.");
-
-                const submissionData = submissionSnap.data();
-                this.data.testId = submissionData.testId;
-                document.getElementById('student-name-display').textContent = submissionData.studentName;
-
-                if (submissionData.progress) {
-                    this.data.progress = submissionData.progress;
-                    this.data.progress.learnedItems = this.data.progress.learnedItems || {};
-                    this.data.progress.incorrectCounts = this.data.progress.incorrectCounts || {};
-                }
-
-                const vocabSetRef = doc(this.data.db, "vocab_sets", this.data.testId);
-                const vocabSetSnap = await getDoc(vocabSetRef);
-                if (!vocabSetSnap.exists()) throw new Error("Không tìm thấy bộ từ vựng tương ứng.");
-                
-                const vocabSetData = vocabSetSnap.data();
-                document.title = vocabSetData.title || "Vocabulary Practice";
-                document.getElementById('sidebar-title').textContent = vocabSetData.title;
-                
-                this.data.words = vocabSetData.wordList || [];
-                
-                this.processData();
-            },
-
-            async saveProgressToFirebase() {
-                const submissionRef = doc(this.data.db, "submissions", this.data.submissionId);
-                await setDoc(submissionRef, { progress: this.data.progress, lastAccessed: serverTimestamp() }, { merge: true });
-            },
-
-            processData() {
-                this.data.structures = [];
-                this.data.words.forEach(word => {
-                    word.itemType = 'word'; 
-                    if (word.structures && Array.isArray(word.structures)) {
-                        word.structures.forEach((struct, s_idx) => {
-                            this.data.structures.push({ 
-                                ...struct, 
-                                id: `s_${word.id}_${s_idx}`, 
-                                itemType: 'structure', 
-                                rootWordId: word.id 
-                            });
-                        });
-                    }
-                });
-                const families = {}; 
-                this.data.words.forEach(word => { 
-                    if (!word.familyRoot) {
-                        word.familyRoot = word.word.toLowerCase();
-                    }
-                    if (!families[word.familyRoot]) families[word.familyRoot] = []; 
-                    families[word.familyRoot].push(word); 
-                });
-                this.data.wordFamilies = families;
-            },
-
-            setupEventListeners() {
-                document.getElementById('sidebar-nav').addEventListener('click', (e) => {
-                    const btn = e.target.closest('.sidebar-nav-btn');
-                    if (btn && !btn.disabled) this.navigateTo(btn.dataset.view);
-                });
-                 document.getElementById('nav-reset').addEventListener('click', async () => {
-                    const confirmed = await this.showModal("Xác nhận", "Bạn có chắc muốn xóa toàn bộ tiến trình học tập của mình không? Thao tác này không thể hoàn tác.", null, true);
-                    if (confirmed) {
-                        this.data.progress = { learnedItems: {}, lastTestResult: null, incorrectCounts: {} };
-                        await this.saveProgressToFirebase();
-                        this.navigateTo('dashboard');
-                    }
-                });
-            },
-
-            navigateTo(view) {
-                document.querySelectorAll('#sidebar-nav .sidebar-nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
-                
-                if (view === 'dashboard') this.renderDashboard();
-                else if (view === 'study') this.renderStudyTypeSelection();
-                else if (view === 'practice') this.renderPracticeTypeSelection();
-                else if (view === 'test') this.renderTestStartScreen();
-            },
-            
-            renderDashboard() {
-                const main = document.getElementById('main-content');
-                const allItems = [...this.data.words, ...this.data.structures];
-                const learnedItems = Object.keys(this.data.progress.learnedItems);
-                
-                const wordsLearned = learnedItems.filter(k => k.startsWith('word_') && !k.includes('_s_')).length;
-                const totalWords = this.data.words.length;
-                const wordProgress = totalWords > 0 ? (wordsLearned / totalWords) * 100 : 0;
-                
-                const structuresLearned = learnedItems.filter(k => k.startsWith('word_s_')).length;
-                const totalStructures = this.data.structures.length;
-                const structureProgress = totalStructures > 0 ? (structuresLearned / totalStructures) * 100 : 0;
-                
-                const overallProgress = allItems.length > 0 ? ((wordsLearned + structuresLearned) / allItems.length) * 100 : 0;
-                
-                main.innerHTML = `
-                    <h1 class="text-3xl font-bold mb-6">Dashboard</h1>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="glass-panel p-6"><h3 class="text-lg font-semibold mb-3">Vocabulary Progress</h3><div class="flex justify-between items-center mb-2 text-sm"><span class="font-medium text-slate-600">${wordsLearned} / ${totalWords}</span><span class="font-semibold text-violet-600">${wordProgress.toFixed(0)}%</span></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${wordProgress}%;"></div></div></div>
-                        <div class="glass-panel p-6"><h3 class="text-lg font-semibold mb-3">Structure Progress</h3><div class="flex justify-between items-center mb-2 text-sm"><span class="font-medium text-slate-600">${structuresLearned} / ${totalStructures}</span><span class="font-semibold text-violet-600">${structureProgress.toFixed(0)}%</span></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${structureProgress}%;"></div></div></div>
-                    </div>
-                     <div class="mt-8 glass-panel p-6">
-                        <h3 class="text-lg font-semibold mb-3">Quy tắc làm bài Test</h3>
-                        <p class="text-slate-600">✨ Bạn có thể mở khóa bài Test cuối kỳ khi tiến độ học tập chung (từ vựng và cấu trúc) đạt <strong class="font-bold text-violet-600">80%</strong>.</p>
-                    </div>
-                `;
-                
-                const testButton = document.querySelector('[data-view="test"]');
-                if (testButton) testButton.disabled = overallProgress < 80;
-            },
-            
-            renderStudyTypeSelection() {
-                const main = document.getElementById('main-content');
-                main.innerHTML = `<h1 class="text-3xl font-bold mb-6">Study</h1><div class="glass-panel p-8 text-center"><h2 class="text-xl font-bold mb-6">What do you want to study?</h2><div class="flex flex-wrap justify-center gap-4"><button id="study-type-vocab-btn" class="btn btn-primary"><i class="fas fa-book mr-2"></i> Vocabulary</button><button id="study-type-structure-btn" class="btn btn-primary ${this.data.structures.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${this.data.structures.length === 0 ? 'disabled' : ''}><i class="fas fa-sitemap mr-2"></i> Structures</button></div></div>`;
-                document.getElementById('study-type-vocab-btn').addEventListener('click', () => this.renderStudyMethodSelection());
-                if(this.data.structures.length > 0) {
-                    document.getElementById('study-type-structure-btn').addEventListener('click', () => this.startFlashcardSession('structure'));
+                    this.showError("Lỗi", error.message);
                 }
             },
 
-            renderStudyMethodSelection() {
-                 const main = document.getElementById('main-content');
-                 main.innerHTML = `<div class="flex items-center mb-6"><button id="back-to-study-type" class="btn btn-secondary !p-3 !rounded-full"><i class="fas fa-arrow-left"></i></button><h1 class="text-3xl font-bold ml-4">Study Vocabulary</h1></div><div class="glass-panel p-8 text-center"><h2 class="text-xl font-bold mb-6">Choose a study method</h2><div class="flex flex-wrap justify-center gap-4"><button id="study-method-flashcard-btn" class="btn btn-primary"><i class="fas fa-clone mr-2"></i> Flashcards</button><button id="study-method-mindmap-btn" class="btn btn-primary"><i class="fas fa-project-diagram mr-2"></i> Mindmap</button></div></div>`;
-                 document.getElementById('back-to-study-type').addEventListener('click', () => this.renderStudyTypeSelection());
-                 document.getElementById('study-method-flashcard-btn').addEventListener('click', () => this.startFlashcardSession('word'));
-                 document.getElementById('study-method-mindmap-btn').addEventListener('click', () => this.startMindmapSession());
-            },
-            
-            startFlashcardSession(type) {
-                this.data.session.items = (type === 'word') ? this.data.words : this.data.structures;
-                this.data.session.currentIndex = 0;
-                this.renderFlashcardViewer();
-            },
-            
-            renderFlashcardViewer() {
-                const main = document.getElementById('main-content');
-                main.innerHTML = `<div class="max-w-3xl mx-auto"><div class="flex justify-between items-center mb-4"><button id="back-to-study-menu" class="btn btn-secondary"><i class="fas fa-times mr-2"></i> Exit</button></div><div class="flashcard-container"><div class="flashcard" id="flashcard"></div></div><div class="flex justify-between items-center mt-4"><button id="prev-card-btn" class="btn btn-secondary !p-4 !rounded-full"><i class="fas fa-arrow-left"></i></button><div id="card-counter" class="font-semibold"></div><button id="next-card-btn" class="btn btn-secondary !p-4 !rounded-full"><i class="fas fa-arrow-right"></i></button></div></div>`;
-                this.updateFlashcardView();
-                document.getElementById('flashcard').addEventListener('click', e => e.currentTarget.classList.toggle('is-flipped'));
-                document.getElementById('prev-card-btn').addEventListener('click', () => this.navigateCard(-1));
-                document.getElementById('next-card-btn').addEventListener('click', () => this.navigateCard(1));
-                const backTarget = this.data.session.items[0].itemType === 'word' ? 'renderStudyMethodSelection' : 'renderStudyTypeSelection';
-                document.getElementById('back-to-study-menu').addEventListener('click', () => this[backTarget]());
-            },
-            
-            updateFlashcardView() {
-                const item = this.data.session.items[this.data.session.currentIndex];
-                const card = document.getElementById('flashcard');
-                if (!item || !card) return;
-                card.classList.remove('is-flipped');
-                const isStructure = item.itemType === 'structure';
-                const frontHTML = `<div class="text-3xl font-bold">${isStructure ? item.phrase : item.word}</div>`;
-                const backHTML = isStructure ? `<div class="text-xl font-semibold">${item.meaning}</div><p class="text-slate-500 mt-4 italic">"${item.applicationExamples[0] || ''}"</p>` : `<div class="text-xl font-semibold">${item.meaning}</div><p class="text-slate-500 mt-2">${item.pronunciation} <span class="mx-2">&bull;</span> ${item.type}</p><p class="text-slate-500 mt-4 italic">"${item.exampleSentence || ''}"</p>`;
-                setTimeout(() => { card.innerHTML = `<div class="flashcard-face flashcard-front">${frontHTML}</div><div class="flashcard-face flashcard-back">${backHTML}</div>`; }, 100);
-                document.getElementById('card-counter').textContent = `${this.data.session.currentIndex + 1} / ${this.data.session.items.length}`;
-            },
-            
-            navigateCard(direction) {
-                const newIndex = this.data.session.currentIndex + direction;
-                const total = this.data.session.items.length;
-                this.data.session.currentIndex = (newIndex < 0) ? total - 1 : (newIndex >= total) ? 0 : newIndex;
-                this.updateFlashcardView();
-            },
+            // --- PROGRESS MANAGEMENT ---
 
-            startMindmapSession() {
-                this.showModal("Thông báo", "Chức năng Mindmap đang được phát triển và sẽ sớm ra mắt!");
-            },
-
-            renderPracticeTypeSelection() {
-                const main = document.getElementById('main-content');
-                const hasWeaknesses = Object.keys(this.data.progress.incorrectCounts).length > 0;
-                main.innerHTML = `<h1 class="text-3xl font-bold mb-6">Practice</h1>
-                <div class="glass-panel p-8 text-center">
-                    <h2 class="text-xl font-bold mb-6">Choose your practice mode</h2>
-                    <div class="flex flex-col md:flex-row justify-center gap-4">
-                        <button id="practice-normal-btn" class="btn btn-primary">
-                            <i class="fas fa-random mr-2"></i> Luyện tập thông thường
-                        </button>
-                        <button id="practice-weakness-btn" class="btn btn-primary !bg-amber-500 hover:!bg-amber-600 ${!hasWeaknesses ? 'opacity-50 cursor-not-allowed' : ''}" ${!hasWeaknesses ? 'disabled' : ''}>
-                            <i class="fas fa-star-half-alt mr-2"></i> Ôn tập điểm yếu
-                        </button>
-                    </div>
-                    ${!hasWeaknesses ? '<p class="text-slate-500 mt-4 text-sm">Bạn chưa có điểm yếu nào. Hãy luyện tập để hệ thống ghi nhận nhé!</p>' : ''}
-                </div>`;
-                document.getElementById('practice-normal-btn').addEventListener('click', () => this.startPracticeSession('normal'));
-                if (hasWeaknesses) {
-                    document.getElementById('practice-weakness-btn').addEventListener('click', () => this.startPracticeSession('weakness'));
+            loadProgress() {
+                const progressKey = `vocabProgress_${this.state.submissionId}`;
+                const savedProgress = localStorage.getItem(progressKey);
+                if (savedProgress) {
+                    const parsed = JSON.parse(savedProgress);
+                    this.state.progress.learnedItems = new Set(parsed.learnedItems || []);
+                    this.state.progress.incorrectCounts = parsed.incorrectCounts || {};
                 }
             },
 
-            startPracticeSession(mode = 'normal', count = 10) {
-                let practiceItems = [];
-                const allItems = [...this.data.words, ...this.data.structures];
-                if (mode === 'weakness') {
-                    const weakItemIds = Object.keys(this.data.progress.incorrectCounts)
-                        .sort((a, b) => this.data.progress.incorrectCounts[b] - this.data.progress.incorrectCounts[a]);
-                    weakItemIds.forEach(id => {
-                        const item = allItems.find(i => this.getProgressKey(i) === id);
-                        if (item) practiceItems.push(item);
-                    });
-                } else { 
-                    const unlearnedItems = allItems.filter(item => !this.data.progress.learnedItems[this.getProgressKey(item)]);
-                    practiceItems = this.shuffleArray(unlearnedItems.length > 0 ? unlearnedItems : allItems);
-                }
-                if (practiceItems.length === 0) { this.showModal("Chúc mừng!", "Bạn đã học hết tất cả các mục!"); return; }
-                this.data.session.items = practiceItems.slice(0, count);
-                this.data.session.currentIndex = 0;
-                this.data.session.correctAnswers = 0;
-                this.renderNextQuestionItem();
+            saveProgress() {
+                const progressKey = `vocabProgress_${this.state.submissionId}`;
+                const progressToSave = {
+                    learnedItems: [...this.state.progress.learnedItems],
+                    incorrectCounts: this.state.progress.incorrectCounts,
+                };
+                localStorage.setItem(progressKey, JSON.stringify(progressToSave));
             },
 
-            renderNextQuestionItem() {
-                if (this.data.session.currentIndex >= this.data.session.items.length) { this.renderSessionSummary(); return; }
-                const main = document.getElementById('main-content');
-                const item = this.data.session.items[this.data.session.currentIndex];
+            // --- UI RENDERING ---
 
-                // *** SAFEGUARD ***
-                if (!item) {
-                    console.error("Skipping undefined item at index:", this.data.session.currentIndex);
-                    this.data.session.currentIndex++;
-                    this.renderNextQuestionItem();
-                    return;
-                }
-
-                const progress = (this.data.session.currentIndex / this.data.session.items.length) * 100;
-                const questionHTML = this.getQuestionHTML(item, this.data.session.currentIndex);
-                main.innerHTML = `
-                    <div class="max-w-3xl mx-auto">
-                        <div class="mb-4 glass-panel p-4">
-                             <div class="flex justify-between items-center mb-2 text-sm"><span class="font-medium">Question ${this.data.session.currentIndex + 1} of ${this.data.session.items.length}</span></div>
-                             <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${progress}%;"></div></div>
+            renderHeader() {
+                this.DOM.header.innerHTML = `
+                    <div class="flex flex-wrap justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-800">${this.state.testData.title}</h1>
+                            <p class="text-sm text-gray-500">Thí sinh: <span class="font-medium">${this.state.studentName}</span></p>
                         </div>
-                        <div id="question-container" class="glass-panel p-6">${questionHTML}</div>
-                        <div id="feedback-container" class="mt-6"></div>
+                        <button id="submit-final-btn" class="btn btn-primary"><i class="fas fa-check-circle mr-2"></i> Hoàn thành & Nộp bài</button>
                     </div>`;
-                this.attachPracticeEventListeners(item);
+                document.getElementById('submit-final-btn').addEventListener('click', () => this.confirmSubmit());
             },
 
-            getQuestionHTML(item, index) {
-                let possibleTypes = [];
-                if (item.itemType === 'word') {
-                    possibleTypes.push('TraditionalMCQ');
-                    if (item.exampleSentence) possibleTypes.push('ContextualMCQ', 'SentenceUnscramble', 'TriosOfGappedSentence');
-                    if ((this.data.wordFamilies[item.familyRoot]?.length || 0) > 1) possibleTypes.push('WordFamilyMatching', 'WordFamilyMCQ');
-                    if (item.pronunciation) possibleTypes.push('PronunciationMatch', 'AudioListening');
-                } else { // This is a structure
-                    const structData = item; // for clarity
-                    // Find a word that has this structure to get example sentences, etc.
-                    const parentWord = this.data.words.find(w => w.id === structData.rootWordId);
-                    if (parentWord) {
-                        if (structData.gapFill) possibleTypes.push('GapFill');
-                        if (structData.errorCorrection) possibleTypes.push('ErrorCorrection');
+            renderDashboard() {
+                const totalWords = this.state.wordList.length;
+                const learnedCount = this.state.progress.learnedItems.size;
+                const progressPercent = totalWords > 0 ? (learnedCount / totalWords * 100).toFixed(0) : 0;
+
+                this.DOM.main.innerHTML = `
+                    <div class="bg-white p-6 rounded-xl shadow-sm fade-in">
+                        <h2 class="text-xl font-bold mb-4">Chọn chế độ luyện tập</h2>
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-2 text-sm">
+                                <span class="font-medium text-slate-600">Tiến độ chung: ${learnedCount} / ${totalWords} từ</span>
+                                <span class="font-semibold text-indigo-600">${progressPercent}%</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-bar-fill" style="width: ${progressPercent}%;"></div></div>
+                        </div>
+                        <div id="mode-buttons" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <button data-mode="mcq_meaning" class="btn btn-secondary text-left !p-4 !items-start"><div class="text-lg"><i class="fas fa-list-check w-6 text-violet-500"></i></div><div><p class="font-bold">Trắc nghiệm - Nghĩa</p><p class="text-xs font-normal">Chọn nghĩa đúng cho từ.</p></div></button>
+                            <button data-mode="mcq_word" class="btn btn-secondary text-left !p-4 !items-start"><div class="text-lg"><i class="fas fa-font w-6 text-sky-500"></i></div><div><p class="font-bold">Trắc nghiệm - Từ</p><p class="text-xs font-normal">Chọn từ đúng cho nghĩa.</p></div></button>
+                            <button data-mode="typing" class="btn btn-secondary text-left !p-4 !items-start"><div class="text-lg"><i class="fas fa-keyboard w-6 text-emerald-500"></i></div><div><p class="font-bold">Luyện gõ</p><p class="text-xs font-normal">Điền từ vào câu ví dụ.</p></div></button>
+                            <button data-mode="weakness" class="btn btn-secondary text-left !p-4 !items-start"><div class="text-lg"><i class="fas fa-star-half-alt w-6 text-amber-500"></i></div><div><p class="font-bold">Ôn tập điểm yếu</p><p class="text-xs font-normal">Luyện tập các từ hay sai.</p></div></button>
+                        </div>
+                    </div>`;
+                
+                const modeButtons = document.getElementById('mode-buttons');
+                modeButtons.addEventListener('click', e => {
+                    const button = e.target.closest('button');
+                    if (button && button.dataset.mode) {
+                        this.startPractice(button.dataset.mode);
                     }
-                }
-                const uniqueTypes = [...new Set(possibleTypes)].filter(Boolean);
-                const exerciseType = this.shuffleArray(uniqueTypes)[0] || 'TraditionalMCQ';
-                item.exerciseType = exerciseType;
-                const renderFunction = this[`get${exerciseType}HTML`];
-                if (typeof renderFunction === 'function') return renderFunction.call(this, item, index);
-                return this.getTraditionalMCQHTML(item, index);
-            },
+                });
 
-            attachPracticeEventListeners(item) {
-                const container = document.getElementById('question-container');
-                if (!container) return;
-                switch(item.exerciseType) {
-                    case 'TraditionalMCQ': case 'ContextualMCQ': case 'WordFamilyMCQ': case 'PronunciationMatch':
-                        container.querySelectorAll('.answer-option').forEach(option => option.addEventListener('click', (e) => this.checkAnswer(e.currentTarget.dataset.answer)));
-                        break;
-                    case 'AudioListening': case 'GapFill': case 'TriosOfGappedSentence':
-                        const input = container.querySelector('#text-input');
-                        const checkBtn = container.querySelector('#check-btn');
-                        container.querySelector('#play-audio-btn')?.addEventListener('click', (e) => {
-                            const textToSpeak = e.currentTarget.dataset.text;
-                            if (textToSpeak) window.speechSynthesis.speak(new SpeechSynthesisUtterance(textToSpeak));
-                        });
-                        if (input && checkBtn) {
-                            const checkFunc = () => this.checkAnswer(input.value);
-                            checkBtn.addEventListener('click', checkFunc);
-                            input.addEventListener('keypress', (e) => { if(e.key === 'Enter') checkFunc(); });
-                        }
-                        break;
-                    case 'SentenceUnscramble':
-                        const answerArea = container.querySelector('#unscramble-answer-area');
-                        const sourceArea = container.querySelector('#unscramble-source-area');
-                        if (answerArea && sourceArea) {
-                            const moveToken = (e) => { if (e.target.classList.contains('word-token')) (e.currentTarget.id === 'unscramble-source-area' ? answerArea : sourceArea).appendChild(e.target); }
-                            sourceArea.addEventListener('click', moveToken);
-                            answerArea.addEventListener('click', moveToken);
-                        }
-                        container.querySelector('#check-btn')?.addEventListener('click', () => { if (answerArea) this.checkAnswer(Array.from(answerArea.querySelectorAll('.word-token')).map(t => t.textContent).join(' ')); });
-                        break;
-                    case 'ErrorCorrection':
-                        container.querySelectorAll('.choice-btn').forEach(btn => btn.addEventListener('click', (e) => this.checkErrorCorrectionStep1(e.target.closest('.choice-btn').dataset.choice === 'correct')));
-                        const correctionInput = container.querySelector('#error-correction-input');
-                        const correctionBtn = container.querySelector('#error-correction-check-btn');
-                        if (correctionInput && correctionBtn) {
-                            const checkFunc = () => this.checkAnswer(correctionInput.value);
-                            correctionBtn.addEventListener('click', checkFunc);
-                            correctionInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') checkFunc(); });
-                        }
-                        break;
-                    case 'WordFamilyMatching':
-                        container.querySelectorAll('.matching-item').forEach(el => el.addEventListener('click', (e) => this.handleMatchingClick(e.currentTarget)));
-                        break;
-                }
-            },
-            
-            // --- HTML Generation Functions ---
-            getTraditionalMCQHTML(item, index) {
-                const isEngToViet = Math.random() > 0.5;
-                const question = isEngToViet ? `${item.word} <span class="text-base font-normal text-slate-500">(${item.type})</span>` : item.meaning;
-                const correctAnswer = isEngToViet ? item.meaning : item.word;
-                const distractorPool = isEngToViet ? this.data.words.map(w => w.meaning) : this.data.words.map(w => w.word);
-                const distractors = this.shuffleArray(distractorPool.filter(d => d !== correctAnswer)).slice(0, 3);
-                const options = this.shuffleArray([correctAnswer, ...distractors]);
-                this.data.session.currentCorrectAnswer = correctAnswer;
-                return `<h2 class="text-sm font-semibold text-violet-600 mb-2">Question ${index + 1}: Choose the correct meaning</h2><div class="text-2xl font-bold min-h-[60px] mb-8">${question}</div><div id="answer-options" class="grid grid-cols-1 md:grid-cols-2 gap-3">${options.map(opt => `<button class="answer-option p-4" data-answer="${opt}">${opt}</button>`).join('')}</div>`;
-            },
-            
-            getContextualMCQHTML(item, index) {
-                const correctAnswer = item.word;
-                const sentence = item.exampleSentence.replace(new RegExp(`\\b${item.word}\\b`, 'gi'), '<span class="font-bold text-violet-600">[...]</span>');
-                let distractors = [];
-                const family = this.data.wordFamilies[item.familyRoot] || [];
-                const familyWords = family.filter(w => w.id !== item.id);
-                if (familyWords.length > 0) distractors.push(this.shuffleArray(familyWords)[0].word);
-                if (item.distractors_en && item.distractors_en.length > 0) distractors.push(...this.shuffleArray([...item.distractors_en]));
-                const otherWords = this.data.words.filter(w => w.type === item.type && w.id !== item.id && !distractors.includes(w.word));
-                distractors.push(...this.shuffleArray(otherWords).map(w => w.word));
-                const finalDistractors = [...new Set(distractors)].slice(0, 3);
-                const options = this.shuffleArray([correctAnswer, ...finalDistractors]);
-                this.data.session.currentCorrectAnswer = correctAnswer;
-                return `<h2 class="text-sm font-semibold text-violet-600 mb-2">Question ${index + 1}: Choose the word that best fits the sentence</h2><p class="text-xl font-serif italic min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="grid grid-cols-1 md:grid-cols-2 gap-3">${options.map(opt => `<button class="answer-option p-4" data-answer="${opt}">${opt}</button>`).join('')}</div>`;
-            },
-            
-            getWordFamilyMCQHTML(item, index) {
-                const family = this.data.wordFamilies[item.familyRoot];
-                if (!family || family.length < 2) return this.getContextualMCQHTML(item, index);
-                const correctAnswer = item.word;
-                const sentence = item.exampleSentence.replace(new RegExp(`\\b${item.word}\\b`, 'gi'), '<span class="font-bold text-violet-600">[...]</span>');
-                const distractors = this.shuffleArray(family.filter(w => w.id !== item.id)).slice(0, 3).map(w => w.word);
-                while (distractors.length < 3) distractors.push("... (filler)");
-                const options = this.shuffleArray([correctAnswer, ...distractors]);
-                this.data.session.currentCorrectAnswer = correctAnswer;
-                return `<h2 class="text-sm font-semibold text-violet-600 mb-2">Question ${index + 1}: Word Family Quiz</h2><p class="text-slate-600 mb-4">Choose the correct word from the "<strong>${item.familyRoot}</strong>" family.</p><p class="text-xl font-serif italic min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="grid grid-cols-1 md:grid-cols-2 gap-3">${options.map(opt => `<button class="answer-option p-4" data-answer="${opt}">${opt}</button>`).join('')}</div>`;
-            },
-
-            getAudioListeningHTML(item, index) {
-                this.data.session.currentCorrectAnswer = item.word;
-                return `<h2 class="text-sm font-semibold text-violet-600 mb-2">Question ${index + 1}: Listen and type the word</h2><div class="text-center mb-8"><button id="play-audio-btn" data-text="${item.word}" class="text-5xl text-violet-500 hover:text-violet-700 transition-colors"><i class="fas fa-volume-up"></i></button></div><div class="flex gap-2"><input type="text" id="text-input" class="input-field p-4 text-center text-lg rounded-lg" placeholder="Type what you hear..."><button id="check-btn" class="btn btn-primary">Check</button></div>`;
-            },
-            
-            getPronunciationMatchHTML(item, index) {
-                this.data.session.currentCorrectAnswer = item.pronunciation;
-                const distractorPool = this.data.words.filter(w => w.id !== item.id && w.pronunciation).map(w => w.pronunciation);
-                const distractors = this.shuffleArray(distractorPool).slice(0, 3);
-                const options = this.shuffleArray([item.pronunciation, ...distractors]);
-                return `<h2 class="text-sm font-semibold text-violet-600 mb-2">Question ${index + 1}: Match the pronunciation</h2><div class="text-2xl font-bold text-center min-h-[60px] mb-8">${item.word}</div><div id="answer-options" class="grid grid-cols-1 md:grid-cols-2 gap-3">${options.map(opt => `<button class="answer-option p-4 font-mono" data-answer="${opt}">${opt}</button>`).join('')}</div>`;
-            },
-
-            getErrorCorrectionHTML(item, index) {
-                const isActuallyIncorrect = Math.random() > 0.5;
-                const sentenceToShow = isActuallyIncorrect ? item.errorCorrection.incorrect : item.errorCorrection.correct;
-                this.data.session.currentCorrectAnswer = item.errorCorrection.correct;
-                this.data.session.isSentenceActuallyIncorrect = isActuallyIncorrect;
-                return `<div id="error-correction-block"><h2 class="text-sm font-semibold text-violet-600 mb-2">Question ${index + 1}: Find and correct the error</h2><p class="text-xl font-serif italic min-h-[60px] mb-8">"${sentenceToShow}"</p><div id="error-step-1"><p class="text-center font-semibold mb-4">Is this sentence correct or incorrect?</p><div class="flex justify-center gap-4"><button data-choice="correct" class="choice-btn btn btn-primary !bg-green-500 hover:!bg-green-600">Correct</button><button data-choice="incorrect" class="choice-btn btn btn-primary !bg-red-500 hover:!bg-red-600">Incorrect</button></div></div><div id="error-step-2" class="hidden"><p class="font-semibold mb-2">Correct the sentence:</p><div class="flex gap-2"><input type="text" id="error-correction-input" class="input-field p-4 rounded-lg" value="${sentenceToShow}"><button id="error-correction-check-btn" class="btn btn-primary">Submit</button></div></div></div>`;
-            },
-            
-            getGapFillHTML(item, index) {
-                this.data.session.currentCorrectAnswer = item.gapFill.blank;
-                const sentence = item.gapFill.sentence.replace('___', '<span class="font-bold text-violet-600">[&hellip;]</span>');
-                return `<h2 class="text-sm font-semibold text-violet-600 mb-2">Question ${index + 1}: Fill in the blank</h2><p class="text-xl font-serif italic min-h-[60px] mb-8">"${sentence}"</p><div class="flex gap-2"><input type="text" id="text-input" class="input-field p-4 text-center rounded-lg" placeholder="Type the missing word..."><button id="check-btn" class="btn btn-primary">Check</button></div>`;
-            },
-
-            getSentenceUnscrambleHTML(item, index) {
-                this.data.session.currentCorrectAnswer = item.exampleSentence;
-                const words = this.shuffleArray(item.exampleSentence.split(' '));
-                return `<h2 class="text-sm font-semibold text-violet-600 mb-2">Question ${index + 1}: Unscramble the sentence</h2><p class="text-slate-600 mb-4">Click the words in the correct order.</p><div id="unscramble-answer-area" class="token-area mb-4 p-4 rounded-lg"></div><div id="unscramble-source-area" class="token-area bg-white/20 p-4 rounded-lg">${words.map(word => `<span class="word-token p-2 rounded-md">${word}</span>`).join('')}</div><div class="mt-6 text-right"><button id="check-btn" class="btn btn-primary">Check</button></div>`;
-            },
-
-            getWordFamilyMatchingHTML(item, index) {
-                const family = this.data.wordFamilies[item.familyRoot];
-                if (!family || family.length < 2) return this.getTraditionalMCQHTML(item, index);
-                this.data.session.matchedItems = [];
-                this.data.session.currentMatchingSelection = { word: null, type: null, pronunciation: null, meaning: null };
-                const words = this.shuffleArray([...family]);
-                const types = this.shuffleArray(family.map(w => w.type));
-                const pronunciations = this.shuffleArray(family.map(w => w.pronunciation));
-                const meanings = this.shuffleArray(family.map(w => w.meaning));
-                const renderColumn = (title, items, category) => `<div class="matching-column"><h3>${title}</h3><div>${items.map(i => `<div class="matching-item p-3 rounded-lg bg-white/30 border border-white/40" data-category="${category}" data-value="${i}">${i}</div>`).join('')}</div></div>`;
-                return `<h2 class="text-sm font-semibold text-violet-600 mb-2">Question ${index + 1}: Word Family Matching</h2><p class="text-slate-600 mb-6">Match the items for the word family: <strong class="text-violet-700">${item.familyRoot}</strong></p><div id="matching-game" class="matching-game-container grid grid-cols-2 md:grid-cols-4 gap-4">${renderColumn('Từ vựng', words.map(w => w.word), 'word')}${renderColumn('Loại từ', types, 'type')}${renderColumn('Phiên âm', pronunciations, 'pronunciation')}${renderColumn('Nghĩa', meanings, 'meaning')}</div><div id="matching-feedback" class="mt-4 text-center font-semibold h-5"></div>`;
-            },
-
-            getTriosOfGappedSentenceHTML(item, index) {
-                const keyword = item.word;
-                let sentences = new Set();
-                this.data.words.forEach(w => { if (w.exampleSentence && w.exampleSentence.toLowerCase().includes(keyword.toLowerCase())) sentences.add(w.exampleSentence); });
-                if (sentences.size < 3) return this.getContextualMCQHTML(item, index);
-                const finalSentences = this.shuffleArray([...sentences]).slice(0, 3);
-                const gappedSentences = finalSentences.map(s => s.replace(new RegExp(`\\b${keyword}\\b`, 'gi'), '______'));
-                this.data.session.currentCorrectAnswer = keyword;
-                return `<h2 class="text-sm font-semibold text-violet-600 mb-2">Question ${index + 1}: Find the common word</h2><p class="text-slate-600 mb-6">What single word fits in all three blanks?</p><div class="space-y-4 mb-6">${gappedSentences.map((s, i) => `<p class="text-lg font-serif italic">${i + 1}. "${s}"</p>`).join('')}</div><div class="flex gap-2"><input type="text" id="text-input" class="input-field p-4 rounded-lg" placeholder="Type the common word..."><button id="check-btn" class="btn btn-primary">Check</button></div>`;
-            },
-            
-            checkErrorCorrectionStep1(userThinksIsCorrect) {
-                const isActuallyCorrect = !this.data.session.isSentenceActuallyIncorrect;
-                if (userThinksIsCorrect === isActuallyCorrect) {
-                    if (isActuallyCorrect) this.checkAnswer(this.data.session.currentCorrectAnswer);
-                    else {
-                        document.getElementById('error-step-1')?.classList.add('hidden');
-                        document.getElementById('error-step-2')?.classList.remove('hidden');
-                        document.getElementById('error-correction-input')?.focus();
-                    }
-                } else this.checkAnswer("user-was-wrong-about-correctness");
-            },
-
-            handleMatchingClick(element) {
-                const category = element.dataset.category;
-                const value = element.dataset.value;
-                if (element.classList.contains('correct-match')) return;
-                this.data.session.currentMatchingSelection[category] = value;
-                document.querySelectorAll(`.matching-item[data-category="${category}"]`).forEach(item => item.classList.remove('selected'));
-                element.classList.add('selected');
-                const selection = this.data.session.currentMatchingSelection;
-                if (Object.values(selection).every(v => v !== null)) {
-                    const family = this.data.wordFamilies[this.data.session.items[this.data.session.currentIndex].familyRoot];
-                    const matchedWord = family.find(w => w.word === selection.word && w.type === selection.type && w.pronunciation === selection.pronunciation && w.meaning === selection.meaning);
-                    const feedbackEl = document.getElementById('matching-feedback');
-                    if (matchedWord) {
-                        this.data.session.matchedItems.push(matchedWord.id);
-                        feedbackEl.textContent = "Correct Match!";
-                        feedbackEl.className = 'mt-4 text-center font-semibold text-green-600';
-                        Object.keys(selection).forEach(cat => document.querySelector(`.matching-item[data-category="${cat}"].selected`)?.classList.add('correct-match'));
-                        this.data.session.currentMatchingSelection = { word: null, type: null, pronunciation: null, meaning: null };
-                        if (this.data.session.matchedItems.length === family.length) this.checkAnswer("all matched");
-                    } else {
-                        feedbackEl.textContent = "Incorrect, try again.";
-                        feedbackEl.className = 'mt-4 text-center font-semibold text-red-600';
-                    }
+                const weaknessBtn = modeButtons.querySelector('[data-mode="weakness"]');
+                if (Object.keys(this.state.progress.incorrectCounts).length === 0) {
+                    weaknessBtn.disabled = true;
+                    weaknessBtn.querySelector('div:last-child p:last-child').textContent = 'Bạn chưa có điểm yếu nào!';
                 }
             },
 
-            checkAnswer(selectedAnswer) {
-                const currentItem = this.data.session.items[this.data.session.currentIndex];
-                if (!currentItem || this.data.session.currentCorrectAnswer === null || selectedAnswer === undefined) {
-                    console.error("Cannot check answer: Invalid data.", { currentItem, selectedAnswer, correctAnswer: this.data.session.currentCorrectAnswer });
-                    this.renderNextQuestionItem();
+            renderPracticeView() {
+                const progressPercent = this.state.practiceQueue.length > 0 ? (this.state.currentIndex / this.state.practiceQueue.length * 100) : 0;
+                this.DOM.main.innerHTML = `
+                    <div class="bg-white p-6 rounded-xl shadow-sm fade-in">
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-2">
+                                <p class="text-sm font-medium">Câu ${this.state.currentIndex + 1} / ${this.state.practiceQueue.length}</p>
+                                <button id="exit-practice-btn" class="text-sm font-semibold text-gray-600 hover:text-red-500"><i class="fas fa-times mr-1"></i> Thoát</button>
+                            </div>
+                            <div class="progress-bar"><div class="progress-bar-fill" style="width: ${progressPercent}%;"></div></div>
+                        </div>
+                        <div id="question-container" class="min-h-[250px]"></div>
+                        <div id="feedback-container" class="mt-4"></div>
+                    </div>`;
+                
+                document.getElementById('exit-practice-btn').addEventListener('click', () => this.renderDashboard());
+                this.renderNextQuestion();
+            },
+            
+            renderNextQuestion() {
+                if (this.state.currentIndex >= this.state.practiceQueue.length) {
+                    this.renderSummary();
                     return;
                 }
-
-                let isCorrect = false;
-                if (currentItem.exerciseType === 'WordFamilyMatching') isCorrect = selectedAnswer === "all matched";
-                else isCorrect = selectedAnswer.trim().toLowerCase() === this.data.session.currentCorrectAnswer.trim().toLowerCase();
-                
-                this.updateProgress(currentItem, isCorrect);
-                if (isCorrect) this.data.session.correctAnswers++;
-                
+                const word = this.state.practiceQueue[this.state.currentIndex];
                 const questionContainer = document.getElementById('question-container');
-                if (questionContainer) {
-                    questionContainer.querySelectorAll('.answer-option, #check-btn, #text-input, .choice-btn, .matching-item, #error-correction-check-btn').forEach(el => { el.disabled = true; el.classList.add('disabled', 'opacity-75'); });
-                    if (questionContainer.querySelector('#answer-options')) {
-                        questionContainer.querySelectorAll('#answer-options .answer-option').forEach(btn => {
-                            if (btn.dataset.answer.trim().toLowerCase() === this.data.session.currentCorrectAnswer.trim().toLowerCase()) btn.classList.add('correct');
-                            else if (btn.dataset.answer.trim().toLowerCase() === selectedAnswer.trim().toLowerCase()) btn.classList.add('incorrect');
-                        });
-                    }
+                const feedbackContainer = document.getElementById('feedback-container');
+                
+                if (!questionContainer || !feedbackContainer) return;
+                
+                feedbackContainer.innerHTML = '';
+                let questionHTML = '';
+
+                // Tự động chọn dạng câu hỏi dựa trên mode và dữ liệu có sẵn
+                switch(this.state.currentMode) {
+                    case 'mcq_meaning':
+                        questionHTML = this.getMcqMeaningHTML(word);
+                        break;
+                    case 'mcq_word':
+                        questionHTML = this.getMcqWordHTML(word);
+                        break;
+                    case 'typing':
+                        questionHTML = this.getTypingHTML(word);
+                        break;
+                    default: // Bao gồm cả 'weakness' - sẽ tự chọn ngẫu nhiên
+                        const possibleTypes = ['mcq_meaning', 'mcq_word'];
+                        if (word.exampleSentence) possibleTypes.push('typing');
+                        const randomType = possibleTypes[Math.floor(Math.random() * possibleTypes.length)];
+                        questionHTML = this[`get${randomType.charAt(0).toUpperCase() + randomType.slice(1)}HTML`](word);
                 }
-                this.showFeedback(isCorrect);
+                
+                questionContainer.innerHTML = questionHTML;
+                this.attachQuestionEventListeners();
             },
 
-            updateProgress(item, isCorrect) {
-                const progressKey = this.getProgressKey(item);
-                if (!progressKey) return;
-
-                const incorrectCounts = this.data.progress.incorrectCounts || {};
-                if (isCorrect) {
-                    this.data.progress.learnedItems[progressKey] = true;
-                    if (incorrectCounts[progressKey]) delete incorrectCounts[progressKey];
-                } else {
-                    incorrectCounts[progressKey] = (incorrectCounts[progressKey] || 0) + 1;
-                }
-                this.data.progress.incorrectCounts = incorrectCounts;
-                this.saveProgressToFirebase();
-            },
-
-            // *** CRITICAL FIX: This function now generates keys matching your Firebase structure ***
-            getProgressKey(item) {
-                if (!item || !item.itemType || item.id === undefined) return null;
-                if (item.itemType === 'word') {
-                    // Firebase key is 'word_{numeric_id}'
-                    return `word_${item.id}`;
-                } else if (item.itemType === 'structure') {
-                    // Firebase key is 'word_s_{word_id}_{structure_index}' which corresponds to the structure's generated ID
-                    return `word_${item.id}`; 
-                }
-                return null;
+            renderSummary() {
+                const score = this.state.currentScore;
+                const total = this.state.practiceQueue.length;
+                const percentage = total > 0 ? (score / total * 100).toFixed(0) : 0;
+                this.DOM.main.innerHTML = `
+                    <div class="text-center max-w-lg mx-auto bg-white p-8 rounded-xl shadow-sm fade-in">
+                        <h1 class="text-3xl font-bold mb-4">Hoàn thành!</h1>
+                        <p class="text-lg text-slate-600">Điểm của bạn:</p>
+                        <p class="text-6xl font-bold my-4 text-indigo-600">${percentage}%</p>
+                        <p class="font-semibold">${score} / ${total} câu đúng</p>
+                        <div class="mt-8">
+                            <button id="back-to-dashboard-btn" class="w-full btn btn-primary">Quay về Bảng điều khiển</button>
+                        </div>
+                    </div>`;
+                document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.renderDashboard());
             },
 
             showFeedback(isCorrect) {
-                const container = document.getElementById('feedback-container');
-                if (!container) return;
+                const feedbackContainer = document.getElementById('feedback-container');
+                if (!feedbackContainer) return;
+
                 const bgColor = isCorrect ? 'bg-green-100' : 'bg-red-100';
                 const textColor = isCorrect ? 'text-green-800' : 'text-red-800';
-                let message = isCorrect ? 'Correct!' : `Incorrect! The correct answer is: <strong class="font-bold">${this.data.session.currentCorrectAnswer}</strong>`;
-                container.innerHTML = `<div class="glass-panel p-4 rounded-lg flex justify-between items-center ${bgColor} ${textColor}"><p class="font-semibold">${message}</p><button id="next-question-btn" class="btn btn-primary">Next <i class="fas fa-arrow-right ml-2"></i></button></div>`;
-                const nextButton = document.getElementById('next-question-btn');
-                nextButton?.addEventListener('click', () => { this.data.session.currentIndex++; this.renderNextQuestionItem(); });
-                nextButton?.focus();
-            },
-            
-            renderSessionSummary() {
-                const main = document.getElementById('main-content');
-                const score = this.data.session.correctAnswers;
-                const total = this.data.session.items.length;
-                const percentage = total > 0 ? (score / total * 100).toFixed(0) : 0;
-                main.innerHTML = `<div class="text-center max-w-lg mx-auto"><h1 class="text-3xl font-bold mb-4">Practice Complete!</h1><div class="glass-panel p-8"><p class="text-lg">Your score:</p><p class="text-6xl font-bold my-4 text-violet-600">${percentage}%</p><p class="font-semibold">${score} / ${total} correct</p><div class="mt-8"><button id="practice-again-btn" class="btn btn-primary w-full">Practice Again</button><button id="back-to-dashboard-btn" class="btn btn-secondary w-full mt-3">Back to Dashboard</button></div></div></div>`;
-                document.getElementById('practice-again-btn').addEventListener('click', () => this.renderPracticeTypeSelection());
-                document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.navigateTo('dashboard'));
-            },
+                let message = isCorrect ? 'Chính xác!' : `Sai rồi! Đáp án đúng là: <strong class="font-bold">${this.state.currentCorrectAnswer}</strong>`;
 
-            renderTestStartScreen() {
-                this.showModal("Thông báo", "Chức năng Test đang được phát triển và sẽ sớm ra mắt!");
-            },
-
-            showModal(title, message, onConfirm, showCancel = false) {
-                return new Promise(resolve => {
-                    const modal = document.getElementById('custom-modal');
-                    modal.innerHTML = `
-                        <div class="modal-content glass-panel text-center p-8 w-full max-w-sm">
-                            <h3 class="text-xl font-bold mb-4">${title}</h3>
-                            <p class="mb-6">${message}</p>
-                            <div class="flex gap-4 justify-center">
-                                ${showCancel ? '<button id="modal-cancel-btn" class="btn btn-secondary">Hủy</button>' : ''}
-                                <button id="modal-confirm-btn" class="btn btn-primary">Đồng ý</button>
-                            </div>
-                        </div>`;
-                    modal.classList.add('is-open');
-                    document.getElementById('modal-confirm-btn').onclick = () => {
-                        modal.classList.remove('is-open');
-                        if (onConfirm) onConfirm();
-                        resolve(true);
-                    };
-                    if (showCancel) {
-                        document.getElementById('modal-cancel-btn').onclick = () => {
-                            modal.classList.remove('is-open');
-                            resolve(false);
-                        };
-                    }
+                feedbackContainer.innerHTML = `
+                    <div class="${bgColor} ${textColor} p-4 rounded-lg flex justify-between items-center fade-in">
+                        <p class="font-semibold">${message}</p>
+                        <button id="next-question-btn" class="btn btn-secondary !py-2 !px-4">Tiếp theo <i class="fas fa-arrow-right ml-2"></i></button>
+                    </div>`;
+                
+                const nextBtn = document.getElementById('next-question-btn');
+                nextBtn.focus();
+                nextBtn.addEventListener('click', () => {
+                    this.state.currentIndex++;
+                    this.renderPracticeView(); 
                 });
             },
 
+            // --- QUESTION GENERATION ---
+
+            getMcqMeaningHTML(word) {
+                this.state.currentCorrectAnswer = word.meaning;
+                const options = this.shuffleArray([word.meaning, ...word.distractors_vi]);
+                return `
+                    <h2 class="text-sm font-semibold text-gray-500 mb-2">Chọn nghĩa đúng cho từ:</h2>
+                    <p class="text-3xl font-bold mb-6">${word.word} <span class="text-lg font-normal text-gray-400">(${word.type})</span></p>
+                    <div id="answer-options" class="space-y-3">
+                        ${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}
+                    </div>`;
+            },
+            
+            getMcqWordHTML(word) {
+                this.state.currentCorrectAnswer = word.word;
+                const options = this.shuffleArray([word.word, ...word.distractors_en]);
+                return `
+                    <h2 class="text-sm font-semibold text-gray-500 mb-2">Chọn từ đúng cho nghĩa:</h2>
+                    <p class="text-3xl font-bold mb-6">${word.meaning}</p>
+                    <div id="answer-options" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        ${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}
+                    </div>`;
+            },
+            
+            getTypingHTML(word) {
+                if (!word.exampleSentence) return this.getMcqMeaningHTML(word); // Fallback
+                this.state.currentCorrectAnswer = word.word;
+                // Regex to replace only the whole word, case-insensitive
+                const sentenceHTML = word.exampleSentence.replace(new RegExp(`\\b${word.word}\\b`, 'gi'), '<span class="font-bold text-indigo-600">[ _______ ]</span>');
+
+                return `
+                    <h2 class="text-sm font-semibold text-gray-500 mb-2">Điền từ còn thiếu vào câu:</h2>
+                    <p class="text-xl font-serif italic text-slate-700 mb-6">"${sentenceHTML}"</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-indigo-500 focus:ring-indigo-500" placeholder="Gõ đáp án...">
+                        <button id="check-btn" class="btn btn-primary !py-3">Kiểm tra</button>
+                    </div>`;
+            },
+
+
+            // --- EVENT HANDLING & ACTIONS ---
+
+            startPractice(mode) {
+                this.state.currentMode = mode;
+                this.state.currentIndex = 0;
+                this.state.currentScore = 0;
+
+                let itemsToPractice = [];
+                if (mode === 'weakness') {
+                    const weakIds = Object.keys(this.state.progress.incorrectCounts)
+                        .sort((a,b) => this.state.progress.incorrectCounts[b] - this.state.progress.incorrectCounts[a]);
+                    itemsToPractice = weakIds.map(id => this.state.wordList.find(w => `word_${w.id}` === id)).filter(Boolean);
+                } else {
+                    // Ưu tiên các từ chưa học
+                    const unlearned = this.state.wordList.filter(w => !this.state.progress.learnedItems.has(`word_${w.id}`));
+                    itemsToPractice = unlearned.length > 0 ? unlearned : this.state.wordList;
+                }
+                
+                this.state.practiceQueue = this.shuffleArray([...itemsToPractice]);
+                this.renderPracticeView();
+            },
+
+            attachQuestionEventListeners() {
+                const answerOptions = document.getElementById('answer-options');
+                if (answerOptions) {
+                    answerOptions.addEventListener('click', e => {
+                        const button = e.target.closest('button');
+                        if (button && button.dataset.answer) {
+                            this.checkAnswer(button.dataset.answer);
+                        }
+                    });
+                }
+                const checkBtn = document.getElementById('check-btn');
+                const textInput = document.getElementById('text-input');
+                if(checkBtn && textInput) {
+                    const doCheck = () => this.checkAnswer(textInput.value);
+                    checkBtn.addEventListener('click', doCheck);
+                    textInput.addEventListener('keypress', e => { if (e.key === 'Enter') doCheck(); });
+                }
+            },
+            
+            checkAnswer(userAnswer) {
+                const word = this.state.practiceQueue[this.state.currentIndex];
+                const correctAnswer = this.state.currentCorrectAnswer;
+                const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
+
+                // Disable inputs
+                this.DOM.main.querySelectorAll('button, input').forEach(el => el.disabled = true);
+                
+                if (isCorrect) {
+                    this.state.currentScore++;
+                    this.state.progress.learnedItems.add(`word_${word.id}`);
+                    delete this.state.progress.incorrectCounts[`word_${word.id}`];
+                } else {
+                    this.state.progress.incorrectCounts[`word_${word.id}`] = (this.state.progress.incorrectCounts[`word_${word.id}`] || 0) + 1;
+                }
+                
+                this.saveProgress();
+                this.showFeedback(isCorrect);
+            },
+            
+            confirmSubmit() {
+                const learnedCount = this.state.progress.learnedItems.size;
+                const totalWords = this.state.wordList.length;
+                this.showModal(
+                    "Xác nhận Nộp bài",
+                    `Bạn đã học được ${learnedCount} / ${totalWords} từ. Bạn có chắc chắn muốn kết thúc và nộp bài không? Bạn sẽ không thể luyện tập tiếp sau khi nộp.`,
+                    () => this.submitToFirebase(),
+                    true // showCancel
+                );
+            },
+
+            async submitToFirebase() {
+                if (this.state.isSubmitting) return;
+                this.state.isSubmitting = true;
+                this.DOM.loader.classList.remove('hidden');
+
+                const learnedCount = this.state.progress.learnedItems.size;
+                const totalWords = this.state.wordList.length;
+                const score = totalWords > 0 ? Math.round((learnedCount / totalWords) * 100) : 0;
+                
+                const finalSubmission = {
+                    score: score, // Điểm là % số từ đã học
+                    totalPoints: 100,
+                    answers: this.state.progress.incorrectCounts, // Lưu lại các từ sai để giáo viên xem
+                    status: 'submitted',
+                    endTime: serverTimestamp()
+                };
+
+                try {
+                    await updateDoc(doc(this.state.db, 'submissions', this.state.submissionId), finalSubmission);
+                    localStorage.removeItem(`vocabProgress_${this.state.submissionId}`);
+                    this.showError("Thành công!", `Đã nộp bài thành công với kết quả ${score}%.`, true);
+                } catch(error) {
+                    this.showError("Lỗi", "Không thể nộp bài. Vui lòng thử lại. " + error.message);
+                    this.state.isSubmitting = false;
+                    this.DOM.loader.classList.add('hidden');
+                }
+            },
+
+            // --- UTILITIES ---
             shuffleArray(array) {
-                let currentIndex = array.length, randomIndex;
-                while (currentIndex != 0) { randomIndex = Math.floor(Math.random() * currentIndex); currentIndex--; [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]]; }
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
                 return array;
             },
+
+            showError(title, message, isSuccess = false) {
+                this.DOM.loader.classList.add('hidden');
+                const icon = isSuccess ? `<i class="fas fa-check-circle text-5xl text-green-500 mb-4"></i>` : `<i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i>`;
+                this.DOM.modal.innerHTML = `
+                    <div class="modal-content bg-white p-8 rounded-xl shadow-lg text-center w-full max-w-sm fade-in">
+                        ${icon}
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">${title}</h3>
+                        <p class="text-gray-600 mb-6">${message}</p>
+                        <button id="modal-confirm-btn" class="btn btn-primary w-full">Đã hiểu</button>
+                    </div>`;
+                this.DOM.modal.classList.remove('hidden');
+                document.getElementById('modal-confirm-btn').onclick = () => {
+                    this.DOM.modal.classList.add('hidden');
+                    if (isSuccess) window.location.href = 'index.html';
+                };
+            },
+            showModal(title, message, onConfirm, showCancel = false) {
+                 this.DOM.modal.innerHTML = `
+                    <div class="modal-content bg-white p-8 rounded-xl shadow-lg text-center w-full max-w-sm fade-in">
+                        <h3 class="text-xl font-bold text-gray-900 mb-4">${title}</h3>
+                        <p class="text-gray-600 mb-6">${message}</p>
+                        <div class="flex gap-4 justify-center">
+                            ${showCancel ? '<button id="modal-cancel-btn" class="btn btn-secondary">Hủy</button>' : ''}
+                            <button id="modal-confirm-btn" class="btn btn-primary">Đồng ý</button>
+                        </div>
+                    </div>`;
+                this.DOM.modal.classList.remove('hidden');
+                document.getElementById('modal-confirm-btn').onclick = () => {
+                    this.DOM.modal.classList.add('hidden');
+                    if (onConfirm) onConfirm();
+                };
+                if (showCancel) {
+                    document.getElementById('modal-cancel-btn').onclick = () => this.DOM.modal.classList.add('hidden');
+                }
+            }
         };
-        
-        App.init();
+
+        document.addEventListener('DOMContentLoaded', () => App.init());
     </script>
 </body>
 </html>
