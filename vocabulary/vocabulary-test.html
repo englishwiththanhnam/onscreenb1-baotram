@@ -229,7 +229,17 @@
                         </div>
                         <div class="bg-white p-6 rounded-xl shadow-sm">
                             <h2 class="text-xl font-bold mb-4">Luyện tập 🏋️‍♀️</h2>
-                            <p class="text-sm text-slate-600 mb-4">Hệ thống sẽ trộn ngẫu nhiên các dạng bài tập khác nhau để thử thách bạn.</p>
+                            <div class="mb-6 p-4 bg-slate-50 rounded-lg">
+                                <h3 class="font-semibold mb-3 text-slate-800">Các dạng bài có thể gặp:</h3>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm text-slate-600">
+                                    <p><i class="fas fa-check-circle text-green-500 w-5"></i> Trắc nghiệm Từ & Nghĩa</p>
+                                    <p><i class="fas fa-check-circle text-green-500 w-5"></i> Trắc nghiệm Ngữ cảnh</p>
+                                    <p><i class="fas fa-check-circle text-green-500 w-5"></i> Trắc nghiệm Họ từ</p>
+                                    <p><i class="fas fa-check-circle text-green-500 w-5"></i> Sắp xếp câu</p>
+                                    <p><i class="fas fa-check-circle text-green-500 w-5"></i> Điền vào chỗ trống</p>
+                                    <p><i class="fas fa-check-circle text-green-500 w-5"></i> Nghe & Gõ từ</p>
+                                </div>
+                            </div>
                             <div id="practice-buttons" class="flex flex-col sm:flex-row gap-4">
                                <button data-practice-mode="normal" class="btn btn-primary flex-1"><i class="fas fa-random mr-2"></i> Luyện tập thông thường</button>
                                <button data-practice-mode="weakness" class="btn btn-secondary flex-1 border-amber-500 text-amber-600 hover:bg-amber-50"><i class="fas fa-star-half-alt mr-2"></i> Ôn tập điểm yếu</button>
@@ -451,7 +461,7 @@
                     if (sentence) {
                         const phraseParts = item.phrase.split(/\s+/);
                         const blank = phraseParts.find(p => !['be', 'of', 'to', 'sb', 'sth'].includes(p.toLowerCase()) && p.length > 1 && p.length < 5);
-                        if (blank) {
+                        if (blank && sentence.toLowerCase().includes(blank.toLowerCase())) {
                             item.gapFill = { blank, sentence: sentence.replace(new RegExp(`\\b${blank}\\b`, 'i'), '___') };
                             types.push('GapFill');
                         }
@@ -667,7 +677,6 @@
             },
 
             findRoot(word) {
-                // Đây là một hàm đơn giản hóa. Trong thực tế cần một thư viện chuyên dụng hơn.
                 const endings = ['s', 'es', 'ing', 'ed', 'er', 'est', 'ly', 'tion', 'sion', 'ment', 'able', 'ible', 'al', 'ial', 'ive', 'ous', 'ness'];
                 for (const ending of endings) {
                     if (word.length > ending.length + 3 && word.endsWith(ending)) {
