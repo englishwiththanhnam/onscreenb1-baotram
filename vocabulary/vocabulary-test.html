@@ -223,11 +223,7 @@
                 document.title = vocabSetData.title || "Vocabulary Practice";
                 document.getElementById('sidebar-title').textContent = vocabSetData.title;
                 
-                // *** FIX: Assign unique IDs to words loaded from Firebase ***
-                this.data.words = (vocabSetData.wordList || []).map((word, index) => ({
-                    ...word,
-                    id: `word_${index + 1}` // Create a consistent ID format
-                }));
+                this.data.words = vocabSetData.wordList || [];
                 
                 this.processData();
             },
@@ -240,14 +236,26 @@
             processData() {
                 this.data.structures = [];
                 this.data.words.forEach(word => {
-                    word.itemType = 'word';
+                    word.itemType = 'word'; // Ensure itemType is set
                     if (word.structures && Array.isArray(word.structures)) {
                         word.structures.forEach((struct, s_idx) => {
-                            this.data.structures.push({ ...struct, id: `structure_${word.id}_${s_idx}`, itemType: 'structure', rootWord: word.word });
+                            this.data.structures.push({ 
+                                ...struct, 
+                                id: `s_${word.id}_${s_idx}`, // Create a unique ID for the structure
+                                itemType: 'structure', 
+                                rootWordId: word.id 
+                            });
                         });
                     }
                 });
-                const families = {}; this.data.words.forEach(word => { const root = word.familyRoot; if (!families[root]) families[root] = []; families[root].push(word); });
+                const families = {}; 
+                this.data.words.forEach(word => { 
+                    if (!word.familyRoot) { // Generate familyRoot if it doesn't exist
+                        word.familyRoot = word.word.toLowerCase();
+                    }
+                    if (!families[word.familyRoot]) families[word.familyRoot] = []; 
+                    families[word.familyRoot].push(word); 
+                });
                 this.data.wordFamilies = families;
             },
 
@@ -284,11 +292,11 @@
                 const totalWords = this.data.words.length;
                 const wordProgress = totalWords > 0 ? (wordsLearned / totalWords) * 100 : 0;
                 
-                const structuresLearned = learnedItems.filter(k => k.startsWith('structure_')).length;
+                const structuresLearned = learnedItems.filter(k => k.startsWith('word_s_')).length;
                 const totalStructures = this.data.structures.length;
                 const structureProgress = totalStructures > 0 ? (structuresLearned / totalStructures) * 100 : 0;
                 
-                const overallProgress = allItems.length > 0 ? (learnedItems.length / allItems.length) * 100 : 0;
+                const overallProgress = allItems.length > 0 ? ((wordsLearned + structuresLearned) / allItems.length) * 100 : 0;
                 
                 main.innerHTML = `
                     <h1 class="text-3xl font-bold mb-6">Dashboard</h1>
@@ -392,11 +400,11 @@
                     const weakItemIds = Object.keys(this.data.progress.incorrectCounts)
                         .sort((a, b) => this.data.progress.incorrectCounts[b] - this.data.progress.incorrectCounts[a]);
                     weakItemIds.forEach(id => {
-                        const item = allItems.find(i => `${i.itemType}_${i.id}` === id);
+                        const item = allItems.find(i => this.getProgressKey(i) === id);
                         if (item) practiceItems.push(item);
                     });
                 } else { 
-                    const unlearnedItems = allItems.filter(item => !this.data.progress.learnedItems[`${item.itemType}_${item.id}`]);
+                    const unlearnedItems = allItems.filter(item => !this.data.progress.learnedItems[this.getProgressKey(item)]);
                     practiceItems = this.shuffleArray(unlearnedItems.length > 0 ? unlearnedItems : allItems);
                 }
                 if (practiceItems.length === 0) { this.showModal("Chúc mừng!", "Bạn đã học hết tất cả các mục!"); return; }
@@ -629,7 +637,7 @@
                 if (currentItem.exerciseType === 'WordFamilyMatching') isCorrect = selectedAnswer === "all matched";
                 else isCorrect = selectedAnswer.trim().toLowerCase() === this.data.session.currentCorrectAnswer.trim().toLowerCase();
                 
-                this.updateProgress(currentItem.id, currentItem.itemType, isCorrect);
+                this.updateProgress(currentItem, isCorrect);
                 if (isCorrect) this.data.session.correctAnswers++;
                 
                 const questionContainer = document.getElementById('question-container');
@@ -643,6 +651,31 @@
                     }
                 }
                 this.showFeedback(isCorrect);
+            },
+
+            updateProgress(item, isCorrect) {
+                const progressKey = this.getProgressKey(item);
+                if (!progressKey) return;
+
+                const incorrectCounts = this.data.progress.incorrectCounts || {};
+                if (isCorrect) {
+                    this.data.progress.learnedItems[progressKey] = true;
+                    if (incorrectCounts[progressKey]) delete incorrectCounts[progressKey];
+                } else {
+                    incorrectCounts[progressKey] = (incorrectCounts[progressKey] || 0) + 1;
+                }
+                this.data.progress.incorrectCounts = incorrectCounts;
+                this.saveProgressToFirebase();
+            },
+
+            getProgressKey(item) {
+                if (!item || !item.itemType) return null;
+                if (item.itemType === 'word') {
+                    return `word_${item.id}`;
+                } else if (item.itemType === 'structure') {
+                    return `word_${item.id}`; // Matches the format `word_s_...`
+                }
+                return null;
             },
 
             showFeedback(isCorrect) {
