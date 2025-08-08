@@ -337,7 +337,7 @@
                             "Confirm Final Test", 
                             "This is your final test. It can only be taken once and will be timed. Are you ready to begin?", 
                             true, 
-                            () => this.startFinalTest()
+                            this.startFinalTest.bind(this)
                         );
                     });
                 }
@@ -674,6 +674,152 @@
                     </div>`;
                 document.getElementById('continue-practice-btn').addEventListener('click', () => this.startPractice('normal'));
                 document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.renderDashboard());
+            },
+
+            startFinalTest() {
+                const totalItems = this.state.wordList.length + this.state.structureList.length;
+                let numQuestions = Math.min(Math.floor(totalItems * 0.5), 50);
+
+                const weakItemIds = Object.keys(this.state.progress.incorrectCounts)
+                    .sort((a,b) => this.state.progress.incorrectCounts[b] - this.state.progress.incorrectCounts[a]);
+                
+                let itemsToPractice = weakItemIds
+                    .map(id => [...this.state.wordList, ...this.state.structureList].find(item => item.id === id))
+                    .filter(Boolean);
+
+                if (itemsToPractice.length < numQuestions) {
+                    const learnedButNotWeak = [...this.state.progress.learnedItems]
+                        .filter(id => !this.state.progress.incorrectCounts[id])
+                        .map(id => [...this.state.wordList, ...this.state.structureList].find(item => item.id === id))
+                        .filter(Boolean);
+                    itemsToPractice.push(...this.shuffleArray(learnedButNotWeak));
+                }
+
+                if (itemsToPractice.length === 0) {
+                    this.showModal("Error", "Not enough learned items to start the final test.");
+                    return;
+                }
+
+                this.state.currentSessionItems = itemsToPractice.slice(0, numQuestions);
+                this.state.currentIndex = 0;
+                this.state.currentScore = 0;
+                this.state.sessionCorrectItems = [];
+                this.state.sessionIncorrectItems = [];
+                this.state.proctoring.violations = 0;
+                this.state.proctoring.timeRemaining = this.state.currentSessionItems.length * 75;
+
+                this.renderFinalTestView();
+                this.startProctoring();
+            },
+
+            renderFinalTestView() {
+                const total = this.state.currentSessionItems.length;
+                const progressPercent = total > 0 ? (this.state.currentIndex / total * 100) : 0;
+                
+                const minutes = Math.floor(this.state.proctoring.timeRemaining / 60);
+                const seconds = this.state.proctoring.timeRemaining % 60;
+                const timeString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+                this.DOM.main.innerHTML = `
+                    <div class="bg-white p-6 rounded-xl shadow-lg border-2 border-red-200 fade-in">
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-2 text-red-700 font-bold">
+                                <p>FINAL TEST - Question ${this.state.currentIndex + 1} / ${total}</p>
+                                <div id="timer-display" class="text-lg"><i class="fas fa-clock mr-2"></i>${timeString}</div>
+                            </div>
+                            <div class="progress-bar"><div id="progress-bar-final-test" class="progress-bar-fill bg-red-500" style="width: ${progressPercent}%;"></div></div>
+                        </div>
+                        <div id="question-container" class="min-h-[300px]"></div>
+                        <div id="feedback-container" class="mt-4"></div>
+                    </div>`;
+                
+                this.state.proctoring.timerId = setInterval(() => {
+                    this.state.proctoring.timeRemaining--;
+                    const mins = Math.floor(this.state.proctoring.timeRemaining / 60);
+                    const secs = this.state.proctoring.timeRemaining % 60;
+                    const timerDisplay = document.getElementById('timer-display');
+                    if (timerDisplay) {
+                        timerDisplay.innerHTML = `<i class="fas fa-clock mr-2"></i>${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                    }
+                    if (this.state.proctoring.timeRemaining <= 0) {
+                        this.submitFinalTest();
+                    }
+                }, 1000);
+
+                this.renderNextQuestion();
+            },
+
+            startProctoring() {
+                this.proctoringEventHandler = (e) => {
+                    this.state.proctoring.violations++;
+                    console.warn(`Violation detected: ${e.type}. Total: ${this.state.proctoring.violations}`);
+                    const warning = document.createElement('div');
+                    warning.className = 'fixed top-4 right-4 bg-yellow-400 text-black p-3 rounded-lg shadow-lg z-50';
+                    warning.innerHTML = `<i class="fas fa-exclamation-triangle mr-2"></i> Warning: Activity detected! Violations: ${this.state.proctoring.violations}`;
+                    document.body.appendChild(warning);
+                    setTimeout(() => warning.remove(), 3000);
+                    
+                    if (e.type === 'copy' || e.type === 'paste' || e.type === 'contextmenu') {
+                        e.preventDefault();
+                    }
+                    if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'))) {
+                        e.preventDefault();
+                    }
+                };
+                
+                document.addEventListener('visibilitychange', this.proctoringEventHandler);
+                window.addEventListener('blur', this.proctoringEventHandler);
+                document.addEventListener('copy', this.proctoringEventHandler);
+                document.addEventListener('paste', this.proctoringEventHandler);
+                document.addEventListener('contextmenu', this.proctoringEventHandler);
+                document.addEventListener('keydown', this.proctoringEventHandler);
+            },
+
+            stopProctoring() {
+                clearInterval(this.state.proctoring.timerId);
+                document.removeEventListener('visibilitychange', this.proctoringEventHandler);
+                window.removeEventListener('blur', this.proctoringEventHandler);
+                document.removeEventListener('copy', this.proctoringEventHandler);
+                document.removeEventListener('paste', this.proctoringEventHandler);
+                document.removeEventListener('contextmenu', this.proctoringEventHandler);
+                document.removeEventListener('keydown', this.proctoringEventHandler);
+            },
+
+            async submitFinalTest() {
+                this.stopProctoring();
+                if (this.state.isSubmitting) return;
+                this.state.isSubmitting = true;
+
+                const score = this.state.currentSessionItems.length > 0 ? Math.round((this.state.currentScore / this.state.currentSessionItems.length) * 100) : 0;
+                
+                this.DOM.main.innerHTML = `<div class="text-center p-8"><div class="w-12 h-12 border-4 border-t-violet-500 border-gray-200 rounded-full animate-spin mx-auto"></div><p class="mt-4 font-semibold">Submitting your score...</p></div>`;
+
+                const payload = {
+                    finalTest: {
+                        status: 'completed',
+                        score: score,
+                        violations: this.state.proctoring.violations,
+                        takenAt: serverTimestamp(),
+                        correctCount: this.state.currentScore,
+                        totalQuestions: this.state.currentSessionItems.length
+                    }
+                };
+
+                try {
+                    await updateDoc(doc(this.state.db, 'submissions', this.state.submissionId), payload);
+                    this.state.session.finalTestTaken = true;
+                    this.state.session.finalTestScore = score;
+                    this.showModal(
+                        "Test Submitted!",
+                        `You have completed the final test with a score of ${score}%.<br>Violations detected: ${this.state.proctoring.violations}.<br><br>You can now continue to review the materials.`,
+                        false,
+                        () => this.renderDashboard()
+                    );
+                } catch(error) {
+                    this.showModal("Error", "Could not submit your test score: " + error.message);
+                } finally {
+                    this.state.isSubmitting = false;
+                }
             },
 
             getTraditionalMCQHTML(item, isExample = false) {
