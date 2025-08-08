@@ -89,18 +89,18 @@
                  <div class="glass-panel p-6">
                     <h2 class="text-2xl font-bold text-gray-700 mb-4">2. Nhập liệu & Cài đặt</h2>
                      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">File Từ vựng (.csv)</label>
-                            <label for="vocab-csv-upload" class="btn btn-secondary w-full"><i class="fas fa-upload mr-2"></i>Tải lên</label>
-                            <input type="file" id="vocab-csv-upload" class="hidden" accept=".csv">
-                            <p id="vocab-file-name" class="text-gray-600 mt-2 text-sm text-center"></p>
-                        </div>
                          <div>
-                            <label class="block text-sm font-medium mb-1">File Cấu trúc (.csv)</label>
-                            <label for="structures-csv-upload" class="btn btn-secondary w-full"><i class="fas fa-upload mr-2"></i>Tải lên</label>
-                            <input type="file" id="structures-csv-upload" class="hidden" accept=".csv">
-                            <p id="structures-file-name" class="text-gray-600 mt-2 text-sm text-center"></p>
-                        </div>
+                             <label class="block text-sm font-medium mb-1">File Từ vựng (.csv)</label>
+                             <label for="vocab-csv-upload" class="btn btn-secondary w-full"><i class="fas fa-upload mr-2"></i>Tải lên</label>
+                             <input type="file" id="vocab-csv-upload" class="hidden" accept=".csv">
+                             <p id="vocab-file-name" class="text-gray-600 mt-2 text-sm text-center"></p>
+                         </div>
+                         <div>
+                             <label class="block text-sm font-medium mb-1">File Cấu trúc (.csv)</label>
+                             <label for="structures-csv-upload" class="btn btn-secondary w-full"><i class="fas fa-upload mr-2"></i>Tải lên</label>
+                             <input type="file" id="structures-csv-upload" class="hidden" accept=".csv">
+                             <p id="structures-file-name" class="text-gray-600 mt-2 text-sm text-center"></p>
+                         </div>
                     </div>
                     <div class="mt-6">
                         <label for="cefr-level-slider" class="block text-sm font-medium mb-1">Trình độ (CEFR)</label>
@@ -114,6 +114,13 @@
                     <h2 class="text-2xl font-bold text-gray-700 mb-4">3. Cấu hình AI</h2>
                     <div class="space-y-4">
                         <div><label for="gemini-api-key" class="block text-sm font-medium">Google Gemini API Key</label><input type="password" id="gemini-api-key" class="input-field" placeholder="Dán API Key của bạn..."></div>
+                        <div>
+                            <label for="ai-model-select" class="block text-sm font-medium text-gray-700 mb-1">Mô hình Gemini</label>
+                            <select id="ai-model-select" class="input-field w-full">
+                                <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Nhanh & Tiết kiệm)</option>
+                                <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro (Chất lượng cao)</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </aside>
@@ -131,7 +138,8 @@
                     </div>
                     <div class="mt-6 text-center flex flex-wrap justify-center gap-4">
                         <button id="fetch-audio-btn" class="btn btn-secondary"><i class="fas fa-volume-up mr-2"></i>Tìm Audio</button>
-                        <button id="enrich-ai-btn" class="btn btn-secondary"><i class="fas fa-wand-magic-sparkles mr-2"></i>Làm giàu bằng AI</button>
+                        <button id="enrich-ai-btn" class="btn btn-secondary"><i class="fas fa-wand-magic-sparkles mr-2"></i>Làm giàu Tự động</button>
+                        <button id="manual-enrich-btn" class="btn btn-secondary"><i class="fas fa-paste mr-2"></i>Làm giàu Thủ công</button>
                     </div>
                 </div>
                 <div class="text-center"><button id="upload-btn" class="btn btn-primary text-lg w-full"><i class="fas fa-cloud-upload-alt mr-2"></i>Lưu Bộ Từ Vựng</button><p id="upload-log" class="font-semibold mt-2 h-5"></p></div>
@@ -140,6 +148,24 @@
     </div>
     
     <div id="custom-alert-modal" class="modal"></div>
+    <div id="manual-prompt-modal" class="modal">
+        <div class="glass-panel p-8 w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4">Làm giàu dữ liệu thủ công</h2>
+            <div class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-6 overflow-hidden">
+                <div class="flex flex-col h-full">
+                    <label class="font-medium mb-2">Bước 1: Sao chép Prompt này</label>
+                    <textarea id="manual-prompt-output" readonly class="input-field flex-grow font-mono text-xs"></textarea>
+                    <button id="copy-prompt-btn" class="btn btn-primary mt-2">Sao chép Prompt</button>
+                </div>
+                <div class="flex flex-col h-full">
+                    <label class="font-medium mb-2">Bước 2: Dán kết quả JSON từ Gemini vào đây</label>
+                    <textarea id="manual-prompt-input" class="input-field flex-grow font-mono text-xs" placeholder="Dán kết quả JSON tại đây..."></textarea>
+                    <button id="process-manual-result-btn" class="btn btn-primary mt-2">Cập nhật dữ liệu</button>
+                </div>
+            </div>
+            <button id="close-manual-modal-btn" class="btn btn-danger mt-6 mx-auto">Đóng</button>
+        </div>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
@@ -147,17 +173,17 @@
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
         // =================================================================
-        // == BƯỚC QUAN TRỌNG: ĐIỀN THÔNG TIN CỦA BẠN VÀO ĐÂY ==
+        // == PHẦN NÀY GIỮ NGUYÊN TỪ PHIÊN BẢN GỐC ==
         // =================================================================
-const firebaseConfig = {
-  apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
-  authDomain: "b1-baotram.firebaseapp.com",
-  projectId: "b1-baotram",
-  storageBucket: "b1-baotram.firebasestorage.app",
-  messagingSenderId: "948701163187",
-  appId: "1:948701163187:web:043f2d381d63e741114ac6",
-  measurementId: "G-33NHT07JHE"
-};
+        const firebaseConfig = {
+            apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
+            authDomain: "b1-baotram.firebaseapp.com",
+            projectId: "b1-baotram",
+            storageBucket: "b1-baotram.firebasestorage.app",
+            messagingSenderId: "948701163187",
+            appId: "1:948701163187:web:043f2d381d63e741114ac6",
+            measurementId: "G-33NHT07JHE"
+        };
         const CLOUD_FUNCTION_URL = "https://getoaldaudio-asjwauz37q-uc.a.run.app";
         // =================================================================
 
@@ -166,6 +192,7 @@ const firebaseConfig = {
         const auth = getAuth(app);
         let localWordList = [], vocabCsvText = '', structuresCsvText = '';
 
+        // PHẦN DOM ELEMENTS GIỮ NGUYÊN TỪ PHIÊN BẢN GỐC
         const DOM = {
             loginScreen: document.getElementById('login-screen'), mainContent: document.getElementById('main-content'),
             loginBtn: document.getElementById('login-btn'), logoutBtn: document.getElementById('logout-btn'),
@@ -173,15 +200,20 @@ const firebaseConfig = {
             loginError: document.getElementById('login-error'), testIdInput: document.getElementById('test-id'),
             testTitleInput: document.getElementById('test-title'), dataReviewSection: document.getElementById('data-review-section'),
             dataTableBody: document.getElementById('data-table-body'), fetchAudioBtn: document.getElementById('fetch-audio-btn'),
-            enrichAiBtn: document.getElementById('enrich-ai-btn'), uploadBtn: document.getElementById('upload-btn'),
-            uploadLog: document.getElementById('upload-log'), alertModal: document.getElementById('custom-alert-modal'), 
+            enrichAiBtn: document.getElementById('enrich-ai-btn'), manualEnrichBtn: document.getElementById('manual-enrich-btn'),
+            uploadBtn: document.getElementById('upload-btn'), uploadLog: document.getElementById('upload-log'),
+            alertModal: document.getElementById('custom-alert-modal'), 
             vocabCsvUploadInput: document.getElementById('vocab-csv-upload'), vocabFileNameDisplay: document.getElementById('vocab-file-name'),
             structuresCsvUploadInput: document.getElementById('structures-csv-upload'), structuresFileNameDisplay: document.getElementById('structures-file-name'),
             processFilesBtn: document.getElementById('process-files-btn'), darkModeToggle: document.getElementById('dark-mode-toggle'),
             cefrSlider: document.getElementById('cefr-level-slider'), cefrDisplay: document.getElementById('cefr-level-display'),
-            geminiApiKeyInput: document.getElementById('gemini-api-key'),
+            geminiApiKeyInput: document.getElementById('gemini-api-key'), aiModelSelect: document.getElementById('ai-model-select'),
+            manualPromptModal: document.getElementById('manual-prompt-modal'), manualPromptOutput: document.getElementById('manual-prompt-output'),
+            manualPromptInput: document.getElementById('manual-prompt-input'), copyPromptBtn: document.getElementById('copy-prompt-btn'),
+            processManualResultBtn: document.getElementById('process-manual-result-btn'), closeManualModalBtn: document.getElementById('close-manual-modal-btn'),
         };
 
+        // CÁC HÀM showAlert, parseAndStructureCSV, renderTable, uploadToFirebase, handleFileUpload, getCefrLevelDescription GIỮ NGUYÊN TỪ PHIÊN BẢN GỐC
         function showAlert(message) {
             DOM.alertModal.innerHTML = `<div class="glass-panel text-center p-8 rounded-lg"><p class="text-lg mb-6">${message}</p><button id="alert-ok-btn" class="btn btn-primary">OK</button></div>`;
             DOM.alertModal.classList.add('is-open');
@@ -208,7 +240,7 @@ const firebaseConfig = {
             vocab.forEach(v => {
                 const wordLower = v.word.toLowerCase();
                 const matchRegex = new RegExp(`\\b${wordLower}s?\\b`, 'i');
-                v.structures = structures.filter(s => matchRegex.test(s.phrase));
+                v.structures = structures.filter(s => matchRegex.test(s.phrase)).map(s => ({...s, applicationExamples: []}));
             });
             localWordList = vocab;
         }
@@ -219,11 +251,11 @@ const firebaseConfig = {
                 const row = document.createElement('tr');
                 row.className = 'border-b dark:border-slate-700 align-top';
                 const audioIconHTML = word.audioUrl ? `<a href="${word.audioUrl}" target="_blank" title="Nghe"><i class="fas fa-volume-up ml-2 text-blue-500"></i></a>` : '';
-                const structuresHTML = word.structures.map(s => {
-                    const examplesHTML = (s.applicationExamples || []).map((ex, exIdx) => `<li contenteditable="true" data-word-index="${index}" data-structure-index="${word.structures.indexOf(s)}" data-example-index="${exIdx}">${ex}</li>`).join('');
+                const structuresHTML = word.structures.map((s, sIdx) => {
+                    const examplesHTML = (s.applicationExamples || []).map((ex, exIdx) => `<li contenteditable="true" data-word-index="${index}" data-structure-index="${sIdx}" data-example-index="${exIdx}">${ex}</li>`).join('');
                     return `<div class="p-1.5 my-1 bg-violet-100 dark:bg-slate-700 rounded-md"><p class="font-semibold text-violet-800 dark:text-violet-300">${s.phrase}</p><p class="text-xs text-slate-600 dark:text-slate-400">${s.meaning}</p>${examplesHTML ? `<ul class="list-disc list-inside mt-1 text-sky-700 dark:text-sky-400">${examplesHTML}</ul>` : ''}</div>`;
                 }).join('');
-                const exampleHTML = word.exampleSentence ? `<div class="mt-2 p-1.5 bg-green-100 dark:bg-emerald-900/50 rounded-md"><p class="font-semibold text-green-800 dark:text-green-300">Ví dụ (Từ vựng):</p><p class="text-xs" contenteditable="true" data-word-index="${index}" data-field="exampleSentence">${word.exampleSentence}</p></div>` : '';
+                const exampleHTML = word.exampleSentence ? `<div class="mt-2 p-1.5 bg-green-100 dark:bg-emerald-900/50 rounded-md"><p class="font-semibold text-green-800 dark:text-green-300">Ví dụ:</p><p class="text-xs" contenteditable="true" data-word-index="${index}" data-field="exampleSentence">${word.exampleSentence}</p></div>` : '';
                 const distractorsHTML = word.distractors_en.length > 0 ? `<div class="text-xs"><p class="font-semibold">EN:</p><ul class="list-disc list-inside" data-word-index="${index}" data-field="distractors_en">${word.distractors_en.map((d, d_idx) => `<li contenteditable="true" data-distractor-index="${d_idx}">${d}</li>`).join('')}</ul><p class="font-semibold mt-1">VI:</p><ul class="list-disc list-inside" data-word-index="${index}" data-field="distractors_vi">${word.distractors_vi.map((d, d_idx) => `<li contenteditable="true" data-distractor-index="${d_idx}">${d}</li>`).join('')}</ul></div>` : '<span class="text-xs text-gray-400">Chưa có</span>';
 
                 row.innerHTML = `
@@ -270,6 +302,73 @@ const firebaseConfig = {
             if (value <= 70) return "B2"; if (value <= 90) return "C1"; return "C2";
         }
 
+        // CÁC HÀM LIÊN QUAN ĐẾN AI GIỮ NGUYÊN TỪ PHIÊN BẢN GỐC
+        async function callGeminiAPI(prompt, model) {
+            const apiKey = DOM.geminiApiKeyInput.value.trim();
+            if (!apiKey) throw new Error("Vui lòng nhập Google Gemini API Key.");
+            
+            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: "application/json" }
+            };
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                const errorBody = await response.json();
+                throw new Error(`Lỗi API Gemini: ${errorBody.error.message}`);
+            }
+            const result = await response.json();
+            const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!responseText) throw new Error("Cấu trúc phản hồi API không hợp lệ.");
+            return JSON.parse(responseText);
+        }
+
+        function getPromptForBatch(batch) {
+            const cefrLevel = getCefrLevelDescription();
+            const batchInput = batch.map(wordData => ({
+                id: wordData.id, word: wordData.word, type: wordData.type, meaning: wordData.meaning,
+                structures: wordData.structures.map(s => ({ phrase: s.phrase, meaning: s.meaning }))
+            }));
+            return `Bạn là một AI chuyên gia ngôn ngữ Anh. Hãy xử lý mảng JSON sau. Với MỖI object, hãy tạo ra một object mới trong mảng kết quả.
+Đầu vào: ${JSON.stringify(batchInput)}
+YÊU CẦU:
+Trả về một mảng JSON. Mỗi object phải có cấu trúc:
+{ "id": id_gốc, "ex": "Một câu ví dụ cho từ chính", "d_en": ["Từ gây nhiễu 1", "Từ 2", "Từ 3"], "d_vi": ["Nghĩa gây nhiễu 1", "Nghĩa 2", "Nghĩa 3"], "s": [ { "p": "Cấu trúc gốc 1", "exs": ["Ví dụ ứng dụng 1"] } ] }
+YÊU CẦU CHI TIẾT:
+1. "ex": Tạo MỘT câu ví dụ tiếng Anh tự nhiên.
+2. "d_en": Tạo 3 từ tiếng Anh gây nhiễu, cùng loại từ, KHÔNG đồng nghĩa trực tiếp, nhưng liên quan về chủ đề.
+3. "d_vi": Tạo 3 định nghĩa tiếng Việt gây nhiễu, KHÔNG dịch thẳng từ "d_en".
+4. "s": Với mỗi cấu trúc, tạo MỘT ví dụ ứng dụng trong mảng "exs".
+5. QUAN TRỌNG: Toàn bộ nội dung phải phù hợp với trình độ ${cefrLevel}.
+CHỈ trả về mảng JSON, không giải thích gì thêm.`;
+        }
+
+        function processAiResults(aiDataArray) {
+            if (!Array.isArray(aiDataArray)) throw new Error("Kết quả AI không phải là một mảng.");
+            aiDataArray.forEach(enrichedData => {
+                const wordToUpdate = localWordList.find(w => w.id === enrichedData.id);
+                if (wordToUpdate) {
+                    wordToUpdate.exampleSentence = enrichedData.ex || '';
+                    wordToUpdate.distractors_en = enrichedData.d_en || [];
+                    wordToUpdate.distractors_vi = enrichedData.d_vi || [];
+                    if (enrichedData.s && Array.isArray(enrichedData.s)) {
+                        enrichedData.s.forEach(enrichedStruct => {
+                            const originalStruct = wordToUpdate.structures.find(s => s.phrase === enrichedStruct.p);
+                            if (originalStruct) {
+                                originalStruct.applicationExamples = enrichedStruct.exs || [];
+                            }
+                        });
+                    }
+                    wordToUpdate.isEnriched = true;
+                }
+            });
+            renderTable();
+        }
+
         function setupEventListeners() {
             onAuthStateChanged(auth, user => {
                 DOM.loginScreen.classList.toggle('is-open', !user);
@@ -300,6 +399,9 @@ const firebaseConfig = {
             
             DOM.cefrSlider.addEventListener('input', () => DOM.cefrDisplay.textContent = getCefrLevelDescription());
             
+            // =================================================================
+            // == PHẦN CODE ĐÃ SỬA: COPY TỪ PHIÊN BẢN (2) SANG ==
+            // =================================================================
             DOM.fetchAudioBtn.addEventListener('click', async () => {
                 if (localWordList.length === 0) return showAlert("Chưa có dữ liệu.");
 
@@ -323,16 +425,66 @@ const firebaseConfig = {
                 button.disabled = false;
                 button.innerHTML = originalHTML;
             });
+            // =================================================================
+            // == KẾT THÚC PHẦN CODE ĐÃ SỬA ==
+            // =================================================================
 
             DOM.enrichAiBtn.addEventListener('click', async () => {
-                showAlert("Chức năng AI đang được phát triển!");
-                // Logic for AI enrichment will be added here in the future
+                const wordsToEnrich = localWordList.filter(w => !w.isEnriched);
+                if (wordsToEnrich.length === 0) return showAlert("Tất cả các từ đã được làm giàu.");
+                
+                const button = DOM.enrichAiBtn;
+                const originalHTML = button.innerHTML;
+                button.disabled = true;
+                button.innerHTML = `<div class="loader"></div><span class="ml-2">Đang xử lý...</span>`;
+                
+                try {
+                    const BATCH_SIZE = 50;
+                    for (let i = 0; i < wordsToEnrich.length; i += BATCH_SIZE) {
+                        const batch = wordsToEnrich.slice(i, i + BATCH_SIZE);
+                        const prompt = getPromptForBatch(batch);
+                        const model = DOM.aiModelSelect.value;
+                        const results = await callGeminiAPI(prompt, model);
+                        processAiResults(results);
+                    }
+                    showAlert("Làm giàu dữ liệu bằng AI thành công!");
+                } catch (error) {
+                    showAlert(`Lỗi khi làm giàu dữ liệu: ${error.message}`);
+                } finally {
+                    button.disabled = false;
+                    button.innerHTML = originalHTML;
+                }
+            });
+
+            DOM.manualEnrichBtn.addEventListener('click', () => {
+                const wordsToEnrich = localWordList.filter(w => !w.isEnriched);
+                if (wordsToEnrich.length === 0) return showAlert("Tất cả các từ đã được làm giàu.");
+                DOM.manualPromptOutput.value = getPromptForBatch(wordsToEnrich);
+                DOM.manualPromptInput.value = '';
+                DOM.manualPromptModal.classList.add('is-open');
+            });
+            DOM.closeManualModalBtn.addEventListener('click', () => DOM.manualPromptModal.classList.remove('is-open'));
+            DOM.copyPromptBtn.addEventListener('click', () => {
+                DOM.manualPromptOutput.select();
+                document.execCommand('copy');
+                showAlert("Đã sao chép Prompt!");
+            });
+            DOM.processManualResultBtn.addEventListener('click', () => {
+                try {
+                    const jsonText = DOM.manualPromptInput.value.trim().replace(/^```json\s*|```\s*$/g, '');
+                    const results = JSON.parse(jsonText);
+                    processAiResults(results);
+                    DOM.manualPromptModal.classList.remove('is-open');
+                    showAlert("Cập nhật thủ công thành công!");
+                } catch (error) {
+                    showAlert(`Lỗi xử lý JSON: ${error.message}`);
+                }
             });
             
             DOM.dataTableBody.addEventListener('blur', (e) => {
                 const target = e.target;
                 if (target.hasAttribute('contenteditable')) {
-                    const wordIndex = parseInt(target.closest('tr').querySelector('[data-word-index]').dataset.wordIndex, 10);
+                    const wordIndex = parseInt(target.dataset.wordIndex, 10);
                     const field = target.dataset.field;
                     const newText = target.textContent;
                     if (isNaN(wordIndex) || !localWordList[wordIndex]) return;
@@ -343,11 +495,11 @@ const firebaseConfig = {
                     } else if (target.dataset.structureIndex !== undefined) {
                         const sIdx = parseInt(target.dataset.structureIndex, 10);
                         const eIdx = parseInt(target.dataset.exampleIndex, 10);
-                        if (!isNaN(sIdx) && !isNaN(eIdx)) {
-                            wordData.structures[sIdx].applicationExamples[eIdx] = newText;
-                        }
+                        if (!isNaN(sIdx) && !isNaN(eIdx)) wordData.structures[sIdx].applicationExamples[eIdx] = newText;
                     } else if (target.dataset.distractorIndex !== undefined) {
-                        // Logic for distractors
+                        const dIdx = parseInt(target.dataset.distractorIndex, 10);
+                        const dField = target.closest('ul').dataset.field;
+                        if (!isNaN(dIdx) && dField) wordData[dField][dIdx] = newText;
                     }
                 }
             }, true);
