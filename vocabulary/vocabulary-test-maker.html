@@ -20,13 +20,14 @@
             --text-secondary: #94a3b8; --app-bg-start: #0f172a; --app-bg-end: #1e293b;
         }
         body { font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--app-bg-start); background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%); color: var(--text-primary); }
-        body.dark h1, body.dark h2, body.dark label, body.dark p { color: var(--text-primary); }
+        body.dark h1, body.dark h2, body.dark label, body.dark p, body.dark input, body.dark textarea, body.dark select { color: var(--text-primary); }
         body.dark .text-gray-700 { color: var(--text-primary) !important; }
+        body.dark #dark-mode-label .fa-moon { color: var(--primary-accent); } #dark-mode-label .fa-sun { color: #f59e0b; }
         .background-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
-        .shape { position: absolute; border-radius: 50%; filter: blur(25px); opacity: 0.6; }
-        .shape1 { width: 250px; height: 250px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); top: 10%; left: 5%; animation: float 28s infinite alternate ease-in-out; }
-        .shape2 { width: 180px; height: 180px; background: linear-gradient(135deg, #14b8a6, #67e8f9); bottom: 15%; right: 10%; animation: float 32s infinite alternate ease-in-out; }
-        @keyframes float { from { transform: translateY(20px); } to { transform: translateY(-20px); } }
+        .shape { position: absolute; border-radius: 50%; filter: blur(25px); opacity: 0.6; animation: float 30s infinite alternate ease-in-out; }
+        .shape1 { width: 250px; height: 250px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); top: 10%; left: 5%; }
+        .shape2 { width: 180px; height: 180px; background: linear-gradient(135deg, #14b8a6, #67e8f9); bottom: 15%; right: 10%; animation-duration: 35s; }
+        @keyframes float { from { transform: translateY(20px) scale(1); } to { transform: translateY(-20px) scale(1.05); } }
         .glass-panel { background: var(--glass-bg-color); backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity)); border-radius: 24px; border: 1px solid var(--glass-border-color); box-shadow: 0 8px 32px 0 var(--shadow-color); }
         .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
         .btn:disabled { cursor: not-allowed; opacity: 0.6; transform: none !important; }
@@ -41,6 +42,7 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         #data-table th { position: sticky; top: 0; background-color: rgba(255,255,255,0.6); backdrop-filter: blur(5px); z-index: 10; }
         body.dark #data-table th { background-color: rgba(29, 39, 58, 0.6); }
+        [contenteditable]:focus { outline: 2px solid var(--primary-accent); background-color: rgba(255, 255, 255, 0.7); border-radius: 4px; }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -48,7 +50,7 @@
 
     <div id="login-screen" class="modal is-open">
         <div class="glass-panel p-8 rounded-2xl shadow-xl text-center w-full max-w-sm">
-            <h2 class="text-2xl font-bold mb-6">Đăng nhập Giáo viên</h2>
+            <h2 class="text-2xl font-bold mb-6">Đăng nhập</h2>
             <div class="space-y-4 text-left">
                 <div><label for="email-input" class="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" id="email-input" class="input-field"></div>
                 <div><label for="password-input" class="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label><input type="password" id="password-input" class="input-field"></div>
@@ -60,8 +62,19 @@
 
     <div id="main-content" class="max-w-screen-xl mx-auto" style="display: none;">
         <header class="flex justify-between items-center mb-8">
-            <h1 class="text-4xl font-bold text-gray-800">Trình Soạn Thảo Bộ Từ Vựng</h1>
-            <button id="logout-btn" class="btn btn-danger">Đăng xuất</button>
+            <h1 id="page-title" class="text-4xl font-bold">Trình Soạn Thảo Bộ Từ Vựng</h1>
+            <div class="flex items-center gap-4">
+                <label id="dark-mode-label" class="flex items-center cursor-pointer text-slate-500">
+                    <i class="fas fa-moon mr-2"></i>
+                    <div class="relative">
+                        <input type="checkbox" id="dark-mode-toggle" class="sr-only">
+                        <div class="block bg-gray-600 w-14 h-8 rounded-full"></div>
+                        <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
+                    </div>
+                    <i class="fas fa-sun ml-2"></i>
+                </label>
+                <button id="logout-btn" class="btn btn-danger">Đăng xuất</button>
+            </div>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
@@ -74,39 +87,52 @@
                     </div>
                 </div>
                  <div class="glass-panel p-6">
-                    <h2 class="text-2xl font-bold text-gray-700 mb-4">2. Nhập liệu</h2>
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4">2. Nhập liệu & Cài đặt</h2>
                      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label for="vocab-csv-upload" class="block text-sm font-medium text-gray-700 mb-1">File Từ vựng (.csv)</label>
+                            <label class="block text-sm font-medium mb-1">File Từ vựng (.csv)</label>
                             <label for="vocab-csv-upload" class="btn btn-secondary w-full"><i class="fas fa-upload mr-2"></i>Tải lên</label>
                             <input type="file" id="vocab-csv-upload" class="hidden" accept=".csv">
                             <p id="vocab-file-name" class="text-gray-600 mt-2 text-sm text-center"></p>
                         </div>
                          <div>
-                            <label for="structures-csv-upload" class="block text-sm font-medium text-gray-700 mb-1">File Cấu trúc (.csv)</label>
+                            <label class="block text-sm font-medium mb-1">File Cấu trúc (.csv)</label>
                             <label for="structures-csv-upload" class="btn btn-secondary w-full"><i class="fas fa-upload mr-2"></i>Tải lên</label>
                             <input type="file" id="structures-csv-upload" class="hidden" accept=".csv">
                             <p id="structures-file-name" class="text-gray-600 mt-2 text-sm text-center"></p>
                         </div>
                     </div>
+                    <div class="mt-6">
+                        <label for="cefr-level-slider" class="block text-sm font-medium mb-1">Trình độ (CEFR)</label>
+                        <input type="range" id="cefr-level-slider" min="0" max="100" value="50" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700">
+                        <div class="flex justify-between text-xs mt-1"><span>A1</span><span>A2</span><span>B1</span><span>B2</span><span>C1</span><span>C2</span></div>
+                        <p id="cefr-level-display" class="text-center font-semibold mt-2"></p>
+                    </div>
                     <div class="text-center mt-6"><button id="process-files-btn" class="btn btn-primary">Xử lý Dữ liệu</button></div>
+                </div>
+                 <div class="glass-panel p-6">
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4">3. Cấu hình AI</h2>
+                    <div class="space-y-4">
+                        <div><label for="gemini-api-key" class="block text-sm font-medium">Google Gemini API Key</label><input type="password" id="gemini-api-key" class="input-field" placeholder="Dán API Key của bạn..."></div>
+                    </div>
                 </div>
             </aside>
 
             <main class="lg:col-span-3 space-y-8">
                 <div id="data-review-section" class="glass-panel p-6 hidden">
-                     <h2 class="text-2xl font-bold text-gray-700 mb-4">3. Bảng dữ liệu & Làm giàu</h2>
-                    <div id="table-container" class="max-h-[60vh] overflow-auto rounded-lg border border-white/50">
+                     <h2 class="text-2xl font-bold text-gray-700 mb-4">4. Bảng dữ liệu & Làm giàu</h2>
+                    <div id="table-container" class="max-h-[80vh] overflow-auto rounded-lg border border-white/50">
                         <table id="data-table" class="w-full text-sm">
                             <thead>
-                                <tr class="text-left"><th class="p-3">Từ vựng / Phiên âm</th><th class="p-3">Nghĩa</th><th class="p-3">Cấu trúc</th></tr>
+                                <tr class="text-left"><th class="p-3">Từ vựng / Phiên âm</th><th class="p-3">Nghĩa</th><th class="p-3">Cấu trúc & Ví dụ</th><th class="p-3">Từ gây nhiễu</th><th class="p-3 text-center">AI</th></tr>
                             </thead>
                             <tbody id="data-table-body"></tbody>
                         </table>
                     </div>
-                    <div class="mt-6 text-center">
-                        <button id="fetch-audio-btn" class="btn btn-secondary"><i class="fas fa-volume-up mr-2"></i>Tìm link âm thanh</button>
-                        </div>
+                    <div class="mt-6 text-center flex flex-wrap justify-center gap-4">
+                        <button id="fetch-audio-btn" class="btn btn-secondary"><i class="fas fa-volume-up mr-2"></i>Tìm Audio</button>
+                        <button id="enrich-ai-btn" class="btn btn-secondary"><i class="fas fa-wand-magic-sparkles mr-2"></i>Làm giàu bằng AI</button>
+                    </div>
                 </div>
                 <div class="text-center"><button id="upload-btn" class="btn btn-primary text-lg w-full"><i class="fas fa-cloud-upload-alt mr-2"></i>Lưu Bộ Từ Vựng</button><p id="upload-log" class="font-semibold mt-2 h-5"></p></div>
             </main>
@@ -123,28 +149,22 @@
         // =================================================================
         // == BƯỚC QUAN TRỌNG: ĐIỀN THÔNG TIN CỦA BẠN VÀO ĐÂY ==
         // =================================================================
-
-        // 1. Dán cấu hình Firebase của PROJECT SPARK (chứa giao diện app)
-const firebaseConfig = {
-  apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
-  authDomain: "b1-baotram.firebaseapp.com",
-  projectId: "b1-baotram",
-  storageBucket: "b1-baotram.firebasestorage.app",
-  messagingSenderId: "948701163187",
-  appId: "1:948701163187:web:043f2d381d63e741114ac6",
-  measurementId: "G-33NHT07JHE"
-};
-
-        // 2. Dán URL của Cloud Function đã triển khai thành công
+        const firebaseConfig = {
+            apiKey: "AIza...",
+            authDomain: "b1-baotram.firebaseapp.com",
+            projectId: "b1-baotram",
+            storageBucket: "b1-baotram.appspot.com",
+            messagingSenderId: "948701163187",
+            appId: "1:948701163187:web:043f2d381d63e741114ac6",
+            measurementId: "G-33NHT07JHE"
+        };
         const CLOUD_FUNCTION_URL = "https://getoaldaudio-asjwauz37q-uc.a.run.app";
-
         // =================================================================
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
-        let localWordList = [];
-        let vocabCsvText = '', structuresCsvText = '';
+        let localWordList = [], vocabCsvText = '', structuresCsvText = '';
 
         const DOM = {
             loginScreen: document.getElementById('login-screen'), mainContent: document.getElementById('main-content'),
@@ -153,11 +173,13 @@ const firebaseConfig = {
             loginError: document.getElementById('login-error'), testIdInput: document.getElementById('test-id'),
             testTitleInput: document.getElementById('test-title'), dataReviewSection: document.getElementById('data-review-section'),
             dataTableBody: document.getElementById('data-table-body'), fetchAudioBtn: document.getElementById('fetch-audio-btn'),
-            uploadBtn: document.getElementById('upload-btn'), uploadLog: document.getElementById('upload-log'),
-            alertModal: document.getElementById('custom-alert-modal'), 
+            enrichAiBtn: document.getElementById('enrich-ai-btn'), uploadBtn: document.getElementById('upload-btn'),
+            uploadLog: document.getElementById('upload-log'), alertModal: document.getElementById('custom-alert-modal'), 
             vocabCsvUploadInput: document.getElementById('vocab-csv-upload'), vocabFileNameDisplay: document.getElementById('vocab-file-name'),
             structuresCsvUploadInput: document.getElementById('structures-csv-upload'), structuresFileNameDisplay: document.getElementById('structures-file-name'),
-            processFilesBtn: document.getElementById('process-files-btn'),
+            processFilesBtn: document.getElementById('process-files-btn'), darkModeToggle: document.getElementById('dark-mode-toggle'),
+            cefrSlider: document.getElementById('cefr-level-slider'), cefrDisplay: document.getElementById('cefr-level-display'),
+            geminiApiKeyInput: document.getElementById('gemini-api-key'),
         };
 
         function showAlert(message) {
@@ -171,7 +193,7 @@ const firebaseConfig = {
             const vocab = vocabRows.map((row, index) => {
                 const columns = row.split(',').map(c => c.trim().replace(/"/g, ''));
                 if (columns.length >= 4 && columns[0]) {
-                    return { id: index + 1, word: columns[0], type: columns[1], pronunciation: columns[2], meaning: columns[3], audioUrl: '', structures: [] };
+                    return { id: index + 1, word: columns[0], type: columns[1], pronunciation: columns[2], meaning: columns[3], audioUrl: '', structures: [], exampleSentence: '', distractors_en: [], distractors_vi: [], isEnriched: false };
                 }
                 return null;
             }).filter(Boolean);
@@ -193,16 +215,23 @@ const firebaseConfig = {
 
         function renderTable() {
             DOM.dataTableBody.innerHTML = '';
-            localWordList.forEach(word => {
+            localWordList.forEach((word, index) => {
                 const row = document.createElement('tr');
-                row.className = 'border-b dark:border-slate-700';
-                const audioIconHTML = word.audioUrl ? `<a href="${word.audioUrl}" target="_blank" title="Nghe" class="ml-2 text-blue-500"><i class="fas fa-volume-up"></i></a>` : '';
-                const structuresHTML = word.structures.map(s => `<div class="p-1 my-1 bg-violet-100 dark:bg-slate-700 rounded-md"><p class="font-semibold text-violet-800 dark:text-violet-300">${s.phrase}</p><p class="text-xs text-slate-600 dark:text-slate-400">${s.meaning}</p></div>`).join('');
+                row.className = 'border-b dark:border-slate-700 align-top';
+                const audioIconHTML = word.audioUrl ? `<a href="${word.audioUrl}" target="_blank" title="Nghe"><i class="fas fa-volume-up ml-2 text-blue-500"></i></a>` : '';
+                const structuresHTML = word.structures.map(s => {
+                    const examplesHTML = (s.applicationExamples || []).map((ex, exIdx) => `<li contenteditable="true" data-word-index="${index}" data-structure-index="${word.structures.indexOf(s)}" data-example-index="${exIdx}">${ex}</li>`).join('');
+                    return `<div class="p-1.5 my-1 bg-violet-100 dark:bg-slate-700 rounded-md"><p class="font-semibold text-violet-800 dark:text-violet-300">${s.phrase}</p><p class="text-xs text-slate-600 dark:text-slate-400">${s.meaning}</p>${examplesHTML ? `<ul class="list-disc list-inside mt-1 text-sky-700 dark:text-sky-400">${examplesHTML}</ul>` : ''}</div>`;
+                }).join('');
+                const exampleHTML = word.exampleSentence ? `<div class="mt-2 p-1.5 bg-green-100 dark:bg-emerald-900/50 rounded-md"><p class="font-semibold text-green-800 dark:text-green-300">Ví dụ (Từ vựng):</p><p class="text-xs" contenteditable="true" data-word-index="${index}" data-field="exampleSentence">${word.exampleSentence}</p></div>` : '';
+                const distractorsHTML = word.distractors_en.length > 0 ? `<div class="text-xs"><p class="font-semibold">EN:</p><ul class="list-disc list-inside" data-word-index="${index}" data-field="distractors_en">${word.distractors_en.map((d, d_idx) => `<li contenteditable="true" data-distractor-index="${d_idx}">${d}</li>`).join('')}</ul><p class="font-semibold mt-1">VI:</p><ul class="list-disc list-inside" data-word-index="${index}" data-field="distractors_vi">${word.distractors_vi.map((d, d_idx) => `<li contenteditable="true" data-distractor-index="${d_idx}">${d}</li>`).join('')}</ul></div>` : '<span class="text-xs text-gray-400">Chưa có</span>';
 
                 row.innerHTML = `
-                    <td class="p-3 align-top"><div class="flex items-center"><p class="font-bold">${word.word}</p>${audioIconHTML}</div><p class="text-sm text-gray-600">${word.pronunciation} (${word.type})</p></td>
-                    <td class="p-3 align-top">${word.meaning}</td>
-                    <td class="p-3 align-top text-xs">${structuresHTML || '<span class="text-gray-400">Không có</span>'}</td>
+                    <td class="p-3"><div class="flex items-center"><p class="font-bold text-base" contenteditable="true" data-word-index="${index}" data-field="word">${word.word}</p>${audioIconHTML}</div><p class="font-mono text-sm text-violet-700 dark:text-violet-400" contenteditable="true" data-word-index="${index}" data-field="pronunciation">${word.pronunciation}</p><p class="text-xs text-slate-500">(${word.type})</p></td>
+                    <td class="p-3" contenteditable="true" data-word-index="${index}" data-field="meaning">${word.meaning}</td>
+                    <td class="p-3 text-xs">${structuresHTML}${exampleHTML}</td>
+                    <td class="p-3">${distractorsHTML}</td>
+                    <td class="p-3 text-center">${word.isEnriched ? '<i class="fas fa-check-circle text-2xl text-green-500"></i>' : '<i class="fas fa-hourglass-half text-2xl text-gray-400"></i>'}</td>
                 `;
                 DOM.dataTableBody.appendChild(row);
             });
@@ -212,7 +241,6 @@ const firebaseConfig = {
             const testId = DOM.testIdInput.value.trim();
             const title = DOM.testTitleInput.value.trim();
             if (!testId || !title || localWordList.length === 0) return showAlert("Vui lòng nhập ID, Tiêu đề và xử lý dữ liệu.");
-            
             DOM.uploadBtn.disabled = true;
             DOM.uploadLog.textContent = 'Đang lưu...';
             try {
@@ -224,32 +252,28 @@ const firebaseConfig = {
                 DOM.uploadBtn.disabled = false;
             }
         }
-
+        
         const handleFileUpload = (event, type) => {
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = (e) => {
-                if (type === 'vocab') {
-                    vocabCsvText = e.target.result;
-                    DOM.vocabFileNameDisplay.textContent = file.name;
-                } else {
-                    structuresCsvText = e.target.result;
-                    DOM.structuresFileNameDisplay.textContent = file.name;
-                }
+                if (type === 'vocab') { vocabCsvText = e.target.result; DOM.vocabFileNameDisplay.textContent = file.name; } 
+                else { structuresCsvText = e.target.result; DOM.structuresFileNameDisplay.textContent = file.name; }
             };
             reader.readAsText(file);
         };
 
+        function getCefrLevelDescription() {
+            const value = parseInt(DOM.cefrSlider.value, 10);
+            if (value <= 10) return "A1"; if (value <= 30) return "A2"; if (value <= 50) return "B1";
+            if (value <= 70) return "B2"; if (value <= 90) return "C1"; return "C2";
+        }
+
         function setupEventListeners() {
             onAuthStateChanged(auth, user => {
-                if (user) {
-                    DOM.loginScreen.classList.remove('is-open');
-                    DOM.mainContent.style.display = 'block';
-                } else {
-                    DOM.loginScreen.classList.add('is-open');
-                    DOM.mainContent.style.display = 'none';
-                }
+                DOM.loginScreen.classList.toggle('is-open', !user);
+                DOM.mainContent.style.display = user ? 'block' : 'none';
             });
 
             DOM.loginBtn.addEventListener('click', async () => {
@@ -259,7 +283,6 @@ const firebaseConfig = {
 
             DOM.logoutBtn.addEventListener('click', () => signOut(auth));
             DOM.uploadBtn.addEventListener('click', uploadToFirebase);
-
             DOM.vocabCsvUploadInput.addEventListener('change', (e) => handleFileUpload(e, 'vocab'));
             DOM.structuresCsvUploadInput.addEventListener('change', (e) => handleFileUpload(e, 'structures'));
             
@@ -269,16 +292,21 @@ const firebaseConfig = {
                 renderTable();
                 DOM.dataReviewSection.classList.remove('hidden');
             });
+
+            DOM.darkModeToggle.addEventListener('change', () => {
+                document.body.classList.toggle('dark');
+                DOM.darkModeToggle.nextElementSibling.nextElementSibling.style.transform = DOM.darkModeToggle.checked ? 'translateX(100%)' : 'translateX(0)';
+            });
+            
+            DOM.cefrSlider.addEventListener('input', () => DOM.cefrDisplay.textContent = getCefrLevelDescription());
             
             DOM.fetchAudioBtn.addEventListener('click', async () => {
                 if (localWordList.length === 0) return showAlert("Chưa có dữ liệu.");
-                if (CLOUD_FUNCTION_URL.includes("URL_CUA_FUNCTION")) return showAlert("Lỗi: Vui lòng cấu hình URL của Cloud Function trong code.");
 
                 const button = DOM.fetchAudioBtn;
                 const originalHTML = button.innerHTML;
                 button.disabled = true;
-                let foundCount = 0;
-
+                
                 for (let i = 0; i < localWordList.length; i++) {
                     const wordData = localWordList[i];
                     button.innerHTML = `<div class="loader"></div><span class="ml-2">Đang tìm... (${i + 1}/${localWordList.length})</span>`;
@@ -287,20 +315,45 @@ const firebaseConfig = {
                         const response = await fetch(`${CLOUD_FUNCTION_URL}?word=${encodeURIComponent(wordData.word)}`);
                         if (!response.ok) throw new Error(`Server error`);
                         const result = await response.json();
-                        if (result.success) {
-                            wordData.audioUrl = result.audioUrl;
-                            foundCount++;
-                        }
+                        if (result.success) wordData.audioUrl = result.audioUrl;
                     } catch (error) { console.error(`Lỗi với từ '${wordData.word}':`, error); }
                     await new Promise(resolve => setTimeout(resolve, 50));
                 }
                 renderTable();
                 button.disabled = false;
                 button.innerHTML = originalHTML;
-                showAlert(`Hoàn tất! Tìm thấy ${foundCount}/${localWordList.length} link.`);
             });
+
+            DOM.enrichAiBtn.addEventListener('click', async () => {
+                showAlert("Chức năng AI đang được phát triển!");
+                // Logic for AI enrichment will be added here in the future
+            });
+            
+            DOM.dataTableBody.addEventListener('blur', (e) => {
+                const target = e.target;
+                if (target.hasAttribute('contenteditable')) {
+                    const wordIndex = parseInt(target.closest('tr').querySelector('[data-word-index]').dataset.wordIndex, 10);
+                    const field = target.dataset.field;
+                    const newText = target.textContent;
+                    if (isNaN(wordIndex) || !localWordList[wordIndex]) return;
+                    
+                    const wordData = localWordList[wordIndex];
+                    if (field) {
+                        wordData[field] = newText;
+                    } else if (target.dataset.structureIndex !== undefined) {
+                        const sIdx = parseInt(target.dataset.structureIndex, 10);
+                        const eIdx = parseInt(target.dataset.exampleIndex, 10);
+                        if (!isNaN(sIdx) && !isNaN(eIdx)) {
+                            wordData.structures[sIdx].applicationExamples[eIdx] = newText;
+                        }
+                    } else if (target.dataset.distractorIndex !== undefined) {
+                        // Logic for distractors
+                    }
+                }
+            }, true);
         }
 
+        DOM.cefrDisplay.textContent = getCefrLevelDescription();
         setupEventListeners();
     </script>
 </body>
