@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Học và Luyện tập Từ vựng</title>
+    <title>Vocab App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -39,14 +39,26 @@
         .progress-bar { background-color: #e5e7eb; border-radius: 9999px; height: 8px; overflow: hidden; }
         .progress-bar-fill { background-color: var(--primary-color); height: 100%; transition: width 0.4s ease; }
         
-        /* Flashcard Styles */
+        /* --- NEW & UPDATED FLASHCARD STYLES --- */
         .flashcard-viewer { display: flex; flex-direction: column; height: 70vh; max-width: 800px; margin: 0 auto; }
         .flashcard-main { flex-grow: 1; display: flex; align-items: center; justify-content: center; perspective: 1000px; }
         .flashcard { width: 100%; height: 80%; max-height: 400px; cursor: pointer; position: relative; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1); }
         .flashcard.is-flipped { transform: rotateY(180deg); }
-        .flashcard-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: var(--bg-card); border-radius: 1rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07); padding: 2rem; text-align: center; }
-        .flashcard-back { transform: rotateY(180deg); }
+        .flashcard-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 1rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07); padding: 2rem; text-align: center; border: 1px solid var(--border-color); }
+        .flashcard-front { background-image: linear-gradient(to top right, var(--bg-card), #f7f8ff); }
+        .flashcard-back { transform: rotateY(180deg); background-color: #f9fafb; }
+        .flashcard-nav { display: flex; justify-between; align-items: center; padding: 1.5rem 0; }
         
+        /* --- NEW ANIMATIONS FOR CARD TRANSITION --- */
+        @keyframes slideOutLeft { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-100%); opacity: 0; } }
+        @keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+        @keyframes slideInLeft { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideInRight { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .slide-out-left { animation: slideOutLeft 0.3s forwards ease-in-out; }
+        .slide-out-right { animation: slideOutRight 0.3s forwards ease-in-out; }
+        .slide-in-left { animation: slideInLeft 0.3s forwards ease-in-out; }
+        .slide-in-right { animation: slideInRight 0.3s forwards ease-in-out; }
+
         /* Mindmap Styles */
         .mindmap-node { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 50%; text-align: center; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.3s ease; }
         .mindmap-node.center { width: 150px; height: 150px; background-color: var(--primary-color); color: white; font-weight: bold; font-size: 1.25rem; z-index: 10; }
@@ -61,10 +73,7 @@
         .answer-option.incorrect { border-color: var(--incorrect-color); background-color: #fef2f2; color: #991b1b; }
         .token-area { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 1rem; border: 2px dashed #cbd5e1; border-radius: 0.5rem; min-height: 80px; }
         .word-token { padding: 0.5rem 1rem; background-color: #eef2ff; color: #4338ca; border-radius: 0.5rem; font-weight: 500; cursor: pointer; }
-        .matching-item { padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 0.5rem; margin-bottom: 0.5rem; cursor: pointer; transition: all 0.2s; background-color: #fff; }
-        .matching-item.selected { border-color: var(--primary-color); background-color: #eef2ff; font-weight: 600; }
-        .matching-item.correct-match { background-color: #dcfce7; border-color: #22c55e; opacity: 0.6; cursor: default; }
-
+        
         .fade-in { animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -280,9 +289,9 @@
                         </div>
                         <div class="flashcard-main"><div class="flashcard" id="flashcard"></div></div>
                         <div class="flashcard-nav">
-                            <button id="prev-card-btn" class="btn btn-secondary !rounded-full !w-14 !h-14"><i class="fas fa-arrow-left"></i></button>
+                            <button id="prev-card-btn" class="btn btn-secondary !rounded-full !w-14 !h-14 text-xl"><i class="fas fa-arrow-left"></i></button>
                             <p class="text-sm text-gray-500">Nhấn vào thẻ để lật</p>
-                            <button id="next-card-btn" class="btn btn-secondary !rounded-full !w-14 !h-14"><i class="fas fa-arrow-right"></i></button>
+                            <button id="next-card-btn" class="btn btn-secondary !rounded-full !w-14 !h-14 text-xl"><i class="fas fa-arrow-right"></i></button>
                         </div>
                     </div>
                 </div>`;
@@ -307,17 +316,29 @@
                 const frontHTML = `<div class="text-4xl font-bold">${isStructure ? item.phrase : item.word}</div>`;
                 const backHTML = isStructure
                     ? `<div class="text-2xl font-semibold">${item.meaning}</div><p class="text-slate-500 mt-4 italic">"${item.applicationExamples[0] || ''}"</p>`
-                    : `<div class="text-2xl font-semibold">${item.meaning}</div><p class="text-slate-500 mt-2">${item.pronunciation} <span class="mx-2">&bull;</span> ${item.type}</p><p class="text-slate-500 mt-4 italic">"${item.exampleSentence || ''}"</p>`;
+                    : `<div class="text-3xl font-semibold">${item.meaning}</div><p class="text-slate-500 mt-2 text-lg">${item.pronunciation} <span class="mx-2">&bull;</span> ${item.type}</p><p class="text-slate-500 mt-4 italic">"${item.exampleSentence || ''}"</p>`;
                 
-                setTimeout(() => { card.innerHTML = `<div class="flashcard-face flashcard-front">${frontHTML}</div><div class="flashcard-face flashcard-back">${backHTML}</div>`; }, 100);
+                card.innerHTML = `<div class="flashcard-face flashcard-front">${frontHTML}</div><div class="flashcard-face flashcard-back">${backHTML}</div>`;
                 document.getElementById('card-counter').textContent = `${this.state.currentIndex + 1} / ${this.state.currentSessionItems.length}`;
             },
 
             navigateCard(direction) {
-                const newIndex = this.state.currentIndex + direction;
-                const total = this.state.currentSessionItems.length;
-                this.state.currentIndex = (newIndex + total) % total;
-                this.updateFlashcardView();
+                const card = document.getElementById('flashcard');
+                if (!card) return;
+
+                const animationClass = direction === 1 ? 'slide-out-left' : 'slide-out-right';
+                card.classList.add(animationClass);
+
+                setTimeout(() => {
+                    const newIndex = this.state.currentIndex + direction;
+                    const total = this.state.currentSessionItems.length;
+                    this.state.currentIndex = (newIndex + total) % total;
+                    
+                    card.classList.remove('slide-out-left', 'slide-out-right');
+                    this.updateFlashcardView();
+                    card.classList.add(direction === 1 ? 'slide-in-right' : 'slide-in-left');
+                    setTimeout(() => card.classList.remove('slide-in-right', 'slide-in-left'), 300);
+                }, 300);
             },
 
             renderMindmapFamilySelection() {
@@ -585,7 +606,6 @@
             
             getContextualMCQHTML(item, isExample = false) {
                 this.state.currentCorrectAnswer = item.word;
-                // Sửa lỗi: Đảm bảo thay thế cả dạng số nhiều (plural)
                 const wordRegex = new RegExp(`\\b${item.word.replace(/s$/, '')}(s?)\\b`, 'gi');
                 const sentence = item.exampleSentence.replace(wordRegex, '<span class="font-bold text-indigo-600">[...]</span>');
                 const distractors = this.shuffleArray([...item.distractors_en]).slice(0, 3);
