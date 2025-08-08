@@ -9,88 +9,45 @@
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --blur-intensity: 12px;
-            --saturation-intensity: 150%;
-            --glass-bg-color: rgba(255, 255, 255, 0.45);
-            --glass-border-color: rgba(255, 255, 255, 0.6);
-            --shadow-color: rgba(67, 56, 202, 0.15);
-            --primary-accent: #6d28d9;
-            --text-primary: #0f172a;
-            --text-secondary: #475569;
-            --app-bg-start: #f5f7ff;
-            --app-bg-end: #e0e7ff;
+            --blur-intensity: 12px; --saturation-intensity: 150%; --glass-bg-color: rgba(255, 255, 255, 0.45);
+            --glass-border-color: rgba(255, 255, 255, 0.6); --shadow-color: rgba(67, 56, 202, 0.15);
+            --primary-accent: #6d28d9; --text-primary: #0f172a; --text-secondary: #475569;
+            --app-bg-start: #f5f7ff; --app-bg-end: #e0e7ff;
         }
         body.dark {
-            --glass-bg-color: rgba(29, 39, 58, 0.45);
-            --glass-border-color: rgba(255, 255, 255, 0.2);
-            --shadow-color: rgba(0, 0, 0, 0.25);
-            --primary-accent: #a78bfa;
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --app-bg-start: #0f172a;
-            --app-bg-end: #1e293b;
+            --glass-bg-color: rgba(29, 39, 58, 0.45); --glass-border-color: rgba(255, 255, 255, 0.2);
+            --shadow-color: rgba(0, 0, 0, 0.25); --primary-accent: #a78bfa; --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8; --app-bg-start: #0f172a; --app-bg-end: #1e293b;
         }
-        body {
-            font-family: 'Be Vietnam Pro', sans-serif;
-            background-color: var(--app-bg-start);
-            background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%);
-            color: var(--text-primary);
-        }
-        body.dark h1, body.dark h2, body.dark h3, body.dark label, body.dark p, body.dark select, body.dark input, body.dark textarea {
-             color: var(--text-primary);
-        }
+        body { font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--app-bg-start); background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%); color: var(--text-primary); }
+        body.dark h1, body.dark h2, body.dark label, body.dark p { color: var(--text-primary); }
         body.dark .text-gray-700 { color: var(--text-primary) !important; }
-        body.dark .text-gray-600 { color: var(--text-secondary) !important; }
-        body.dark .text-slate-500 { color: var(--text-secondary) !important; }
-        body.dark #dark-mode-label .fa-moon { color: var(--primary-accent); }
-        #dark-mode-label .fa-sun { color: #f59e0b; }
-
         .background-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
         .shape { position: absolute; border-radius: 50%; filter: blur(25px); opacity: 0.6; }
         .shape1 { width: 250px; height: 250px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); top: 10%; left: 5%; animation: float 28s infinite alternate ease-in-out; }
         .shape2 { width: 180px; height: 180px; background: linear-gradient(135deg, #14b8a6, #67e8f9); bottom: 15%; right: 10%; animation: float 32s infinite alternate ease-in-out; }
-        @keyframes float { from { transform: translateY(20px) scale(1); } to { transform: translateY(-20px) scale(1.05); } }
-        .glass-panel {
-            position: relative;
-            background: var(--glass-bg-color);
-            backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity));
-            border-radius: 24px;
-            border: 1px solid var(--glass-border-color);
-            box-shadow: 0 8px 32px 0 var(--shadow-color);
-        }
-        .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; }
-        .btn-primary { background: var(--primary-accent); color: white; box-shadow: 0 4px 15px rgba(91, 33, 182, 0.25); }
-        .btn-primary:hover:not(:disabled) { background: #5b21b6; transform: translateY(-2px); }
-        .btn-primary:disabled { background-color: #a5b4fc; cursor: not-allowed; transform: none; box-shadow: none; }
-        .btn-secondary { background: rgba(255, 255, 255, 0.4); color: var(--text-primary); border-color: rgba(255, 255, 255, 0.6); }
+        @keyframes float { from { transform: translateY(20px); } to { transform: translateY(-20px); } }
+        .glass-panel { background: var(--glass-bg-color); backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity)); border-radius: 24px; border: 1px solid var(--glass-border-color); box-shadow: 0 8px 32px 0 var(--shadow-color); }
+        .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn:disabled { cursor: not-allowed; opacity: 0.6; transform: none !important; }
+        .btn-primary { background: var(--primary-accent); color: white; }
+        .btn-secondary { background: rgba(255, 255, 255, 0.4); color: var(--text-primary); border: 1px solid rgba(255, 255, 255, 0.6); }
         body.dark .btn-secondary { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
-        .btn-secondary:hover:not(:disabled) { background: rgba(255, 255, 255, 0.7); transform: translateY(-2px); }
         .btn-danger { background: #ef4444; color: white; }
-        .btn-danger:hover { background: #dc2626; transform: translateY(-2px); }
-        .input-field, select.input-field, textarea.input-field { background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.5); color: var(--text-primary); transition: all 0.2s ease-in-out; width: 100%; padding: 12px; border-radius: 12px; }
-        .input-field:focus, select.input-field:focus, textarea.input-field:focus { background: rgba(255, 255, 255, 0.7); border-color: var(--primary-accent); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3); outline: none; }
-        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; }
+        .input-field { background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.5); width: 100%; padding: 12px; border-radius: 12px; }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); align-items: center; justify-content: center; }
         .modal.is-open { display: flex; }
-        .modal-content { animation: scaleIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
-        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         .loader { width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid var(--primary-accent); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #data-table th { position: sticky; top: 0; background-color: rgba(255,255,255,0.6); backdrop-filter: blur(5px); }
+        #data-table th { position: sticky; top: 0; background-color: rgba(255,255,255,0.6); backdrop-filter: blur(5px); z-index: 10; }
         body.dark #data-table th { background-color: rgba(29, 39, 58, 0.6); }
-        #gemini-usage-bar { transition: width 0.5s ease-in-out; }
-        [contenteditable]:focus { outline: 2px solid var(--primary-accent); background-color: rgba(255, 255, 255, 0.7); border-radius: 4px; }
-        #context-menu { position: absolute; z-index: 1000; display: none; }
-        .needs-review { border-left: 4px solid #f59e0b; }
     </style>
 </head>
 <body class="p-4 sm:p-8">
-    <div class="background-shapes">
-        <div class="shape shape1"></div>
-        <div class="shape shape2"></div>
-    </div>
+    <div class="background-shapes"><div class="shape shape1"></div><div class="shape shape2"></div></div>
 
     <div id="login-screen" class="modal is-open">
-        <div class="modal-content glass-panel p-8 rounded-2xl shadow-xl text-center w-full max-w-sm">
+        <div class="glass-panel p-8 rounded-2xl shadow-xl text-center w-full max-w-sm">
             <h2 class="text-2xl font-bold mb-6">Đăng nhập Giáo viên</h2>
             <div class="space-y-4 text-left">
                 <div><label for="email-input" class="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" id="email-input" class="input-field"></div>
@@ -103,74 +60,22 @@
 
     <div id="main-content" class="max-w-screen-xl mx-auto" style="display: none;">
         <header class="flex justify-between items-center mb-8">
-            <h1 id="page-title" class="text-4xl font-bold text-gray-800">Trình Soạn Thảo Bộ Từ Vựng</h1>
-            <div class="flex items-center gap-4">
-                <label id="dark-mode-label" class="flex items-center cursor-pointer text-slate-500">
-                    <i class="fas fa-moon mr-2"></i>
-                    <div class="relative">
-                        <input type="checkbox" id="dark-mode-toggle" class="sr-only">
-                        <div class="block bg-gray-600 w-14 h-8 rounded-full"></div>
-                        <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
-                    </div>
-                    <i class="fas fa-sun ml-2"></i>
-                </label>
-                <button id="logout-btn" class="btn btn-danger">Đăng xuất</button>
-            </div>
+            <h1 class="text-4xl font-bold text-gray-800">Trình Soạn Thảo Bộ Từ Vựng</h1>
+            <button id="logout-btn" class="btn btn-danger">Đăng xuất</button>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
-            <!-- Left Column (Static) -->
             <aside class="lg:col-span-2 space-y-8">
                 <div class="glass-panel p-6">
                     <h2 class="text-2xl font-bold text-gray-700 mb-4">1. Thông tin chung</h2>
                     <div class="space-y-4">
-                        <div>
-                            <label for="test-id" class="block text-sm font-medium text-gray-700 mb-1">Mã định danh (ID)</label>
-                            <input type="text" id="test-id" class="input-field" placeholder="vd: unit_1_family">
-                        </div>
-                        <div>
-                            <label for="test-title" class="block text-sm font-medium text-gray-700 mb-1">Tiêu đề bộ từ vựng</label>
-                            <input type="text" id="test-title" class="input-field" placeholder="vd: Unit 1: Family Life">
-                        </div>
+                        <div><label for="test-id" class="block text-sm font-medium">Mã định danh (ID)</label><input type="text" id="test-id" class="input-field" placeholder="vd: unit_1_family"></div>
+                        <div><label for="test-title" class="block text-sm font-medium">Tiêu đề bộ từ vựng</label><input type="text" id="test-title" class="input-field" placeholder="vd: Unit 1: Family Life"></div>
                     </div>
                 </div>
-                <div class="glass-panel p-6">
-                    <h2 class="text-2xl font-bold text-gray-700 mb-4">2. Cấu hình AI</h2>
-                     <div class="space-y-4">
-                        <div>
-                            <label for="gemini-api-key" class="block text-sm font-medium text-gray-700 mb-1">Google Gemini API Key</label>
-                            <input type="password" id="gemini-api-key" class="input-field" placeholder="Nhập API Key của bạn...">
-                        </div>
-                         <div>
-                            <label for="ai-model-select" class="block text-sm font-medium text-gray-700 mb-1">Mô hình Gemini</label>
-                            <select id="ai-model-select" class="input-field w-full">
-                                <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Nhanh & Tiết kiệm)</option>
-                                <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro (Chất lượng cao)</option>
-                            </select>
-                        </div>
-                    </div>
-                     <div id="gemini-usage-tracker" class="space-y-2 mt-6">
-                        <div class="flex flex-wrap justify-between items-center gap-2">
-                            <label class="block text-sm font-medium text-gray-700">Hạn mức miễn phí (Ước tính)</label>
-                            <button id="refresh-usage-btn" class="btn btn-secondary !py-1 !px-3">
-                                <i class="fas fa-sync-alt"></i> Làm mới
-                            </button>
-                        </div>
-                        <div class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-4">
-                            <div id="gemini-usage-bar" class="bg-gradient-to-r from-green-400 to-blue-500 h-4 rounded-full" style="width: 0%;"></div>
-                        </div>
-                        <div class="flex justify-between text-xs font-medium text-gray-600">
-                            <span id="gemini-usage-text">0 / 15,000,000 ký tự</span>
-                        </div>
-                    </div>
-                </div>
-            </aside>
-
-            <!-- Right Column (Scrollable) -->
-            <main class="lg:col-span-3 space-y-8">
                  <div class="glass-panel p-6">
-                    <h2 class="text-2xl font-bold text-gray-700 mb-4">3. Nhập liệu & Cài đặt</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4">2. Nhập liệu</h2>
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label for="vocab-csv-upload" class="block text-sm font-medium text-gray-700 mb-1">File Từ vựng (.csv)</label>
                             <label for="vocab-csv-upload" class="btn btn-secondary w-full"><i class="fas fa-upload mr-2"></i>Tải lên</label>
@@ -184,87 +89,44 @@
                             <p id="structures-file-name" class="text-gray-600 mt-2 text-sm text-center"></p>
                         </div>
                     </div>
-                     <div class="mt-6">
-                        <label for="cefr-level-slider" class="block text-sm font-medium text-gray-700 mb-1">Trình độ (CEFR)</label>
-                        <input type="range" id="cefr-level-slider" min="0" max="100" value="50" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700">
-                        <div class="flex justify-between text-xs mt-1">
-                            <span>A1</span>
-                            <span>A2</span>
-                            <span>B1</span>
-                            <span>B2</span>
-                            <span>C1</span>
-                            <span>C2</span>
-                        </div>
-                        <p id="cefr-level-display" class="text-center font-semibold mt-2"></p>
-                    </div>
-                    <div class="text-center mt-4">
-                        <button id="process-files-btn" class="btn btn-primary">Xử lý và Ánh xạ Dữ liệu</button>
-                    </div>
+                    <div class="text-center mt-6"><button id="process-files-btn" class="btn btn-primary">Xử lý Dữ liệu</button></div>
                 </div>
+            </aside>
 
+            <main class="lg:col-span-3 space-y-8">
                 <div id="data-review-section" class="glass-panel p-6 hidden">
-                     <div class="flex flex-wrap justify-between items-center mb-4">
-                        <h2 class="text-2xl font-bold text-gray-700">4. Bảng dữ liệu & Làm giàu</h2>
-                     </div>
-                     <div id="table-container" class="max-h-[60vh] overflow-auto rounded-lg border border-white/50">
+                     <h2 class="text-2xl font-bold text-gray-700 mb-4">3. Bảng dữ liệu & Làm giàu</h2>
+                    <div id="table-container" class="max-h-[60vh] overflow-auto rounded-lg border border-white/50">
                         <table id="data-table" class="w-full text-sm">
                             <thead>
-                                <tr class="text-left">
-                                    <th class="p-3">Từ vựng / Phiên âm</th>
-                                    <th class="p-3">Nghĩa</th>
-                                    <th class="p-3">Cấu trúc & Ví dụ</th>
-                                    <th class="p-3">Từ gây nhiễu (EN/VI)</th>
-                                    <th class="p-3 text-center">AI</th>
-                                </tr>
+                                <tr class="text-left"><th class="p-3">Từ vựng / Phiên âm</th><th class="p-3">Nghĩa</th><th class="p-3">Cấu trúc</th></tr>
                             </thead>
                             <tbody id="data-table-body"></tbody>
                         </table>
-                     </div>
-                     <div class="mt-6 text-center flex flex-wrap justify-center gap-4">
-                        <button id="enrich-ai-btn" class="btn btn-secondary"><i class="fas fa-wand-magic-sparkles mr-2"></i>Làm giàu tự động (API)</button>
-                        <button id="manual-enrich-btn" class="btn btn-secondary"><i class="fas fa-paste mr-2"></i>Làm giàu thủ công</button>
-                        <p id="ai-log" class="text-sm text-gray-600 mt-2 h-5 w-full"></p>
                     </div>
+                    <div class="mt-6 text-center">
+                        <button id="fetch-audio-btn" class="btn btn-secondary"><i class="fas fa-volume-up mr-2"></i>Tìm link âm thanh</button>
+                        </div>
                 </div>
-
-                <div class="text-center">
-                     <button id="upload-btn" class="btn btn-primary text-lg w-full"><i class="fas fa-cloud-upload-alt mr-2"></i>Lưu Bộ Từ Vựng</button>
-                     <p id="upload-log" class="font-semibold mt-2 h-5"></p>
-                </div>
+                <div class="text-center"><button id="upload-btn" class="btn btn-primary text-lg w-full"><i class="fas fa-cloud-upload-alt mr-2"></i>Lưu Bộ Từ Vựng</button><p id="upload-log" class="font-semibold mt-2 h-5"></p></div>
             </main>
         </div>
     </div>
     
     <div id="custom-alert-modal" class="modal"></div>
-    <div id="context-menu" class="glass-panel !rounded-lg !p-2 min-w-[250px] shadow-2xl"></div>
-
-    <div id="manual-prompt-modal" class="modal">
-        <div class="modal-content glass-panel p-8 w-full max-w-4xl max-h-[90vh] flex flex-col">
-            <h2 class="text-2xl font-bold text-gray-700 mb-4">Làm giàu dữ liệu thủ công</h2>
-            <div class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-6 overflow-hidden">
-                <div class="flex flex-col h-full">
-                    <label class="font-medium mb-2">Bước 1: Sao chép Prompt này</label>
-                    <textarea id="manual-prompt-output" readonly class="input-field flex-grow font-mono text-xs"></textarea>
-                    <button id="copy-prompt-btn" class="btn btn-primary mt-2">Sao chép Prompt</button>
-                </div>
-                <div class="flex flex-col h-full">
-                    <label class="font-medium mb-2">Bước 2: Dán kết quả JSON từ Gemini vào đây</label>
-                    <textarea id="manual-prompt-input" class="input-field flex-grow font-mono text-xs" placeholder="Dán kết quả JSON tại đây..."></textarea>
-                    <button id="process-manual-result-btn" class="btn btn-primary mt-2">Cập nhật dữ liệu</button>
-                </div>
-            </div>
-             <button id="close-manual-modal-btn" class="btn btn-danger mt-6 mx-auto">Đóng</button>
-        </div>
-    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
-        // --- Firebase Configuration ---
+        // =================================================================
+        // == BƯỚC QUAN TRỌNG: ĐIỀN THÔNG TIN CỦA BẠN VÀO ĐÂY ==
+        // =================================================================
+
+        // 1. Dán cấu hình Firebase của PROJECT SPARK (chứa giao diện app)
         const firebaseConfig = {
-            apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
+            apiKey: "AIza...",
             authDomain: "b1-baotram.firebaseapp.com",
             projectId: "b1-baotram",
             storageBucket: "b1-baotram.appspot.com",
@@ -272,521 +134,96 @@
             appId: "1:948701163187:web:043f2d381d63e741114ac6",
             measurementId: "G-33NHT07JHE"
         };
-        
-        // --- Firebase Initialization ---
+
+        // 2. Dán URL của Cloud Function đã triển khai thành công
+        const CLOUD_FUNCTION_URL = "https://getoaldaudio-asjwauz37q-uc.a.run.app";
+
+        // =================================================================
+
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
-
-        // --- Global State ---
-        let isEditMode = false;
         let localWordList = [];
-        let vocabCsvText = '';
-        let structuresCsvText = '';
-        const GEMINI_FREE_TIER_LIMIT = 15000000;
+        let vocabCsvText = '', structuresCsvText = '';
 
-        // --- DOM Element Cache ---
         const DOM = {
-            loginScreen: document.getElementById('login-screen'),
-            mainContent: document.getElementById('main-content'),
-            loginBtn: document.getElementById('login-btn'),
-            logoutBtn: document.getElementById('logout-btn'),
-            emailInput: document.getElementById('email-input'),
-            passwordInput: document.getElementById('password-input'),
-            loginError: document.getElementById('login-error'),
-            testIdInput: document.getElementById('test-id'),
-            testTitleInput: document.getElementById('test-title'),
-            dataReviewSection: document.getElementById('data-review-section'),
-            dataTableBody: document.getElementById('data-table-body'),
-            enrichAiBtn: document.getElementById('enrich-ai-btn'),
-            manualEnrichBtn: document.getElementById('manual-enrich-btn'),
-            aiLog: document.getElementById('ai-log'),
-            uploadBtn: document.getElementById('upload-btn'),
-            uploadLog: document.getElementById('upload-log'),
-            alertModal: document.getElementById('custom-alert-modal'),
-            pageTitle: document.getElementById('page-title'),
-            vocabCsvUploadInput: document.getElementById('vocab-csv-upload'),
-            structuresCsvUploadInput: document.getElementById('structures-csv-upload'),
-            vocabFileNameDisplay: document.getElementById('vocab-file-name'),
-            structuresFileNameDisplay: document.getElementById('structures-file-name'),
+            loginScreen: document.getElementById('login-screen'), mainContent: document.getElementById('main-content'),
+            loginBtn: document.getElementById('login-btn'), logoutBtn: document.getElementById('logout-btn'),
+            emailInput: document.getElementById('email-input'), passwordInput: document.getElementById('password-input'),
+            loginError: document.getElementById('login-error'), testIdInput: document.getElementById('test-id'),
+            testTitleInput: document.getElementById('test-title'), dataReviewSection: document.getElementById('data-review-section'),
+            dataTableBody: document.getElementById('data-table-body'), fetchAudioBtn: document.getElementById('fetch-audio-btn'),
+            uploadBtn: document.getElementById('upload-btn'), uploadLog: document.getElementById('upload-log'),
+            alertModal: document.getElementById('custom-alert-modal'), 
+            vocabCsvUploadInput: document.getElementById('vocab-csv-upload'), vocabFileNameDisplay: document.getElementById('vocab-file-name'),
+            structuresCsvUploadInput: document.getElementById('structures-csv-upload'), structuresFileNameDisplay: document.getElementById('structures-file-name'),
             processFilesBtn: document.getElementById('process-files-btn'),
-            darkModeToggle: document.getElementById('dark-mode-toggle'),
-            aiModelSelect: document.getElementById('ai-model-select'),
-            geminiApiKeyInput: document.getElementById('gemini-api-key'),
-            geminiUsageBar: document.getElementById('gemini-usage-bar'),
-            geminiUsageText: document.getElementById('gemini-usage-text'),
-            refreshUsageBtn: document.getElementById('refresh-usage-btn'),
-            manualPromptModal: document.getElementById('manual-prompt-modal'),
-            manualPromptOutput: document.getElementById('manual-prompt-output'),
-            manualPromptInput: document.getElementById('manual-prompt-input'),
-            copyPromptBtn: document.getElementById('copy-prompt-btn'),
-            processManualResultBtn: document.getElementById('process-manual-result-btn'),
-            closeManualModalBtn: document.getElementById('close-manual-modal-btn'),
-            cefrSlider: document.getElementById('cefr-level-slider'),
-            cefrDisplay: document.getElementById('cefr-level-display'),
-            contextMenu: document.getElementById('context-menu'),
         };
 
-        // --- Utility Functions ---
-        function showAlert(message, isConfirm = false) {
-            return new Promise(resolve => {
-                const buttonsHTML = isConfirm 
-                    ? `<button id="alert-cancel-btn" class="btn btn-secondary">Hủy</button><button id="alert-ok-btn" class="btn btn-primary">Đồng ý</button>`
-                    : `<button id="alert-ok-btn" class="btn btn-primary">OK</button>`;
-                
-                DOM.alertModal.innerHTML = `<div class="modal-content glass-panel text-center p-8"><p class="text-lg font-medium text-slate-800 dark:text-slate-200 mb-6">${message}</p><div class="flex justify-center gap-4">${buttonsHTML}</div></div>`;
-                DOM.alertModal.classList.add('is-open');
-                
-                document.getElementById('alert-ok-btn').onclick = () => {
-                    DOM.alertModal.classList.remove('is-open');
-                    resolve(true);
-                };
-
-                if (isConfirm) {
-                    document.getElementById('alert-cancel-btn').onclick = () => {
-                        DOM.alertModal.classList.remove('is-open');
-                        resolve(false);
-                    };
-                }
-            });
+        function showAlert(message) {
+            DOM.alertModal.innerHTML = `<div class="glass-panel text-center p-8 rounded-lg"><p class="text-lg mb-6">${message}</p><button id="alert-ok-btn" class="btn btn-primary">OK</button></div>`;
+            DOM.alertModal.classList.add('is-open');
+            document.getElementById('alert-ok-btn').onclick = () => DOM.alertModal.classList.remove('is-open');
         }
 
-        async function callGeminiAPI(prompt, model) {
-            const geminiApiKey = localStorage.getItem('geminiApiKey');
-            if (!geminiApiKey) throw new Error("Vui lòng nhập Google Gemini API Key.");
-            
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`;
-            const payload = {
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { responseMimeType: "application/json" }
-            };
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            if (!response.ok) {
-                const errorBody = await response.text();
-                throw new Error(`Gemini API error: ${response.statusText} - ${errorBody}`);
-            }
-            const result = await response.json();
-            const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (!responseText) throw new Error("Invalid Gemini API response structure.");
-            
-            updateLocalGeminiUsage(JSON.stringify(payload).length, responseText.length);
-            return JSON.parse(responseText);
-        }
-        
-        // --- Gemini Usage Tracker ---
-        function updateLocalGeminiUsage(inputChars, outputChars) {
-             let usageData = JSON.parse(localStorage.getItem('geminiUsage')) || { count: 0, month: new Date().getMonth() };
-             usageData.count += inputChars + outputChars;
-             localStorage.setItem('geminiUsage', JSON.stringify(usageData));
-             renderGeminiUsage(usageData.count);
-        }
-        
-        function renderGeminiUsage(usage) {
-            const percentage = Math.min(100, (usage / GEMINI_FREE_TIER_LIMIT) * 100);
-            DOM.geminiUsageBar.style.width = `${percentage}%`;
-            DOM.geminiUsageText.textContent = `${usage.toLocaleString('vi-VN')} / ${GEMINI_FREE_TIER_LIMIT.toLocaleString('vi-VN')} ký tự`;
-            
-            if (percentage > 90) {
-                DOM.geminiUsageBar.classList.remove('from-green-400', 'to-blue-500');
-                DOM.geminiUsageBar.classList.add('bg-red-500');
-            } else if (percentage > 70) {
-                 DOM.geminiUsageBar.classList.remove('from-green-400', 'to-blue-500');
-                DOM.geminiUsageBar.classList.add('bg-yellow-500');
-            } else {
-                 DOM.geminiUsageBar.classList.remove('bg-red-500', 'bg-yellow-500');
-                 DOM.geminiUsageBar.classList.add('from-green-400', 'to-blue-500');
-            }
-        }
-
-
-        // --- Core Application Logic ---
         function parseAndStructureCSV(vocabText, structuresText) {
             const vocabRows = vocabText.trim().split(/\r?\n/);
-            const vocab = [];
-            vocabRows.forEach(row => {
+            const vocab = vocabRows.map((row, index) => {
                 const columns = row.split(',').map(c => c.trim().replace(/"/g, ''));
-                if (columns.length >= 4 && columns[0] && columns[1] && columns[2] && columns[3]) {
-                    vocab.push({ word: columns[0], type: columns[1], pronunciation: columns[2], meaning: columns[3] });
+                if (columns.length >= 4 && columns[0]) {
+                    return { id: index + 1, word: columns[0], type: columns[1], pronunciation: columns[2], meaning: columns[3], audioUrl: '', structures: [] };
                 }
-            });
+                return null;
+            }).filter(Boolean);
 
             const structureRows = structuresText.trim().split(/\r?\n/);
-            const structures = [];
-            structureRows.forEach(row => {
+            const structures = structureRows.map(row => {
                 const columns = row.split(',').map(c => c.trim().replace(/"/g, ''));
-                if (columns.length >= 2 && columns[0] && columns[1]) {
-                    structures.push({ phrase: columns[0], meaning: columns[1] });
-                }
-            });
+                if (columns.length >= 2 && columns[0]) return { phrase: columns[0], meaning: columns[1] };
+                return null;
+            }).filter(Boolean);
 
-            localWordList = vocab.map((v, index) => {
+            vocab.forEach(v => {
                 const wordLower = v.word.toLowerCase();
                 const matchRegex = new RegExp(`\\b${wordLower}s?\\b`, 'i');
-                const matchingStructures = structures
-                    .filter(s => matchRegex.test(s.phrase))
-                    .map(s => ({ ...s, applicationExamples: [] }));
-                
-                return {
-                    id: index + 1,
-                    ...v,
-                    structures: matchingStructures,
-                    exampleSentence: '',
-                    distractors_en: [],
-                    distractors_vi: [],
-                    isEnriched: false,
-                    needsReview: false,
-                };
+                v.structures = structures.filter(s => matchRegex.test(s.phrase));
             });
+            localWordList = vocab;
         }
 
         function renderTable() {
             DOM.dataTableBody.innerHTML = '';
-            if (localWordList.length === 0) return;
-
-            localWordList.forEach((word, index) => {
+            localWordList.forEach(word => {
                 const row = document.createElement('tr');
-                row.className = `border-b border-white/30 dark:border-slate-700 align-top ${word.needsReview ? 'needs-review' : ''}`;
-
-                const structuresHTML = word.structures.map((s, s_idx) => {
-                    const examples = Array.isArray(s.applicationExamples) ? s.applicationExamples : [];
-                    const examplesHTML = examples.length > 0
-                        ? `<ul class="list-disc list-inside mt-1 text-sky-700 dark:text-sky-400">${examples.map((ex, ex_idx) => `<li contenteditable="true" data-word-index="${index}" data-structure-index="${s_idx}" data-example-index="${ex_idx}">${ex}</li>`).join('')}</ul>`
-                        : '';
-                    return `
-                    <div class="p-1.5 bg-violet-100 dark:bg-slate-700 rounded-md mb-1">
-                        <p class="font-semibold text-violet-800 dark:text-violet-300">${s.phrase}</p>
-                        <p class="text-xs text-slate-600 dark:text-slate-400">${s.meaning}</p>
-                        ${examplesHTML}
-                    </div>`;
-                }).join('');
-                
-                const exampleHTML = word.exampleSentence ? `
-                    <div class="mt-2 p-1.5 bg-green-100 dark:bg-emerald-900/50 rounded-md">
-                        <p class="font-semibold text-green-800 dark:text-green-300">Ví dụ (Từ vựng):</p>
-                        <p class="text-xs text-slate-600 dark:text-slate-400" contenteditable="true" data-word-index="${index}" data-field="exampleSentence">${word.exampleSentence}</p>
-                    </div>` : '';
-
-                const distractorsHTML = word.distractors_en.length > 0 ? `
-                    <div class="text-xs">
-                        <p class="font-semibold">EN:</p>
-                        <ul class="list-disc list-inside" data-word-index="${index}" data-field="distractors_en">
-                            ${word.distractors_en.map((d, d_idx) => `<li contenteditable="true" data-distractor-index="${d_idx}">${d}</li>`).join('')}
-                        </ul>
-                        <p class="font-semibold mt-1">VI:</p>
-                        <ul class="list-disc list-inside" data-word-index="${index}" data-field="distractors_vi">
-                            ${word.distractors_vi.map((d, d_idx) => `<li contenteditable="true" data-distractor-index="${d_idx}">${d}</li>`).join('')}
-                        </ul>
-                    </div>
-                ` : '<span class="text-xs text-gray-400">Chưa có</span>';
+                row.className = 'border-b dark:border-slate-700';
+                const audioIconHTML = word.audioUrl ? `<a href="${word.audioUrl}" target="_blank" title="Nghe" class="ml-2 text-blue-500"><i class="fas fa-volume-up"></i></a>` : '';
+                const structuresHTML = word.structures.map(s => `<div class="p-1 my-1 bg-violet-100 dark:bg-slate-700 rounded-md"><p class="font-semibold text-violet-800 dark:text-violet-300">${s.phrase}</p><p class="text-xs text-slate-600 dark:text-slate-400">${s.meaning}</p></div>`).join('');
 
                 row.innerHTML = `
-                    <td class="p-3">
-                        <p class="font-bold text-base" contenteditable="true" data-word-index="${index}" data-field="word">${word.word}</p>
-                        <p class="font-mono text-sm text-violet-700 dark:text-violet-400" contenteditable="true" data-word-index="${index}" data-field="pronunciation">${word.pronunciation}</p>
-                        <p class="text-xs text-slate-500">(${word.type})</p>
-                    </td>
-                    <td class="p-3" contenteditable="true" data-word-index="${index}" data-field="meaning">${word.meaning}</td>
-                    <td class="p-3 text-xs">${structuresHTML}${exampleHTML}</td>
-                    <td class="p-3">${distractorsHTML}</td>
-                    <td class="p-3 text-center" id="ai-status-${index}">
-                        ${word.isEnriched ? '<i class="fas fa-check-circle text-2xl text-green-500"></i>' : '<i class="fas fa-hourglass-half text-2xl text-gray-400"></i>'}
-                    </td>
+                    <td class="p-3 align-top"><div class="flex items-center"><p class="font-bold">${word.word}</p>${audioIconHTML}</div><p class="text-sm text-gray-600">${word.pronunciation} (${word.type})</p></td>
+                    <td class="p-3 align-top">${word.meaning}</td>
+                    <td class="p-3 align-top text-xs">${structuresHTML || '<span class="text-gray-400">Không có</span>'}</td>
                 `;
                 DOM.dataTableBody.appendChild(row);
             });
         }
         
-        function getPromptForBatch(batch, isCorrection = false, correctionReason = "") {
-             const cefrLevel = getCefrLevelDescription();
-             const batchInput = batch.map(wordData => ({
-                id: wordData.id,
-                word: wordData.word,
-                type: wordData.type,
-                meaning: wordData.meaning,
-                structures: wordData.structures.map(s => ({ phrase: s.phrase, meaning: s.meaning }))
-            }));
-            
-            const correctionInstruction = isCorrection ? `LƯU Ý SỬA LỖI: Ở lần trước, kết quả của bạn đã không đạt chuẩn vì: "${correctionReason}". Lần này, hãy đặc biệt chú ý để khắc phục các lỗi này.` : "";
-
-            return `Bạn là một AI chuyên gia về ngôn ngữ Anh, chuyên tạo tài liệu học tập chất lượng cao.
-Hãy xử lý mảng JSON đầu vào sau đây. Với MỖI object trong mảng, hãy tạo ra một object mới trong mảng kết quả.
-${correctionInstruction}
-Đầu vào: ${JSON.stringify(batchInput)}
-
-YÊU CẦU:
-Trả về một mảng JSON. Mỗi object trong mảng phải có cấu trúc rút gọn như sau:
-{
-  "id": id_gốc_của_từ,
-  "ex": "Một câu ví dụ cho từ chính",
-  "d_en": ["Từ gây nhiễu 1", "Từ gây nhiễu 2", "Từ gây nhiễu 3"],
-  "d_vi": ["Nghĩa gây nhiễu 1", "Nghĩa gây nhiễu 2", "Nghĩa gây nhiễu 3"],
-  "s": [
-    { "p": "Cấu trúc gốc 1", "exs": ["Ví dụ ứng dụng 1"] }
-  ]
-}
-
-YÊU CẦU CHI TIẾT CHO TỪNG TRƯỜNG:
-1.  "id": Giữ nguyên ID từ object đầu vào.
-2.  "ex": Tạo **MỘT** câu ví dụ tiếng Anh tự nhiên, rõ ràng.
-3.  "d_en": Tạo 3 từ tiếng Anh gây nhiễu. Yêu cầu:
-    - Cùng loại từ (danh từ, động từ, etc.).
-    - **KHÔNG được là từ đồng nghĩa trực tiếp**.
-    - Phải liên quan về mặt chủ đề hoặc ngữ cảnh để tạo sự phân vân hợp lý. Ví dụ: với từ "result" (kết quả), các từ gây nhiễu tốt là "cause" (nguyên nhân), "process" (quá trình), "effort" (nỗ lực). Các từ này đều liên quan đến một hành động và hệ quả của nó nhưng có vai trò khác nhau. "consequence" (hậu quả) là một từ gây nhiễu TỆ vì nghĩa quá gần.
-4.  "d_vi": Tạo 3 định nghĩa tiếng Việt gây nhiễu, nghe hợp lý nhưng không chính xác. **KHÔNG được dịch thẳng các từ gây nhiễu tiếng Anh**.
-5.  "s": Một mảng các object cấu trúc. Với mỗi cấu trúc đầu vào, tạo một object với:
-    - "p": Cấu trúc gốc chính xác.
-    - "exs": Một mảng chứa **MỘT** câu ví dụ tiếng Anh hoàn chỉnh.
-6. **QUAN TRỌNG NHẤT**: Toàn bộ nội dung (ví dụ, từ gây nhiễu) phải **phù hợp với trình độ ${cefrLevel}** của học sinh.
-
-CHỈ trả về mảng JSON kết quả, không giải thích gì thêm.`;
-        }
-
-        function qualityCheck(wordData, aiData) {
-            const reasons = [];
-            if (!aiData.ex || aiData.ex.trim() === '') reasons.push("Thiếu câu ví dụ cho từ vựng.");
-            if (!aiData.d_en || !Array.isArray(aiData.d_en) || aiData.d_en.length !== 3) reasons.push("Từ gây nhiễu tiếng Anh không đủ 3 mục.");
-            if (!aiData.d_vi || !Array.isArray(aiData.d_vi) || aiData.d_vi.length !== 3) reasons.push("Từ gây nhiễu tiếng Việt không đủ 3 mục.");
-            
-            // Basic translation check
-            if (aiData.d_en && aiData.d_vi && aiData.d_en.length === 3 && aiData.d_vi.length === 3) {
-                if (aiData.d_vi.some(vi => aiData.d_en.includes(vi))) {
-                     reasons.push("Từ gây nhiễu tiếng Việt có vẻ là bản dịch trực tiếp.");
-                }
-            }
-
-            if (wordData.structures.length > 0) {
-                if (!aiData.s || !Array.isArray(aiData.s) || aiData.s.length !== wordData.structures.length) {
-                    reasons.push("Số lượng ví dụ cấu trúc không khớp.");
-                } else {
-                    aiData.s.forEach(struct => {
-                        if (!struct.exs || !Array.isArray(struct.exs) || struct.exs.length === 0 || struct.exs[0].trim() === '') {
-                             reasons.push(`Thiếu ví dụ cho cấu trúc "${struct.p}".`);
-                        }
-                    });
-                }
-            }
-            
-            return { passed: reasons.length === 0, reasons };
-        }
-
-        function processAiResults(aiDataArray) {
-            let needsReviewBatch = [];
-            if (!Array.isArray(aiDataArray)) {
-                throw new Error("Kết quả trả về không phải là một mảng JSON hợp lệ.");
-            }
-            aiDataArray.forEach(enrichedData => {
-                const wordToUpdate = localWordList.find(w => w.id === enrichedData.id);
-                if (wordToUpdate) {
-                    const { passed, reasons } = qualityCheck(wordToUpdate, enrichedData);
-                    if (passed) {
-                        wordToUpdate.exampleSentence = enrichedData.ex || '';
-                        wordToUpdate.distractors_en = enrichedData.d_en || [];
-                        wordToUpdate.distractors_vi = enrichedData.d_vi || [];
-                        if (enrichedData.s && Array.isArray(enrichedData.s)) {
-                            enrichedData.s.forEach(enrichedStruct => {
-                                const originalStruct = wordToUpdate.structures.find(s => s.phrase === enrichedStruct.p);
-                                if (originalStruct) {
-                                    let examples = enrichedStruct.exs || [];
-                                    if (!Array.isArray(examples)) examples = [String(examples)];
-                                    originalStruct.applicationExamples = examples;
-                                }
-                            });
-                        }
-                        wordToUpdate.isEnriched = true;
-                        wordToUpdate.needsReview = false;
-                    } else {
-                        wordToUpdate.needsReview = true;
-                        wordToUpdate.reviewReasons = reasons;
-                        needsReviewBatch.push(wordToUpdate);
-                    }
-                }
-            });
-            renderTable();
-            return needsReviewBatch;
-        }
-
-        async function enrichWithAI() {
-            let wordsToEnrich = localWordList.filter(w => !w.isEnriched);
-            if (wordsToEnrich.length === 0) {
-                showAlert("Tất cả các từ đã được làm giàu dữ liệu.");
-                return;
-            }
-
-            DOM.enrichAiBtn.disabled = true;
-            DOM.enrichAiBtn.innerHTML = `<div class="loader"></div><span class="ml-2">Đang xử lý...</span>`;
-            
-            const BATCH_SIZE = 50;
-            const selectedModel = DOM.aiModelSelect.value;
-            let processedCount = localWordList.length - wordsToEnrich.length;
-            let iteration = 1;
-
-            while(wordsToEnrich.length > 0 && iteration <= 3) { // Limit to 3 retries
-                DOM.aiLog.textContent = `Bắt đầu làm giàu (Lần ${iteration})...`;
-                let allBatchPromises = [];
-
-                for (let i = 0; i < wordsToEnrich.length; i += BATCH_SIZE) {
-                    const batch = wordsToEnrich.slice(i, i + BATCH_SIZE);
-                    const isCorrection = iteration > 1;
-                    const correctionReason = isCorrection ? batch.map(w => `${w.word}: ${w.reviewReasons.join(', ')}`).join('; ') : "";
-                    const prompt = getPromptForBatch(batch, isCorrection, correctionReason);
-                    
-                    const promise = callGeminiAPI(prompt, selectedModel)
-                        .then(aiDataArray => {
-                            processedCount += batch.length;
-                            DOM.aiLog.textContent = `Đã xử lý ${processedCount}/${localWordList.length} từ...`;
-                            return processAiResults(aiDataArray);
-                        })
-                        .catch(error => {
-                            console.error(`Lỗi khi xử lý lô`, error);
-                            showAlert(`Lỗi API: ${error.message}`);
-                            return []; // Return empty array on error to not break Promise.all
-                        });
-                    allBatchPromises.push(promise);
-                }
-
-                const reviewBatches = await Promise.all(allBatchPromises);
-                wordsToEnrich = reviewBatches.flat();
-
-                if (wordsToEnrich.length > 0) {
-                    const reasonsSummary = wordsToEnrich.map(w => `<li><b>${w.word}</b>: ${w.reviewReasons.join(', ')}</li>`).join('');
-                    const userConfirmed = await showAlert(`Phát hiện ${wordsToEnrich.length} mục chưa đạt chuẩn:<ul class="text-left list-disc list-inside mt-2">${reasonsSummary}</ul>Bạn có muốn tự động gửi lại cho AI sửa không?`, true);
-                    if (!userConfirmed) break;
-                    iteration++;
-                }
-            }
-
-            DOM.aiLog.textContent = `Hoàn tất!`;
-            DOM.enrichAiBtn.disabled = false;
-            DOM.enrichAiBtn.innerHTML = `<i class="fas fa-wand-magic-sparkles mr-2"></i>Làm giàu tự động (API)`;
-        }
-
-        async function loadTestData(testId) {
-            const testRef = doc(db, "vocab_sets", testId);
-            const testSnap = await getDoc(testRef);
-            if (testSnap.exists()) {
-                const data = testSnap.data();
-                DOM.testIdInput.value = testId;
-                DOM.testTitleInput.value = data.title || '';
-                localWordList = data.wordList || [];
-                renderTable();
-                DOM.dataReviewSection.classList.remove('hidden');
-            } else {
-                showAlert("Không tìm thấy bộ từ vựng để chỉnh sửa.");
-                window.location.search = '';
-            }
-        }
-        
         async function uploadToFirebase() {
             const testId = DOM.testIdInput.value.trim();
             const title = DOM.testTitleInput.value.trim();
+            if (!testId || !title || localWordList.length === 0) return showAlert("Vui lòng nhập ID, Tiêu đề và xử lý dữ liệu.");
             
-            if (!testId || !title || localWordList.length === 0) {
-                showAlert("Vui lòng nhập ID, Tiêu đề và xử lý dữ liệu từ vựng.");
-                return;
-            }
-
             DOM.uploadBtn.disabled = true;
             DOM.uploadLog.textContent = 'Đang lưu...';
-            DOM.uploadLog.className = 'font-semibold mt-2 h-5 text-blue-600';
-
             try {
-                const finalWordList = localWordList.map(word => {
-                    const { needsReview, reviewReasons, ...rest } = word;
-                    return rest;
-                });
-
-                const setData = {
-                    title,
-                    wordList: finalWordList,
-                    totalWords: finalWordList.length,
-                    updatedAt: serverTimestamp(),
-                    folderId: null,
-                    type: 'assignment'
-                };
-                if (!isEditMode) {
-                    setData.createdAt = serverTimestamp();
-                    setData.isLocked = false;
-                    setData.resultsPublished = 'full';
-                }
-
-                await setDoc(doc(db, "vocab_sets", testId), setData, { merge: true });
-                DOM.uploadLog.textContent = `THÀNH CÔNG! Đã lưu bộ từ vựng ID: "${testId}".`;
-                DOM.uploadLog.className = 'font-semibold mt-2 h-5 text-green-600';
-                setTimeout(() => window.close(), 2000);
-
+                await setDoc(doc(db, "vocab_sets", testId), { title, wordList: localWordList, updatedAt: serverTimestamp() }, { merge: true });
+                DOM.uploadLog.textContent = 'THÀNH CÔNG!';
             } catch (error) {
                 DOM.uploadLog.textContent = `LỖI: ${error.message}`;
-                DOM.uploadLog.className = 'font-semibold mt-2 h-5 text-red-600';
             } finally {
                 DOM.uploadBtn.disabled = false;
             }
         }
-        
-        function getCefrLevelDescription() {
-            const value = parseInt(DOM.cefrSlider.value, 10);
-            const levels = ["A1", "A2", "B1", "B2", "C1", "C2"];
-            const markers = [0, 20, 40, 60, 80, 100];
-
-            for (let i = 0; i < markers.length; i++) {
-                if (value === markers[i]) {
-                    return `Trình độ ${levels[i]}`;
-                }
-            }
-
-            const segmentIndex = markers.findIndex((marker, i) => value > marker && value < markers[i+1]);
-            
-            if (segmentIndex === -1) { 
-                return `Trình độ ${levels[levels.length - 1]}`;
-            }
-
-            const lowerBound = markers[segmentIndex];
-            const upperBound = markers[segmentIndex + 1];
-            const lowerLevel = levels[segmentIndex];
-            const upperLevel = levels[segmentIndex + 1];
-
-            const positionInSegment = (value - lowerBound) / (upperBound - lowerBound);
-            const upperPercentage = Math.round(positionInSegment * 100);
-            const lowerPercentage = 100 - upperPercentage;
-
-            return `Trình độ ${lowerPercentage}% ${lowerLevel} và ${upperPercentage}% ${upperLevel}`;
-        }
-
-        function updateCefrDisplay() {
-            DOM.cefrDisplay.textContent = getCefrLevelDescription();
-        }
-
-        // --- Event Listeners & Initialization ---
-        onAuthStateChanged(auth, user => {
-            if (user) {
-                DOM.loginScreen.classList.remove('is-open');
-                DOM.mainContent.style.display = 'block';
-                const params = new URLSearchParams(window.location.search);
-                const testIdToEdit = params.get('edit');
-                if (testIdToEdit) {
-                    isEditMode = true;
-                    DOM.pageTitle.textContent = "Chỉnh Sửa Bộ Từ Vựng";
-                    DOM.testIdInput.disabled = true;
-                    DOM.processFilesBtn.parentElement.classList.add('hidden');
-                    DOM.enrichAiBtn.parentElement.parentElement.classList.add('hidden');
-                    loadTestData(testIdToEdit);
-                }
-            } else {
-                DOM.loginScreen.classList.add('is-open');
-                DOM.mainContent.style.display = 'none';
-            }
-        });
-
-        DOM.loginBtn.addEventListener('click', async () => {
-            try { await signInWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value); } 
-            catch (error) { DOM.loginError.textContent = 'Email hoặc mật khẩu không đúng.'; }
-        });
-        DOM.logoutBtn.addEventListener('click', () => signOut(auth));
-        DOM.uploadBtn.addEventListener('click', uploadToFirebase);
-        DOM.enrichAiBtn.addEventListener('click', enrichWithAI);
 
         const handleFileUpload = (event, type) => {
             const file = event.target.files[0];
@@ -803,186 +240,68 @@ CHỈ trả về mảng JSON kết quả, không giải thích gì thêm.`;
             };
             reader.readAsText(file);
         };
-        
-        DOM.vocabCsvUploadInput.addEventListener('change', (e) => handleFileUpload(e, 'vocab'));
-        DOM.structuresCsvUploadInput.addEventListener('change', (e) => handleFileUpload(e, 'structures'));
-        
-        DOM.processFilesBtn.addEventListener('click', () => {
-            if (!vocabCsvText) {
-                showAlert("Vui lòng tải lên file Từ vựng chính.");
-                return;
-            }
-            if (!structuresCsvText) {
-                showAlert("Vui lòng tải lên file Cấu trúc.");
-                return;
-            }
-            parseAndStructureCSV(vocabCsvText, structuresCsvText);
-            renderTable();
-            DOM.dataReviewSection.classList.remove('hidden');
-        });
 
-        DOM.darkModeToggle.addEventListener('change', () => {
-            document.body.classList.toggle('dark');
-        });
-        
-        DOM.geminiApiKeyInput.addEventListener('input', (e) => localStorage.setItem('geminiApiKey', e.target.value));
-        
-        DOM.refreshUsageBtn.addEventListener('click', async () => {
-            const button = DOM.refreshUsageBtn;
-            const icon = button.querySelector('i');
-            icon.classList.add('fa-spin');
-            button.disabled = true;
-
-            const cloudFunctionUrl = 'https://get-gemini-usage-178273661912.europe-west1.run.app';
-
-            try {
-                const response = await fetch(cloudFunctionUrl);
-                if (!response.ok) {
-                    throw new Error(`Cloud Function trả về lỗi: ${response.status} ${response.statusText}`);
-                }
-                const data = await response.json();
-                if (typeof data.totalCharacters === 'number') {
-                    const currentMonth = new Date().getMonth();
-                    localStorage.setItem('geminiUsage', JSON.stringify({ count: data.totalCharacters, month: currentMonth }));
-                    renderGeminiUsage(data.totalCharacters);
-                    showAlert("Đã làm mới hạn mức thành công!");
+        function setupEventListeners() {
+            onAuthStateChanged(auth, user => {
+                if (user) {
+                    DOM.loginScreen.classList.remove('is-open');
+                    DOM.mainContent.style.display = 'block';
                 } else {
-                    throw new Error("Phản hồi từ Cloud Function không hợp lệ.");
+                    DOM.loginScreen.classList.add('is-open');
+                    DOM.mainContent.style.display = 'none';
                 }
-            } catch (error) {
-                console.error("Lỗi khi làm mới hạn mức:", error);
-                let userMessage = `Không thể làm mới hạn mức. ${error.message}`;
-                if (error instanceof TypeError) {
-                    userMessage = "Không thể kết nối đến Cloud Function. Vui lòng kiểm tra lại URL và đảm bảo Function đã được triển khai thành công, không có lỗi.";
-                }
-                showAlert(userMessage);
-            } finally {
-                icon.classList.remove('fa-spin');
-                button.disabled = false;
-            }
-        });
+            });
 
-        DOM.manualEnrichBtn.addEventListener('click', () => {
-            const wordsToEnrich = localWordList.filter(w => !w.isEnriched);
-            if (wordsToEnrich.length === 0) {
-                showAlert("Tất cả các từ đã được làm giàu dữ liệu.");
-                return;
-            }
-            const prompt = getPromptForBatch(wordsToEnrich);
-            DOM.manualPromptOutput.value = prompt;
-            DOM.manualPromptInput.value = '';
-            DOM.manualPromptModal.classList.add('is-open');
-        });
+            DOM.loginBtn.addEventListener('click', async () => {
+                try { await signInWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value); } 
+                catch (e) { DOM.loginError.textContent = 'Email hoặc mật khẩu không đúng.'; }
+            });
 
-        DOM.closeManualModalBtn.addEventListener('click', () => {
-            DOM.manualPromptModal.classList.remove('is-open');
-        });
+            DOM.logoutBtn.addEventListener('click', () => signOut(auth));
+            DOM.uploadBtn.addEventListener('click', uploadToFirebase);
 
-        DOM.copyPromptBtn.addEventListener('click', () => {
-            DOM.manualPromptOutput.select();
-            document.execCommand('copy');
-            showAlert("Đã sao chép Prompt!");
-        });
-
-        DOM.processManualResultBtn.addEventListener('click', () => {
-            const resultText = DOM.manualPromptInput.value.trim();
-            if (!resultText) {
-                showAlert("Vui lòng dán kết quả JSON vào ô nhập liệu.");
-                return;
-            }
-            try {
-                const cleanedText = resultText.replace(/^```json\s*|```\s*$/g, '');
-                const aiDataArray = JSON.parse(cleanedText);
-                processAiResults(aiDataArray);
-                showAlert("Cập nhật dữ liệu từ kết quả thủ công thành công!");
-                DOM.manualPromptModal.classList.remove('is-open');
-            } catch (error) {
-                showAlert(`Lỗi khi xử lý JSON: ${error.message}. Vui lòng kiểm tra lại kết quả bạn đã dán.`);
-            }
-        });
-
-        DOM.cefrSlider.addEventListener('input', updateCefrDisplay);
-
-        DOM.dataTableBody.addEventListener('blur', (e) => {
-            const target = e.target;
-            if (target.hasAttribute('contenteditable')) {
-                const wordIndex = parseInt(target.dataset.wordIndex, 10);
-                const field = target.dataset.field;
-                const newText = target.textContent;
-
-                if (isNaN(wordIndex)) return;
-                const wordData = localWordList[wordIndex];
-                if (!wordData) return;
-
-                if (field === 'distractors_en' || field === 'distractors_vi') {
-                    const distractorIndex = parseInt(target.dataset.distractorIndex, 10);
-                    if (!isNaN(distractorIndex)) wordData[field][distractorIndex] = newText;
-                } else if (target.dataset.structureIndex !== undefined) {
-                    const structureIndex = parseInt(target.dataset.structureIndex, 10);
-                    const exampleIndex = parseInt(target.dataset.exampleIndex, 10);
-                    if (!isNaN(structureIndex) && !isNaN(exampleIndex)) {
-                        wordData.structures[structureIndex].applicationExamples[exampleIndex] = newText;
-                    }
-                } else if (field) {
-                    wordData[field] = newText;
-                }
-            }
-        }, true);
-        
-        document.addEventListener('click', () => { DOM.contextMenu.style.display = 'none'; });
-        
-        DOM.dataTableBody.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            const target = e.target.closest('[data-field]');
-            if (!target) return;
-
-            const wordIndex = parseInt(target.closest('tr').querySelector('[data-word-index]').dataset.wordIndex, 10);
-            const field = target.dataset.field;
-
-            DOM.contextMenu.innerHTML = `<div class="p-2 hover:bg-violet-200 dark:hover:bg-slate-600 rounded-md cursor-pointer" data-action="regenerate" data-word-index="${wordIndex}" data-field="${field}">Sửa bằng AI...</div>`;
-            DOM.contextMenu.style.display = 'block';
-            DOM.contextMenu.style.left = `${e.pageX}px`;
-            DOM.contextMenu.style.top = `${e.pageY}px`;
-        });
-
-        DOM.contextMenu.addEventListener('click', async (e) => {
-            const target = e.target.closest('[data-action="regenerate"]');
-            if (!target) return;
-
-            const wordIndex = parseInt(target.dataset.wordIndex, 10);
-            const field = target.dataset.field;
-            const wordData = localWordList[wordIndex];
+            DOM.vocabCsvUploadInput.addEventListener('change', (e) => handleFileUpload(e, 'vocab'));
+            DOM.structuresCsvUploadInput.addEventListener('change', (e) => handleFileUpload(e, 'structures'));
             
-            const instruction = prompt(`Nhập yêu cầu sửa cho "${field}" của từ "${wordData.word}":`);
-            if (!instruction) return;
-
-            const selectedModel = DOM.aiModelSelect.value;
-            const cefrLevel = getCefrLevelDescription();
-
-            const regenPrompt = `Bạn là một AI chuyên gia ngôn ngữ. Với từ sau:
-- Word: ${JSON.stringify(wordData)}
-- Yêu cầu của người dùng: "${instruction}"
-
-Hãy tạo lại chỉ riêng trường "${field}" theo yêu cầu. Toàn bộ kết quả phải phù hợp với trình độ ${cefrLevel}.
-CHỈ trả về giá trị mới cho trường đó (một chuỗi hoặc một mảng chuỗi), không trả về JSON hay giải thích gì thêm.`;
-            
-            try {
-                const resultText = await callGeminiAPI(regenPrompt, selectedModel);
-                // The API is instructed not to return JSON, so we handle the raw text/array
-                wordData[field] = resultText;
+            DOM.processFilesBtn.addEventListener('click', () => {
+                if (!vocabCsvText || !structuresCsvText) return showAlert("Vui lòng tải lên cả hai file CSV.");
+                parseAndStructureCSV(vocabCsvText, structuresCsvText);
                 renderTable();
-                showAlert("Đã cập nhật thành công!");
-            } catch (error) {
-                 showAlert(`Lỗi khi sửa bằng AI: ${error.message}`);
-            }
-        });
+                DOM.dataReviewSection.classList.remove('hidden');
+            });
+            
+            DOM.fetchAudioBtn.addEventListener('click', async () => {
+                if (localWordList.length === 0) return showAlert("Chưa có dữ liệu.");
+                if (CLOUD_FUNCTION_URL.includes("URL_CUA_FUNCTION")) return showAlert("Lỗi: Vui lòng cấu hình URL của Cloud Function trong code.");
 
-        // Initial setup on page load
-        DOM.geminiApiKeyInput.value = localStorage.getItem('geminiApiKey') || '';
-        const initialUsage = JSON.parse(localStorage.getItem('geminiUsage'))?.count || 0;
-        renderGeminiUsage(initialUsage);
-        updateCefrDisplay();
+                const button = DOM.fetchAudioBtn;
+                const originalHTML = button.innerHTML;
+                button.disabled = true;
+                let foundCount = 0;
 
+                for (let i = 0; i < localWordList.length; i++) {
+                    const wordData = localWordList[i];
+                    button.innerHTML = `<div class="loader"></div><span class="ml-2">Đang tìm... (${i + 1}/${localWordList.length})</span>`;
+                    if (wordData.audioUrl || !wordData.word) continue;
+                    try {
+                        const response = await fetch(`${CLOUD_FUNCTION_URL}?word=${encodeURIComponent(wordData.word)}`);
+                        if (!response.ok) throw new Error(`Server error`);
+                        const result = await response.json();
+                        if (result.success) {
+                            wordData.audioUrl = result.audioUrl;
+                            foundCount++;
+                        }
+                    } catch (error) { console.error(`Lỗi với từ '${wordData.word}':`, error); }
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
+                renderTable();
+                button.disabled = false;
+                button.innerHTML = originalHTML;
+                showAlert(`Hoàn tất! Tìm thấy ${foundCount}/${localWordList.length} link.`);
+            });
+        }
+
+        setupEventListeners();
     </script>
 </body>
 </html>
