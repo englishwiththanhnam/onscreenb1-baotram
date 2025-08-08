@@ -98,14 +98,12 @@
                 progress: { learnedItems: new Set(), incorrectCounts: {} },
                 session: {},
                 isSubmitting: false,
-                // --- NEW AUDIO STATES ---
                 audioPlayer: null,
                 audioCache: new Map(),
                 playbackRate: 1.0,
             },
             DOM: {},
 
-            // --- 1. CORE LOGIC ---
             async init() {
                 this.DOM = {
                     loader: document.getElementById('loader-overlay'),
@@ -155,7 +153,6 @@
                     this.renderHeader();
                     this.renderDashboard();
 
-                    // Bắt đầu tải trước âm thanh sau khi mọi thứ đã sẵn sàng
                     this.precacheAllAudio();
 
                 } catch (error) { this.showModal("Lỗi", error.message); }
@@ -180,7 +177,6 @@
                 this.state.wordFamilies = families;
             },
 
-            // --- 2. PROGRESS & AUDIO CACHE MANAGEMENT ---
             loadProgress() {
                 const progressKey = `vocabProgress_${this.state.submissionId}`;
                 const savedProgress = localStorage.getItem(progressKey);
@@ -239,7 +235,6 @@
                 practiceButtons.forEach(btn => btn.disabled = false);
             },
             
-            // --- 3. UI RENDERING ---
             renderHeader() {
                  this.DOM.header.innerHTML = `
                     <div class="flex flex-wrap justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
@@ -1052,7 +1047,39 @@ findSentencesWithWord(word) {
     return [...sentences];
 }
         };
-        
+        Object.assign(App, {
+            startFlashcardSession: App.startFlashcardSession,
+            renderFlashcardViewer: App.renderFlashcardViewer,
+            updateFlashcardView: App.updateFlashcardView,
+            navigateCard: App.navigateCard,
+            renderMindmapFamilySelection: App.renderMindmapFamilySelection,
+            renderMindmap: App.renderMindmap,
+            renderPracticeGuide: App.renderPracticeGuide,
+            renderGuideModal: App.renderGuideModal,
+            startPractice: App.startPractice,
+            renderPracticeView: App.renderPracticeView,
+            renderNextQuestion: App.renderNextQuestion,
+            getPossibleExerciseTypes: App.getPossibleExerciseTypes,
+            renderSummary: App.renderSummary,
+            getTraditionalMCQHTML: App.getTraditionalMCQHTML,
+            getContextualMCQHTML: App.getContextualMCQHTML,
+            getWordFamilyMCQHTML: App.getWordFamilyMCQHTML,
+            getAudioListeningHTML: App.getAudioListeningHTML,
+            getSentenceUnscrambleHTML: App.getSentenceUnscrambleHTML,
+            getGapFillHTML: App.getGapFillHTML,
+            getTriosOfGappedSentenceHTML: App.getTriosOfGappedSentenceHTML,
+            getErrorCorrectionHTML: App.getErrorCorrectionHTML,
+            getIPAFillHTML: App.getIPAFillHTML,
+            attachPracticeEventListeners: App.attachPracticeEventListeners,
+            checkAnswer: App.checkAnswer,
+            checkGuideAnswer: App.checkGuideAnswer,
+            showFeedback: App.showFeedback,
+            submitToFirebase: App.submitToFirebase,
+            shuffleArray: App.shuffleArray,
+            findRoot: App.findRoot,
+            showModal: App.showModal,
+            findSentencesWithWord: App.findSentencesWithWord
+        });
         document.addEventListener('DOMContentLoaded', () => App.init());
     </script>
 </body>
