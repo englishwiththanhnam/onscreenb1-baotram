@@ -61,9 +61,6 @@
         .answer-option.incorrect { border-color: var(--incorrect-color); background-color: #fef2f2; color: #991b1b; }
         .token-area { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 1rem; border: 2px dashed #cbd5e1; border-radius: 0.5rem; min-height: 80px; }
         .word-token { padding: 0.5rem 1rem; background-color: #eef2ff; color: #4338ca; border-radius: 0.5rem; font-weight: 500; cursor: pointer; }
-        .matching-item { padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 0.5rem; margin-bottom: 0.5rem; cursor: pointer; transition: all 0.2s; background-color: #fff; }
-        .matching-item.selected { border-color: var(--primary-color); background-color: #eef2ff; font-weight: 600; }
-        .matching-item.correct-match { background-color: #dcfce7; border-color: #22c55e; opacity: 0.6; cursor: default; }
 
         .fade-in { animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -76,6 +73,7 @@
             <p class="text-lg font-semibold text-white mt-4">Đang tải dữ liệu bài học...</p>
         </div>
     </div>
+    <div id="modal-container"></div>
     <div id="app-container" class="max-w-4xl mx-auto p-4 sm:p-8 hidden">
         <header id="app-header" class="mb-8"></header>
         <main id="app-main"></main>
@@ -89,7 +87,8 @@
             state: {
                 db: null, submissionId: null, studentName: '',
                 testData: {}, wordList: [], structureList: [], wordFamilies: {},
-                currentSessionItems: [], currentIndex: 0, currentScore: 0,
+                currentSessionItems: [], sessionCorrectItems: [], sessionIncorrectItems: [],
+                currentIndex: 0, currentScore: 0,
                 currentCorrectAnswer: null,
                 progress: { learnedItems: new Set(), incorrectCounts: {} },
                 session: {},
@@ -104,6 +103,7 @@
                     container: document.getElementById('app-container'),
                     header: document.getElementById('app-header'),
                     main: document.getElementById('app-main'),
+                    modal: document.getElementById('modal-container'),
                 };
                 this.state.db = getFirestore(initializeApp(window.firebaseConfig));
                 const params = new URLSearchParams(window.location.search);
@@ -148,12 +148,13 @@
             
             processData() {
                 const structures = []; const families = {};
-                this.state.wordList.forEach(word => {
+                this.state.wordList.forEach((word, idx) => {
                     word.itemType = 'word';
-                    word.id = `word_${word.id}`;
+                    // Sửa lỗi ID, đảm bảo ID gốc từ maker được giữ lại và chuẩn hóa
+                    word.id = `word_${word.id || idx}`; 
                     if (word.structures && Array.isArray(word.structures)) {
-                        word.structures.forEach((struct, index) => {
-                            structures.push({ ...struct, id: `structure_${word.id}_${index}`, itemType: 'structure', rootWord: word.word });
+                        word.structures.forEach((struct, s_idx) => {
+                            structures.push({ ...struct, id: `structure_${word.id}_${s_idx}`, itemType: 'structure', rootWord: word.word });
                         });
                     }
                     const root = this.findRoot(word.word);
@@ -228,20 +229,7 @@
                         </div>
                         <div class="bg-white p-6 rounded-xl shadow-sm">
                             <h2 class="text-xl font-bold mb-4">Luyện tập 🏋️‍♀️</h2>
-                            <div class="mb-6 p-4 bg-slate-50 rounded-lg">
-                                <h3 class="font-semibold mb-3 text-slate-800">Các dạng bài có thể gặp:</h3>
-                                <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm text-slate-600">
-                                    <p><i class="fas fa-list-check text-violet-500 w-5"></i> Trắc nghiệm Từ & Nghĩa</p>
-                                    <p><i class="fas fa-quote-left text-sky-500 w-5"></i> Trắc nghiệm Ngữ cảnh</p>
-                                    <p><i class="fas fa-users text-blue-500 w-5"></i> Trắc nghiệm Họ từ</p>
-                                    <p><i class="fas fa-sort-alpha-down text-indigo-500 w-5"></i> Sắp xếp câu</p>
-                                    <p><i class="fas fa-edit text-emerald-500 w-5"></i> Điền vào chỗ trống</p>
-                                    <p><i class="fas fa-volume-up text-pink-500 w-5"></i> Nghe & Gõ</p>
-                                    <p><i class="fas fa-search-plus text-teal-500 w-5"></i> Tìm từ chung</p>
-                                    <p><i class="fas fa-check-double text-rose-500 w-5"></i> Sửa lỗi sai</p>
-                                    <p><i class="fas fa-language text-orange-500 w-5"></i> Điền phiên âm</p>
-                                </div>
-                            </div>
+                            <div id="practice-guide-buttons" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6"></div>
                             <div id="practice-buttons" class="flex flex-col sm:flex-row gap-4">
                                <button data-practice-mode="normal" class="btn btn-primary flex-1"><i class="fas fa-random mr-2"></i> Luyện tập thông thường</button>
                                <button data-practice-mode="weakness" class="btn btn-secondary flex-1 border-amber-500 text-amber-600 hover:bg-amber-50"><i class="fas fa-star-half-alt mr-2"></i> Ôn tập điểm yếu</button>
@@ -249,6 +237,7 @@
                         </div>
                     </div>`;
 
+                this.renderPracticeGuide();
                 document.getElementById('study-buttons').addEventListener('click', e => {
                     const button = e.target.closest('button');
                     if (!button || !button.dataset.studyMode) return;
@@ -268,7 +257,7 @@
                 }
             },
 
-            // --- 4. STUDY IMPLEMENTATION ---
+            // --- 4. STUDY & PRACTICE GUIDE IMPLEMENTATION ---
             startFlashcardSession(type) {
                 this.state.currentSessionItems = type === 'word' ? this.state.wordList : this.state.structureList;
                 if(this.state.currentSessionItems.length === 0) {
@@ -386,11 +375,80 @@
                 }
                 container.innerHTML = html;
             },
+            
+            renderPracticeGuide() {
+                const guideContainer = document.getElementById('practice-guide-buttons');
+                const exerciseTypes = [
+                    { type: 'TraditionalMCQ', name: 'Trắc nghiệm', icon: 'fa-list-check', color: 'text-violet-500' },
+                    { type: 'ContextualMCQ', name: 'Ngữ cảnh', icon: 'fa-quote-left', color: 'text-sky-500' },
+                    { type: 'WordFamilyMCQ', name: 'Họ từ', icon: 'fa-users', color: 'text-blue-500' },
+                    { type: 'SentenceUnscramble', name: 'Sắp xếp câu', icon: 'fa-sort-alpha-down', color: 'text-indigo-500' },
+                    { type: 'GapFill', name: 'Điền từ', icon: 'fa-edit', color: 'text-emerald-500' },
+                    { type: 'AudioListening', name: 'Nghe & Gõ', icon: 'fa-volume-up', color: 'text-pink-500' },
+                    { type: 'ErrorCorrection', name: 'Sửa lỗi', icon: 'fa-check-double', color: 'text-rose-500' },
+                    { type: 'IPAFill', name: 'Phiên âm', icon: 'fa-language', color: 'text-orange-500' },
+                ];
+                guideContainer.innerHTML = exerciseTypes.map(ex => `
+                    <button data-guide-type="${ex.type}" class="btn btn-secondary !p-2 !justify-start text-left text-sm">
+                        <i class="fas ${ex.icon} ${ex.color} w-8 text-center text-base"></i>
+                        <span class="font-semibold">${ex.name}</span>
+                    </button>
+                `).join('');
+                
+                guideContainer.addEventListener('click', e => {
+                    const button = e.target.closest('button');
+                    if (button && button.dataset.guideType) {
+                        this.renderGuideModal(button.dataset.guideType);
+                    }
+                });
+            },
+
+            renderGuideModal(exerciseType) {
+                const exerciseInfo = {
+                    'TraditionalMCQ': { name: 'Trắc nghiệm Từ & Nghĩa', desc: 'Chọn nghĩa tiếng Việt đúng cho từ tiếng Anh cho sẵn, hoặc ngược lại.' },
+                    'ContextualMCQ': { name: 'Trắc nghiệm Ngữ cảnh', desc: 'Chọn từ vựng phù hợp nhất để điền vào chỗ trống trong một câu ví dụ.' },
+                    'WordFamilyMCQ': { name: 'Trắc nghiệm Họ từ', desc: 'Chọn dạng đúng của từ (danh từ, động từ, tính từ...) trong cùng một họ từ để hoàn thành câu.' },
+                    'SentenceUnscramble': { name: 'Sắp xếp câu', desc: 'Nhấn vào các từ cho sẵn theo đúng thứ tự để tạo thành một câu hoàn chỉnh.' },
+                    'GapFill': { name: 'Điền vào chỗ trống', desc: 'Gõ một từ (thường là giới từ) còn thiếu vào chỗ trống trong một cấu trúc câu.' },
+                    'AudioListening': { name: 'Nghe & Gõ', desc: 'Nghe phát âm của một từ hoặc một câu và gõ lại chính xác những gì bạn nghe được.' },
+                    'ErrorCorrection': { name: 'Sửa lỗi sai', desc: 'Xác định một câu cho sẵn là đúng hay sai. Nếu sai, hãy sửa lại cho đúng.' },
+                    'IPAFill': { name: 'Điền phiên âm', desc: 'Chọn nguyên âm đúng để hoàn thành phiên âm IPA của một từ cho sẵn.' }
+                };
+                
+                const info = exerciseInfo[exerciseType];
+                const allItems = [...this.state.wordList, ...this.state.structureList];
+                const suitableItem = allItems.find(item => this.getPossibleExerciseTypes(item).includes(exerciseType));
+
+                if (!suitableItem) {
+                    this.showModal("Thông báo", "Không tìm thấy dữ liệu phù hợp để tạo ví dụ cho dạng bài này.");
+                    return;
+                }
+                
+                suitableItem.exerciseType = exerciseType;
+                const exampleHTML = this[`get${exerciseType}HTML`](suitableItem, true); // isExample = true
+
+                this.showModal(
+                    `Hướng dẫn: ${info.name}`,
+                    `<p class="text-slate-600 mb-6 text-left">${info.desc}</p>
+                     <div class="bg-slate-50 p-4 rounded-lg border">
+                        <h4 class="font-bold mb-3 text-left">Ví dụ tương tác:</h4>
+                        <div id="guide-question-container">${exampleHTML}</div>
+                        <div id="guide-feedback-container" class="mt-4"></div>
+                     </div>`,
+                    false, null, true // isGuide = true
+                );
+                
+                // Attach listeners for the interactive guide
+                const guideContainer = document.getElementById('guide-question-container');
+                this.attachPracticeEventListeners(suitableItem, guideContainer, true);
+            },
 
             // --- 5. PRACTICE IMPLEMENTATION ---
             startPractice(mode, count = 10) {
                 this.state.currentIndex = 0;
                 this.state.currentScore = 0;
+                this.state.sessionCorrectItems = [];
+                this.state.sessionIncorrectItems = [];
                 let itemsToPractice = [];
                 const allItems = [...this.state.wordList, ...this.state.structureList];
 
@@ -446,7 +504,7 @@
 
                 const renderFunction = this[`get${exerciseType}HTML`];
                 qContainer.innerHTML = renderFunction.call(this, item);
-                this.attachPracticeEventListeners(item);
+                this.attachPracticeEventListeners(item, qContainer);
             },
             
             getPossibleExerciseTypes(item) {
@@ -464,11 +522,10 @@
                     if (sentence) {
                         const phraseParts = item.phrase.split(/\s+/);
                         const blank = phraseParts.find(p => !['be', 'of', 'to', 'sb', 'sth'].includes(p.toLowerCase()) && p.length > 1 && p.length < 5);
-                        if (blank && sentence.toLowerCase().includes(blank.toLowerCase())) {
+                        if (blank && new RegExp(`\\b${blank}\\b`, 'i').test(sentence)) {
                             item.gapFill = { blank, sentence: sentence.replace(new RegExp(`\\b${blank}\\b`, 'i'), '___') };
                             types.push('GapFill');
                         }
-                        // Create data for ErrorCorrection
                         const commonErrors = {'on': 'in', 'in': 'at', 'at': 'on', 'to': 'for', 'for': 'to'};
                         for(const correctPrep in commonErrors) {
                             if (sentence.includes(` ${correctPrep} `)) {
@@ -488,22 +545,31 @@
             renderSummary() {
                 const score = this.state.currentScore;
                 const total = this.state.currentSessionItems.length;
-                const percentage = total > 0 ? (score / total * 100).toFixed(0) : 0;
                 this.DOM.main.innerHTML = `
                     <div class="text-center max-w-lg mx-auto bg-white p-8 rounded-xl shadow-sm fade-in">
-                        <h1 class="text-3xl font-bold mb-4">Hoàn thành Lượt luyện tập!</h1>
-                        <p class="text-lg text-slate-600">Điểm của bạn:</p>
-                        <p class="text-6xl font-bold my-4 text-indigo-600">${percentage}%</p>
-                        <p class="font-semibold">${score} / ${total} câu đúng</p>
-                        <div class="mt-8">
-                            <button id="back-to-dashboard-btn" class="w-full btn btn-primary">Quay về Bảng điều khiển</button>
+                        <h1 class="text-3xl font-bold mb-2">Hoàn thành Lượt luyện tập!</h1>
+                        <p class="text-lg text-slate-600 mb-6">Bạn đã trả lời đúng ${score} / ${total} câu.</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+                            <div class="bg-green-50 p-4 rounded-lg">
+                                <h3 class="font-bold text-green-800 mb-2">Đã học (${this.state.sessionCorrectItems.length})</h3>
+                                <ul class="text-sm space-y-1 max-h-32 overflow-y-auto">${this.state.sessionCorrectItems.map(item => `<li>${item.word || item.phrase}</li>`).join('')}</ul>
+                            </div>
+                            <div class="bg-red-50 p-4 rounded-lg">
+                                <h3 class="font-bold text-red-800 mb-2">Cần ôn lại (${this.state.sessionIncorrectItems.length})</h3>
+                                <ul class="text-sm space-y-1 max-h-32 overflow-y-auto">${this.state.sessionIncorrectItems.map(item => `<li>${item.word || item.phrase}</li>`).join('')}</ul>
+                            </div>
+                        </div>
+                        <div class="mt-8 flex flex-col sm:flex-row gap-4">
+                            <button id="continue-practice-btn" class="btn btn-primary w-full">Luyện tập tiếp</button>
+                            <button id="back-to-dashboard-btn" class="btn btn-secondary w-full">Thoát</button>
                         </div>
                     </div>`;
+                document.getElementById('continue-practice-btn').addEventListener('click', () => this.startPractice('normal'));
                 document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.renderDashboard());
             },
 
             // --- 6. QUESTION GENERATION & EVENT LISTENERS ---
-            getTraditionalMCQHTML(item) {
+ getTraditionalMCQHTML(item) {
                 const isEngToViet = Math.random() > 0.5;
                 const question = isEngToViet ? `${item.word} <span class="text-base font-normal text-slate-500">(${item.type})</span>` : item.meaning;
                 this.state.currentCorrectAnswer = isEngToViet ? item.meaning : item.word;
@@ -605,19 +671,20 @@
                 <div id="answer-options" class="grid grid-cols-2 gap-3">${options.map(opt => `<button class="answer-option font-mono text-center !text-2xl" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             
-            attachPracticeEventListeners(item) {
-                const qContainer = document.getElementById('question-container');
-                if (!qContainer) return;
+            attachPracticeEventListeners(item, container, isGuide = false) {
+                if (!container) return;
+                const checkAnswerFunction = isGuide ? this.checkGuideAnswer.bind(this) : this.checkAnswer.bind(this);
+                
                 switch(item.exerciseType) {
                     case 'TraditionalMCQ': case 'ContextualMCQ': case 'WordFamilyMCQ': case 'IPAFill':
-                        qContainer.querySelectorAll('.answer-option').forEach(option => {
-                            option.addEventListener('click', (e) => this.checkAnswer(e.target.closest('.answer-option').dataset.answer));
+                        container.querySelectorAll('.answer-option').forEach(option => {
+                            option.addEventListener('click', (e) => checkAnswerFunction(e.target.closest('.answer-option').dataset.answer, item, container));
                         });
                         break;
                     case 'AudioListening': case 'GapFill': case 'TriosOfGappedSentence':
-                        const input = qContainer.querySelector('#text-input');
-                        const checkBtn = qContainer.querySelector('#check-btn');
-                        qContainer.querySelector('#play-audio-btn')?.addEventListener('click', (e) => {
+                        const input = container.querySelector('#text-input');
+                        const checkBtn = container.querySelector('#check-btn');
+                        container.querySelector('#play-audio-btn')?.addEventListener('click', (e) => {
                            if (typeof SpeechSynthesisUtterance !== 'undefined') {
                                 const utterance = new SpeechSynthesisUtterance(e.currentTarget.dataset.text);
                                 utterance.lang = 'en-US';
@@ -625,14 +692,14 @@
                             }
                         });
                         if (input && checkBtn) {
-                            const doCheck = () => this.checkAnswer(input.value);
+                            const doCheck = () => checkAnswerFunction(input.value, item, container);
                             checkBtn.addEventListener('click', doCheck);
                             input.addEventListener('keypress', (e) => { if (e.key === 'Enter') doCheck(); });
                         }
                         break;
                     case 'SentenceUnscramble':
-                        const answerArea = qContainer.querySelector('#unscramble-answer-area');
-                        const sourceArea = qContainer.querySelector('#unscramble-source-area');
+                        const answerArea = container.querySelector('#unscramble-answer-area');
+                        const sourceArea = container.querySelector('#unscramble-source-area');
                         const moveToken = (e) => {
                             if (e.target.classList.contains('word-token')) {
                                 const isFromSource = e.currentTarget.id === 'unscramble-source-area';
@@ -641,19 +708,33 @@
                         };
                         sourceArea.addEventListener('click', moveToken);
                         answerArea.addEventListener('click', moveToken);
-                        qContainer.querySelector('#check-btn')?.addEventListener('click', () => {
+                        container.querySelector('#check-btn')?.addEventListener('click', () => {
                             const answer = Array.from(answerArea.querySelectorAll('.word-token')).map(t => t.textContent).join(' ');
-                            this.checkAnswer(answer);
+                            checkAnswerFunction(answer, item, container);
                         });
                         break;
                     case 'ErrorCorrection':
-                        qContainer.querySelectorAll('#error-step-1 button').forEach(btn => {
-                            btn.addEventListener('click', (e) => this.checkErrorCorrectionStep1(e.target.closest('button').dataset.choice === 'correct'));
+                        container.querySelectorAll('#error-step-1 button').forEach(btn => {
+                            btn.addEventListener('click', (e) => {
+                                const userThinksIsCorrect = e.target.closest('button').dataset.choice === 'correct';
+                                const isActuallyCorrect = !item.errorCorrection.isActuallyIncorrect;
+                                if (userThinksIsCorrect === isActuallyCorrect) {
+                                    if (isActuallyCorrect) {
+                                        checkAnswerFunction(item.errorCorrection.correct, item, container);
+                                    } else {
+                                        container.querySelector('#error-step-1')?.classList.add('hidden');
+                                        container.querySelector('#error-step-2')?.classList.remove('hidden');
+                                        container.querySelector('#error-correction-input')?.focus();
+                                    }
+                                } else {
+                                    checkAnswerFunction("user-was-wrong-about-correctness", item, container);
+                                }
+                            });
                         });
-                        const correctionInput = qContainer.querySelector('#error-correction-input');
-                        const correctionBtn = qContainer.querySelector('#error-correction-check-btn');
+                        const correctionInput = container.querySelector('#error-correction-input');
+                        const correctionBtn = container.querySelector('#error-correction-check-btn');
                         if (correctionInput && correctionBtn) {
-                            const doCheck = () => this.checkAnswer(correctionInput.value);
+                            const doCheck = () => checkAnswerFunction(correctionInput.value, item, container);
                             correctionBtn.addEventListener('click', doCheck);
                             correctionInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') doCheck(); });
                         }
@@ -662,19 +743,21 @@
             },
             
             // --- 7. ANSWER CHECKING ---
-            checkAnswer(userAnswer) {
-                const item = this.state.currentSessionItems[this.state.currentIndex];
+            checkAnswer(userAnswer, item, container) {
+                if (!item) item = this.state.currentSessionItems[this.state.currentIndex];
                 const correctAnswer = this.state.currentCorrectAnswer;
                 const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
 
-                this.DOM.main.querySelectorAll('button, input').forEach(el => el.disabled = true);
+                (container || this.DOM.main).querySelectorAll('button, input').forEach(el => el.disabled = true);
                 
                 const itemId = item.id;
                 if (isCorrect) {
                     this.state.currentScore++;
+                    this.state.sessionCorrectItems.push(item);
                     this.state.progress.learnedItems.add(itemId);
                     delete this.state.progress.incorrectCounts[itemId];
                 } else {
+                    this.state.sessionIncorrectItems.push(item);
                     this.state.progress.incorrectCounts[itemId] = (this.state.progress.incorrectCounts[itemId] || 0) + 1;
                 }
                 
@@ -682,39 +765,36 @@
                 this.showFeedback(isCorrect, correctAnswer);
             },
 
-            checkErrorCorrectionStep1(userThinksIsCorrect) {
-                const isActuallyCorrect = !this.state.session.isActuallyIncorrect;
-                if (userThinksIsCorrect === isActuallyCorrect) {
-                    if (isActuallyCorrect) {
-                        this.checkAnswer(this.state.currentCorrectAnswer);
-                    } else {
-                        document.getElementById('error-step-1')?.classList.add('hidden');
-                        document.getElementById('error-step-2')?.classList.remove('hidden');
-                        document.getElementById('error-correction-input')?.focus();
-                    }
-                } else {
-                    this.checkAnswer("user-was-wrong-about-correctness");
-                }
+            checkGuideAnswer(userAnswer, item, container) {
+                const correctAnswer = this.state.currentCorrectAnswer;
+                const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
+                container.querySelectorAll('button, input').forEach(el => el.disabled = true);
+                this.showFeedback(isCorrect, correctAnswer, container.parentElement.querySelector('#guide-feedback-container'), true);
             },
 
-            showFeedback(isCorrect, correctAnswer) {
-                const container = document.getElementById('feedback-container');
+            showFeedback(isCorrect, correctAnswer, container = null, isGuide = false) {
+                if (!container) container = document.getElementById('feedback-container');
                 if (!container) return;
+
                 const bgColor = isCorrect ? 'bg-green-100' : 'bg-red-100';
                 const textColor = isCorrect ? 'text-green-800' : 'text-red-800';
                 let message = isCorrect ? 'Chính xác!' : `Sai rồi! Đáp án đúng là: <strong class="font-bold">${correctAnswer}</strong>`;
 
+                const nextButtonHTML = isGuide ? '' : `<button id="next-question-btn" class="btn btn-secondary !py-2 !px-4">Tiếp theo <i class="fas fa-arrow-right ml-2"></i></button>`;
                 container.innerHTML = `
                     <div class="${bgColor} ${textColor} p-4 rounded-lg flex justify-between items-center fade-in">
                         <p class="font-semibold">${message}</p>
-                        <button id="next-question-btn" class="btn btn-secondary !py-2 !px-4">Tiếp theo <i class="fas fa-arrow-right ml-2"></i></button>
+                        ${nextButtonHTML}
                     </div>`;
-                const nextBtn = document.getElementById('next-question-btn');
-                nextBtn.focus();
-                nextBtn.addEventListener('click', () => {
-                    this.state.currentIndex++;
-                    this.renderPracticeView(); 
-                });
+
+                if (!isGuide) {
+                    const nextBtn = document.getElementById('next-question-btn');
+                    nextBtn.focus();
+                    nextBtn.addEventListener('click', () => {
+                        this.state.currentIndex++;
+                        this.renderPracticeView(); 
+                    });
+                }
             },
 
             // --- 8. SUBMISSION & UTILITIES ---
@@ -769,23 +849,27 @@
                 }
                 return word;
             },
+            showModal(title, message, showCancel = false, onConfirm = null, isGuide = false) {
+                const modalId = isGuide ? 'guide-modal' : 'main-modal';
+                const existingModal = document.getElementById(modalId);
+                if (existingModal) existingModal.remove();
 
-            showModal(title, message, showCancel = false, onConfirm = null) {
-                this.DOM.loader.classList.add('hidden');
                 const modalContainer = document.createElement('div');
-                modalContainer.className = "fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50";
+                modalContainer.id = modalId;
+                modalContainer.className = "fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4";
                 
                 const buttonsHTML = showCancel 
                     ? `<button id="modal-cancel-btn" class="btn btn-secondary">Hủy</button><button id="modal-confirm-btn" class="btn btn-primary">Đồng ý</button>`
-                    : `<button id="modal-confirm-btn" class="btn btn-primary w-full">Đã hiểu</button>`;
+                    : `<button id="modal-confirm-btn" class="btn btn-primary w-full">${isGuide ? 'Đóng' : 'Đã hiểu'}</button>`;
                 
+                const modalWidth = isGuide ? 'max-w-2xl' : 'max-w-sm';
                 modalContainer.innerHTML = `
-                    <div class="bg-white p-8 rounded-xl shadow-lg text-center w-full max-w-sm fade-in">
-                        <h3 class="text-xl font-bold text-gray-900 mb-4">${title}</h3>
-                        <p class="text-gray-600 mb-6">${message}</p>
-                        <div class="flex gap-4 justify-center">${buttonsHTML}</div>
+                    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg w-full ${modalWidth} fade-in">
+                        <h3 class="text-xl font-bold text-gray-900 mb-4 text-left">${title}</h3>
+                        <div class="text-gray-600 mb-6">${message}</div>
+                        <div class="flex gap-4 justify-end mt-8">${buttonsHTML}</div>
                     </div>`;
-                document.body.appendChild(modalContainer);
+                this.DOM.modal.appendChild(modalContainer);
 
                 const confirmBtn = modalContainer.querySelector('#modal-confirm-btn');
                 const cancelBtn = modalContainer.querySelector('#modal-cancel-btn');
@@ -800,7 +884,6 @@
                     cancelBtn.onclick = closeModal;
                 }
             },
-
             findSentencesWithWord(word) {
                 const sentences = new Set();
                 const regex = new RegExp(`\\b${word}\\b`, 'i');
@@ -818,6 +901,20 @@
             }
         };
         
+        // --- Bổ sung đầy đủ các hàm ---
+        Object.assign(App, {
+            startFlashcardSession: App.startFlashcardSession,
+            renderFlashcardViewer: App.renderFlashcardViewer,
+            updateFlashcardView: App.updateFlashcardView,
+            navigateCard: App.navigateCard,
+            renderMindmapFamilySelection: App.renderMindmapFamilySelection,
+            renderMindmap: App.renderMindmap,
+            submitToFirebase: App.submitToFirebase,
+            shuffleArray: App.shuffleArray,
+            findRoot: App.findRoot,
+            findSentencesWithWord: App.findSentencesWithWord
+        });
+
         document.addEventListener('DOMContentLoaded', () => App.init());
     </script>
 </body>
