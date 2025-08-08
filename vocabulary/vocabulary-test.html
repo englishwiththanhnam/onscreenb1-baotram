@@ -61,6 +61,9 @@
         .answer-option.incorrect { border-color: var(--incorrect-color); background-color: #fef2f2; color: #991b1b; }
         .token-area { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 1rem; border: 2px dashed #cbd5e1; border-radius: 0.5rem; min-height: 80px; }
         .word-token { padding: 0.5rem 1rem; background-color: #eef2ff; color: #4338ca; border-radius: 0.5rem; font-weight: 500; cursor: pointer; }
+        .matching-item { padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 0.5rem; margin-bottom: 0.5rem; cursor: pointer; transition: all 0.2s; background-color: #fff; }
+        .matching-item.selected { border-color: var(--primary-color); background-color: #eef2ff; font-weight: 600; }
+        .matching-item.correct-match { background-color: #dcfce7; border-color: #22c55e; opacity: 0.6; cursor: default; }
 
         .fade-in { animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -150,7 +153,6 @@
                 const structures = []; const families = {};
                 this.state.wordList.forEach((word, idx) => {
                     word.itemType = 'word';
-                    // Sửa lỗi ID, đảm bảo ID gốc từ maker được giữ lại và chuẩn hóa
                     word.id = `word_${word.id || idx}`; 
                     if (word.structures && Array.isArray(word.structures)) {
                         word.structures.forEach((struct, s_idx) => {
@@ -375,7 +377,7 @@
                 }
                 container.innerHTML = html;
             },
-            
+
             renderPracticeGuide() {
                 const guideContainer = document.getElementById('practice-guide-buttons');
                 const exerciseTypes = [
@@ -385,6 +387,7 @@
                     { type: 'SentenceUnscramble', name: 'Sắp xếp câu', icon: 'fa-sort-alpha-down', color: 'text-indigo-500' },
                     { type: 'GapFill', name: 'Điền từ', icon: 'fa-edit', color: 'text-emerald-500' },
                     { type: 'AudioListening', name: 'Nghe & Gõ', icon: 'fa-volume-up', color: 'text-pink-500' },
+                    { type: 'TriosOfGappedSentence', name: 'Tìm từ chung', icon: 'fa-search-plus', color: 'text-teal-500' },
                     { type: 'ErrorCorrection', name: 'Sửa lỗi', icon: 'fa-check-double', color: 'text-rose-500' },
                     { type: 'IPAFill', name: 'Phiên âm', icon: 'fa-language', color: 'text-orange-500' },
                 ];
@@ -411,6 +414,7 @@
                     'SentenceUnscramble': { name: 'Sắp xếp câu', desc: 'Nhấn vào các từ cho sẵn theo đúng thứ tự để tạo thành một câu hoàn chỉnh.' },
                     'GapFill': { name: 'Điền vào chỗ trống', desc: 'Gõ một từ (thường là giới từ) còn thiếu vào chỗ trống trong một cấu trúc câu.' },
                     'AudioListening': { name: 'Nghe & Gõ', desc: 'Nghe phát âm của một từ hoặc một câu và gõ lại chính xác những gì bạn nghe được.' },
+                    'TriosOfGappedSentence': { name: 'Tìm từ chung', desc: 'Tìm một từ duy nhất có thể điền vào cả 3 chỗ trống trong các câu khác nhau.'},
                     'ErrorCorrection': { name: 'Sửa lỗi sai', desc: 'Xác định một câu cho sẵn là đúng hay sai. Nếu sai, hãy sửa lại cho đúng.' },
                     'IPAFill': { name: 'Điền phiên âm', desc: 'Chọn nguyên âm đúng để hoàn thành phiên âm IPA của một từ cho sẵn.' }
                 };
@@ -425,7 +429,7 @@
                 }
                 
                 suitableItem.exerciseType = exerciseType;
-                const exampleHTML = this[`get${exerciseType}HTML`](suitableItem, true); // isExample = true
+                const exampleHTML = this[`get${exerciseType}HTML`](suitableItem, true);
 
                 this.showModal(
                     `Hướng dẫn: ${info.name}`,
@@ -435,10 +439,9 @@
                         <div id="guide-question-container">${exampleHTML}</div>
                         <div id="guide-feedback-container" class="mt-4"></div>
                      </div>`,
-                    false, null, true // isGuide = true
+                    false, null, true
                 );
                 
-                // Attach listeners for the interactive guide
                 const guideContainer = document.getElementById('guide-question-container');
                 this.attachPracticeEventListeners(suitableItem, guideContainer, true);
             },
@@ -569,7 +572,7 @@
             },
 
             // --- 6. QUESTION GENERATION & EVENT LISTENERS ---
- getTraditionalMCQHTML(item) {
+            getTraditionalMCQHTML(item, isExample = false) {
                 const isEngToViet = Math.random() > 0.5;
                 const question = isEngToViet ? `${item.word} <span class="text-base font-normal text-slate-500">(${item.type})</span>` : item.meaning;
                 this.state.currentCorrectAnswer = isEngToViet ? item.meaning : item.word;
@@ -580,21 +583,24 @@
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Trắc nghiệm: Chọn đáp án đúng</h2><div class="text-2xl font-bold min-h-[60px] mb-8">${question}</div><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             
-            getContextualMCQHTML(item) {
+            getContextualMCQHTML(item, isExample = false) {
                 this.state.currentCorrectAnswer = item.word;
-                const sentence = item.exampleSentence.replace(new RegExp(`\\b${item.word}\\b`, 'gi'), '<span class="font-bold text-indigo-600">[...]</span>');
+                // Sửa lỗi: Đảm bảo thay thế cả dạng số nhiều (plural)
+                const wordRegex = new RegExp(`\\b${item.word.replace(/s$/, '')}(s?)\\b`, 'gi');
+                const sentence = item.exampleSentence.replace(wordRegex, '<span class="font-bold text-indigo-600">[...]</span>');
                 const distractors = this.shuffleArray([...item.distractors_en]).slice(0, 3);
                 const options = this.shuffleArray([this.state.currentCorrectAnswer, ...distractors]);
 
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Trắc nghiệm: Hoàn thành câu</h2><p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
 
-            getWordFamilyMCQHTML(item) {
+            getWordFamilyMCQHTML(item, isExample = false) {
                 const family = this.state.wordFamilies[item.familyRoot];
                 if (!family || family.length < 2) return this.getContextualMCQHTML(item);
 
                 this.state.currentCorrectAnswer = item.word;
-                const sentence = item.exampleSentence.replace(new RegExp(`\\b${item.word}\\b`, 'gi'), '<span class="font-bold text-indigo-600">[...]</span>');
+                const wordRegex = new RegExp(`\\b${item.word.replace(/s$/, '')}(s?)\\b`, 'gi');
+                const sentence = item.exampleSentence.replace(wordRegex, '<span class="font-bold text-indigo-600">[...]</span>');
                 
                 const distractors = this.shuffleArray(family.filter(w => w.id !== item.id)).slice(0, 3).map(w => w.word);
                 const options = this.shuffleArray([this.state.currentCorrectAnswer, ...distractors]);
@@ -602,34 +608,35 @@
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Trắc nghiệm: Họ từ</h2><p class="text-slate-600 mb-4">Chọn từ đúng trong họ từ "<strong>${item.familyRoot}</strong>" để hoàn thành câu.</p><p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
 
-            getAudioListeningHTML(item) {
+            getAudioListeningHTML(item, isExample = false) {
                 const isSentence = Math.random() > 0.5 && item.exampleSentence;
                 const textToSpeak = isSentence ? item.exampleSentence : item.word;
                 this.state.currentCorrectAnswer = textToSpeak;
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Luyện nghe: Gõ lại ${isSentence ? 'câu' : 'từ'}</h2><div class="text-center mb-8"><button id="play-audio-btn" data-text="${textToSpeak}" class="text-5xl text-indigo-500 hover:text-indigo-700 transition-colors"><i class="fas fa-volume-up"></i></button></div><div class="flex gap-2"><input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-indigo-500 focus:ring-indigo-500" placeholder="Gõ những gì bạn nghe được..."><button id="check-btn" class="btn btn-primary !py-3">Kiểm tra</button></div></div>`;
             },
             
-            getSentenceUnscrambleHTML(item) {
+            getSentenceUnscrambleHTML(item, isExample = false) {
                 this.state.currentCorrectAnswer = item.exampleSentence;
                 const words = this.shuffleArray(item.exampleSentence.split(' '));
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Sắp xếp câu</h2><p class="text-slate-600 mb-4">Nhấn vào các từ theo đúng thứ tự để tạo thành câu hoàn chỉnh.</p><div id="unscramble-answer-area" class="token-area mb-4"></div><div id="unscramble-source-area" class="token-area bg-slate-50">${words.map(word => `<span class="word-token">${word}</span>`).join('')}</div><div class="mt-6 text-right"><button id="check-btn" class="btn btn-primary">Kiểm tra</button></div></div>`;
             },
 
-            getGapFillHTML(item) {
+            getGapFillHTML(item, isExample = false) {
                 this.state.currentCorrectAnswer = item.gapFill.blank;
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Điền vào chỗ trống</h2><p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${item.gapFill.sentence}"</p><div class="flex gap-2"><input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-indigo-500 focus:ring-indigo-500" placeholder="Gõ từ còn thiếu..."><button id="check-btn" class="btn btn-primary !py-3">Kiểm tra</button></div></div>`;
             },
 
-            getTriosOfGappedSentenceHTML(item) {
+            getTriosOfGappedSentenceHTML(item, isExample = false) {
                 this.state.currentCorrectAnswer = item.word;
                 const sentences = this.findSentencesWithWord(item.word);
-                const gappedSentences = this.shuffleArray(sentences).slice(0, 3).map(s => s.replace(new RegExp(`\\b${item.word}\\b`, 'gi'), '______'));
+                const wordRegex = new RegExp(`\\b${item.word.replace(/s$/, '')}(s?)\\b`, 'gi');
+                const gappedSentences = this.shuffleArray(sentences).slice(0, 3).map(s => s.replace(wordRegex, '______'));
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Tìm từ chung</h2><p class="text-slate-600 mb-6">Một từ duy nhất có thể điền vào cả 3 chỗ trống dưới đây?</p><div class="space-y-4 mb-6">${gappedSentences.map((s, i) => `<p class="text-lg font-serif italic text-slate-700">${i + 1}. "${s}"</p>`).join('')}</div><div class="flex gap-2"><input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg" placeholder="Gõ từ chung..."><button id="check-btn" class="btn btn-primary !py-3">Kiểm tra</button></div></div>`;
             },
 
-            getErrorCorrectionHTML(item) {
-                this.state.session.isActuallyIncorrect = Math.random() > 0.5;
-                const sentenceToShow = this.state.session.isActuallyIncorrect ? item.errorCorrection.incorrect : item.errorCorrection.correct;
+            getErrorCorrectionHTML(item, isExample = false) {
+                item.errorCorrection.isActuallyIncorrect = Math.random() > 0.5;
+                const sentenceToShow = item.errorCorrection.isActuallyIncorrect ? item.errorCorrection.incorrect : item.errorCorrection.correct;
                 this.state.currentCorrectAnswer = item.errorCorrection.correct;
 
                 return `<div class="question-block" id="error-correction-block">
@@ -652,11 +659,11 @@
                 </div>`;
             },
             
-            getIPAFillHTML(item) {
+            getIPAFillHTML(item, isExample = false) {
                 const ipa = item.pronunciation.replace(/\//g, '');
                 const vowels = ['ɪ', 'e', 'æ', 'ɒ', 'ɔː', 'ʊ', 'uː', 'ʌ', 'ɜː', 'ə', 'eɪ', 'aɪ', 'ɔɪ', 'aʊ', 'əʊ', 'ɪə', 'eə', 'ʊə'];
                 const presentVowels = vowels.filter(v => ipa.includes(v));
-                if (presentVowels.length === 0) return this.getTraditionalMCQHTML(item); // Fallback
+                if (presentVowels.length === 0) return this.getTraditionalMCQHTML(item);
 
                 const vowelToGuess = this.shuffleArray(presentVowels)[0];
                 this.state.currentCorrectAnswer = vowelToGuess;
@@ -849,6 +856,7 @@
                 }
                 return word;
             },
+
             showModal(title, message, showCancel = false, onConfirm = null, isGuide = false) {
                 const modalId = isGuide ? 'guide-modal' : 'main-modal';
                 const existingModal = document.getElementById(modalId);
@@ -884,9 +892,10 @@
                     cancelBtn.onclick = closeModal;
                 }
             },
+
             findSentencesWithWord(word) {
                 const sentences = new Set();
-                const regex = new RegExp(`\\b${word}\\b`, 'i');
+                const regex = new RegExp(`\\b${word.replace(/s$/, '')}(s?)\\b`, 'i');
                 this.state.wordList.forEach(w => {
                     if (w.exampleSentence && regex.test(w.exampleSentence)) sentences.add(w.exampleSentence);
                     if (w.structures) {
@@ -901,20 +910,6 @@
             }
         };
         
-        // --- Bổ sung đầy đủ các hàm ---
-        Object.assign(App, {
-            startFlashcardSession: App.startFlashcardSession,
-            renderFlashcardViewer: App.renderFlashcardViewer,
-            updateFlashcardView: App.updateFlashcardView,
-            navigateCard: App.navigateCard,
-            renderMindmapFamilySelection: App.renderMindmapFamilySelection,
-            renderMindmap: App.renderMindmap,
-            submitToFirebase: App.submitToFirebase,
-            shuffleArray: App.shuffleArray,
-            findRoot: App.findRoot,
-            findSentencesWithWord: App.findSentencesWithWord
-        });
-
         document.addEventListener('DOMContentLoaded', () => App.init());
     </script>
 </body>
