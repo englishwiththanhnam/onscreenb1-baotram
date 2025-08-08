@@ -8,10 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- THÊM THƯ VIỆN RESPONSIVEVOICE.JS -->
-    <!-- Lưu ý: Bạn cần đăng ký key miễn phí cho dự án phi thương mại tại https://responsivevoice.org/ -->
-    <script src="<script src="https://code.responsivevoice.org/responsivevoice.js?key=X6TnQG87"></script>></script>
-
     <script>
         // Cấu hình Firebase
         const firebaseConfig = {
@@ -102,11 +98,12 @@
                 progress: { learnedItems: new Set(), incorrectCounts: {} },
                 session: {},
                 isSubmitting: false,
-                playbackRate: 1.0, // Tốc độ đọc mặc định
+                audioPlayer: null,
+                audioCache: new Map(),
+                playbackRate: 1.0,
             },
             DOM: {},
 
-            // --- 1. CORE LOGIC ---
             async init() {
                 this.DOM = {
                     loader: document.getElementById('loader-overlay'),
@@ -117,6 +114,7 @@
                     modal: document.getElementById('modal-container'),
                 };
                 this.state.db = getFirestore(initializeApp(window.firebaseConfig));
+                this.state.audioPlayer = new Audio();
                 const params = new URLSearchParams(window.location.search);
                 const submissionId = params.get('submission_id');
 
@@ -155,6 +153,8 @@
                     this.renderHeader();
                     this.renderDashboard();
 
+                    this.precacheAllAudio();
+
                 } catch (error) { this.showModal("Lỗi", error.message); }
             },
             
@@ -177,7 +177,6 @@
                 this.state.wordFamilies = families;
             },
 
-            // --- 2. PROGRESS MANAGEMENT ---
             loadProgress() {
                 const progressKey = `vocabProgress_${this.state.submissionId}`;
                 const savedProgress = localStorage.getItem(progressKey);
@@ -195,8 +194,47 @@
                     incorrectCounts: this.state.progress.incorrectCounts,
                 }));
             },
+
+            async precacheAllAudio() {
+                const textsToCache = new Set();
+                this.state.wordList.forEach(word => {
+                    if (word.word) textsToCache.add(word.word);
+                    if (word.exampleSentence) textsToCache.add(word.exampleSentence);
+                });
+
+                const textsArray = [...textsToCache];
+                const total = textsArray.length;
+                let loaded = 0;
+
+                const practiceButtons = document.querySelectorAll('#practice-buttons button');
+                practiceButtons.forEach(btn => btn.disabled = true);
+
+                const progressText = document.createElement('p');
+                progressText.className = 'text-sm text-center text-slate-500 mt-4';
+                document.getElementById('practice-buttons').parentElement.appendChild(progressText);
+                
+                const updateProgress = () => {
+                    progressText.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Đang chuẩn bị âm thanh: ${loaded}/${total}`;
+                };
+                updateProgress();
+
+                for (const text of textsArray) {
+                    if (!this.state.audioCache.has(text)) {
+                        try {
+                            const audioBlob = await this.generateAudio(text);
+                            this.state.audioCache.set(text, audioBlob);
+                        } catch (error) {
+                            console.error(`Failed to cache audio for: "${text}"`, error);
+                        }
+                    }
+                    loaded++;
+                    updateProgress();
+                }
+
+                progressText.innerHTML = `<i class="fas fa-check-circle text-green-500 mr-2"></i> Âm thanh đã sẵn sàng!`;
+                practiceButtons.forEach(btn => btn.disabled = false);
+            },
             
-            // --- 3. UI RENDERING ---
             renderHeader() {
                  this.DOM.header.innerHTML = `
                     <div class="flex flex-wrap justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
@@ -268,7 +306,7 @@
                 }
             },
 
-            // --- 4. STUDY & PRACTICE GUIDE IMPLEMENTATION ---
+              // --- 4. STUDY & PRACTICE GUIDE IMPLEMENTATION ---
             startFlashcardSession(type) {
                 this.state.currentSessionItems = type === 'word' ? this.state.wordList : this.state.structureList;
                 if(this.state.currentSessionItems.length === 0) {
@@ -375,7 +413,7 @@
                          <button id="back-to-selection-btn" class="btn btn-secondary !py-2 !px-4 mr-4"><i class="fas fa-arrow-left"></i></button>
                         <h2 class="text-xl font-bold">Họ từ: ${familyRoot}</h2>
                     </div>
-                    <div class="relative w-full h-[60vh] flex items-center justify-content: center; overflow: hidden">
+                    <div class="relative w-full h-[60vh] flex items-center justify-center overflow-hidden">
                         <div id="mindmap" class="relative w-[150px] h-[150px]"></div>
                     </div>
                 </div>`;
@@ -632,8 +670,7 @@
                 const isSentence = Math.random() > 0.5 && item.exampleSentence;
                 const textToSpeak = isSentence ? item.exampleSentence : item.word;
                 this.state.currentCorrectAnswer = textToSpeak;
-                
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Luyện nghe: Gõ lại ${isSentence ? 'câu' : 'từ'}</h2><div class="text-center mb-8"><button id="play-audio-btn" data-text="${textToSpeak}" class="text-5xl text-indigo-500 hover:text-indigo-700 transition-colors"><i class="fas fa-volume-up"></i></button></div><div class="flex justify-center items-center mb-6"><div class="speed-control"><button id="speed-down-btn" class="btn !p-2 rounded-full w-8 h-8"><i class="fas fa-minus"></i></button><span id="speed-display" class="font-mono font-semibold w-12 text-center">${this.state.playbackRate.toFixed(2)}x</span><button id="speed-up-btn" class="btn !p-2 rounded-full w-8 h-8"><i class="fas fa-plus"></i></button></div></div><div class="flex gap-2"><input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-indigo-500 focus:ring-indigo-500" placeholder="Gõ những gì bạn nghe được..."><button id="check-btn" class="btn btn-primary !py-3">Kiểm tra</button></div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Luyện nghe: Gõ lại ${isSentence ? 'câu' : 'từ'}</h2><div class="text-center mb-8"><button id="play-audio-btn" data-text="${textToSpeak}" class="text-5xl text-indigo-500 hover:text-indigo-700 transition-colors"><i class="fas fa-volume-up"></i></button></div><div class="flex gap-2"><input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-indigo-500 focus:ring-indigo-500" placeholder="Gõ những gì bạn nghe được..."><button id="check-btn" class="btn btn-primary !py-3">Kiểm tra</button></div></div>`;
             },
             
             getSentenceUnscrambleHTML(item, isExample = false) {
@@ -713,21 +750,12 @@
                         const input = container.querySelector('#text-input');
                         const checkBtn = container.querySelector('#check-btn');
                         container.querySelector('#play-audio-btn')?.addEventListener('click', (e) => {
-                           if (typeof responsiveVoice !== 'undefined') {
-                                this.playAudio(e.currentTarget.dataset.text);
-                           }
+                           if (typeof SpeechSynthesisUtterance !== 'undefined') {
+                                const utterance = new SpeechSynthesisUtterance(e.currentTarget.dataset.text);
+                                utterance.lang = 'en-US';
+                                window.speechSynthesis.speak(utterance);
+                            }
                         });
-                        // Speed controls for AudioListening
-                        const speedDisplay = container.querySelector('#speed-display');
-                        container.querySelector('#speed-down-btn')?.addEventListener('click', () => {
-                            this.state.playbackRate = Math.max(0.5, this.state.playbackRate - 0.25);
-                            if(speedDisplay) speedDisplay.textContent = `${this.state.playbackRate.toFixed(2)}x`;
-                        });
-                        container.querySelector('#speed-up-btn')?.addEventListener('click', () => {
-                            this.state.playbackRate = Math.min(1.5, this.state.playbackRate + 0.25);
-                            if(speedDisplay) speedDisplay.textContent = `${this.state.playbackRate.toFixed(2)}x`;
-                        });
-
                         if (input && checkBtn) {
                             const doCheck = () => checkAnswerFunction(input.value, item, container);
                             checkBtn.addEventListener('click', doCheck);
@@ -835,121 +863,223 @@
             },
 
             // --- 8. AUDIO & UTILITIES ---
+            async generateAudio(text) {
+                const apiKey = ""; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+                const payload = {
+                    contents: [{ parts: [{ text }] }],
+                    generationConfig: { responseModalities: ["AUDIO"] },
+                    model: "gemini-2.5-flash-preview-tts"
+                };
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error for TTS`);
+                const result = await response.json();
+                const audioData = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                if (!audioData) throw new Error("Invalid audio data from API.");
+                const pcmBuffer = this.base64ToArrayBuffer(audioData);
+                const pcm16 = new Int16Array(pcmBuffer);
+                return this.pcmToWav(pcm16, 24000);
+            },
             playAudio(text) {
-                if (typeof responsiveVoice !== 'undefined') {
-                    // Sử dụng giọng US English Male chất lượng cao, tương tự Puck
-                    responsiveVoice.speak(text, "US English Male", { rate: this.state.playbackRate });
+                const audioBlob = this.state.audioCache.get(text);
+                if (audioBlob) {
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    this.state.audioPlayer.src = audioUrl;
+                    this.state.audioPlayer.playbackRate = this.state.playbackRate;
+                    this.state.audioPlayer.play().catch(e => console.error("Audio play failed:", e));
                 } else {
-                    console.error("ResponsiveVoice library not loaded.");
-                    this.showModal("Lỗi Âm thanh", "Không thể tải thư viện âm thanh. Vui lòng kiểm tra lại kết nối.");
+                    console.warn(`Audio for "${text}" not found in cache.`);
                 }
             },
+           base64ToArrayBuffer(base64) {
+    const binaryString = window.atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+},
+            pcmToWav(pcmData, sampleRate) {
+    const numChannels = 1;
+    const bitsPerSample = 16;
+    const blockAlign = (numChannels * bitsPerSample) / 8;
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = pcmData.length * (bitsPerSample / 8);
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
 
-            submitToFirebase(isFinal = false) {
-                if (this.state.isSubmitting) return;
-                this.state.isSubmitting = true;
-                this.DOM.loader.classList.remove('hidden');
+    // Header RIFF
+    this.writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    this.writeString(view, 8, 'WAVE');
+    // "fmt " sub-chunk
+    this.writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true); // Audio format 1 = PCM
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitsPerSample, true);
+    // "data" sub-chunk
+    this.writeString(view, 36, 'data');
+    view.setUint32(40, dataSize, true);
 
-                const learnedCount = this.state.progress.learnedItems.size;
-                const totalItems = this.state.wordList.length + this.state.structureList.length;
-                const score = totalItems > 0 ? Math.round((learnedCount / totalItems) * 100) : 0;
-                
-                const submissionPayload = {
-                    score: score, totalPoints: 100,
-                    status: isFinal ? 'submitted' : 'in-progress',
-                    answers: { 
-                        learnedCount, 
-                        totalItems,
-                        incorrectCounts: this.state.progress.incorrectCounts 
-                    },
-                    endTime: isFinal ? serverTimestamp() : null,
-                };
+    // Ghi dữ liệu PCM
+    let offset = 44;
+    for (let i = 0; i < pcmData.length; i++, offset += 2) {
+        view.setInt16(offset, pcmData[i], true);
+    }
 
-                try {
-                    updateDoc(doc(this.state.db, 'submissions', this.state.submissionId), submissionPayload);
-                    if (isFinal) {
-                        localStorage.removeItem(`vocabProgress_${this.state.submissionId}`);
-                        this.showModal("Thành công!", `Đã nộp bài thành công với tiến độ ${score}%.`, false, () => window.location.href='index.html');
-                    }
-                } catch(error) { 
-                    this.showModal("Lỗi", "Không thể lưu tiến độ: " + error.message); 
-                } finally { 
-                    this.state.isSubmitting = false;
-                    this.DOM.loader.classList.add('hidden');
-                }
-            },
-            
-            shuffleArray(array) {
-                for (let i = array.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [array[i], array[j]] = [array[j], array[i]];
-                }
-                return array;
-            },
+    return new Blob([view], { type: 'audio/wav' });
+},
 
-            findRoot(word) {
-                const endings = ['s', 'es', 'ing', 'ed', 'er', 'est', 'ly', 'tion', 'sion', 'ment', 'able', 'ible', 'al', 'ial', 'ive', 'ous', 'ness'];
-                for (const ending of endings) {
-                    if (word.length > ending.length + 3 && word.endsWith(ending)) {
-                        return word.slice(0, -ending.length);
-                    }
-                }
-                return word;
-            },
+writeString(view, offset, string) {
+    for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+    }
+},
+        async submitToFirebase(isFinal = false) {
+    if (this.state.isSubmitting) return;
+    this.state.isSubmitting = true;
+    this.DOM.loader.classList.remove('hidden');
 
-            showModal(title, message, showCancel = false, onConfirm = null, isGuide = false) {
-                const modalId = isGuide ? 'guide-modal' : 'main-modal';
-                const existingModal = document.getElementById(modalId);
-                if (existingModal) existingModal.remove();
+    const learnedCount = this.state.progress.learnedItems.size;
+    const totalItems = this.state.wordList.length + this.state.structureList.length;
+    const score = totalItems > 0 ? Math.round((learnedCount / totalItems) * 100) : 0;
+    
+    const submissionPayload = {
+        score: score,
+        totalPoints: 100,
+        status: isFinal ? 'submitted' : 'in-progress',
+        answers: { 
+            learnedCount, 
+            totalItems,
+            incorrectCounts: this.state.progress.incorrectCounts 
+        },
+        endTime: isFinal ? serverTimestamp() : null,
+    };
 
-                const modalContainer = document.createElement('div');
-                modalContainer.id = modalId;
-                modalContainer.className = "fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4";
-                
-                const buttonsHTML = showCancel 
-                    ? `<button id="modal-cancel-btn" class="btn btn-secondary">Hủy</button><button id="modal-confirm-btn" class="btn btn-primary">Đồng ý</button>`
-                    : `<button id="modal-confirm-btn" class="btn btn-primary w-full">${isGuide ? 'Đóng' : 'Đã hiểu'}</button>`;
-                
-                const modalWidth = isGuide ? 'max-w-2xl' : 'max-w-sm';
-                modalContainer.innerHTML = `
-                    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg w-full ${modalWidth} fade-in">
-                        <h3 class="text-xl font-bold text-gray-900 mb-4 text-left">${title}</h3>
-                        <div class="text-gray-600 mb-6">${message}</div>
-                        <div class="flex gap-4 justify-end mt-8">${buttonsHTML}</div>
-                    </div>`;
-                this.DOM.modal.appendChild(modalContainer);
+    try {
+        await updateDoc(doc(this.state.db, 'submissions', this.state.submissionId), submissionPayload);
+        if (isFinal) {
+            localStorage.removeItem(`vocabProgress_${this.state.submissionId}`);
+            this.showModal("Thành công!", `Đã nộp bài thành công với tiến độ ${score}%.`, false, () => window.location.href='index.html');
+        }
+    } catch(error) { 
+        this.showModal("Lỗi", "Không thể lưu tiến độ: " + error.message); 
+    } finally { 
+        this.state.isSubmitting = false;
+        this.DOM.loader.classList.add('hidden');
+    }
+},
+shuffleArray(array) {
+    // Thuật toán Fisher-Yates shuffle
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+},
 
-                const confirmBtn = modalContainer.querySelector('#modal-confirm-btn');
-                const cancelBtn = modalContainer.querySelector('#modal-cancel-btn');
+findRoot(word) {
+    // Đây là một hàm đơn giản hóa. Trong thực tế cần một thư viện chuyên dụng hơn.
+    const endings = ['s', 'es', 'ing', 'ed', 'er', 'est', 'ly', 'tion', 'sion', 'ment', 'able', 'ible', 'al', 'ial', 'ive', 'ous', 'ness'];
+    for (const ending of endings) {
+        if (word.length > ending.length + 3 && word.endsWith(ending)) {
+            return word.slice(0, -ending.length);
+        }
+    }
+    return word;
+},
 
-                const closeModal = () => modalContainer.remove();
+showModal(title, message, showCancel = false, onConfirm = null, isGuide = false) {
+    const modalId = isGuide ? 'guide-modal' : 'main-modal';
+    const existingModal = document.getElementById(modalId);
+    if (existingModal) existingModal.remove();
 
-                confirmBtn.onclick = () => {
-                    closeModal();
-                    if (onConfirm) onConfirm();
-                };
-                if(cancelBtn) {
-                    cancelBtn.onclick = closeModal;
-                }
-            },
+    const modalContainer = document.createElement('div');
+    modalContainer.id = modalId;
+    modalContainer.className = "fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4";
+    
+    const buttonsHTML = showCancel 
+        ? `<button id="modal-cancel-btn" class="btn btn-secondary">Hủy</button><button id="modal-confirm-btn" class="btn btn-primary">Đồng ý</button>`
+        : `<button id="modal-confirm-btn" class="btn btn-primary w-full">${isGuide ? 'Đóng' : 'Đã hiểu'}</button>`;
+    
+    const modalWidth = isGuide ? 'max-w-2xl' : 'max-w-sm';
+    modalContainer.innerHTML = `
+        <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg w-full ${modalWidth} fade-in">
+            <h3 class="text-xl font-bold text-gray-900 mb-4 text-left">${title}</h3>
+            <div class="text-gray-600 mb-6">${message}</div>
+            <div class="flex gap-4 justify-end mt-8">${buttonsHTML}</div>
+        </div>`;
+    this.DOM.modal.appendChild(modalContainer);
 
-            findSentencesWithWord(word) {
-                const sentences = new Set();
-                const regex = new RegExp(`\\b${word.replace(/s$/, '')}(s?)\\b`, 'i');
-                this.state.wordList.forEach(w => {
-                    if (w.exampleSentence && regex.test(w.exampleSentence)) sentences.add(w.exampleSentence);
-                    if (w.structures) {
-                        w.structures.forEach(s => {
-                            if (s.applicationExamples) s.applicationExamples.forEach(ex => {
-                                if (regex.test(ex)) sentences.add(ex);
-                            });
-                        });
-                    }
+    const confirmBtn = modalContainer.querySelector('#modal-confirm-btn');
+    const cancelBtn = modalContainer.querySelector('#modal-cancel-btn');
+
+    const closeModal = () => modalContainer.remove();
+
+    confirmBtn.onclick = () => {
+        closeModal();
+        if (onConfirm) onConfirm();
+    };
+    if(cancelBtn) {
+        cancelBtn.onclick = closeModal;
+    }
+},
+
+findSentencesWithWord(word) {
+    const sentences = new Set();
+    // Regex để tìm từ độc lập, không phân biệt hoa thường, và có thể có 's' ở cuối
+    const regex = new RegExp(`\\b${word.replace(/s$/, '')}(s?)\\b`, 'i');
+    this.state.wordList.forEach(w => {
+        if (w.exampleSentence && regex.test(w.exampleSentence)) sentences.add(w.exampleSentence);
+        if (w.structures) {
+            w.structures.forEach(s => {
+                if (s.applicationExamples) s.applicationExamples.forEach(ex => {
+                    if (regex.test(ex)) sentences.add(ex);
                 });
-                return [...sentences];
-            }
+            });
+        }
+    });
+    return [...sentences];
+}
         };
-        
+        Object.assign(App, {
+            startFlashcardSession: App.startFlashcardSession,
+            renderFlashcardViewer: App.renderFlashcardViewer,
+            updateFlashcardView: App.updateFlashcardView,
+            navigateCard: App.navigateCard,
+            renderMindmapFamilySelection: App.renderMindmapFamilySelection,
+            renderMindmap: App.renderMindmap,
+            renderPracticeGuide: App.renderPracticeGuide,
+            renderGuideModal: App.renderGuideModal,
+            startPractice: App.startPractice,
+            renderPracticeView: App.renderPracticeView,
+            renderNextQuestion: App.renderNextQuestion,
+            getPossibleExerciseTypes: App.getPossibleExerciseTypes,
+            renderSummary: App.renderSummary,
+            getTraditionalMCQHTML: App.getTraditionalMCQHTML,
+            getContextualMCQHTML: App.getContextualMCQHTML,
+            getWordFamilyMCQHTML: App.getWordFamilyMCQHTML,
+            getAudioListeningHTML: App.getAudioListeningHTML,
+            getSentenceUnscrambleHTML: App.getSentenceUnscrambleHTML,
+            getGapFillHTML: App.getGapFillHTML,
+            getTriosOfGappedSentenceHTML: App.getTriosOfGappedSentenceHTML,
+            getErrorCorrectionHTML: App.getErrorCorrectionHTML,
+            getIPAFillHTML: App.getIPAFillHTML,
+            attachPracticeEventListeners: App.attachPracticeEventListeners,
+            checkAnswer: App.checkAnswer,
+            checkGuideAnswer: App.checkGuideAnswer,
+            showFeedback: App.showFeedback,
+            submitToFirebase: App.submitToFirebase,
+            shuffleArray: App.shuffleArray,
+            findRoot: App.findRoot,
+            showModal: App.showModal,
+            findSentencesWithWord: App.findSentencesWithWord
+        });
         document.addEventListener('DOMContentLoaded', () => App.init());
     </script>
 </body>
