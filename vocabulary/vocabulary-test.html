@@ -69,6 +69,27 @@
 
         .fade-in { animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .audio-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: rgba(0,0,0,0.05);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+        .audio-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -90,16 +111,23 @@
 
         const App = {
             state: {
-                db: null, submissionId: null, studentName: '',
-                testData: {}, wordList: [], structureList: [], wordFamilies: {},
-                currentSessionItems: [], sessionCorrectItems: [], sessionIncorrectItems: [],
-                currentIndex: 0, currentScore: 0,
+                db: null,
+                submissionId: null,
+                studentName: '',
+                testData: {},
+                wordList: [],
+                structureList: [],
+                wordFamilies: {},
+                currentSessionItems: [],
+                sessionCorrectItems: [],
+                sessionIncorrectItems: [],
+                currentIndex: 0,
+                currentScore: 0,
                 currentCorrectAnswer: null,
                 progress: { learnedItems: new Set(), incorrectCounts: {} },
                 session: {},
                 isSubmitting: false,
                 audioPlayer: null,
-                audioCache: new Map(),
                 playbackRate: 1.0,
             },
             DOM: {},
@@ -118,7 +146,10 @@
                 const params = new URLSearchParams(window.location.search);
                 const submissionId = params.get('submission_id');
 
-                if (!submissionId) { this.showModal("Lỗi", "Không tìm thấy mã dự thi."); return; }
+                if (!submissionId) {
+                    this.showModal("Lỗi", "Không tìm thấy mã dự thi.");
+                    return;
+                }
                 
                 this.state.submissionId = submissionId;
                 await this.startSession(submissionId);
@@ -152,14 +183,14 @@
                     
                     this.renderHeader();
                     this.renderDashboard();
-
-                    this.precacheAllAudio();
-
-                } catch (error) { this.showModal("Lỗi", error.message); }
+                } catch (error) {
+                    this.showModal("Lỗi", error.message);
+                }
             },
             
             processData() {
-                 const structures = []; const families = {};
+                const structures = [];
+                const families = {};
                 this.state.wordList.forEach((word, idx) => {
                     word.itemType = 'word';
                     word.id = `word_${word.id || idx}`; 
@@ -195,48 +226,8 @@
                 }));
             },
 
-            async precacheAllAudio() {
-                const textsToCache = new Set();
-                this.state.wordList.forEach(word => {
-                    if (word.word) textsToCache.add(word.word);
-                    if (word.exampleSentence) textsToCache.add(word.exampleSentence);
-                });
-
-                const textsArray = [...textsToCache];
-                const total = textsArray.length;
-                let loaded = 0;
-
-                const practiceButtons = document.querySelectorAll('#practice-buttons button');
-                practiceButtons.forEach(btn => btn.disabled = true);
-
-                const progressText = document.createElement('p');
-                progressText.className = 'text-sm text-center text-slate-500 mt-4';
-                document.getElementById('practice-buttons').parentElement.appendChild(progressText);
-                
-                const updateProgress = () => {
-                    progressText.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Đang chuẩn bị âm thanh: ${loaded}/${total}`;
-                };
-                updateProgress();
-
-                for (const text of textsArray) {
-                    if (!this.state.audioCache.has(text)) {
-                        try {
-                            const audioBlob = await this.generateAudio(text);
-                            this.state.audioCache.set(text, audioBlob);
-                        } catch (error) {
-                            console.error(`Failed to cache audio for: "${text}"`, error);
-                        }
-                    }
-                    loaded++;
-                    updateProgress();
-                }
-
-                progressText.innerHTML = `<i class="fas fa-check-circle text-green-500 mr-2"></i> Âm thanh đã sẵn sàng!`;
-                practiceButtons.forEach(btn => btn.disabled = false);
-            },
-            
             renderHeader() {
-                 this.DOM.header.innerHTML = `
+                this.DOM.header.innerHTML = `
                     <div class="flex flex-wrap justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
                         <div>
                             <h1 class="text-2xl font-bold text-gray-800">${this.state.testData.title}</h1>
@@ -264,8 +255,8 @@
                         <div class="bg-white p-6 rounded-xl shadow-sm">
                              <h2 class="text-xl font-bold mb-4">Tổng quan Tiến độ</h2>
                              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div><p class="font-medium mb-1">Từ vựng đã học</p><div class="progress-bar"><div class="progress-bar-fill" style="width: ${vocabProgress.toFixed(0)}%;"></div></div><p class="text-right text-sm mt-1">${vocabLearned}/${wordList.length}</p></div>
-                                <div><p class="font-medium mb-1">Cấu trúc đã học</p><div class="progress-bar"><div class="progress-bar-fill" style="width: ${structProgress.toFixed(0)}%;"></div></div><p class="text-right text-sm mt-1">${structLearned}/${structureList.length}</p></div>
+                                 <div><p class="font-medium mb-1">Từ vựng đã học</p><div class="progress-bar"><div class="progress-bar-fill" style="width: ${vocabProgress.toFixed(0)}%;"></div></div><p class="text-right text-sm mt-1">${vocabLearned}/${wordList.length}</p></div>
+                                 <div><p class="font-medium mb-1">Cấu trúc đã học</p><div class="progress-bar"><div class="progress-bar-fill" style="width: ${structProgress.toFixed(0)}%;"></div></div><p class="text-right text-sm mt-1">${structLearned}/${structureList.length}</p></div>
                             </div>
                         </div>
                         <div class="bg-white p-6 rounded-xl shadow-sm">
@@ -302,11 +293,10 @@
                     if (button && button.dataset.practiceMode) this.startPractice(button.dataset.practiceMode);
                 });
                 if (Object.keys(this.state.progress.incorrectCounts).length === 0) {
-                     practiceButtons.querySelector('[data-practice-mode="weakness"]').disabled = true;
+                    practiceButtons.querySelector('[data-practice-mode="weakness"]').disabled = true;
                 }
             },
 
-              // --- 4. STUDY & PRACTICE GUIDE IMPLEMENTATION ---
             startFlashcardSession(type) {
                 this.state.currentSessionItems = type === 'word' ? this.state.wordList : this.state.structureList;
                 if(this.state.currentSessionItems.length === 0) {
@@ -326,7 +316,7 @@
                             <div id="card-counter" class="font-semibold text-slate-700"></div>
                         </div>
                         <div class="flashcard-main"><div class="flashcard" id="flashcard"></div></div>
-                        <div class="flashcard-nav">
+                        <div class="flashcard-nav flex justify-between items-center p-4">
                             <button id="prev-card-btn" class="btn btn-secondary !rounded-full !w-14 !h-14 text-xl"><i class="fas fa-arrow-left"></i></button>
                             <p class="text-sm text-gray-500">Nhấn vào thẻ để lật</p>
                             <button id="next-card-btn" class="btn btn-secondary !rounded-full !w-14 !h-14 text-xl"><i class="fas fa-arrow-right"></i></button>
@@ -336,7 +326,10 @@
                 
                 this.updateFlashcardView();
                 document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.renderDashboard());
-                document.getElementById('flashcard').addEventListener('click', e => e.currentTarget.classList.toggle('is-flipped'));
+                document.getElementById('flashcard').addEventListener('click', e => {
+                    if (e.target.closest('.audio-btn')) return;
+                    e.currentTarget.classList.toggle('is-flipped');
+                });
                 document.getElementById('prev-card-btn').addEventListener('click', () => this.navigateCard(-1));
                 document.getElementById('next-card-btn').addEventListener('click', () => this.navigateCard(1));
             },
@@ -351,27 +344,34 @@
 
                 card.classList.remove('is-flipped');
                 const isStructure = item.itemType === 'structure';
-                const frontHTML = `<div class="text-4xl font-bold">${isStructure ? item.phrase : item.word}</div>`;
+                const audioBtnHTML = item.audioUrl ? `<button class="audio-btn" data-audio-url="${item.audioUrl}"><i class="fas fa-volume-up"></i></button>` : '';
+
+                const frontHTML = `${audioBtnHTML}<div class="text-4xl font-bold">${isStructure ? item.phrase : item.word}</div>`;
                 const backHTML = isStructure
-                    ? `<div class="text-2xl font-semibold">${item.meaning}</div><p class="text-slate-500 mt-4 italic">"${item.applicationExamples[0] || ''}"</p>`
-                    : `<div class="text-3xl font-semibold">${item.meaning}</div><p class="text-slate-500 mt-2 text-lg">${item.pronunciation} <span class="mx-2">&bull;</span> ${item.type}</p><p class="text-slate-500 mt-4 italic">"${item.exampleSentence || ''}"</p>`;
+                    ? `<div class="text-2xl font-semibold">${item.meaning}</div><p class="text-slate-500 mt-4 italic">"${item.applicationExamples?.[0] || ''}"</p>`
+                    : `${audioBtnHTML}<div class="text-3xl font-semibold">${item.meaning}</div><p class="text-slate-500 mt-2 text-lg">${item.pronunciation} <span class="mx-2">&bull;</span> ${item.type}</p><p class="text-slate-500 mt-4 italic">"${item.exampleSentence || ''}"</p>`;
                 
                 card.innerHTML = `<div class="flashcard-face flashcard-front">${frontHTML}</div><div class="flashcard-face flashcard-back">${backHTML}</div>`;
+                
+                card.querySelectorAll('.audio-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.playAudio(e.currentTarget.dataset.audioUrl);
+                    });
+                });
+                
                 document.getElementById('card-counter').textContent = `${this.state.currentIndex + 1} / ${this.state.currentSessionItems.length}`;
             },
 
             navigateCard(direction) {
                 const card = document.getElementById('flashcard');
                 if (!card) return;
-
                 const animationClass = direction === 1 ? 'slide-out-left' : 'slide-out-right';
                 card.classList.add(animationClass);
-
                 setTimeout(() => {
                     const newIndex = this.state.currentIndex + direction;
                     const total = this.state.currentSessionItems.length;
                     this.state.currentIndex = (newIndex + total) % total;
-                    
                     card.classList.remove('slide-out-left', 'slide-out-right');
                     this.updateFlashcardView();
                     card.classList.add(direction === 1 ? 'slide-in-right' : 'slide-in-left');
@@ -494,9 +494,9 @@
                     `Hướng dẫn: ${info.name}`,
                     `<p class="text-slate-600 mb-6 text-left">${info.desc}</p>
                      <div class="bg-slate-50 p-4 rounded-lg border">
-                        <h4 class="font-bold mb-3 text-left">Ví dụ tương tác:</h4>
-                        <div id="guide-question-container">${exampleHTML}</div>
-                        <div id="guide-feedback-container" class="mt-4"></div>
+                         <h4 class="font-bold mb-3 text-left">Ví dụ tương tác:</h4>
+                         <div id="guide-question-container">${exampleHTML}</div>
+                         <div id="guide-feedback-container" class="mt-4"></div>
                      </div>`,
                     false, null, true
                 );
@@ -505,7 +505,6 @@
                 this.attachPracticeEventListeners(suitableItem, guideContainer, true);
             },
 
-            // --- 5. PRACTICE IMPLEMENTATION ---
             startPractice(mode, count = 10) {
                 this.state.currentIndex = 0;
                 this.state.currentScore = 0;
@@ -568,7 +567,7 @@
                 qContainer.innerHTML = renderFunction.call(this, item);
                 this.attachPracticeEventListeners(item, qContainer);
             },
-            
+
             getPossibleExerciseTypes(item) {
                 const types = [];
                 if (item.itemType === 'word') {
@@ -577,7 +576,7 @@
                     if (item.exampleSentence) types.push('SentenceUnscramble');
                     if ((this.state.wordFamilies[item.familyRoot]?.length || 0) > 1) types.push('WordFamilyMCQ');
                     if (this.findSentencesWithWord(item.word).length >= 3) types.push('TriosOfGappedSentence');
-                    if (typeof SpeechSynthesisUtterance !== 'undefined') types.push('AudioListening');
+                    if (item.audioUrl) types.push('AudioListening');
                     if (item.pronunciation) types.push('IPAFill');
                 } else { // structure
                     const sentence = item.applicationExamples?.[0];
@@ -630,7 +629,6 @@
                 document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.renderDashboard());
             },
 
-            // --- 6. QUESTION GENERATION & EVENT LISTENERS ---
             getTraditionalMCQHTML(item, isExample = false) {
                 const isEngToViet = Math.random() > 0.5;
                 const question = isEngToViet ? `${item.word} <span class="text-base font-normal text-slate-500">(${item.type})</span>` : item.meaning;
@@ -665,12 +663,26 @@
 
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Trắc nghiệm: Họ từ</h2><p class="text-slate-600 mb-4">Chọn từ đúng trong họ từ "<strong>${item.familyRoot}</strong>" để hoàn thành câu.</p><p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-
+            
             getAudioListeningHTML(item, isExample = false) {
-                const isSentence = Math.random() > 0.5 && item.exampleSentence;
-                const textToSpeak = isSentence ? item.exampleSentence : item.word;
-                this.state.currentCorrectAnswer = textToSpeak;
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Luyện nghe: Gõ lại ${isSentence ? 'câu' : 'từ'}</h2><div class="text-center mb-8"><button id="play-audio-btn" data-text="${textToSpeak}" class="text-5xl text-indigo-500 hover:text-indigo-700 transition-colors"><i class="fas fa-volume-up"></i></button></div><div class="flex gap-2"><input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-indigo-500 focus:ring-indigo-500" placeholder="Gõ những gì bạn nghe được..."><button id="check-btn" class="btn btn-primary !py-3">Kiểm tra</button></div></div>`;
+                this.state.currentCorrectAnswer = item.word;
+                return `<div class="question-block">
+                    <h2 class="text-sm font-semibold text-indigo-600 mb-2">Luyện nghe: Gõ lại từ</h2>
+                    <div class="text-center mb-6">
+                        <button id="play-audio-btn" data-audio-url="${item.audioUrl}" class="text-5xl text-indigo-500 hover:text-indigo-700 transition-colors"><i class="fas fa-play-circle"></i></button>
+                    </div>
+                    <div class="flex justify-center mb-6">
+                        <div class="speed-control">
+                            <button data-speed="0.75" class="speed-btn px-2 text-sm">0.75x</button>
+                            <button data-speed="1.0" class="speed-btn px-2 text-sm font-bold text-indigo-600">1x</button>
+                            <button data-speed="1.25" class="speed-btn px-2 text-sm">1.25x</button>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-indigo-500 focus:ring-indigo-500" placeholder="Gõ những gì bạn nghe được...">
+                        <button id="check-btn" class="btn btn-primary !py-3">Kiểm tra</button>
+                    </div>
+                </div>`;
             },
             
             getSentenceUnscrambleHTML(item, isExample = false) {
@@ -746,15 +758,18 @@
                             option.addEventListener('click', (e) => checkAnswerFunction(e.target.closest('.answer-option').dataset.answer, item, container));
                         });
                         break;
-                    case 'AudioListening': case 'GapFill': case 'TriosOfGappedSentence':
+                    case 'AudioListening':
                         const input = container.querySelector('#text-input');
                         const checkBtn = container.querySelector('#check-btn');
                         container.querySelector('#play-audio-btn')?.addEventListener('click', (e) => {
-                           if (typeof SpeechSynthesisUtterance !== 'undefined') {
-                                const utterance = new SpeechSynthesisUtterance(e.currentTarget.dataset.text);
-                                utterance.lang = 'en-US';
-                                window.speechSynthesis.speak(utterance);
-                            }
+                            this.playAudio(e.currentTarget.dataset.audioUrl);
+                        });
+                        container.querySelectorAll('.speed-btn').forEach(btn => {
+                            btn.addEventListener('click', e => {
+                                this.state.playbackRate = parseFloat(e.currentTarget.dataset.speed);
+                                container.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('font-bold', 'text-indigo-600'));
+                                e.currentTarget.classList.add('font-bold', 'text-indigo-600');
+                            });
                         });
                         if (input && checkBtn) {
                             const doCheck = () => checkAnswerFunction(input.value, item, container);
@@ -762,7 +777,17 @@
                             input.addEventListener('keypress', (e) => { if (e.key === 'Enter') doCheck(); });
                         }
                         break;
-                    case 'SentenceUnscramble':
+                    case 'GapFill': case 'TriosOfGappedSentence': {
+                        const input = container.querySelector('#text-input');
+                        const checkBtn = container.querySelector('#check-btn');
+                        if (input && checkBtn) {
+                            const doCheck = () => checkAnswerFunction(input.value, item, container);
+                            checkBtn.addEventListener('click', doCheck);
+                            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') doCheck(); });
+                        }
+                        break;
+                    }
+                    case 'SentenceUnscramble': {
                         const answerArea = container.querySelector('#unscramble-answer-area');
                         const sourceArea = container.querySelector('#unscramble-source-area');
                         const moveToken = (e) => {
@@ -778,6 +803,7 @@
                             checkAnswerFunction(answer, item, container);
                         });
                         break;
+                    }
                     case 'ErrorCorrection':
                         container.querySelectorAll('#error-step-1 button').forEach(btn => {
                             btn.addEventListener('click', (e) => {
@@ -807,7 +833,6 @@
                 }
             },
             
-            // --- 7. ANSWER CHECKING ---
             checkAnswer(userAnswer, item, container) {
                 if (!item) item = this.state.currentSessionItems[this.state.currentIndex];
                 const correctAnswer = this.state.currentCorrectAnswer;
@@ -862,224 +887,122 @@
                 }
             },
 
-            // --- 8. AUDIO & UTILITIES ---
-            async generateAudio(text) {
-                const apiKey = ""; 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
-                const payload = {
-                    contents: [{ parts: [{ text }] }],
-                    generationConfig: { responseModalities: ["AUDIO"] },
-                    model: "gemini-2.5-flash-preview-tts"
-                };
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!response.ok) throw new Error(`API Error for TTS`);
-                const result = await response.json();
-                const audioData = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-                if (!audioData) throw new Error("Invalid audio data from API.");
-                const pcmBuffer = this.base64ToArrayBuffer(audioData);
-                const pcm16 = new Int16Array(pcmBuffer);
-                return this.pcmToWav(pcm16, 24000);
+            playAudio(url) {
+                if (!url) {
+                    console.warn("No audio URL provided.");
+                    return;
+                }
+                this.state.audioPlayer.src = url;
+                this.state.audioPlayer.playbackRate = this.state.playbackRate;
+                this.state.audioPlayer.play().catch(e => console.error("Audio play failed:", e));
             },
-            playAudio(text) {
-                const audioBlob = this.state.audioCache.get(text);
-                if (audioBlob) {
-                    const audioUrl = URL.createObjectURL(audioBlob);
-                    this.state.audioPlayer.src = audioUrl;
-                    this.state.audioPlayer.playbackRate = this.state.playbackRate;
-                    this.state.audioPlayer.play().catch(e => console.error("Audio play failed:", e));
-                } else {
-                    console.warn(`Audio for "${text}" not found in cache.`);
+
+            async submitToFirebase(isFinal = false) {
+                if (this.state.isSubmitting) return;
+                this.state.isSubmitting = true;
+                this.DOM.loader.classList.remove('hidden');
+
+                const learnedCount = this.state.progress.learnedItems.size;
+                const totalItems = this.state.wordList.length + this.state.structureList.length;
+                const score = totalItems > 0 ? Math.round((learnedCount / totalItems) * 100) : 0;
+                
+                const submissionPayload = {
+                    score: score,
+                    totalPoints: 100,
+                    status: isFinal ? 'submitted' : 'in-progress',
+                    answers: { 
+                        learnedCount, 
+                        totalItems,
+                        incorrectCounts: this.state.progress.incorrectCounts 
+                    },
+                    endTime: isFinal ? serverTimestamp() : null,
+                };
+
+                try {
+                    await updateDoc(doc(this.state.db, 'submissions', this.state.submissionId), submissionPayload);
+                    if (isFinal) {
+                        localStorage.removeItem(`vocabProgress_${this.state.submissionId}`);
+                        this.showModal("Thành công!", `Đã nộp bài thành công với tiến độ ${score}%.`, false, () => window.location.href='index.html');
+                    }
+                } catch(error) { 
+                    this.showModal("Lỗi", "Không thể lưu tiến độ: " + error.message); 
+                } finally { 
+                    this.state.isSubmitting = false;
+                    this.DOM.loader.classList.add('hidden');
                 }
             },
-           base64ToArrayBuffer(base64) {
-    const binaryString = window.atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes.buffer;
-},
-            pcmToWav(pcmData, sampleRate) {
-    const numChannels = 1;
-    const bitsPerSample = 16;
-    const blockAlign = (numChannels * bitsPerSample) / 8;
-    const byteRate = sampleRate * blockAlign;
-    const dataSize = pcmData.length * (bitsPerSample / 8);
-    const buffer = new ArrayBuffer(44 + dataSize);
-    const view = new DataView(buffer);
 
-    // Header RIFF
-    this.writeString(view, 0, 'RIFF');
-    view.setUint32(4, 36 + dataSize, true);
-    this.writeString(view, 8, 'WAVE');
-    // "fmt " sub-chunk
-    this.writeString(view, 12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true); // Audio format 1 = PCM
-    view.setUint16(22, numChannels, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, byteRate, true);
-    view.setUint16(32, blockAlign, true);
-    view.setUint16(34, bitsPerSample, true);
-    // "data" sub-chunk
-    this.writeString(view, 36, 'data');
-    view.setUint32(40, dataSize, true);
+            shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            },
 
-    // Ghi dữ liệu PCM
-    let offset = 44;
-    for (let i = 0; i < pcmData.length; i++, offset += 2) {
-        view.setInt16(offset, pcmData[i], true);
-    }
+            findRoot(word) {
+                const endings = ['s', 'es', 'ing', 'ed', 'er', 'est', 'ly', 'tion', 'sion', 'ment', 'able', 'ible', 'al', 'ial', 'ive', 'ous', 'ness'];
+                for (const ending of endings) {
+                    if (word.length > ending.length + 3 && word.endsWith(ending)) {
+                        return word.slice(0, -ending.length);
+                    }
+                }
+                return word;
+            },
 
-    return new Blob([view], { type: 'audio/wav' });
-},
+            showModal(title, message, showCancel = false, onConfirm = null, isGuide = false) {
+                const modalId = isGuide ? 'guide-modal' : 'main-modal';
+                const existingModal = document.getElementById(modalId);
+                if (existingModal) existingModal.remove();
 
-writeString(view, offset, string) {
-    for (let i = 0; i < string.length; i++) {
-        view.setUint8(offset + i, string.charCodeAt(i));
-    }
-},
-        async submitToFirebase(isFinal = false) {
-    if (this.state.isSubmitting) return;
-    this.state.isSubmitting = true;
-    this.DOM.loader.classList.remove('hidden');
+                const modalContainer = document.createElement('div');
+                modalContainer.id = modalId;
+                modalContainer.className = "fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4";
+                
+                const buttonsHTML = showCancel 
+                    ? `<button id="modal-cancel-btn" class="btn btn-secondary">Hủy</button><button id="modal-confirm-btn" class="btn btn-primary">Đồng ý</button>`
+                    : `<button id="modal-confirm-btn" class="btn btn-primary w-full">${isGuide ? 'Đóng' : 'Đã hiểu'}</button>`;
+                
+                const modalWidth = isGuide ? 'max-w-2xl' : 'max-w-sm';
+                modalContainer.innerHTML = `
+                    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg w-full ${modalWidth} fade-in">
+                        <h3 class="text-xl font-bold text-gray-900 mb-4 text-left">${title}</h3>
+                        <div class="text-gray-600 mb-6">${message}</div>
+                        <div class="flex gap-4 justify-end mt-8">${buttonsHTML}</div>
+                    </div>`;
+                this.DOM.modal.appendChild(modalContainer);
 
-    const learnedCount = this.state.progress.learnedItems.size;
-    const totalItems = this.state.wordList.length + this.state.structureList.length;
-    const score = totalItems > 0 ? Math.round((learnedCount / totalItems) * 100) : 0;
-    
-    const submissionPayload = {
-        score: score,
-        totalPoints: 100,
-        status: isFinal ? 'submitted' : 'in-progress',
-        answers: { 
-            learnedCount, 
-            totalItems,
-            incorrectCounts: this.state.progress.incorrectCounts 
-        },
-        endTime: isFinal ? serverTimestamp() : null,
-    };
+                const confirmBtn = modalContainer.querySelector('#modal-confirm-btn');
+                const cancelBtn = modalContainer.querySelector('#modal-cancel-btn');
 
-    try {
-        await updateDoc(doc(this.state.db, 'submissions', this.state.submissionId), submissionPayload);
-        if (isFinal) {
-            localStorage.removeItem(`vocabProgress_${this.state.submissionId}`);
-            this.showModal("Thành công!", `Đã nộp bài thành công với tiến độ ${score}%.`, false, () => window.location.href='index.html');
-        }
-    } catch(error) { 
-        this.showModal("Lỗi", "Không thể lưu tiến độ: " + error.message); 
-    } finally { 
-        this.state.isSubmitting = false;
-        this.DOM.loader.classList.add('hidden');
-    }
-},
-shuffleArray(array) {
-    // Thuật toán Fisher-Yates shuffle
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
-},
+                const closeModal = () => modalContainer.remove();
 
-findRoot(word) {
-    // Đây là một hàm đơn giản hóa. Trong thực tế cần một thư viện chuyên dụng hơn.
-    const endings = ['s', 'es', 'ing', 'ed', 'er', 'est', 'ly', 'tion', 'sion', 'ment', 'able', 'ible', 'al', 'ial', 'ive', 'ous', 'ness'];
-    for (const ending of endings) {
-        if (word.length > ending.length + 3 && word.endsWith(ending)) {
-            return word.slice(0, -ending.length);
-        }
-    }
-    return word;
-},
+                confirmBtn.onclick = () => {
+                    closeModal();
+                    if (onConfirm) onConfirm();
+                };
+                if(cancelBtn) {
+                    cancelBtn.onclick = closeModal;
+                }
+            },
 
-showModal(title, message, showCancel = false, onConfirm = null, isGuide = false) {
-    const modalId = isGuide ? 'guide-modal' : 'main-modal';
-    const existingModal = document.getElementById(modalId);
-    if (existingModal) existingModal.remove();
-
-    const modalContainer = document.createElement('div');
-    modalContainer.id = modalId;
-    modalContainer.className = "fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4";
-    
-    const buttonsHTML = showCancel 
-        ? `<button id="modal-cancel-btn" class="btn btn-secondary">Hủy</button><button id="modal-confirm-btn" class="btn btn-primary">Đồng ý</button>`
-        : `<button id="modal-confirm-btn" class="btn btn-primary w-full">${isGuide ? 'Đóng' : 'Đã hiểu'}</button>`;
-    
-    const modalWidth = isGuide ? 'max-w-2xl' : 'max-w-sm';
-    modalContainer.innerHTML = `
-        <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg w-full ${modalWidth} fade-in">
-            <h3 class="text-xl font-bold text-gray-900 mb-4 text-left">${title}</h3>
-            <div class="text-gray-600 mb-6">${message}</div>
-            <div class="flex gap-4 justify-end mt-8">${buttonsHTML}</div>
-        </div>`;
-    this.DOM.modal.appendChild(modalContainer);
-
-    const confirmBtn = modalContainer.querySelector('#modal-confirm-btn');
-    const cancelBtn = modalContainer.querySelector('#modal-cancel-btn');
-
-    const closeModal = () => modalContainer.remove();
-
-    confirmBtn.onclick = () => {
-        closeModal();
-        if (onConfirm) onConfirm();
-    };
-    if(cancelBtn) {
-        cancelBtn.onclick = closeModal;
-    }
-},
-
-findSentencesWithWord(word) {
-    const sentences = new Set();
-    // Regex để tìm từ độc lập, không phân biệt hoa thường, và có thể có 's' ở cuối
-    const regex = new RegExp(`\\b${word.replace(/s$/, '')}(s?)\\b`, 'i');
-    this.state.wordList.forEach(w => {
-        if (w.exampleSentence && regex.test(w.exampleSentence)) sentences.add(w.exampleSentence);
-        if (w.structures) {
-            w.structures.forEach(s => {
-                if (s.applicationExamples) s.applicationExamples.forEach(ex => {
-                    if (regex.test(ex)) sentences.add(ex);
+            findSentencesWithWord(word) {
+                const sentences = new Set();
+                const regex = new RegExp(`\\b${word.replace(/s$/, '')}(s?)\\b`, 'i');
+                this.state.wordList.forEach(w => {
+                    if (w.exampleSentence && regex.test(w.exampleSentence)) sentences.add(w.exampleSentence);
+                    if (w.structures) {
+                        w.structures.forEach(s => {
+                            if (s.applicationExamples) s.applicationExamples.forEach(ex => {
+                                if (regex.test(ex)) sentences.add(ex);
+                            });
+                        });
+                    }
                 });
-            });
-        }
-    });
-    return [...sentences];
-}
+                return [...sentences];
+            }
         };
-        Object.assign(App, {
-            startFlashcardSession: App.startFlashcardSession,
-            renderFlashcardViewer: App.renderFlashcardViewer,
-            updateFlashcardView: App.updateFlashcardView,
-            navigateCard: App.navigateCard,
-            renderMindmapFamilySelection: App.renderMindmapFamilySelection,
-            renderMindmap: App.renderMindmap,
-            renderPracticeGuide: App.renderPracticeGuide,
-            renderGuideModal: App.renderGuideModal,
-            startPractice: App.startPractice,
-            renderPracticeView: App.renderPracticeView,
-            renderNextQuestion: App.renderNextQuestion,
-            getPossibleExerciseTypes: App.getPossibleExerciseTypes,
-            renderSummary: App.renderSummary,
-            getTraditionalMCQHTML: App.getTraditionalMCQHTML,
-            getContextualMCQHTML: App.getContextualMCQHTML,
-            getWordFamilyMCQHTML: App.getWordFamilyMCQHTML,
-            getAudioListeningHTML: App.getAudioListeningHTML,
-            getSentenceUnscrambleHTML: App.getSentenceUnscrambleHTML,
-            getGapFillHTML: App.getGapFillHTML,
-            getTriosOfGappedSentenceHTML: App.getTriosOfGappedSentenceHTML,
-            getErrorCorrectionHTML: App.getErrorCorrectionHTML,
-            getIPAFillHTML: App.getIPAFillHTML,
-            attachPracticeEventListeners: App.attachPracticeEventListeners,
-            checkAnswer: App.checkAnswer,
-            checkGuideAnswer: App.checkGuideAnswer,
-            showFeedback: App.showFeedback,
-            submitToFirebase: App.submitToFirebase,
-            shuffleArray: App.shuffleArray,
-            findRoot: App.findRoot,
-            showModal: App.showModal,
-            findSentencesWithWord: App.findSentencesWithWord
-        });
+
         document.addEventListener('DOMContentLoaded', () => App.init());
     </script>
 </body>
