@@ -32,7 +32,7 @@
             --text-primary: #0f172a;
             --app-bg-start: #f5f7ff;
             --app-bg-end: #e0e7ff;
-            --base-font-size: 16px; /* Font size variable */
+            --base-font-size: 16px;
         }
         body {
             font-family: 'Be Vietnam Pro', sans-serif;
@@ -190,7 +190,7 @@
             maxViolations: 10,
             isProctoring: false,
 
-            start() {
+            start(initialCount = 0) {
                 if (this.isProctoring) return;
                 document.addEventListener('visibilitychange', this.handleVisibilityChange);
                 window.addEventListener('blur', this.handleBlur);
@@ -201,7 +201,7 @@
                 ['copy', 'paste', 'cut'].forEach(event => document.addEventListener(event, e => e.preventDefault()));
                 
                 this.isProctoring = true;
-                this.violationCount = appState.currentTestSnapshot.violationCount || 0;
+                this.violationCount = initialCount;
                 
                 if (!document.fullscreenElement) {
                     showModal(
@@ -229,7 +229,7 @@
             
             handleBeforeUnload(e) {
                 if (appState.isTestRunning && appState.currentTestSnapshot.testSnapshot.type === 'test') {
-                    submitTest(true); // Force submit
+                    submitTest(true);
                     const confirmationMessage = 'Bạn có chắc chắn muốn rời khỏi? Bài làm sẽ được nộp tự động.';
                     (e || window.event).returnValue = confirmationMessage; 
                     return confirmationMessage; 
@@ -301,20 +301,20 @@
             try {
                 appState.currentSubmissionId = submissionId;
                 const submissionRef = doc(appState.db, 'submissions', appState.currentSubmissionId);
-                let submissionSnap = await getDoc(submissionRef);
+                const submissionSnap = await getDoc(submissionRef);
                 if (!submissionSnap.exists()) throw new Error("Mã bài làm không hợp lệ.");
                 
-                let submissionData = submissionSnap.data();
+                const submissionData = submissionSnap.data();
                 
                 if (submissionData.status === 'submitted') {
-                    const testSnapshot = submissionData.testSnapshot || (await getDoc(doc(appState.db, 'tests', submissionData.testId))).data();
+                    const testSnapshot = submissionData.testSnapshot;
                     await displayResults(submissionData, testSnapshot);
                     return;
                 }
                 
                 appState.currentTestSnapshot = submissionData;
 
-                // MỚI: Dùng studentId để lấy tên học sinh từ collection 'users'
+                // Dùng studentId để lấy tên học sinh từ collection 'users'
                 const userDoc = await getDoc(doc(appState.db, "users", submissionData.studentId));
                 if (userDoc.exists()) {
                     DOM.studentNameDisplay.textContent = `Thí sinh: ${userDoc.data().displayName}`;
@@ -489,8 +489,7 @@
                     score, 
                     totalPoints, 
                     status: 'submitted', 
-                    endTime: serverTimestamp(),
-                    submissionTime: serverTimestamp() // << ĐÃ THÊM
+                    submissionTime: serverTimestamp()
                 };
                 await updateDoc(doc(appState.db, 'submissions', appState.currentSubmissionId), finalSubmission);
                 
@@ -587,10 +586,10 @@
         function setupTestEnvironment(submissionData) {
             const testData = submissionData.testSnapshot;
             if (testData.type === 'test') {
-                ProctoringService.start();
+                ProctoringService.start(submissionData.violationCount || 0);
                 if (testData.duration > 0) {
                     DOM.timerDisplay.classList.remove('hidden');
-                    startTimer(submissionData.startTime, testData.duration);
+                    startTimer(submissionData.createdAt, testData.duration); // Sửa: Dùng createdAt thay cho startTime
                 } else {
                     DOM.timerDisplay.classList.add('hidden');
                 }
