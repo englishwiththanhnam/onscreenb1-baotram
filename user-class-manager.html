@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Học sinh & Lớp học</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-accent: #6d28d9; --text-primary: #0f172a; --app-bg-start: #f5f7ff;
+            --app-bg-end: #e0e7ff; --glass-bg-color: rgba(255, 255, 255, 0.55);
+            --glass-border-color: rgba(255, 255, 255, 0.6);
+        }
+        body { font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--app-bg-start); background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%); }
+        .glass-panel { background: var(--glass-bg-color); backdrop-filter: blur(12px); border-radius: 24px; border: 1px solid var(--glass-border-color); box-shadow: 0 8px 32px 0 rgba(67, 56, 202, 0.15); }
+        .btn { padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-primary { background: var(--primary-accent); color: white; }
+        .btn-primary:hover { background: #5b21b6; }
+        .btn-primary:disabled { background-color: #a5b4fc; cursor: not-allowed; }
+        .input-field { background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.5); width: 100%; padding: 12px; border-radius: 12px; }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); align-items: center; justify-content: center; }
+        .modal.is-open { display: flex; }
+        .list-item.active { background-color: var(--primary-accent) !important; color: white; }
+    </style>
+</head>
+<body class="p-8">
+
+    <div id="login-screen" class="modal is-open">
+        <div class="glass-panel p-8 text-center w-full max-w-sm">
+            <h2 class="text-2xl font-bold mb-6">Đăng nhập Giáo viên</h2>
+            <div class="space-y-4 text-left">
+                <input type="email" id="email-input" class="input-field" placeholder="Email">
+                <input type="password" id="password-input" class="input-field" placeholder="Mật khẩu">
+            </div>
+            <button id="login-btn" class="btn btn-primary w-full mt-6">Đăng nhập</button>
+            <p id="login-error" class="text-red-500 mt-2 h-5"></p>
+        </div>
+    </div>
+
+    <div id="main-content" class="max-w-screen-xl mx-auto" style="display: none;">
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-4xl font-bold">Quản lý Học sinh & Lớp học</h1>
+            <a href="test-manager.html" class="btn btn-primary"><i class="fas fa-arrow-left mr-2"></i> Quay lại Bảng điều khiển</a>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div class="lg:col-span-4 glass-panel p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Danh sách Lớp học</h2>
+                    <button id="new-class-btn" class="btn btn-primary !p-2 !rounded-lg" title="Tạo lớp mới"><i class="fas fa-plus"></i></button>
+                </div>
+                <div id="class-list-container" class="space-y-2 max-h-[65vh] overflow-y-auto">
+                    <p class="text-center text-gray-500 p-4">Đang tải danh sách lớp...</p>
+                </div>
+            </div>
+
+            <div class="lg:col-span-8 glass-panel p-6">
+                 <div id="student-view-header" class="flex justify-between items-center mb-4" style="display: none;">
+                    <h2 class="text-xl font-bold">Học sinh trong lớp <span id="current-class-name" class="text-violet-700"></span></h2>
+                    <button id="add-student-btn" class="btn btn-primary"><i class="fas fa-user-plus mr-2"></i> Thêm học sinh</button>
+                </div>
+                <div id="student-list-container" class="max-h-[65vh] overflow-y-auto">
+                    <p id="student-list-placeholder" class="text-center text-gray-500 p-10">Vui lòng chọn một lớp học từ danh sách bên trái.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-student-modal" class="modal">
+        <div class="glass-panel p-8 w-full max-w-lg">
+            <h3 class="text-2xl font-bold mb-4">Thêm học sinh hàng loạt</h3>
+            <p class="mb-4 text-sm">Dán danh sách họ và tên vào ô dưới đây, mỗi tên một dòng. Hệ thống sẽ tự động tạo tài khoản và mật khẩu mặc định là `123456`.</p>
+            <textarea id="student-name-list" class="input-field" rows="10" placeholder="Nguyễn Văn A\nTrần Thị B\n..."></textarea>
+            <div class="flex gap-4 mt-6">
+                <button id="cancel-add-student-btn" class="btn btn-primary bg-gray-500 hover:bg-gray-600 w-1/2">Hủy</b-button>
+                <button id="confirm-add-student-btn" class="btn btn-primary w-1/2">Xác nhận & Tạo</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getFirestore, collection, doc, addDoc, onSnapshot, query, where, updateDoc, arrayUnion, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+
+        // --- Firebase Config ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
+            authDomain: "b1-baotram.firebaseapp.com",
+            projectId: "b1-baotram",
+            storageBucket: "b1-baotram.appspot.com",
+            messagingSenderId: "948701163187",
+            appId: "1:948701163187:web:043f2d381d63e741114ac6",
+            measurementId: "G-33NHT07JHE"
+        };
+
+        // --- App State & Initialization ---
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let appState = {
+            currentUser: null,
+            selectedClassId: null,
+            allClasses: [],
+            allStudents: [],
+        };
+
+        // --- DOM Elements ---
+        const DOM = {
+            loginScreen: document.getElementById('login-screen'),
+            mainContent: document.getElementById('main-content'),
+            loginBtn: document.getElementById('login-btn'),
+            emailInput: document.getElementById('email-input'),
+            passwordInput: document.getElementById('password-input'),
+            loginError: document.getElementById('login-error'),
+            classListContainer: document.getElementById('class-list-container'),
+            studentListContainer: document.getElementById('student-list-container'),
+            newClassBtn: document.getElementById('new-class-btn'),
+            addStudentBtn: document.getElementById('add-student-btn'),
+            addStudentModal: document.getElementById('add-student-modal'),
+            studentNameList: document.getElementById('student-name-list'),
+            confirmAddStudentBtn: document.getElementById('confirm-add-student-btn'),
+            cancelAddStudentBtn: document.getElementById('cancel-add-student-btn'),
+            currentClassName: document.getElementById('current-class-name'),
+            studentViewHeader: document.getElementById('student-view-header'),
+            studentListPlaceholder: document.getElementById('student-list-placeholder'),
+        };
+
+        // --- Authentication ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists() && userDoc.data().role === 'teacher') {
+                    appState.currentUser = user;
+                    DOM.loginScreen.classList.remove('is-open');
+                    DOM.mainContent.style.display = 'block';
+                    startDataListeners();
+                } else {
+                    auth.signOut();
+                    alert("Tài khoản không có quyền truy cập.");
+                }
+            } else {
+                DOM.loginScreen.classList.add('is-open');
+                DOM.mainContent.style.display = 'none';
+            }
+        });
+        
+        DOM.loginBtn.addEventListener('click', () => {
+            signInWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value)
+                .catch(err => DOM.loginError.textContent = "Email hoặc mật khẩu không đúng.");
+        });
+
+        // --- Data Listeners ---
+        function startDataListeners() {
+            // Listen for classes
+            const qClasses = query(collection(db, "classes"), where("teacherId", "==", appState.currentUser.uid));
+            onSnapshot(qClasses, (snapshot) => {
+                appState.allClasses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderClassList();
+            });
+
+            // Listen for all students (for easier lookup)
+            const qStudents = query(collection(db, "users"), where("role", "==", "student"));
+            onSnapshot(qStudents, (snapshot) => {
+                appState.allStudents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (appState.selectedClassId) {
+                    renderStudentList();
+                }
+            });
+        }
+        
+        // --- Rendering ---
+        function renderClassList() {
+            DOM.classListContainer.innerHTML = '';
+            if (appState.allClasses.length === 0) {
+                DOM.classListContainer.innerHTML = `<p class="text-center text-gray-500 p-4">Chưa có lớp học nào. Hãy tạo lớp mới!</p>`;
+                return;
+            }
+            appState.allClasses.forEach(cls => {
+                const isActive = cls.id === appState.selectedClassId;
+                DOM.classListContainer.innerHTML += `
+                    <div class="list-item p-4 rounded-lg cursor-pointer hover:bg-violet-100 ${isActive ? 'active' : 'bg-white/50'}" data-class-id="${cls.id}">
+                        <p class="font-bold">${cls.className}</p>
+                        <p class="text-sm">${(cls.studentUids || []).length} học sinh</p>
+                    </div>`;
+            });
+        }
+
+        function renderStudentList() {
+            DOM.studentListContainer.innerHTML = '';
+            DOM.studentListPlaceholder.style.display = 'none';
+
+            const selectedClass = appState.allClasses.find(c => c.id === appState.selectedClassId);
+            if (!selectedClass || !selectedClass.studentUids || selectedClass.studentUids.length === 0) {
+                DOM.studentListContainer.innerHTML = `<p class="text-center text-gray-500 p-4">Lớp học này chưa có học sinh nào.</p>`;
+                return;
+            }
+
+            const studentsInClass = appState.allStudents.filter(s => selectedClass.studentUids.includes(s.uid));
+            
+            let tableHTML = `<table class="w-full text-left">
+                <thead><tr class="border-b"><th class="p-2">Họ và tên</th><th class="p-2">Email (Tên đăng nhập)</th></tr></thead>
+                <tbody>`;
+            studentsInClass.forEach(student => {
+                tableHTML += `<tr class="border-b"><td class="p-2 font-semibold">${student.displayName}</td><td class="p-2 font-mono">${student.email}</td></tr>`;
+            });
+            tableHTML += `</tbody></table>`;
+            DOM.studentListContainer.innerHTML = tableHTML;
+        }
+
+        // --- Core Logic ---
+        async function createNewClass() {
+            const className = prompt("Nhập tên cho lớp học mới:");
+            if (className && className.trim()) {
+                await addDoc(collection(db, "classes"), {
+                    className: className.trim(),
+                    teacherId: appState.currentUser.uid,
+                    studentUids: []
+                });
+            }
+        }
+
+        async function createStudentAccount(authInstance, studentInfo, classId) {
+            try {
+                // NOTE: Creating users client-side is for prototyping. In production, this should be a Cloud Function.
+                const tempAuth = initializeApp(firebaseConfig, 'Secondary').auth();
+                const userCredential = await createUserWithEmailAndPassword(tempAuth, studentInfo.email, studentInfo.password);
+                const newStudentUid = userCredential.user.uid;
+                await tempAuth.signOut(); // Sign out the temporary user
+
+                await setDoc(doc(db, "users", newStudentUid), {
+                    uid: newStudentUid,
+                    displayName: studentInfo.displayName,
+                    email: studentInfo.email,
+                    role: "student"
+                });
+
+                const classRef = doc(db, "classes", classId);
+                await updateDoc(classRef, { studentUids: arrayUnion(newStudentUid) });
+
+                return { success: true };
+            } catch (error) {
+                console.error("Lỗi khi tạo tài khoản cho", studentInfo.displayName, ":", error);
+                return { success: false, error: error.code };
+            }
+        }
+
+        function slugify(text) {
+            text = text.toString().toLowerCase().trim();
+            const sets = [
+                {to: 'a', from: /[\xE0-\xE5]/g}, {to: 'e', from: /[\xE8-\xEB]/g},
+                {to: 'i', from: /[\xEC-\xEF]/g}, {to: 'o', from: /[\xF2-\xF6]/g},
+                {to: 'u', from: /[\xF9-\xFC]/g}, {to: 'c', from: /[\xE7]/g},
+                {to: 'n', from: /[\xF1]/g}
+            ];
+            for (let i = 0; i < sets.length; i++) { text = text.replace(sets[i].from, sets[i].to); }
+            return text.replace(/\s+/g, '').replace(/[^\w-]/g, '');
+        }
+
+        async function handleBatchAddStudents() {
+            const names = DOM.studentNameList.value.trim().split('\n').filter(name => name.trim());
+            if (names.length === 0) return alert("Vui lòng nhập danh sách tên.");
+
+            DOM.confirmAddStudentBtn.disabled = true;
+            DOM.confirmAddStudentBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Đang xử lý...`;
+
+            const domain = "@student.onscreen.com"; // Custom domain for student accounts
+            let failedNames = [];
+
+            for (const name of names) {
+                const studentInfo = {
+                    displayName: name.trim(),
+                    email: `${slugify(name.trim())}${domain}`,
+                    password: "123456" // Default password
+                };
+
+                const result = await createStudentAccount(auth, studentInfo, appState.selectedClassId);
+                if (!result.success) {
+                    failedNames.push(`${name} (${result.error})`);
+                }
+            }
+
+            DOM.confirmAddStudentBtn.disabled = false;
+            DOM.confirmAddStudentBtn.textContent = 'Xác nhận & Tạo';
+            DOM.studentNameList.value = '';
+            DOM.addStudentModal.classList.remove('is-open');
+
+            if (failedNames.length > 0) {
+                alert(`Một số tài khoản tạo thất bại:\n${failedNames.join('\n')}`);
+            } else {
+                alert("Tất cả học sinh đã được thêm thành công!");
+            }
+        }
+
+        // --- Event Listeners ---
+        DOM.newClassBtn.addEventListener('click', createNewClass);
+
+        DOM.classListContainer.addEventListener('click', (e) => {
+            const classItem = e.target.closest('.list-item');
+            if (classItem) {
+                appState.selectedClassId = classItem.dataset.classId;
+                DOM.currentClassName.textContent = appState.allClasses.find(c => c.id === appState.selectedClassId).className;
+                DOM.studentViewHeader.style.display = 'flex';
+                renderClassList(); // Re-render to show active state
+                renderStudentList();
+            }
+        });
+        
+        DOM.addStudentBtn.addEventListener('click', () => DOM.addStudentModal.classList.add('is-open'));
+        DOM.cancelAddStudentBtn.addEventListener('click', () => DOM.addStudentModal.classList.remove('is-open'));
+        DOM.confirmAddStudentBtn.addEventListener('click', handleBatchAddStudents);
+
+    </script>
+</body>
+</html>
