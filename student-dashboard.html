@@ -17,6 +17,8 @@
         .glass-panel { background: var(--glass-bg-color); backdrop-filter: blur(12px); border-radius: 24px; border: 1px solid var(--glass-border-color); box-shadow: 0 8px 32px 0 rgba(67, 56, 202, 0.15); }
         .assignment-card { transition: all 0.2s ease-in-out; }
         .assignment-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
+        .progress-bar { background-color: #e5e7eb; border-radius: 9999px; height: 6px; overflow: hidden; }
+        .progress-bar-fill { background-color: var(--primary-accent); height: 100%; transition: width 0.4s ease; }
     </style>
 </head>
 <body class="p-8">
@@ -60,7 +62,7 @@
         </main>
     </div>
 
-  <script type="module">
+    <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, collection, doc, getDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
@@ -91,10 +93,8 @@
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // Nếu đã đăng nhập, tải dashboard
                 loadDashboard(user);
             } else {
-                // Nếu chắc chắn chưa đăng nhập, chuyển về trang index
                 window.location.href = 'index.html';
             }
         });
@@ -113,14 +113,12 @@
             onSnapshot(q, (snapshot) => {
                 const submissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderAssignments(submissions);
-                // Ẩn loader và hiện nội dung CHỈ KHI đã có dữ liệu
                 DOM.loader.style.display = 'none';
                 DOM.mainContent.style.display = 'block';
             });
         }
 
         function renderAssignments(submissions) {
-            // Clear current lists
             DOM.todoList.innerHTML = '';
             DOM.overdueList.innerHTML = '';
             DOM.completedList.innerHTML = '';
@@ -135,6 +133,7 @@
                 const isSubmitted = sub.status === 'submitted';
                 const dueDate = sub.dueDate ? sub.dueDate.toDate() : null;
                 const isOverdue = dueDate && now > dueDate;
+                const isVocab = test.testType === 'vocabulary';
 
                 const redirectUrlMap = {
                     'standard': 'standard/standard-test.html',
@@ -144,29 +143,55 @@
                 };
                 const url = `${redirectUrlMap[test.testType]}?submission_id=${sub.id}`;
 
-                let cardHTML = `<a href="${isSubmitted ? '#' : url}" class="assignment-card glass-panel p-6 flex flex-col justify-between ${isSubmitted ? 'opacity-70 cursor-default' : ''}">
+                const typeBadge = test.type === 'test' 
+                    ? `<span class="text-xs font-bold uppercase px-2 py-1 bg-red-200 text-red-800 rounded-full">Đề thi</span>`
+                    : `<span class="text-xs font-bold uppercase px-2 py-1 bg-blue-200 text-blue-800 rounded-full">Bài tập</span>`;
+
+                let cardHTML = `<a href="${url}" class="assignment-card glass-panel p-6 flex flex-col justify-between">
                                     <div>
-                                        <p class="text-sm font-bold text-violet-700">${test.testType.toUpperCase()}</p>
+                                        <div class="flex justify-between items-center mb-2">
+                                            <p class="text-sm font-bold text-violet-700">${test.testType.toUpperCase()}</p>
+                                            ${typeBadge}
+                                        </div>
                                         <h3 class="text-lg font-bold mb-2">${test.title}</h3>
                                     </div>`;
 
                 if (isSubmitted) {
                     completedCount++;
-                    const onTime = sub.submissionTime && dueDate ? sub.submissionTime.toDate() <= dueDate : true;
-                    cardHTML += `<div class="mt-4">
-                                    <p class="font-semibold">Điểm số: <span class="text-xl font-bold text-green-700">${sub.score}/${sub.totalPoints}</span></p>
-                                    <p class="text-sm text-gray-600">Trạng thái: ${onTime ? 'Nộp đúng hạn' : '<span class="text-red-600 font-bold">Nộp muộn</span>'}</p>
-                                 </div>
-                                 </a>`; // Close card
+                    if (isVocab) {
+                        const progress = sub.answers || {};
+                        const finalTest = sub.finalTest || {};
+                        cardHTML += `<div class="mt-4 text-sm space-y-2">
+                                        <div>
+                                            <p>Tiến độ học: <span class="font-bold">${progress.learnedCount || 0}/${progress.totalItems || 'N/A'}</span></p>
+                                            <div class="progress-bar mt-1"><div class="progress-bar-fill" style="width: ${sub.score || 0}%;"></div></div>
+                                        </div>
+                                        <p>KT cuối kỳ: <span class="font-bold">${finalTest.score !== undefined ? `${finalTest.score}%` : 'Chưa làm'}</span></p>
+                                        <div class="block w-full text-center bg-green-600 text-white font-bold py-2 px-4 rounded-lg mt-4">
+                                            Tiếp tục học
+                                        </div>
+                                     </div>`;
+                    } else {
+                        const onTime = sub.submissionTime && dueDate ? sub.submissionTime.toDate() <= dueDate : true;
+                        cardHTML += `<div class="mt-4">
+                                        <p class="font-semibold">Điểm số: <span class="text-xl font-bold text-green-700">${sub.score}/${sub.totalPoints}</span></p>
+                                        <p class="text-sm text-gray-600">Trạng thái: ${onTime ? 'Nộp đúng hạn' : '<span class="text-red-600 font-bold">Nộp muộn</span>'}</p>
+                                        <div class="block w-full text-center bg-gray-500 text-white font-bold py-2 px-4 rounded-lg mt-4">
+                                            Xem lại bài
+                                        </div>
+                                     </div>`;
+                    }
+                    cardHTML += `</a>`;
                     DOM.completedList.innerHTML += cardHTML;
-                } else {
+                } else { // Not submitted
+                    const buttonText = isVocab ? 'Bắt đầu học' : (isOverdue ? 'Làm bài (Quá hạn)' : 'Vào làm bài');
                     cardHTML += `<div class="mt-4">
                                     <p class="text-sm text-gray-600">Hạn nộp: <span class="font-semibold">${dueDate ? dueDate.toLocaleString('vi-VN') : 'Không có'}</span></p>
                                     <div class="block w-full text-center bg-violet-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-violet-800 transition-colors mt-4">
-                                        ${isOverdue ? 'Làm bài (Quá hạn)' : 'Vào làm bài'}
+                                        ${buttonText}
                                     </div>
                                  </div>
-                                 </a>`; // Close card
+                                 </a>`;
                     if (isOverdue) {
                         overdueCount++;
                         DOM.overdueList.innerHTML += cardHTML;
