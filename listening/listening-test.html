@@ -331,7 +331,7 @@
                 appState.currentSubmissionId = submissionId;
                 const submissionRef = doc(appState.db, 'submissions', submissionId);
                 let submissionSnap = await getDoc(submissionRef);
-                if (!submissionSnap.exists()) throw new Error("Mã truy cập không hợp lệ.");
+                if (!submissionSnap.exists()) throw new Error("Mã bài làm không hợp lệ.");
                 
                 let submissionData = submissionSnap.data();
                 
@@ -341,23 +341,16 @@
                     return;
                 }
                 
-                if (!submissionData.testSnapshot) {
-                    const testRef = doc(appState.db, 'listening_tests', submissionData.testId);
-                    const testSnap = await getDoc(testRef);
-                    if (!testSnap.exists()) throw new Error("Đây là mã cho loại bài tập khác.");
-                    appState.testData = testSnap.data();
-                    
-                    await updateDoc(submissionRef, {
-                        testSnapshot: appState.testData,
-                        startTime: serverTimestamp()
-                    });
-                    submissionSnap = await getDoc(submissionRef);
-                    submissionData = submissionSnap.data();
-                } else {
-                    appState.testData = submissionData.testSnapshot;
-                }
+                appState.testData = submissionData.testSnapshot;
                 
-                DOM.studentNameDisplay.textContent = `Thí sinh: ${submissionData.studentName}`;
+                // MỚI: Dùng studentId để lấy tên học sinh từ collection 'users'
+                const userDoc = await getDoc(doc(appState.db, "users", submissionData.studentId));
+                if (userDoc.exists()) {
+                    DOM.studentNameDisplay.textContent = `Thí sinh: ${userDoc.data().displayName}`;
+                } else {
+                    DOM.studentNameDisplay.textContent = `Thí sinh: Không rõ`;
+                }
+
                 renderTest(appState.testData, submissionData.answers || {});
                 DOM.testContainer.classList.remove('hidden');
                 appState.isTestRunning = true;
