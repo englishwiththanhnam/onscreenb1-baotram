@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Auth Worker</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f0f2f5; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .container { text-align: center; padding: 2rem; background-color: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #6d28d9; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="spinner"></div>
+        <h1 id="status-text">Đang chờ dữ liệu...</h1>
+        <p id="progress-text"></p>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
+            authDomain: "b1-baotram.firebaseapp.com",
+            projectId: "b1-baotram",
+            storageBucket: "b1-baotram.appspot.com",
+            messagingSenderId: "948701163187",
+            appId: "1:948701163187:web:043f2d381d63e741114ac6",
+            measurementId: "G-33NHT07JHE"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        const statusText = document.getElementById('status-text');
+        const progressText = document.getElementById('progress-text');
+
+        // Hàm tạo tài khoản, chỉ chạy trong cửa sổ này
+        async function createAccount(studentInfo, classId) {
+            try {
+                // Dùng auth instance của cửa sổ này
+                const userCredential = await createUserWithEmailAndPassword(auth, studentInfo.email, studentInfo.password);
+                const newStudentUid = userCredential.user.uid;
+
+                await setDoc(doc(db, "users", newStudentUid), {
+                    uid: newStudentUid,
+                    displayName: studentInfo.displayName,
+                    email: studentInfo.email,
+                    role: "student"
+                });
+
+                const classRef = doc(db, "classes", classId);
+                await updateDoc(classRef, { studentUids: arrayUnion(newStudentUid) });
+
+                return { success: true };
+            } catch (error) {
+                console.error("Lỗi worker:", error);
+                return { success: false, error: error.code };
+            }
+        }
+
+        // Lắng nghe tin nhắn từ trang chính
+        window.addEventListener("message", async (event) => {
+            // Chỉ chấp nhận tin nhắn từ chính trang của bạn
+            if (event.origin !== window.location.origin) return;
+
+            const { studentInfos, classId } = event.data;
+            if (studentInfos && classId) {
+                statusText.textContent = "Đang xử lý...";
+                const total = studentInfos.length;
+                let processed = 0;
+                let failedAccounts = [];
+
+                for (const studentInfo of studentInfos) {
+                    processed++;
+                    progressText.textContent = `Đang tạo tài khoản ${processed}/${total}...`;
+                    const result = await createAccount(studentInfo, classId);
+                    if (!result.success) {
+                        failedAccounts.push(`${studentInfo.displayName} (${result.error})`);
+                    }
+                }
+                
+                // Gửi kết quả về cho trang chính
+                event.source.postMessage({ status: "completed", failedAccounts: failedAccounts }, event.origin);
+                
+                // Tự đóng sau khi hoàn tất
+                window.close();
+            }
+        });
+
+        // Báo cho trang chính là đã sẵn sàng
+        window.opener.postMessage("worker-ready", window.location.origin);
+    </script>
+</body>
+</html>
