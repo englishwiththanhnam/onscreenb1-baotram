@@ -348,7 +348,7 @@
             return answers;
         }
 
-        async function submitTest(isForced = false) {
+       async function submitTest(isForced = false) {
             if (!appState.isTestRunning) return;
             appState.isTestRunning = false;
             ProctoringService.stop();
@@ -371,7 +371,8 @@
                     score,
                     totalPoints: appState.testData.totalQuestions,
                     status: 'submitted',
-                    endTime: serverTimestamp()
+                    endTime: serverTimestamp(),
+                    submissionTime: serverTimestamp() // << ĐÃ THÊM
                 };
 
                 await updateDoc(doc(appState.db, 'submissions', appState.currentSubmissionId), finalSubmission);
