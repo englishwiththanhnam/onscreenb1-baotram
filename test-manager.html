@@ -103,6 +103,9 @@
         <header class="flex flex-wrap justify-between items-center mb-8">
             <h1 class="text-4xl font-bold text-gray-800">Quản lý Bài tập</h1>
             <div class="flex items-center gap-4">
+                 <a href="user-class-manager.html" class="btn btn-primary bg-blue-500 hover:bg-blue-700">
+                    <i class="fas fa-users-cog mr-2"></i>Quản lý Lớp học
+                 </a>
                  <div id="create-test-buttons" class="flex gap-2">
                     <button data-type="standard" class="btn btn-secondary !p-3" title="Tạo đề trắc nghiệm"><i class="fas fa-file-alt text-lg"></i></button>
                     <button data-type="reading" class="btn btn-secondary !p-3" title="Tạo bài đọc hiểu"><i class="fas fa-book-open text-lg"></i></button>
@@ -130,9 +133,31 @@
     <div id="context-menu" class="glass-panel !rounded-lg !p-2 min-w-[180px]"></div>
     <div id="custom-modal-container"></div>
 
+    <div id="assignment-modal" class="modal">
+        <div class="modal-content glass-panel p-8 w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <h3 class="text-2xl font-bold mb-4">Giao bài: <span id="assignment-test-title" class="text-violet-700"></span></h3>
+            
+            <div class="mb-4">
+                <label for="due-date-input" class="font-bold">Chọn hạn nộp bài:</label>
+                <input type="datetime-local" id="due-date-input" class="mt-1 block w-full p-2 border rounded-md bg-white/50">
+            </div>
+
+            <div class="mb-4 flex-grow overflow-y-auto">
+                <p class="font-bold">Chọn lớp hoặc học sinh để giao:</p>
+                <div id="class-selection-container" class="space-y-2 mt-2 p-2 bg-white/30 rounded-lg"></div>
+            </div>
+
+            <div class="flex gap-4 mt-6">
+                <button id="cancel-assignment-btn" class="btn btn-secondary w-1/2">Hủy</button>
+                <button id="confirm-assignment-btn" class="btn btn-primary w-1/2">Xác nhận Giao bài</button>
+            </div>
+        </div>
+    </div>
+
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getFirestore, collection, doc, addDoc, deleteDoc, query, where, setDoc, updateDoc, onSnapshot, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, addDoc, deleteDoc, query, where, setDoc, updateDoc, onSnapshot, getDoc, getDocs, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -153,6 +178,9 @@
             currentUser: null,
             localTestsCache: [],
             localFoldersCache: [],
+            localClassesCache: [],
+            localStudentsCache: [],
+            assigningTest: null,
             locationHistory: ['root'],
             get currentLocationId() { return this.locationHistory[this.locationHistory.length - 1]; },
             selectedTestId: null,
@@ -176,15 +204,27 @@
             mainPanelView: document.getElementById('main-panel-view'),
             contextMenu: document.getElementById('context-menu'),
             modalContainer: document.getElementById('custom-modal-container'),
+            assignmentModal: document.getElementById('assignment-modal'),
+            assignmentTestTitle: document.getElementById('assignment-test-title'),
+            dueDateInput: document.getElementById('due-date-input'),
+            classSelectionContainer: document.getElementById('class-selection-container'),
+            cancelAssignmentBtn: document.getElementById('cancel-assignment-btn'),
+            confirmAssignmentBtn: document.getElementById('confirm-assignment-btn'),
         };
 
-        onAuthStateChanged(auth, user => {
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
-                appState.currentUser = user;
-                DOM.loginScreen.classList.remove('is-open');
-                DOM.mainContent.style.display = 'block';
-                startDataListeners();
-                changeCurrentLocation('root', true);
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists() && userDoc.data().role === 'teacher') {
+                    appState.currentUser = user;
+                    DOM.loginScreen.classList.remove('is-open');
+                    DOM.mainContent.style.display = 'block';
+                    startDataListeners();
+                    changeCurrentLocation('root', true);
+                } else {
+                    auth.signOut();
+                    alert("Tài khoản không có quyền truy cập.");
+                }
             } else {
                 appState.currentUser = null;
                 appState.unsubscribers.forEach(unsub => unsub());
@@ -213,13 +253,32 @@
                         appState.localFoldersCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                         renderFolderTree();
                     } else {
-                        combinedTests[type] = snapshot.docs.map(doc => ({ id: doc.id, testType: type, ...doc.data() }));
-                        appState.localTestsCache = Object.values(combinedTests).flat();
+                        snapshot.docs.forEach(doc => {
+                           const testData = { id: doc.id, testType: type, ...doc.data() };
+                           const index = appState.localTestsCache.findIndex(t => t.id === doc.id);
+                           if (index > -1) {
+                               appState.localTestsCache[index] = testData;
+                           } else {
+                               appState.localTestsCache.push(testData);
+                           }
+                        });
                     }
                     renderMainPanel();
                 });
                 appState.unsubscribers.push(unsub);
             });
+
+            const qClasses = query(collection(db, "classes"), where("teacherId", "==", appState.currentUser.uid));
+            const unsubClasses = onSnapshot(qClasses, snapshot => {
+                appState.localClassesCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            });
+            appState.unsubscribers.push(unsubClasses);
+
+            const qStudents = query(collection(db, "users"), where("role", "==", "student"));
+            const unsubStudents = onSnapshot(qStudents, snapshot => {
+                appState.localStudentsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            });
+            appState.unsubscribers.push(unsubStudents);
         }
 
         function renderMainPanel(isNavigating = false) {
@@ -229,7 +288,7 @@
                     container.firstElementChild.classList.add('anim-fade-out');
                     setTimeout(() => {
                         renderFunction(...args);
-                        container.firstElementChild.classList.add('anim-fade-in');
+                        if(container.firstElementChild) container.firstElementChild.classList.add('anim-fade-in');
                     }, 200);
                 } else {
                     renderFunction(...args);
@@ -281,7 +340,7 @@
             } else {
                 const icons = { folder: '<i class="fas fa-folder text-5xl text-violet-600 mb-2"></i>', standard: '<i class="fas fa-file-alt text-5xl text-violet-600 mb-2"></i>', reading: '<i class="fas fa-book-open text-5xl text-violet-600 mb-2"></i>', listening: '<i class="fas fa-headphones text-5xl text-violet-600 mb-2"></i>', vocabulary: '<i class="fas fa-spell-check text-5xl text-violet-600 mb-2"></i>' };
                 itemsToShow.forEach(item => {
-                    const isFolder = !!item.parentId;
+                    const isFolder = 'parentId' in item;
                     mainContentHTML += `<div class="main-view-item flex flex-col items-center justify-center p-4 rounded-xl cursor-pointer text-center bg-white/30" data-item-id="${item.id}" data-item-type="${isFolder ? 'folder' : item.testType}">${icons[isFolder ? 'folder' : item.testType]}<p class="font-semibold text-sm break-words w-full">${item.name || item.title}</p></div>`;
                 });
             }
@@ -332,17 +391,28 @@
                         <button id="history-back-btn" class="btn btn-secondary !p-3 !rounded-full mr-4"><i class="fas fa-arrow-left"></i></button>
                         <div><h2 class="text-3xl font-bold text-gray-700">${test.title}</h2><p class="font-mono text-sm text-gray-500">${test.id}</p></div>
                     </div>
+
+                    <div class="my-6 p-4 bg-white/30 rounded-2xl">
+                        <h3 class="font-bold mb-3 text-xl">Giao bài tập</h3>
+                        <p class="text-sm mb-4">Giao bài tập này cho các lớp hoặc học sinh cụ thể với một hạn nộp nhất định.</p>
+                        <button id="open-assignment-modal-btn" data-testid="${test.id}" data-testtype="${test.testType}" class="btn btn-primary">
+                            <i class="fas fa-paper-plane mr-2"></i>Giao bài tập này
+                        </button>
+                    </div>
+
                     <div id="settings-panel" class="my-6 p-4 bg-white/30 rounded-2xl" data-testid="${test.id}" data-testtype="${test.testType}"><h3 class="font-bold mb-3">Cài đặt & Trạng thái</h3><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div class="flex items-center justify-between p-3 bg-white/40 rounded-lg"><label for="lock-test-toggle" class="font-medium">Khóa đề thi</label><label class="toggle-switch"><input type="checkbox" id="lock-test-toggle" ${test.isLocked ? 'checked' : ''}><span class="slider"></span></label></div><div class="p-3 bg-white/40 rounded-lg"><span class="font-medium">Công bố kết quả</span><div class="flex justify-around mt-2 custom-radio-group"><input type="radio" name="publish-results" value="none" id="pub-none" ${(!test.resultsPublished || test.resultsPublished === 'none') ? 'checked' : ''}><label for="pub-none">Không</label><input type="radio" name="publish-results" value="correctIncorrect" id="pub-ci" ${test.resultsPublished === 'correctIncorrect' ? 'checked' : ''}><label for="pub-ci">Đúng/Sai</label><input type="radio" name="publish-results" value="full" id="pub-full" ${test.resultsPublished === 'full' ? 'checked' : ''}><label for="pub-full">Toàn bộ</label></div></div></div></div>
-                    <div class="my-6 p-4 bg-white/30 rounded-2xl"><h3 class="font-bold mb-2">Thêm học sinh mới</h3><textarea id="new-student-list" class="input-field" rows="3" placeholder="Dán danh sách tên, mỗi tên một dòng..."></textarea><button id="add-students-btn" class="btn btn-primary mt-2 w-full">Thêm và tạo mã</button></div>
-                    <div><h3 class="font-bold mb-2">Danh sách học sinh</h3><div class="overflow-x-auto max-h-[45vh]"><table class="w-full text-left border-collapse"><thead class="sticky top-0 bg-white/50 backdrop-blur-sm"><tr><th class="p-3 border-b border-gray-300">Tên</th><th class="p-3 border-b border-gray-300">Mã</th><th class="p-3 border-b border-gray-300">Trạng thái</th><th class="p-3 border-b border-gray-300">Điểm</th><th class="p-3 border-b border-gray-300">Vi phạm</th><th class="p-3 border-b border-gray-300"></th></tr></thead><tbody id="submission-table-body"><tr><td colspan="6" class="p-4 text-center">Đang tải danh sách...</td></tr></tbody></table></div></div>
+                    <div><h3 class="font-bold mb-2">Danh sách các bài đã giao (Submissions)</h3><div class="overflow-x-auto max-h-[45vh]"><table class="w-full text-left border-collapse"><thead class="sticky top-0 bg-white/50 backdrop-blur-sm"><tr><th class="p-3 border-b border-gray-300">Tên</th><th class="p-3 border-b border-gray-300">Hạn nộp</th><th class="p-3 border-b border-gray-300">Trạng thái</th><th class="p-3 border-b border-gray-300">Điểm</th><th class="p-3 border-b border-gray-300">Vi phạm</th><th class="p-3 border-b border-gray-300"></th></tr></thead><tbody id="submission-table-body"><tr><td colspan="6" class="p-4 text-center">Đang tải danh sách...</td></tr></tbody></table></div></div>
                 </div>`;
                 
             const q = query(collection(db, "submissions"), where("testId", "==", test.id));
-            const unsub = onSnapshot(q, (snapshot) => {
+            const unsub = onSnapshot(q, async (snapshot) => {
                 const submissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderSubmissionsTable(submissions, test);
-                if (appState.timerInterval) clearInterval(appState.timerInterval);
-                appState.timerInterval = setInterval(() => updateTimers(submissions, test), 1000);
+                // Enrich submissions with student names
+                const enrichedSubmissions = await Promise.all(submissions.map(async sub => {
+                    const student = appState.localStudentsCache.find(s => s.id === sub.studentId);
+                    return { ...sub, studentName: student ? student.displayName : 'Không rõ' };
+                }));
+                renderSubmissionsTable(enrichedSubmissions, test);
             });
             appState.unsubscribers.push(unsub);
         }
@@ -350,47 +420,34 @@
         function renderSubmissionsTable(submissions, test) {
             const tableBody = document.getElementById('submission-table-body');
             if (!tableBody) return;
-            if (submissions.length === 0) { tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">Chưa có học sinh nào.</td></tr>`; return; }
+            if (submissions.length === 0) { tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">Chưa giao bài cho học sinh nào.</td></tr>`; return; }
             tableBody.innerHTML = submissions.map(sub => {
-                const statusInfo = getStatusInfo(sub, test);
+                const statusInfo = getStatusInfo(sub);
                 const scoreDisplay = (sub.status === 'submitted' && sub.score !== undefined) ? `${sub.score} / ${sub.totalPoints}` : '-';
-                return `<tr class="hover:bg-white/40" data-submission-id="${sub.id}"><td class="p-3 border-b border-gray-200"><a href="index.html?submission_id=${sub.id}" target="_blank" class="text-violet-700 hover:underline font-semibold">${sub.studentName}</a></td><td class="p-3 border-b border-gray-200 font-mono">${sub.id}</td><td class="p-3 border-b border-gray-200"><span class="status-badge ${statusInfo.class}">${statusInfo.text}</span><br><span class="text-sm font-mono">${statusInfo.timer}</span></td><td class="p-3 border-b border-gray-200 font-bold">${scoreDisplay}</td><td class="p-3 border-b border-gray-200 text-center font-bold ${sub.violationCount > 0 ? 'text-red-500' : ''}">${sub.violationCount || 0}</td><td class="p-3 border-b border-gray-200 text-right"><button class="btn-delete-student btn btn-danger !p-2 !rounded-full" data-sub-id="${sub.id}"><i class="fas fa-trash text-sm"></i></button></td></tr>`
+                const dueDate = sub.dueDate ? sub.dueDate.toDate().toLocaleString('vi-VN') : 'N/A';
+                return `<tr class="hover:bg-white/40" data-submission-id="${sub.id}">
+                            <td class="p-3 border-b border-gray-200 font-semibold">${sub.studentName}</td>
+                            <td class="p-3 border-b border-gray-200">${dueDate}</td>
+                            <td class="p-3 border-b border-gray-200"><span class="status-badge ${statusInfo.class}">${statusInfo.text}</span></td>
+                            <td class="p-3 border-b border-gray-200 font-bold">${scoreDisplay}</td>
+                            <td class="p-3 border-b border-gray-200 text-center font-bold ${sub.violationCount > 0 ? 'text-red-500' : ''}">${sub.violationCount || 0}</td>
+                            <td class="p-3 border-b border-gray-200 text-right"><button class="btn-delete-student btn btn-danger !p-2 !rounded-full" data-sub-id="${sub.id}" title="Xóa bài làm"><i class="fas fa-trash text-sm"></i></button></td>
+                        </tr>`
             }).join('');
         }
 
-        function getStatusInfo(sub, test) {
-            if (sub.status === 'submitted') return { text: 'Đã nộp', class: 'status-submitted', timer: '-' };
-            if (sub.startTime) {
-                const duration = test.duration || 0;
-                if (duration > 0) {
-                    const endTime = sub.startTime.toDate().getTime() + duration * 60 * 1000;
-                    const remaining = Math.max(0, endTime - Date.now());
-                    if (remaining > 0) {
-                        const minutes = String(Math.floor(remaining / 60000)).padStart(2, '0');
-                        const seconds = String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0');
-                        return { text: 'Đang làm', class: 'status-in-progress', timer: `${minutes}:${seconds}` };
-                    } else { return { text: 'Hết giờ', class: 'status-in-progress', timer: '00:00' }; }
-                }
-                return { text: 'Đang làm', class: 'status-in-progress', timer: 'Không tính giờ' };
+        function getStatusInfo(sub) {
+            const now = new Date();
+            if (sub.status === 'submitted') {
+                const onTime = sub.submissionTime && sub.dueDate ? sub.submissionTime.toDate() <= sub.dueDate.toDate() : true;
+                return { text: onTime ? 'Đã nộp' : 'Nộp muộn', class: 'status-submitted' };
             }
-            return { text: 'Chưa làm', class: 'status-not-started', timer: '-' };
+            if (sub.dueDate && now > sub.dueDate.toDate()) {
+                 return { text: 'Quá hạn', class: 'status-in-progress bg-red-200 !text-red-800' };
+            }
+            if (sub.status === 'in-progress') return { text: 'Đang làm', class: 'status-in-progress' };
+            return { text: 'Chưa làm', class: 'status-not-started' };
         };
-
-        function updateTimers(submissions, test) {
-            const tableBody = document.getElementById('submission-table-body');
-            if (!tableBody) return;
-            submissions.forEach(sub => {
-                if (sub.startTime && sub.status !== 'submitted') {
-                    const statusInfo = getStatusInfo(sub, test);
-                    const row = tableBody.querySelector(`tr[data-submission-id="${sub.id}"]`);
-                    if (row) {
-                        const timerCell = row.children[2].querySelector('.text-sm');
-                        if (timerCell) timerCell.textContent = statusInfo.timer;
-                        if (statusInfo.timer === '00:00' && timerCell.previousElementSibling.textContent !== 'Hết giờ') { renderSubmissionsTable(submissions, test); }
-                    }
-                }
-            });
-        }
 
         function initSortable() {
             const mainContentView = document.getElementById('main-content-view');
@@ -402,8 +459,6 @@
                     moveItem(evt.item.dataset.itemId, evt.item.dataset.itemType, destFolderId === 'unassigned' ? null : destFolderId);
                 }});
             });
-            const breadcrumbContainer = document.getElementById('breadcrumb-container');
-            if (breadcrumbContainer) { new Sortable(breadcrumbContainer, { group: { name: 'drive', pull: false, put: true }, onAdd: (evt) => moveItem(evt.item.dataset.itemId, evt.item.dataset.itemType, 'root') }); }
         }
         
         async function moveItem(itemId, itemType, destinationFolderId) {
@@ -413,17 +468,6 @@
             const itemRef = doc(db, collectionName, itemId);
             const fieldToUpdate = itemType === 'folder' ? 'parentId' : 'folderId';
             await updateDoc(itemRef, { [fieldToUpdate]: destinationFolderId });
-        }
-
-        async function createNewFolder(name) {
-            if (name && name.trim()) {
-                await addDoc(collection(db, 'folders'), {
-                    name: name.trim(),
-                    parentId: appState.currentLocationId === 'unassigned' ? 'root' : appState.currentLocationId,
-                    ownerId: appState.currentUser.uid,
-                    createdAt: serverTimestamp()
-                });
-            }
         }
 
         function changeCurrentLocation(newLocationId, isNewHistory = false) {
@@ -437,15 +481,120 @@
             });
             renderMainPanel(true);
         }
+
+        async function handleDetailsViewClick(e) {
+            const settingsPanel = e.target.closest('#settings-panel');
+            if (settingsPanel) {
+                const testId = settingsPanel.dataset.testid; const testType = settingsPanel.dataset.testtype;
+                const collectionNameMap = { standard: 'tests', reading: 'reading_tests', listening: 'listening_tests', vocabulary: 'vocab_sets' };
+                const collectionName = collectionNameMap[testType];
+                const testRef = doc(db, collectionName, testId);
+                if (e.target.id === 'lock-test-toggle') await updateDoc(testRef, { isLocked: e.target.checked });
+                if (e.target.name === 'publish-results') await updateDoc(testRef, { resultsPublished: e.target.value });
+                return;
+            }
+            if (e.target.closest('.btn-delete-student')) {
+                const subId = e.target.closest('.btn-delete-student').dataset.subId;
+                const confirmed = await showConfirmModal("Xác nhận xóa", "Bạn có chắc muốn xóa vĩnh viễn bài làm này của học sinh?");
+                if (confirmed) { await deleteDoc(doc(db, "submissions", subId)); }
+            }
+        }
         
+        // --- MODAL & CONTEXT MENU FUNCTIONS (Giữ nguyên) ---
+        function showConfirmModal(title, message) { /*...*/ }
+        function showPromptModal(title, message, defaultValue = '') { /*...*/ }
+        
+        // --- LOGIC GIAO BÀI MỚI ---
+        function openAssignmentModal(testId) {
+            const test = appState.localTestsCache.find(t => t.id === testId);
+            if (!test) return alert("Không tìm thấy đề thi.");
+
+            appState.assigningTest = test;
+            DOM.assignmentTestTitle.textContent = test.title;
+            DOM.classSelectionContainer.innerHTML = '';
+
+            appState.localClassesCache.forEach(cls => {
+                const studentsInClass = appState.localStudentsCache.filter(s => (cls.studentUids || []).includes(s.uid));
+                let classHTML = `
+                    <div class="p-2 bg-white/50 rounded-lg mb-2">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="class-${cls.id}" data-class-id="${cls.id}" class="class-checkbox h-5 w-5 mr-3 cursor-pointer">
+                            <label for="class-${cls.id}" class="font-bold cursor-pointer">${cls.className}</label>
+                        </div>
+                        <div class="pl-8 mt-2 space-y-1 student-checkbox-group">`;
+                
+                studentsInClass.forEach(student => {
+                    classHTML += `
+                        <div class="flex items-center">
+                            <input type="checkbox" id="student-${student.uid}" data-student-uid="${student.uid}" class="student-checkbox h-4 w-4 mr-2 cursor-pointer">
+                            <label for="student-${student.uid}" class="cursor-pointer">${student.displayName}</label>
+                        </div>`;
+                });
+
+                classHTML += `</div></div>`;
+                DOM.classSelectionContainer.innerHTML += classHTML;
+            });
+            
+            DOM.assignmentModal.classList.add('is-open');
+        }
+
+        async function handleConfirmAssignment() {
+            const dueDate = DOM.dueDateInput.value;
+            if (!dueDate) return alert("Vui lòng chọn hạn nộp bài.");
+
+            const selectedStudentUids = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(cb => cb.dataset.studentUid);
+            if (selectedStudentUids.length === 0) return alert("Vui lòng chọn ít nhất một học sinh.");
+
+            const test = appState.assigningTest;
+            const batch = writeBatch(db);
+
+            selectedStudentUids.forEach(studentId => {
+                const submissionRef = doc(collection(db, "submissions"));
+                batch.set(submissionRef, {
+                    studentId: studentId,
+                    testId: test.id,
+                    testSnapshot: test,
+                    status: 'not-started',
+                    dueDate: new Date(dueDate),
+                    createdAt: serverTimestamp(),
+                    violationCount: 0,
+                    answers: {},
+                });
+            });
+
+            try {
+                await batch.commit();
+                alert(`Đã giao bài thành công cho ${selectedStudentUids.length} học sinh.`);
+                DOM.assignmentModal.classList.remove('is-open');
+            } catch (error) {
+                alert("Lỗi khi giao bài: " + error.message);
+            }
+        }
+
+        // --- EVENT LISTENERS ---
+        DOM.loginBtn.addEventListener('click', () => { signInWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value).catch(e => DOM.loginError.textContent = 'Đăng nhập thất bại.'); });
+        DOM.logoutBtn.addEventListener('click', () => signOut(auth));
+        
+        DOM.createTestButtons.addEventListener('click', (e) => {
+            const button = e.target.closest('button'); if (!button) return;
+            const type = button.dataset.type;
+            const pageMap = { standard: 'standard/standard-test-maker.html', reading: 'reading/reading-test-maker.html', listening: 'listening/listening-test-maker.html', vocabulary: 'vocabulary/vocabulary-test-maker.html' };
+            if(pageMap[type]) window.open(pageMap[type], '_blank');
+        });
+
         document.addEventListener('click', (e) => {
-            DOM.contextMenu.classList.remove('show');
+            const contextItem = e.target.closest('#context-menu');
+            if (!contextItem) DOM.contextMenu.classList.remove('show');
+            
             const specialLocation = e.target.closest('.special-location');
             if (specialLocation) { changeCurrentLocation(specialLocation.dataset.locationId, true); return; }
+            
             const folderTreeItem = e.target.closest('.folder-tree-item');
             if (folderTreeItem) { changeCurrentLocation(folderTreeItem.dataset.itemId); return; }
+            
             const breadcrumbLink = e.target.closest('#breadcrumb-container a');
             if (breadcrumbLink) { e.preventDefault(); changeCurrentLocation(breadcrumbLink.dataset.locationId); return; }
+
             const historyBackBtn = e.target.closest('#history-back-btn');
             if (historyBackBtn) {
                 if (appState.mainPanelViewMode === 'details') {
@@ -458,23 +607,15 @@
                 }
                 return;
             }
-            const breadcrumbContainer = e.target.closest('#breadcrumb-container');
-            if (breadcrumbContainer) {
-                breadcrumbContainer.classList.add('hidden');
-                const searchContainer = document.getElementById('search-container');
-                searchContainer.classList.remove('hidden');
-                searchContainer.querySelector('input').focus();
+
+            const assignBtn = e.target.closest('#open-assignment-modal-btn');
+            if(assignBtn) {
+                openAssignmentModal(assignBtn.dataset.testid);
             }
-            const searchInput = e.target.closest('#search-input');
-            if (!searchInput && document.getElementById('search-container') && !document.getElementById('search-container').classList.contains('hidden')) {
-                document.getElementById('breadcrumb-container').classList.remove('hidden');
-                document.getElementById('search-container').classList.add('hidden');
-                if (appState.searchQuery) { appState.searchQuery = ''; renderMainPanel(); }
-            }
-            const detailsPanel = e.target.closest('#main-panel-view');
-            if (detailsPanel) { handleDetailsViewClick(e); }
+            
+            handleDetailsViewClick(e);
         });
-        
+
         DOM.mainPanelView.addEventListener('dblclick', e => {
             const mainViewItem = e.target.closest('.main-view-item');
             if (!mainViewItem) return;
@@ -487,8 +628,66 @@
             }
         });
         
+        // Event listeners cho modal giao bài
+        DOM.classSelectionContainer.addEventListener('change', (e) => {
+            if (e.target.classList.contains('class-checkbox')) {
+                const studentCheckboxes = e.target.closest('.p-2').querySelectorAll('.student-checkbox');
+                studentCheckboxes.forEach(cb => cb.checked = e.target.checked);
+            }
+        });
+
+        DOM.cancelAssignmentBtn.addEventListener('click', () => DOM.assignmentModal.classList.remove('is-open'));
+        DOM.confirmAssignmentBtn.addEventListener('click', handleConfirmAssignment);
+
+        // --- MODAL & CONTEXT MENU FUNCTIONS ---
+        function showConfirmModal(title, message) {
+            return new Promise(resolve => {
+                const modal = document.createElement('div');
+                modal.className = 'modal is-open';
+                modal.innerHTML = `<div class="modal-content glass-panel text-center p-8 w-full max-w-sm"><h3 class="text-xl font-bold text-gray-900 mb-4">${title}</h3><p class="text-gray-600 mb-6">${message}</p><div class="flex gap-4 justify-center"><button class="btn btn-secondary" data-resolve="false">Hủy</button><button class="btn btn-danger" data-resolve="true">Xác nhận</button></div></div>`;
+                DOM.modalContainer.appendChild(modal);
+                modal.querySelectorAll('button').forEach(btn => {
+                    btn.onclick = () => {
+                        modal.remove();
+                        resolve(btn.dataset.resolve === 'true');
+                    };
+                });
+            });
+        }
+        function showPromptModal(title, message, defaultValue = '') {
+            return new Promise(resolve => {
+                const modal = document.createElement('div');
+                modal.className = 'modal is-open';
+                modal.innerHTML = `<div class="modal-content glass-panel p-8 w-full max-w-sm"><h3 class="text-xl font-bold text-gray-900 mb-4">${title}</h3><p class="text-gray-600 mb-4">${message}</p><input type="text" class="input-field mb-6" value="${defaultValue}"><div class="flex gap-4 justify-center"><button class="btn btn-secondary" data-resolve="null">Hủy</button><button class="btn btn-primary" data-resolve="value">OK</button></div></div>`;
+                DOM.modalContainer.appendChild(modal);
+                const input = modal.querySelector('input');
+                input.focus();
+                input.select();
+                modal.querySelectorAll('button').forEach(btn => {
+                    btn.onclick = () => {
+                        const resolution = btn.dataset.resolve === 'value' ? input.value : null;
+                        modal.remove();
+                        resolve(resolution);
+                    };
+                });
+            });
+        }
+        
+        // --- EVENT LISTENERS ---
         DOM.mainPanelView.addEventListener('input', e => {
             if (e.target.id === 'search-input') { appState.searchQuery = e.target.value; renderFolderView(); }
+        });
+        
+        DOM.mainPanelView.addEventListener('dblclick', e => {
+            const mainViewItem = e.target.closest('.main-view-item');
+            if (!mainViewItem) return;
+            if (mainViewItem.dataset.itemType === 'folder') {
+                changeCurrentLocation(mainViewItem.dataset.itemId);
+            } else {
+                appState.selectedTestId = mainViewItem.dataset.itemId;
+                appState.mainPanelViewMode = 'details';
+                renderMainPanel(true);
+            }
         });
 
         document.addEventListener('contextmenu', e => {
@@ -525,10 +724,19 @@
 
             if (action === 'new-folder') {
                 const newName = await showPromptModal("Tạo thư mục mới", "Nhập tên cho thư mục:", "Thư mục không tên");
-                if (newName) createNewFolder(newName);
+                if (newName) {
+                    await addDoc(collection(db, 'folders'), {
+                        name: newName.trim(),
+                        parentId: appState.currentLocationId === 'unassigned' ? 'root' : appState.currentLocationId,
+                        createdAt: serverTimestamp()
+                    });
+                }
             } else if (action === 'delete-folder') {
                 const hasChildren = appState.localFoldersCache.some(f => f.parentId === itemId) || appState.localTestsCache.some(t => t.folderId === itemId);
-                if (hasChildren) { showModal("Không thể xóa", "Thư mục phải rỗng trước khi xóa."); return; }
+                if (hasChildren) { 
+                    alert("Không thể xóa. Thư mục phải rỗng trước khi xóa."); 
+                    return; 
+                }
                 const confirmed = await showConfirmModal("Xác nhận xóa", "Bạn có chắc muốn xóa vĩnh viễn thư mục này?");
                 if (confirmed) { await deleteDoc(doc(db, 'folders', itemId)); }
             } else if (action === 'delete-test') {
@@ -536,7 +744,10 @@
                 if (confirmed) {
                     const submissionsQuery = query(collection(db, "submissions"), where("testId", "==", itemId));
                     const submissionSnapshot = await getDocs(submissionsQuery);
-                    await Promise.all(submissionSnapshot.docs.map(sDoc => deleteDoc(sDoc.ref)));
+                    const batch = writeBatch(db);
+                    submissionSnapshot.docs.forEach(sDoc => batch.delete(sDoc.ref));
+                    await batch.commit();
+                    
                     const collectionNameMap = { standard: 'tests', reading: 'reading_tests', listening: 'listening_tests', vocabulary: 'vocab_sets' };
                     const collectionName = collectionNameMap[itemType];
                     await deleteDoc(doc(db, collectionName, itemId));
@@ -554,86 +765,6 @@
                 renderMainPanel(true);
             }
         });
-
-        async function handleDetailsViewClick(e) {
-            const settingsPanel = e.target.closest('#settings-panel');
-            if (settingsPanel) {
-                const testId = settingsPanel.dataset.testid; const testType = settingsPanel.dataset.testtype;
-                const collectionNameMap = { standard: 'tests', reading: 'reading_tests', listening: 'listening_tests', vocabulary: 'vocab_sets' };
-                const collectionName = collectionNameMap[testType];
-                const testRef = doc(db, collectionName, testId);
-                if (e.target.id === 'lock-test-toggle') await updateDoc(testRef, { isLocked: e.target.checked });
-                if (e.target.name === 'publish-results') await updateDoc(testRef, { resultsPublished: e.target.value });
-                return;
-            }
-            if (e.target.closest('#add-students-btn')) {
-                const names = document.getElementById('new-student-list').value.trim().split('\n').filter(Boolean);
-                for (const name of names) {
-                    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-                    await setDoc(doc(db, "submissions", code), { studentName: name.trim(), testId: appState.selectedTestId, status: 'not-started', violationCount: 0 });
-                }
-                document.getElementById('new-student-list').value = '';
-            } else if (e.target.closest('.btn-delete-student')) {
-                const subId = e.target.closest('.btn-delete-student').dataset.subId;
-                const confirmed = await showConfirmModal("Xác nhận xóa", "Bạn có chắc muốn xóa bài làm của học sinh này?");
-                if (confirmed) { await deleteDoc(doc(db, "submissions", subId)); }
-            }
-        }
-
-        function showModal(title, message) {
-            return new Promise(resolve => {
-                const modal = document.createElement('div');
-                modal.className = 'modal is-open';
-                modal.innerHTML = `<div class="modal-content glass-panel text-center p-8 w-full max-w-sm"><h3 class="text-xl font-bold text-gray-900 mb-4">${title}</h3><p class="text-gray-600 mb-6">${message}</p><button class="btn btn-primary">OK</button></div>`;
-                DOM.modalContainer.appendChild(modal);
-                modal.querySelector('button').onclick = () => {
-                    modal.remove();
-                    resolve(true);
-                };
-            });
-        }
-        function showConfirmModal(title, message) {
-            return new Promise(resolve => {
-                const modal = document.createElement('div');
-                modal.className = 'modal is-open';
-                modal.innerHTML = `<div class="modal-content glass-panel text-center p-8 w-full max-w-sm"><h3 class="text-xl font-bold text-gray-900 mb-4">${title}</h3><p class="text-gray-600 mb-6">${message}</p><div class="flex gap-4 justify-center"><button class="btn btn-secondary" data-resolve="false">Hủy</button><button class="btn btn-danger" data-resolve="true">Xác nhận</button></div></div>`;
-                DOM.modalContainer.appendChild(modal);
-                modal.querySelectorAll('button').forEach(btn => {
-                    btn.onclick = () => {
-                        modal.remove();
-                        resolve(btn.dataset.resolve === 'true');
-                    };
-                });
-            });
-        }
-        function showPromptModal(title, message, defaultValue = '') {
-            return new Promise(resolve => {
-                const modal = document.createElement('div');
-                modal.className = 'modal is-open';
-                modal.innerHTML = `<div class="modal-content glass-panel p-8 w-full max-w-sm"><h3 class="text-xl font-bold text-gray-900 mb-4">${title}</h3><p class="text-gray-600 mb-4">${message}</p><input type="text" class="input-field mb-6" value="${defaultValue}"><div class="flex gap-4 justify-center"><button class="btn btn-secondary" data-resolve="null">Hủy</button><button class="btn btn-primary" data-resolve="value">OK</button></div></div>`;
-                DOM.modalContainer.appendChild(modal);
-                const input = modal.querySelector('input');
-                input.focus();
-                input.select();
-                modal.querySelectorAll('button').forEach(btn => {
-                    btn.onclick = () => {
-                        const resolution = btn.dataset.resolve === 'value' ? input.value : null;
-                        modal.remove();
-                        resolve(resolution);
-                    };
-                });
-            });
-        }
-
-        DOM.loginBtn.addEventListener('click', () => { signInWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value).catch(e => DOM.loginError.textContent = 'Đăng nhập thất bại.'); });
-        DOM.logoutBtn.addEventListener('click', () => signOut(auth));
-        DOM.createTestButtons.addEventListener('click', (e) => {
-            const button = e.target.closest('button'); if (!button) return;
-            const type = button.dataset.type;
-            const pageMap = { standard: 'standard/standard-test-maker.html', reading: 'reading/reading-test-maker.html', listening: 'listening/listening-test-maker.html', vocabulary: 'vocabulary/vocabulary-test-maker.html' };
-            if(pageMap[type]) window.open(pageMap[type], '_blank');
-        });
-
     </script>
 </body>
 </html>
