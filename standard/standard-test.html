@@ -302,7 +302,7 @@
                 appState.currentSubmissionId = submissionId;
                 const submissionRef = doc(appState.db, 'submissions', appState.currentSubmissionId);
                 let submissionSnap = await getDoc(submissionRef);
-                if (!submissionSnap.exists()) throw new Error("Mã truy cập không hợp lệ.");
+                if (!submissionSnap.exists()) throw new Error("Mã bài làm không hợp lệ.");
                 
                 let submissionData = submissionSnap.data();
                 
@@ -312,27 +312,21 @@
                     return;
                 }
                 
-                if (!submissionData.testSnapshot) {
-                    const testRef = doc(appState.db, 'tests', submissionData.testId);
-                    const testSnap = await getDoc(testRef);
-                    if (!testSnap.exists()) throw new Error("Không tìm thấy đề thi gốc.");
-                    
-                    await updateDoc(submissionRef, {
-                        testSnapshot: testSnap.data(),
-                        startTime: serverTimestamp()
-                    });
-                    submissionSnap = await getDoc(submissionRef);
-                    submissionData = submissionSnap.data();
-                }
-                
                 appState.currentTestSnapshot = submissionData;
 
+                // MỚI: Dùng studentId để lấy tên học sinh từ collection 'users'
+                const userDoc = await getDoc(doc(appState.db, "users", submissionData.studentId));
+                if (userDoc.exists()) {
+                    DOM.studentNameDisplay.textContent = `Thí sinh: ${userDoc.data().displayName}`;
+                } else {
+                    DOM.studentNameDisplay.textContent = `Thí sinh: Không rõ`;
+                }
+                
                 const originalQuestions = appState.currentTestSnapshot.testSnapshot.questions.map((q, index) => ({ ...q, originalIndex: index }));
                 appState.shuffledQuestions = appState.currentTestSnapshot.testSnapshot.shuffleQuestions
                     ? seededShuffle(originalQuestions, submissionId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0))
                     : originalQuestions;
 
-                DOM.studentNameDisplay.textContent = `Thí sinh: ${submissionData.studentName}`;
                 renderTest(appState.currentTestSnapshot.testSnapshot, submissionData.answers || {});
                 setupTestEnvironment(appState.currentTestSnapshot);
                 DOM.testContainer.classList.remove('hidden');
