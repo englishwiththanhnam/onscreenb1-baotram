@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Kiểm Tra Online</title>
+    <title>Hệ Thống Kiểm Tra Online - Đăng nhập</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -23,185 +23,111 @@
 
     <style>
         :root {
-            --blur-intensity: 12px;
-            --saturation-intensity: 150%;
-            --glass-bg-color: rgba(255, 255, 255, 0.45);
+            --primary-accent: #6d28d9; --text-primary: #0f172a; --app-bg-start: #f5f7ff;
+            --app-bg-end: #e0e7ff; --glass-bg-color: rgba(255, 255, 255, 0.45);
             --glass-border-color: rgba(255, 255, 255, 0.6);
-            --shadow-color: rgba(67, 56, 202, 0.15);
-            --primary-accent: #6d28d9;
-            --text-primary: #0f172a;
-            --app-bg-start: #f5f7ff;
-            --app-bg-end: #e0e7ff;
         }
-        body {
-            font-family: 'Be Vietnam Pro', sans-serif;
-            background-color: var(--app-bg-start);
-            background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%);
-            color: var(--text-primary);
-        }
-        .background-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
-        .shape { position: absolute; border-radius: 50%; filter: blur(25px); opacity: 0.6; }
-        .shape1 { width: 250px; height: 250px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); top: 10%; left: 5%; animation: float 28s infinite alternate ease-in-out; }
-        .shape2 { width: 180px; height: 180px; background: linear-gradient(135deg, #14b8a6, #67e8f9); bottom: 15%; right: 10%; animation: float 32s infinite alternate ease-in-out; }
-        @keyframes float { from { transform: translateY(20px) scale(1); } to { transform: translateY(-20px) scale(1.05); } }
-        .glass-panel {
-            background: var(--glass-bg-color);
-            backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity));
-            border-radius: 24px;
-            border: 1px solid var(--glass-border-color);
-            box-shadow: 0 8px 32px 0 var(--shadow-color);
-        }
-        .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; }
-        .btn-primary { background: var(--primary-accent); color: white; box-shadow: 0 4px 15px rgba(91, 33, 182, 0.25); }
-        .btn-primary:hover { background: #5b21b6; transform: translateY(-2px); }
-        .code-input { width: 48px; height: 60px; text-align: center; font-size: 2rem; font-weight: 700; color: var(--primary-accent); background: rgba(255, 255, 255, 0.6); border: 2px solid var(--glass-border-color); border-radius: 16px; margin: 0 4px; transition: all 0.2s; }
-        .code-input:focus { outline: none; border-color: var(--primary-accent); transform: scale(1.1); }
-        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; }
-        .modal.is-open { display: flex; }
-        .modal-content { animation: scaleIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
-        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        body { font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--app-bg-start); background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%); }
+        .glass-panel { background: var(--glass-bg-color); backdrop-filter: blur(12px); border-radius: 24px; border: 1px solid var(--glass-border-color); box-shadow: 0 8px 32px 0 rgba(67, 56, 202, 0.15); }
+        .btn-primary { background: var(--primary-accent); color: white; transition: all 0.3s ease; padding: 12px 24px; border-radius: 12px; font-weight: 600; }
+        .btn-primary:hover:not(:disabled) { background: #5b21b6; transform: translateY(-2px); }
+        .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
+        .input-field { background: rgba(255, 255, 255, 0.6); border: 2px solid var(--glass-border-color); color: var(--text-primary); width: 100%; padding: 12px; border-radius: 16px; transition: all 0.2s; }
+        .input-field:focus { outline: none; border-color: var(--primary-accent); transform: scale(1.02); }
     </style>
 </head>
 <body>
-    <div class="background-shapes">
-        <div class="shape shape1"></div>
-        <div class="shape shape2"></div>
-    </div>
-
-    <div id="loader-overlay" class="modal">
-        <div class="text-center">
-            <div class="w-16 h-16 border-8 border-t-violet-500 border-gray-200 rounded-full animate-spin"></div>
-            <p id="loader-text" class="text-lg font-semibold text-white mt-4">Đang tải...</p>
-        </div>
-    </div>
-    
-    <div id="custom-modal" class="modal"></div>
-
-    <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen text-center p-4 relative z-10">
-        <div class="glass-panel p-8 sm:p-10 rounded-2xl shadow-xl w-full max-w-lg">
-            <div id="code-entry-view">
-                <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 mb-4">Hệ Thống Kiểm Tra Online</h1>
-                <p class="text-gray-600 mb-8">Nhập Mã truy cập để bắt đầu.</p>
-                <div id="code-inputs" class="flex justify-center mb-4">
-                    <input type="text" maxlength="1" class="code-input"><input type="text" maxlength="1" class="code-input"><input type="text" maxlength="1" class="code-input"><input type="text" maxlength="1" class="code-input"><input type="text" maxlength="1" class="code-input"><input type="text" maxlength="1" class="code-input">
-                </div>
-                <button id="check-code-btn" class="btn btn-primary mt-4 text-lg w-full">Kiểm tra mã</button>
+    <div id="login-container" class="flex flex-col items-center justify-center min-h-screen p-4">
+        <div class="glass-panel p-8 sm:p-12 w-full max-w-md text-center">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 mb-4">Chào mừng trở lại!</h1>
+            <p class="text-gray-600 mb-8">Đăng nhập để xem bài tập của bạn.</p>
+            
+            <div class="space-y-4">
+                <input type="email" id="email-input" class="input-field" placeholder="Email hoặc Tên đăng nhập" required>
+                <input type="password" id="password-input" class="input-field" placeholder="Mật khẩu" required>
             </div>
+            
+            <button id="login-btn" class="btn-primary w-full mt-6 text-lg">Đăng nhập</button>
+            <p id="error-message" class="text-red-500 mt-4 h-5"></p>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
-        const DOM = {
-            loaderOverlay: document.getElementById('loader-overlay'),
-            loaderText: document.getElementById('loader-text'),
-            customModal: document.getElementById('custom-modal'),
-            codeInputsContainer: document.getElementById('code-inputs'),
-            checkCodeBtn: document.getElementById('check-code-btn'),
-        };
+        const app = initializeApp(window.firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
 
-        const showLoader = (text = 'Đang kiểm tra...') => { 
-            DOM.loaderText.textContent = text; 
-            DOM.loaderOverlay.classList.add('is-open'); 
-        };
-        const hideLoader = () => DOM.loaderOverlay.classList.remove('is-open');
-        
-        function showModal(title, message) {
-            DOM.customModal.innerHTML = `
-                <div class="modal-content glass-panel text-center p-8 w-full max-w-sm">
-                    <h3 class="text-xl font-bold text-gray-900 mb-4">${title}</h3>
-                    <p class="text-gray-600 mb-6">${message}</p>
-                    <button id="modal-confirm-btn" class="btn btn-primary">Đã hiểu</button>
-                </div>`;
-            DOM.customModal.classList.add('is-open');
-            document.getElementById('modal-confirm-btn').onclick = () => {
-                DOM.customModal.classList.remove('is-open');
-            };
-        }
+        const emailInput = document.getElementById('email-input');
+        const passwordInput = document.getElementById('password-input');
+        const loginBtn = document.getElementById('login-btn');
+        const errorMessage = document.getElementById('error-message');
 
-        async function verifyAndRedirect(submissionId) {
-            showLoader();
-            const db = getFirestore(initializeApp(window.firebaseConfig));
-            
+        async function handleLogin() {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+
+            if (!email || !password) {
+                errorMessage.textContent = "Vui lòng nhập đầy đủ thông tin.";
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+            errorMessage.textContent = '';
+
             try {
-                const submissionRef = doc(db, 'submissions', submissionId);
-                const submissionSnap = await getDoc(submissionRef);
-
-                if (!submissionSnap.exists()) {
-                    throw new Error("Mã truy cập không hợp lệ hoặc không tồn tại.");
-                }
-
-                const testId = submissionSnap.data().testId;
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
                 
-                const testCollections = {
-                    'tests': 'standard/standard-test.html',
-                    'reading_tests': 'reading/reading-test.html',
-                    'listening_tests': 'listening/listening-test.html',
-                    'vocab_sets': 'vocabulary/vocabulary-test.html'
-                };
-
-                let redirectUrl = null;
-
-                for (const collectionName in testCollections) {
-                    const testRef = doc(db, collectionName, testId);
-                    const testSnap = await getDoc(testRef);
-                    if (testSnap.exists()) {
-                        redirectUrl = testCollections[collectionName];
-                        break;
-                    }
-                }
-
-                if (redirectUrl) {
-                    window.location.href = `${redirectUrl}?submission_id=${submissionId}`;
-                } else {
-                    throw new Error("Không tìm thấy bài thi/bài tập tương ứng với mã này.");
-                }
+                // Sau khi đăng nhập thành công, kiểm tra vai trò để điều hướng
+                await redirectUserBasedOnRole(user);
 
             } catch (error) {
-                hideLoader();
-                showModal('Lỗi Xác Thực', error.message);
+                errorMessage.textContent = "Tên đăng nhập hoặc mật khẩu không chính xác.";
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Đăng nhập';
             }
         }
+        
+        async function redirectUserBasedOnRole(user) {
+            if (!user) return;
+            try {
+                const userDocRef = doc(db, "users", user.uid);
+                const userDocSnap = await getDoc(userDocRef);
 
-        function init() {
-            const codeInputs = Array.from(DOM.codeInputsContainer.querySelectorAll('input'));
-            
-            DOM.codeInputsContainer.addEventListener('input', (e) => {
-                const target = e.target;
-                if (target.value && target.nextElementSibling) {
-                    target.nextElementSibling.focus();
-                }
-            });
-
-            DOM.codeInputsContainer.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && !e.target.value && e.target.previousElementSibling) {
-                    e.target.previousElementSibling.focus();
-                }
-            });
-
-            DOM.checkCodeBtn.addEventListener('click', () => {
-                const code = codeInputs.map(input => input.value.trim()).join('').toUpperCase();
-                if (code.length === 6) {
-                    verifyAndRedirect(code);
+                if (userDocSnap.exists()) {
+                    const userData = userDocSnap.data();
+                    if (userData.role === 'teacher') {
+                        window.location.href = 'test-manager.html';
+                    } else if (userData.role === 'student') {
+                        // CHUẨN BỊ CHO BƯỚC 2:
+                        // window.location.href = 'student-dashboard.html';
+                        alert("Đăng nhập học sinh thành công! Trang Bảng điều khiển sẽ được xây dựng ở bước tiếp theo.");
+                        loginBtn.disabled = false;
+                        loginBtn.textContent = 'Đăng nhập';
+                    } else {
+                        errorMessage.textContent = 'Tài khoản không được phân quyền.';
+                        auth.signOut();
+                    }
                 } else {
-                    showModal('Thông báo', 'Vui lòng nhập đủ 6 ký tự của mã truy cập.');
+                    errorMessage.textContent = 'Không tìm thấy thông tin người dùng.';
+                    auth.signOut();
                 }
-            });
-
-            const params = new URLSearchParams(window.location.search);
-            const submissionIdFromUrl = params.get('submission_id');
-            if (submissionIdFromUrl && submissionIdFromUrl.length === 6) {
-                const codeArray = submissionIdFromUrl.toUpperCase().split('');
-                codeInputs.forEach((input, index) => input.value = codeArray[index] || '');
-                verifyAndRedirect(submissionIdFromUrl.toUpperCase());
-            } else {
-                codeInputs[0].focus();
+            } catch (err) {
+                 errorMessage.textContent = 'Lỗi khi xác thực vai trò.';
+                 auth.signOut();
             }
         }
-
-        init();
+        
+        loginBtn.addEventListener('click', handleLogin);
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleLogin();
+        });
+        
     </script>
 </body>
 </html>
