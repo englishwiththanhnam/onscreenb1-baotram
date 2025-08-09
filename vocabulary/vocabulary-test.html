@@ -1095,7 +1095,7 @@
                 this.state.audioPlayer.play().catch(e => console.error("Audio play failed:", e));
             },
 
-            async submitToFirebase(isFinal = false) {
+           async function submitToFirebase(isFinal = false) {
                 if (this.state.isSubmitting) return;
                 this.state.isSubmitting = true;
                 this.DOM.loader.classList.remove('hidden');
@@ -1106,21 +1106,25 @@
                 
                 const submissionPayload = {
                     score: score,
-                    totalPoints: 100,
+                    totalPoints: 100, // or totalItems
                     status: isFinal ? 'submitted' : 'in-progress',
                     answers: { 
                         learnedCount, 
                         totalItems,
                         incorrectCounts: this.state.progress.incorrectCounts 
                     },
-                    endTime: isFinal ? serverTimestamp() : null,
                 };
+
+                if (isFinal) {
+                    submissionPayload.endTime = serverTimestamp();
+                    submissionPayload.submissionTime = serverTimestamp(); // << ĐÃ THÊM
+                }
 
                 try {
                     await updateDoc(doc(this.state.db, 'submissions', this.state.submissionId), submissionPayload);
                     if (isFinal) {
                         localStorage.removeItem(`vocabProgress_${this.state.submissionId}`);
-                        this.showModal("Success!", `Progress submitted successfully with a completion of ${score}%.`, false, () => window.location.href='index.html');
+                        this.showModal("Success!", `Progress submitted successfully with a completion of ${score}%.`, false, () => window.close());
                     }
                 } catch(error) { 
                     this.showModal("Error", "Could not save progress: " + error.message); 
@@ -1128,7 +1132,7 @@
                     this.state.isSubmitting = false;
                     this.DOM.loader.classList.add('hidden');
                 }
-            },
+            }
 
             shuffleArray(array) {
                 for (let i = array.length - 1; i > 0; i--) {
