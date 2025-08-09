@@ -490,7 +490,14 @@
                     }
                 });
 
-                const finalSubmission = { answers, score, totalPoints, status: 'submitted', endTime: serverTimestamp() };
+                const finalSubmission = { 
+                    answers, 
+                    score, 
+                    totalPoints, 
+                    status: 'submitted', 
+                    endTime: serverTimestamp(),
+                    submissionTime: serverTimestamp() // << ĐÃ THÊM
+                };
                 await updateDoc(doc(appState.db, 'submissions', appState.currentSubmissionId), finalSubmission);
                 
                 const submissionSnap = await getDoc(doc(appState.db, 'submissions', appState.currentSubmissionId));
