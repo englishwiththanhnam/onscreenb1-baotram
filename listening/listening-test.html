@@ -441,7 +441,8 @@
                     score,
                     totalPoints: appState.testData.totalQuestions,
                     status: 'submitted',
-                    endTime: serverTimestamp()
+                    endTime: serverTimestamp(),
+                    submissionTime: serverTimestamp() // << ĐÃ THÊM
                 };
 
                 await updateDoc(doc(appState.db, 'submissions', appState.currentSubmissionId), finalSubmission);
