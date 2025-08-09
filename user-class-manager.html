@@ -83,7 +83,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, collection, doc, addDoc, onSnapshot, query, where, updateDoc, arrayUnion, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-functions.js";
 
         // --- Firebase Config ---
         const firebaseConfig = {
@@ -100,6 +101,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+        const functions = getFunctions(app); // Khởi tạo Functions
 
         let appState = {
             currentUser: null,
@@ -155,14 +157,12 @@
 
         // --- Data Listeners ---
         function startDataListeners() {
-            // Listen for classes
             const qClasses = query(collection(db, "classes"), where("teacherId", "==", appState.currentUser.uid));
             onSnapshot(qClasses, (snapshot) => {
                 appState.allClasses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderClassList();
             });
 
-            // Listen for all students (for easier lookup)
             const qStudents = query(collection(db, "users"), where("role", "==", "student"));
             onSnapshot(qStudents, (snapshot) => {
                 appState.allStudents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -223,88 +223,38 @@
             }
         }
 
-        async function createStudentAccount(studentInfo, classId) {
-            try {
-                // NOTE: Việc tạo tài khoản ở client chỉ dành cho mục đích phát triển.
-                // Trong môi trường thực tế, nên dùng Cloud Function để bảo mật hơn.
-
-                // SỬA LỖI Ở ĐÂY: Khởi tạo một app Firebase phụ tạm thời
-                const secondaryApp = initializeApp(firebaseConfig, `secondary-app-${Date.now()}`);
-                const tempAuth = getAuth(secondaryApp); // Dùng getAuth(app) thay vì .auth()
-
-                // Tạo tài khoản trên app phụ này
-                const userCredential = await createUserWithEmailAndPassword(tempAuth, studentInfo.email, studentInfo.password);
-                const newStudentUid = userCredential.user.uid;
-                
-                // Vì không cần đăng xuất khỏi app phụ, chúng ta có thể bỏ qua bước signOut.
-
-                // Lưu thông tin học sinh vào Firestore 'users' collection
-                await setDoc(doc(db, "users", newStudentUid), {
-                    uid: newStudentUid,
-                    displayName: studentInfo.displayName,
-                    email: studentInfo.email,
-                    role: "student"
-                });
-
-                // Cập nhật lớp học với UID của học sinh mới
-                const classRef = doc(db, "classes", classId);
-                await updateDoc(classRef, { studentUids: arrayUnion(newStudentUid) });
-
-                return { success: true };
-            } catch (error) {
-                console.error("Lỗi khi tạo tài khoản cho", studentInfo.displayName, ":", error);
-                // Xử lý lỗi nếu email đã tồn tại
-                if (error.code === 'auth/email-already-in-use') {
-                    return { success: false, error: 'Email đã tồn tại' };
-                }
-                return { success: false, error: error.code };
-            }
-        }
-
-        function slugify(text) {
-            text = text.toString().toLowerCase().trim();
-            const sets = [
-                {to: 'a', from: /[\xE0-\xE5]/g}, {to: 'e', from: /[\xE8-\xEB]/g},
-                {to: 'i', from: /[\xEC-\xEF]/g}, {to: 'o', from: /[\xF2-\xF6]/g},
-                {to: 'u', from: /[\xF9-\xFC]/g}, {to: 'c', from: /[\xE7]/g},
-                {to: 'n', from: /[\xF1]/g}
-            ];
-            for (let i = 0; i < sets.length; i++) { text = text.replace(sets[i].from, sets[i].to); }
-            return text.replace(/\s+/g, '').replace(/[^\w-]/g, '');
-        }
-
         async function handleBatchAddStudents() {
-            const names = DOM.studentNameList.value.trim().split('\n').filter(name => name.trim());
-            if (names.length === 0) return alert("Vui lòng nhập danh sách tên.");
+            const studentNames = DOM.studentNameList.value.trim().split('\n').filter(name => name.trim());
+            if (studentNames.length === 0) return alert("Vui lòng nhập danh sách tên.");
 
             DOM.confirmAddStudentBtn.disabled = true;
             DOM.confirmAddStudentBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Đang xử lý...`;
+            
+            try {
+                // Gọi Cloud Function
+                const createStudentUsers = httpsCallable(functions, 'createStudentUsers');
+                const result = await createStudentUsers({ 
+                    studentNames: studentNames, 
+                    classId: appState.selectedClassId 
+                });
 
-            const domain = "@student.onscreen.com"; // Custom domain for student accounts
-            let failedNames = [];
+                const failedResults = result.data.results.filter(r => !r.success);
 
-            for (const name of names) {
-                const studentInfo = {
-                    displayName: name.trim(),
-                    email: `${slugify(name.trim())}${domain}`,
-                    password: "123456" // Default password
-                };
-
-                const result = await createStudentAccount(auth, studentInfo, appState.selectedClassId);
-                if (!result.success) {
-                    failedNames.push(`${name} (${result.error})`);
+                if (failedResults.length > 0) {
+                    const errorMessages = failedResults.map(r => `${r.name}: ${r.error}`).join('\n');
+                    alert(`Một số tài khoản tạo thất bại:\n${errorMessages}`);
+                } else {
+                    alert("Tất cả học sinh đã được thêm thành công!");
                 }
-            }
 
-            DOM.confirmAddStudentBtn.disabled = false;
-            DOM.confirmAddStudentBtn.textContent = 'Xác nhận & Tạo';
-            DOM.studentNameList.value = '';
-            DOM.addStudentModal.classList.remove('is-open');
-
-            if (failedNames.length > 0) {
-                alert(`Một số tài khoản tạo thất bại:\n${failedNames.join('\n')}`);
-            } else {
-                alert("Tất cả học sinh đã được thêm thành công!");
+            } catch (error) {
+                console.error("Lỗi khi gọi Cloud Function:", error);
+                alert(`Đã xảy ra lỗi nghiêm trọng: ${error.message}`);
+            } finally {
+                DOM.confirmAddStudentBtn.disabled = false;
+                DOM.confirmAddStudentBtn.textContent = 'Xác nhận & Tạo';
+                DOM.studentNameList.value = '';
+                DOM.addStudentModal.classList.remove('is-open');
             }
         }
 
@@ -317,7 +267,7 @@
                 appState.selectedClassId = classItem.dataset.classId;
                 DOM.currentClassName.textContent = appState.allClasses.find(c => c.id === appState.selectedClassId).className;
                 DOM.studentViewHeader.style.display = 'flex';
-                renderClassList(); // Re-render to show active state
+                renderClassList();
                 renderStudentList();
             }
         });
@@ -325,7 +275,6 @@
         DOM.addStudentBtn.addEventListener('click', () => DOM.addStudentModal.classList.add('is-open'));
         DOM.cancelAddStudentBtn.addEventListener('click', () => DOM.addStudentModal.classList.remove('is-open'));
         DOM.confirmAddStudentBtn.addEventListener('click', handleBatchAddStudents);
-
     </script>
 </body>
 </html>
