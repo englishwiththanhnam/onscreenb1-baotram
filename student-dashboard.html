@@ -60,12 +60,11 @@
         </main>
     </div>
 
-    <script type="module">
+  <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, collection, doc, getDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
         
-        // --- Firebase Config ---
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
@@ -76,7 +75,6 @@
             measurementId: "G-33NHT07JHE"
         };
         
-        // --- App State & Initialization ---
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
@@ -91,13 +89,12 @@
             completedList: document.getElementById('completed-list'),
         };
 
-        // --- Authentication ---
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // User is logged in, fetch their data and assignments.
+                // Nếu đã đăng nhập, tải dashboard
                 loadDashboard(user);
             } else {
-                // User is not logged in, redirect to login page.
+                // Nếu chắc chắn chưa đăng nhập, chuyển về trang index
                 window.location.href = 'index.html';
             }
         });
@@ -107,17 +104,16 @@
         });
         
         async function loadDashboard(user) {
-            // Fetch user's name
             const userDoc = await getDoc(doc(db, "users", user.uid));
             if (userDoc.exists()) {
                 DOM.studentNameDisplay.textContent = `Xin chào, ${userDoc.data().displayName}!`;
             }
             
-            // Listen for assignments
             const q = query(collection(db, "submissions"), where("studentId", "==", user.uid));
             onSnapshot(q, (snapshot) => {
                 const submissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderAssignments(submissions);
+                // Ẩn loader và hiện nội dung CHỈ KHI đã có dữ liệu
                 DOM.loader.style.display = 'none';
                 DOM.mainContent.style.display = 'block';
             });
@@ -134,7 +130,7 @@
 
             submissions.forEach(sub => {
                 const test = sub.testSnapshot;
-                if (!test) return; // Skip if snapshot is missing
+                if (!test) return;
 
                 const isSubmitted = sub.status === 'submitted';
                 const dueDate = sub.dueDate ? sub.dueDate.toDate() : null;
@@ -148,7 +144,7 @@
                 };
                 const url = `${redirectUrlMap[test.testType]}?submission_id=${sub.id}`;
 
-                let cardHTML = `<div class="assignment-card glass-panel p-6 flex flex-col justify-between">
+                let cardHTML = `<a href="${isSubmitted ? '#' : url}" class="assignment-card glass-panel p-6 flex flex-col justify-between ${isSubmitted ? 'opacity-70 cursor-default' : ''}">
                                     <div>
                                         <p class="text-sm font-bold text-violet-700">${test.testType.toUpperCase()}</p>
                                         <h3 class="text-lg font-bold mb-2">${test.title}</h3>
@@ -161,16 +157,16 @@
                                     <p class="font-semibold">Điểm số: <span class="text-xl font-bold text-green-700">${sub.score}/${sub.totalPoints}</span></p>
                                     <p class="text-sm text-gray-600">Trạng thái: ${onTime ? 'Nộp đúng hạn' : '<span class="text-red-600 font-bold">Nộp muộn</span>'}</p>
                                  </div>
-                                 </div>`; // Close card
+                                 </a>`; // Close card
                     DOM.completedList.innerHTML += cardHTML;
                 } else {
                     cardHTML += `<div class="mt-4">
                                     <p class="text-sm text-gray-600">Hạn nộp: <span class="font-semibold">${dueDate ? dueDate.toLocaleString('vi-VN') : 'Không có'}</span></p>
-                                    <a href="${url}" class="block w-full text-center bg-violet-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-violet-800 transition-colors mt-4">
+                                    <div class="block w-full text-center bg-violet-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-violet-800 transition-colors mt-4">
                                         ${isOverdue ? 'Làm bài (Quá hạn)' : 'Vào làm bài'}
-                                    </a>
+                                    </div>
                                  </div>
-                                 </div>`; // Close card
+                                 </a>`; // Close card
                     if (isOverdue) {
                         overdueCount++;
                         DOM.overdueList.innerHTML += cardHTML;
@@ -181,7 +177,6 @@
                 }
             });
             
-            // Show placeholder if a list is empty
             if (todoCount === 0) DOM.todoList.innerHTML = `<p class="placeholder-text text-gray-500 col-span-full">Tuyệt vời! Bạn đã hoàn thành hết bài tập.</p>`;
             if (overdueCount === 0) DOM.overdueList.innerHTML = `<p class="placeholder-text text-gray-500 col-span-full">Không có bài tập nào bị quá hạn.</p>`;
             if (completedCount === 0) DOM.completedList.innerHTML = `<p class="placeholder-text text-gray-500 col-span-full">Bạn chưa hoàn thành bài tập nào.</p>`;
