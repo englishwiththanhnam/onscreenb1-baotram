@@ -104,12 +104,8 @@
                     if (userData.role === 'teacher') {
                         window.location.href = 'test-manager.html';
                     } else if (userData.role === 'student') {
-                        // CHUẨN BỊ CHO BƯỚC 2:
-                        // window.location.href = 'student-dashboard.html';
-                        alert("Đăng nhập học sinh thành công! Trang Bảng điều khiển sẽ được xây dựng ở bước tiếp theo.");
-                        loginBtn.disabled = false;
-                        loginBtn.textContent = 'Đăng nhập';
-                    } else {
+    window.location.href = 'student-dashboard.html';
+} else {
                         errorMessage.textContent = 'Tài khoản không được phân quyền.';
                         auth.signOut();
                     }
