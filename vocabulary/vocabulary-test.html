@@ -176,9 +176,6 @@
                     let submissionData = submissionSnap.data();
                     
                     this.state.session.isCompleted = submissionData.status === 'submitted';
-                    if (this.state.session.isCompleted) {
-                        console.log("Session already completed. Entering review mode.");
-                    }
 
                     if (submissionData.finalTest && submissionData.finalTest.status === 'completed') {
                         this.state.session.finalTestTaken = true;
@@ -248,19 +245,25 @@
             },
 
             renderHeader() {
+                const isCompleted = this.state.session.isCompleted;
+                const buttonText = isCompleted ? "Cập nhật tiến độ" : "Hoàn thành & Lưu";
+                const buttonIcon = isCompleted ? "fa-sync-alt" : "fa-check-circle";
+
                 this.DOM.header.innerHTML = `
                     <div class="flex flex-wrap justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
                         <div>
                             <h1 class="text-2xl font-bold text-gray-800">${this.state.testData.title}</h1>
                             <p class="text-sm text-gray-500">Học sinh: <span class="font-medium">${this.state.studentName}</span></p>
                         </div>
-                        <button id="submit-final-btn" class="btn btn-primary"><i class="fas fa-check-circle mr-2"></i> Hoàn thành & Lưu tiến độ</button>
+                        <div>
+                            <a href="student-dashboard.html" class="btn btn-secondary mr-2"><i class="fas fa-arrow-left mr-2"></i> Dashboard</a>
+                            <button id="submit-final-btn" class="btn btn-primary"><i class="fas ${buttonIcon} mr-2"></i> ${buttonText}</button>
+                        </div>
                     </div>`;
                 document.getElementById('submit-final-btn').addEventListener('click', () => {
-                    this.showModal(
-                        "Xác nhận Hoàn thành", "Bạn có chắc muốn kết thúc và lưu tiến độ không? Thao tác này sẽ ghi nhận kết quả cuối cùng của bạn.",
-                        true, () => this.submitToFirebase(true)
-                    );
+                    const title = isCompleted ? "Xác nhận Cập nhật" : "Xác nhận Hoàn thành";
+                    const message = isCompleted ? "Bạn có muốn lưu lại tiến độ học tập mới nhất không?" : "Bạn có chắc muốn kết thúc và lưu tiến độ không? Thao tác này sẽ ghi nhận kết quả cuối cùng của bạn.";
+                    this.showModal(title, message, true, () => this.submitToFirebase(true));
                 });
             },
 
@@ -352,6 +355,56 @@
                 }
             },
 
+            async submitToFirebase(isFinal = false) {
+                if (this.state.isSubmitting) return;
+                this.state.isSubmitting = true;
+                
+                const loaderText = this.state.session.isCompleted ? "Đang cập nhật..." : "Đang nộp bài...";
+                this.DOM.loaderText.textContent = loaderText;
+                this.DOM.loader.classList.remove('hidden');
+
+                const learnedCount = this.state.progress.learnedItems.size;
+                const totalItems = this.state.wordList.length + this.state.structureList.length;
+                const score = totalItems > 0 ? Math.round((learnedCount / totalItems) * 100) : 0;
+                
+                const submissionPayload = {
+                    score: score,
+                    totalPoints: 100,
+                    answers: { 
+                        learnedCount, 
+                        totalItems,
+                        incorrectCounts: this.state.progress.incorrectCounts 
+                    },
+                };
+
+                if (isFinal) {
+                    submissionPayload.status = 'submitted';
+                    if (!this.state.session.isCompleted) {
+                        submissionPayload.submissionTime = serverTimestamp();
+                    }
+                }
+
+                try {
+                    await updateDoc(doc(this.state.db, 'submissions', this.state.submissionId), submissionPayload);
+                    
+                    const message = this.state.session.isCompleted
+                        ? `Đã cập nhật tiến độ thành công.`
+                        : `Đã nộp bài thành công với mức độ hoàn thành ${score}%.`;
+
+                    this.showModal("Thành công!", message, false, () => {
+                        this.state.session.isCompleted = true;
+                        this.renderHeader();
+                    });
+
+                } catch(error) { 
+                    this.showModal("Lỗi", "Không thể lưu tiến độ: " + error.message); 
+                } finally { 
+                    this.state.isSubmitting = false;
+                    this.DOM.loader.classList.add('hidden');
+                }
+            },
+            
+            // ... Dán tất cả các hàm còn lại vào đây ...
             startFlashcardSession(type) {
                 this.state.currentSessionItems = type === 'word' ? this.state.wordList : this.state.structureList;
                 if(this.state.currentSessionItems.length === 0) {
@@ -1098,44 +1151,6 @@
                 this.state.audioPlayer.src = url;
                 this.state.audioPlayer.playbackRate = this.state.playbackRate;
                 this.state.audioPlayer.play().catch(e => console.error("Audio play failed:", e));
-            },
-
-            async submitToFirebase(isFinal = false) {
-                if (this.state.isSubmitting) return;
-                this.state.isSubmitting = true;
-                this.DOM.loader.classList.remove('hidden');
-
-                const learnedCount = this.state.progress.learnedItems.size;
-                const totalItems = this.state.wordList.length + this.state.structureList.length;
-                const score = totalItems > 0 ? Math.round((learnedCount / totalItems) * 100) : 0;
-                
-                const submissionPayload = {
-                    score: score,
-                    totalPoints: 100, // Score is a percentage
-                    status: isFinal ? 'submitted' : 'in-progress',
-                    answers: { 
-                        learnedCount, 
-                        totalItems,
-                        incorrectCounts: this.state.progress.incorrectCounts 
-                    },
-                };
-
-                if (isFinal) {
-                    submissionPayload.submissionTime = serverTimestamp();
-                }
-
-                try {
-                    await updateDoc(doc(this.state.db, 'submissions', this.state.submissionId), submissionPayload);
-                    if (isFinal) {
-                        localStorage.removeItem(`vocabProgress_${this.state.submissionId}`);
-                        this.showModal("Thành công!", `Đã nộp tiến độ thành công với mức độ hoàn thành ${score}%.`, false, () => window.close());
-                    }
-                } catch(error) { 
-                    this.showModal("Lỗi", "Không thể lưu tiến độ: " + error.message); 
-                } finally { 
-                    this.state.isSubmitting = false;
-                    this.DOM.loader.classList.add('hidden');
-                }
             },
 
             shuffleArray(array) {
