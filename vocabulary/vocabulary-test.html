@@ -9,7 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <script>
-        // Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
@@ -40,7 +39,6 @@
         .progress-bar { background-color: #e5e7eb; border-radius: 9999px; height: 8px; overflow: hidden; }
         .progress-bar-fill { background-color: var(--primary-color); height: 100%; transition: width 0.4s ease; }
         
-        /* Flashcard Styles */
         .flashcard-viewer { display: flex; flex-direction: column; height: 70vh; max-width: 800px; margin: 0 auto; }
         .flashcard-main { flex-grow: 1; display: flex; align-items: center; justify-content: center; perspective: 1000px; }
         .flashcard { width: 100%; height: 80%; max-height: 400px; cursor: pointer; position: relative; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1); }
@@ -58,7 +56,6 @@
         .slide-in-left { animation: slideInLeft 0.3s forwards ease-in-out; }
         .slide-in-right { animation: slideInRight 0.3s forwards ease-in-out; }
 
-        /* Practice Styles */
         .answer-option { display: block; width: 100%; padding: 1rem; border: 2px solid var(--border-color); border-radius: 0.75rem; background-color: var(--bg-card); text-align: left; font-weight: 500; }
         .answer-option:hover:not(.disabled) { border-color: var(--primary-color); background-color: #f5f3ff; }
         .answer-option.disabled { cursor: not-allowed; }
@@ -91,6 +88,11 @@
             background-color: var(--primary-color);
             color: white;
         }
+        
+        .mindmap-node { position: absolute; width: 110px; height: 110px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .mindmap-node.center { background-color: var(--primary-color); color: white; font-weight: bold; font-size: 1.1rem; z-index: 10; }
+        .mindmap-node.child { background-color: white; color: var(--text-primary); }
+        .mindmap-line { position: absolute; height: 2px; background-color: #cbd5e1; transform-origin: 0 50%; z-index: 5; }
     </style>
 </head>
 <body>
@@ -183,11 +185,8 @@
                         this.state.session.finalTestScore = submissionData.finalTest.score;
                     }
                     
-                    const testRef = doc(this.state.db, 'vocab_sets', submissionData.testId);
-                    const testSnap = await getDoc(testRef);
-                    if (!testSnap.exists()) throw new Error("Could not find the corresponding vocabulary set.");
-
-                    // MỚI: Dùng studentId để lấy tên học sinh từ collection 'users'
+                    this.state.testData = submissionData.testSnapshot;
+                    
                     const userDoc = await getDoc(doc(this.state.db, "users", submissionData.studentId));
                     if (userDoc.exists()) {
                         this.state.studentName = userDoc.data().displayName;
@@ -195,7 +194,6 @@
                         this.state.studentName = "Không rõ";
                     }
 
-                    this.state.testData = testSnap.data();
                     this.state.wordList = this.state.testData.wordList || [];
                     
                     this.processData();
@@ -209,7 +207,7 @@
                 } catch (error) {
                     this.showModal("Error", error.message);
                 }
-            }
+            },
             
             processData() {
                 const structures = [];
@@ -254,13 +252,13 @@
                     <div class="flex flex-wrap justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
                         <div>
                             <h1 class="text-2xl font-bold text-gray-800">${this.state.testData.title}</h1>
-                            <p class="text-sm text-gray-500">Student: <span class="font-medium">${this.state.studentName}</span></p>
+                            <p class="text-sm text-gray-500">Học sinh: <span class="font-medium">${this.state.studentName}</span></p>
                         </div>
-                        <button id="submit-final-btn" class="btn btn-primary"><i class="fas fa-check-circle mr-2"></i> Complete & Save Progress</button>
+                        <button id="submit-final-btn" class="btn btn-primary"><i class="fas fa-check-circle mr-2"></i> Hoàn thành & Lưu tiến độ</button>
                     </div>`;
                 document.getElementById('submit-final-btn').addEventListener('click', () => {
                     this.showModal(
-                        "Confirm Completion", "Are you sure you want to finish and save your progress? This will record your final results.",
+                        "Xác nhận Hoàn thành", "Bạn có chắc muốn kết thúc và lưu tiến độ không? Thao tác này sẽ ghi nhận kết quả cuối cùng của bạn.",
                         true, () => this.submitToFirebase(true)
                     );
                 });
@@ -281,7 +279,7 @@
                 const notifKey = `finalTestNotif_${this.state.submissionId}`;
                 if (isEligibleForFinalTest && !localStorage.getItem(notifKey) && !this.state.session.finalTestTaken) {
                     setTimeout(() => {
-                        this.showModal("Congratulations!", "You have learned 85% of the material and unlocked the Final Test!");
+                        this.showModal("Chúc mừng!", "Bạn đã học được 85% và mở khóa Bài kiểm tra cuối kỳ!");
                         localStorage.setItem(notifKey, 'true');
                     }, 1000);
                 }
@@ -289,32 +287,32 @@
                 this.DOM.main.innerHTML = `
                     <div class="space-y-8 fade-in">
                         <div class="bg-white p-6 rounded-xl shadow-sm">
-                             <h2 class="text-xl font-bold mb-4">Progress Overview</h2>
+                             <h2 class="text-xl font-bold mb-4">Tổng quan Tiến độ</h2>
                              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                 <div><p class="font-medium mb-1">Vocabulary Learned</p><div class="progress-bar"><div class="progress-bar-fill" style="width: ${vocabProgress.toFixed(0)}%;"></div></div><p class="text-right text-sm mt-1">${vocabLearned}/${wordList.length}</p></div>
-                                 <div><p class="font-medium mb-1">Structures Learned</p><div class="progress-bar"><div class="progress-bar-fill" style="width: ${structProgress.toFixed(0)}%;"></div></div><p class="text-right text-sm mt-1">${structLearned}/${structureList.length}</p></div>
+                                 <div><p class="font-medium mb-1">Từ vựng đã học</p><div class="progress-bar"><div class="progress-bar-fill" style="width: ${vocabProgress.toFixed(0)}%;"></div></div><p class="text-right text-sm mt-1">${vocabLearned}/${wordList.length}</p></div>
+                                 <div><p class="font-medium mb-1">Cấu trúc đã học</p><div class="progress-bar"><div class="progress-bar-fill" style="width: ${structProgress.toFixed(0)}%;"></div></div><p class="text-right text-sm mt-1">${structLearned}/${structureList.length}</p></div>
                             </div>
                         </div>
                         <div class="bg-white p-6 rounded-xl shadow-sm">
-                            <h2 class="text-xl font-bold mb-4">Study Modes 📚</h2>
+                            <h2 class="text-xl font-bold mb-4">Chế độ Học 📚</h2>
                             <div id="study-buttons" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <button data-study-mode="vocab-flashcard" class="btn btn-secondary !p-4 !items-start text-left"><div class="text-lg"><i class="fas fa-clone w-6 text-violet-500"></i></div><div><p class="font-bold">Vocabulary Flashcards</p><p class="text-xs font-normal">Learn new words with flashcards.</p></div></button>
-                                <button data-study-mode="mindmap" class="btn btn-secondary !p-4 !items-start text-left"><div class="text-lg"><i class="fas fa-project-diagram w-6 text-sky-500"></i></div><div><p class="font-bold">Word Family Map</p><p class="text-xs font-normal">Explore connections between words.</p></div></button>
-                                <button data-study-mode="struct-flashcard" class="btn btn-secondary !p-4 !items-start text-left"><div class="text-lg"><i class="fas fa-sitemap w-6 text-emerald-500"></i></div><div><p class="font-bold">Structure Flashcards</p><p class="text-xs font-normal">Learn key sentence structures.</p></div></button>
+                                <button data-study-mode="vocab-flashcard" class="btn btn-secondary !p-4 !items-start text-left"><div class="text-lg"><i class="fas fa-clone w-6 text-violet-500"></i></div><div><p class="font-bold">Flashcard Từ vựng</p><p class="text-xs font-normal">Học từ mới qua flashcard.</p></div></button>
+                                <button data-study-mode="mindmap" class="btn btn-secondary !p-4 !items-start text-left"><div class="text-lg"><i class="fas fa-project-diagram w-6 text-sky-500"></i></div><div><p class="font-bold">Sơ đồ Từ loại</p><p class="text-xs font-normal">Khám phá mối liên hệ giữa các từ.</p></div></button>
+                                <button data-study-mode="struct-flashcard" class="btn btn-secondary !p-4 !items-start text-left"><div class="text-lg"><i class="fas fa-sitemap w-6 text-emerald-500"></i></div><div><p class="font-bold">Flashcard Cấu trúc</p><p class="text-xs font-normal">Học các cấu trúc câu chính.</p></div></button>
                             </div>
                         </div>
                         <div class="bg-white p-6 rounded-xl shadow-sm">
-                            <h2 class="text-xl font-bold mb-4">Practice Modes 🏋️‍♀️</h2>
+                            <h2 class="text-xl font-bold mb-4">Chế độ Luyện tập 🏋️‍♀️</h2>
                             <div id="practice-guide-buttons" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6"></div>
                             <div id="practice-buttons" class="flex flex-col gap-4">
                                 <div class="flex flex-col sm:flex-row gap-4">
-                                    <button data-practice-mode="normal" class="btn btn-primary flex-1"><i class="fas fa-random mr-2"></i> Normal Practice</button>
-                                    <button data-practice-mode="weakness" class="btn btn-secondary flex-1 border-amber-500 text-amber-600 hover:bg-amber-50"><i class="fas fa-star-half-alt mr-2"></i> Review Weaknesses</button>
+                                    <button data-practice-mode="normal" class="btn btn-primary flex-1"><i class="fas fa-random mr-2"></i> Luyện tập Thường</button>
+                                    <button data-practice-mode="weakness" class="btn btn-secondary flex-1 border-amber-500 text-amber-600 hover:bg-amber-50"><i class="fas fa-star-half-alt mr-2"></i> Ôn tập Điểm yếu</button>
                                 </div>
                                 ${ isEligibleForFinalTest ? `
                                     <button id="start-final-test-btn" class="btn btn-danger w-full mt-4 text-lg py-4" ${this.state.session.finalTestTaken ? 'disabled' : ''}>
                                         <i class="fas fa-graduation-cap mr-2"></i>
-                                        ${this.state.session.finalTestTaken ? `Final Test Taken (Score: ${this.state.session.finalTestScore}%)` : 'Start Final Test'}
+                                        ${this.state.session.finalTestTaken ? `Đã làm KT cuối kỳ (Điểm: ${this.state.session.finalTestScore}%)` : 'Bắt đầu KT cuối kỳ'}
                                     </button>
                                 ` : '' }
                             </div>
@@ -341,8 +339,8 @@
                 if (finalTestBtn) {
                     finalTestBtn.addEventListener('click', () => {
                         this.showModal(
-                            "Confirm Final Test", 
-                            "This is your final test. It can only be taken once and will be timed. Are you ready to begin?", 
+                            "Xác nhận KT cuối kỳ", 
+                            "Đây là bài kiểm tra cuối cùng. Nó chỉ được làm một lần và sẽ được tính giờ. Bạn đã sẵn sàng chưa?", 
                             true, 
                             this.startFinalTest.bind(this)
                         );
@@ -357,7 +355,7 @@
             startFlashcardSession(type) {
                 this.state.currentSessionItems = type === 'word' ? this.state.wordList : this.state.structureList;
                 if(this.state.currentSessionItems.length === 0) {
-                    this.showModal("Notice", "There is no data for this study mode.");
+                    this.showModal("Thông báo", "Không có dữ liệu cho chế độ học này.");
                     return;
                 }
                 this.state.currentIndex = 0;
@@ -369,13 +367,13 @@
                 <div class="bg-white p-6 rounded-xl shadow-sm fade-in">
                     <div class="flashcard-viewer">
                         <div class="flex justify-between items-center mb-4">
-                            <button id="back-to-dashboard-btn" class="btn btn-secondary !py-2 !px-4"><i class="fas fa-arrow-left mr-2"></i> Back</button>
+                            <button id="back-to-dashboard-btn" class="btn btn-secondary !py-2 !px-4"><i class="fas fa-arrow-left mr-2"></i> Quay lại</button>
                             <div id="card-counter" class="font-semibold text-slate-700"></div>
                         </div>
                         <div class="flashcard-main"><div class="flashcard" id="flashcard"></div></div>
                         <div class="flashcard-nav flex justify-between items-center p-4">
                             <button id="prev-card-btn" class="btn btn-secondary !rounded-full !w-14 !h-14 text-xl"><i class="fas fa-arrow-left"></i></button>
-                            <p class="text-sm text-gray-500">Click card to flip</p>
+                            <p class="text-sm text-gray-500">Bấm vào thẻ để lật</p>
                             <button id="next-card-btn" class="btn btn-secondary !rounded-full !w-14 !h-14 text-xl"><i class="fas fa-arrow-right"></i></button>
                         </div>
                     </div>
@@ -436,14 +434,14 @@
             renderMindmapFamilySelection() {
                 const familiesWithMultipleMembers = Object.entries(this.state.wordFamilies).filter(([root, members]) => members.length > 1);
                 if (familiesWithMultipleMembers.length === 0) {
-                    this.showModal("Notice", "Not enough word families to create a map.");
+                    this.showModal("Thông báo", "Không có đủ từ cùng loại để tạo sơ đồ.");
                     return;
                 }
                 this.DOM.main.innerHTML = `
                 <div class="bg-white p-6 rounded-xl shadow-sm fade-in">
                     <div class="flex items-center mb-6">
                         <button id="back-to-dashboard-btn" class="btn btn-secondary !py-2 !px-4 mr-4"><i class="fas fa-arrow-left"></i></button>
-                        <h2 class="text-xl font-bold">Select a word family to explore</h2>
+                        <h2 class="text-xl font-bold">Chọn một họ từ để khám phá</h2>
                     </div>
                     <div id="family-list" class="flex flex-wrap gap-3">
                         ${familiesWithMultipleMembers.map(([root, members]) => `
@@ -465,7 +463,7 @@
                 <div class="bg-white p-6 rounded-xl shadow-sm fade-in">
                     <div class="flex items-center mb-6">
                          <button id="back-to-selection-btn" class="btn btn-secondary !py-2 !px-4 mr-4"><i class="fas fa-arrow-left"></i></button>
-                        <h2 class="text-xl font-bold">Word Family: ${familyRoot}</h2>
+                        <h2 class="text-xl font-bold">Họ từ: ${familyRoot}</h2>
                     </div>
                     <div class="relative w-full h-[60vh] flex items-center justify-center overflow-hidden">
                         <div id="mindmap" class="relative w-[150px] h-[150px]"></div>
@@ -494,15 +492,15 @@
             renderPracticeGuide() {
                 const guideContainer = document.getElementById('practice-guide-buttons');
                 const exerciseTypes = [
-                    { type: 'TraditionalMCQ', name: 'MCQ', icon: 'fa-list-check', color: 'text-violet-500' },
-                    { type: 'ContextualMCQ', name: 'Context', icon: 'fa-quote-left', color: 'text-sky-500' },
-                    { type: 'WordFamilyMCQ', name: 'Word Family', icon: 'fa-users', color: 'text-blue-500' },
-                    { type: 'SentenceUnscramble', name: 'Unscramble', icon: 'fa-sort-alpha-down', color: 'text-indigo-500' },
-                    { type: 'GapFill', name: 'Gap Fill', icon: 'fa-edit', color: 'text-emerald-500' },
-                    { type: 'AudioListening', name: 'Listening', icon: 'fa-volume-up', color: 'text-pink-500' },
-                    { type: 'TriosOfGappedSentence', name: 'Find Word', icon: 'fa-search-plus', color: 'text-teal-500' },
-                    { type: 'ErrorCorrection', name: 'Correction', icon: 'fa-check-double', color: 'text-rose-500' },
-                    { type: 'IPAFill', name: 'Phonetics', icon: 'fa-language', color: 'text-orange-500' },
+                    { type: 'TraditionalMCQ', name: 'Trắc nghiệm', icon: 'fa-list-check', color: 'text-violet-500' },
+                    { type: 'ContextualMCQ', name: 'Ngữ cảnh', icon: 'fa-quote-left', color: 'text-sky-500' },
+                    { type: 'WordFamilyMCQ', name: 'Họ từ', icon: 'fa-users', color: 'text-blue-500' },
+                    { type: 'SentenceUnscramble', name: 'Sắp xếp', icon: 'fa-sort-alpha-down', color: 'text-indigo-500' },
+                    { type: 'GapFill', name: 'Điền từ', icon: 'fa-edit', color: 'text-emerald-500' },
+                    { type: 'AudioListening', name: 'Nghe', icon: 'fa-volume-up', color: 'text-pink-500' },
+                    { type: 'TriosOfGappedSentence', name: 'Tìm từ', icon: 'fa-search-plus', color: 'text-teal-500' },
+                    { type: 'ErrorCorrection', name: 'Sửa lỗi', icon: 'fa-check-double', color: 'text-rose-500' },
+                    { type: 'IPAFill', name: 'Phiên âm', icon: 'fa-language', color: 'text-orange-500' },
                 ];
                 guideContainer.innerHTML = exerciseTypes.map(ex => `
                     <button data-guide-type="${ex.type}" class="btn btn-secondary !p-2 !justify-start text-left text-sm">
@@ -521,15 +519,15 @@
 
             renderGuideModal(exerciseType) {
                 const exerciseInfo = {
-                    'TraditionalMCQ': { name: 'Word & Meaning MCQ', desc: 'Choose the correct Vietnamese meaning for the given English word, or vice versa.' },
-                    'ContextualMCQ': { name: 'Contextual MCQ', desc: 'Choose the most suitable vocabulary word to fill in the blank in an example sentence.' },
-                    'WordFamilyMCQ': { name: 'Word Family MCQ', desc: 'Choose the correct form of a word (noun, verb, adjective...) from the same word family to complete the sentence.' },
-                    'SentenceUnscramble': { name: 'Sentence Unscramble', desc: 'Click on the given words in the correct order to form a complete sentence.' },
-                    'GapFill': { name: 'Gap Fill', desc: 'Type a missing word (usually a preposition) into the blank in a sentence structure.' },
-                    'AudioListening': { name: 'Listening & Typing', desc: 'Listen to the pronunciation of a word or sentence and type exactly what you hear.' },
-                    'TriosOfGappedSentence': { name: 'Find the Common Word', desc: 'Find a single word that can fit into all three blanks in different sentences.'},
-                    'ErrorCorrection': { name: 'Error Correction', desc: 'Identify whether a given sentence is correct or incorrect. If it\'s incorrect, correct it.' },
-                    'IPAFill': { name: 'Phonetic Fill', desc: 'Choose the correct vowel to complete the IPA transcription of a given word.' }
+                    'TraditionalMCQ': { name: 'Trắc nghiệm Từ & Nghĩa', desc: 'Chọn nghĩa tiếng Việt đúng cho từ tiếng Anh, hoặc ngược lại.' },
+                    'ContextualMCQ': { name: 'Trắc nghiệm Ngữ cảnh', desc: 'Chọn từ vựng phù hợp nhất để điền vào chỗ trống trong câu ví dụ.' },
+                    'WordFamilyMCQ': { name: 'Trắc nghiệm Họ từ', desc: 'Chọn dạng từ đúng (danh từ, động từ, tính từ...) từ cùng một họ từ để hoàn thành câu.' },
+                    'SentenceUnscramble': { name: 'Sắp xếp câu', desc: 'Bấm vào các từ cho sẵn theo đúng thứ tự để tạo thành một câu hoàn chỉnh.' },
+                    'GapFill': { name: 'Điền từ vào chỗ trống', desc: 'Gõ một từ còn thiếu (thường là giới từ) vào chỗ trống trong một cấu trúc câu.' },
+                    'AudioListening': { name: 'Nghe & Viết', desc: 'Nghe cách phát âm của một từ hoặc câu và gõ lại chính xác những gì bạn nghe được.' },
+                    'TriosOfGappedSentence': { name: 'Tìm từ chung', desc: 'Tìm một từ duy nhất có thể điền vào cả ba chỗ trống trong các câu khác nhau.'},
+                    'ErrorCorrection': { name: 'Sửa lỗi sai', desc: 'Xác định xem một câu cho sẵn là đúng hay sai. Nếu sai, hãy sửa lại cho đúng.' },
+                    'IPAFill': { name: 'Điền phiên âm', desc: 'Chọn nguyên âm đúng để hoàn thành phiên âm IPA của một từ cho trước.' }
                 };
                 
                 const info = exerciseInfo[exerciseType];
@@ -537,7 +535,7 @@
                 const suitableItem = allItems.find(item => this.getPossibleExerciseTypes(item).includes(exerciseType));
 
                 if (!suitableItem) {
-                    this.showModal("Notice", "Could not find suitable data to create an example for this exercise type.");
+                    this.showModal("Thông báo", "Không tìm thấy dữ liệu phù hợp để tạo ví dụ cho dạng bài này.");
                     return;
                 }
                 
@@ -545,10 +543,10 @@
                 const exampleHTML = this[`get${exerciseType}HTML`](suitableItem, true);
 
                 this.showModal(
-                    `Guide: ${info.name}`,
+                    `Hướng dẫn: ${info.name}`,
                     `<p class="text-slate-600 mb-6 text-left">${info.desc}</p>
                      <div class="bg-slate-50 p-4 rounded-lg border">
-                         <h4 class="font-bold mb-3 text-left">Interactive Example:</h4>
+                         <h4 class="font-bold mb-3 text-left">Ví dụ tương tác:</h4>
                          <div id="guide-question-container">${exampleHTML}</div>
                          <div id="guide-feedback-container" class="mt-4"></div>
                      </div>`,
@@ -576,7 +574,7 @@
                 }
 
                 if (itemsToPractice.length === 0) {
-                    this.showModal("Great!", mode === 'weakness' ? "You have no weaknesses to review." : "You have learned everything!");
+                    this.showModal("Tuyệt vời!", mode === 'weakness' ? "Bạn không có điểm yếu nào cần ôn tập." : "Bạn đã học hết mọi thứ!");
                     return;
                 }
                 
@@ -591,8 +589,8 @@
                     <div class="bg-white p-6 rounded-xl shadow-sm fade-in">
                         <div class="mb-6">
                             <div class="flex justify-between items-center mb-2">
-                                <p class="text-sm font-medium">Question ${this.state.currentIndex + 1} / ${total}</p>
-                                <button id="exit-practice-btn" class="text-sm font-semibold text-gray-600 hover:text-red-500"><i class="fas fa-times mr-1"></i> Exit</button>
+                                <p class="text-sm font-medium">Câu hỏi ${this.state.currentIndex + 1} / ${total}</p>
+                                <button id="exit-practice-btn" class="text-sm font-semibold text-gray-600 hover:text-red-500"><i class="fas fa-times mr-1"></i> Thoát</button>
                             </div>
                             <div class="progress-bar"><div class="progress-bar-fill" style="width: ${progressPercent}%;"></div></div>
                         </div>
@@ -662,21 +660,21 @@
                 const total = this.state.currentSessionItems.length;
                 this.DOM.main.innerHTML = `
                     <div class="text-center max-w-lg mx-auto bg-white p-8 rounded-xl shadow-sm fade-in">
-                        <h1 class="text-3xl font-bold mb-2">Practice Session Complete!</h1>
-                        <p class="text-lg text-slate-600 mb-6">You answered ${score} / ${total} questions correctly.</p>
+                        <h1 class="text-3xl font-bold mb-2">Hoàn thành Luyện tập!</h1>
+                        <p class="text-lg text-slate-600 mb-6">Bạn đã trả lời đúng ${score} / ${total} câu.</p>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                             <div class="bg-green-50 p-4 rounded-lg">
-                                <h3 class="font-bold text-green-800 mb-2">Correct (${this.state.sessionCorrectItems.length})</h3>
+                                <h3 class="font-bold text-green-800 mb-2">Đúng (${this.state.sessionCorrectItems.length})</h3>
                                 <ul class="text-sm space-y-1 max-h-32 overflow-y-auto">${this.state.sessionCorrectItems.map(item => `<li>${item.word || item.phrase}</li>`).join('')}</ul>
                             </div>
                             <div class="bg-red-50 p-4 rounded-lg">
-                                <h3 class="font-bold text-red-800 mb-2">Needs Review (${this.state.sessionIncorrectItems.length})</h3>
+                                <h3 class="font-bold text-red-800 mb-2">Cần xem lại (${this.state.sessionIncorrectItems.length})</h3>
                                 <ul class="text-sm space-y-1 max-h-32 overflow-y-auto">${this.state.sessionIncorrectItems.map(item => `<li>${item.word || item.phrase}</li>`).join('')}</ul>
                             </div>
                         </div>
                         <div class="mt-8 flex flex-col sm:flex-row gap-4">
-                            <button id="continue-practice-btn" class="btn btn-primary w-full">Practice Again</button>
-                            <button id="back-to-dashboard-btn" class="btn btn-secondary w-full">Exit</button>
+                            <button id="continue-practice-btn" class="btn btn-primary w-full">Luyện tập lại</button>
+                            <button id="back-to-dashboard-btn" class="btn btn-secondary w-full">Thoát</button>
                         </div>
                     </div>`;
                 document.getElementById('continue-practice-btn').addEventListener('click', () => this.startPractice('normal'));
@@ -703,7 +701,7 @@
                 }
 
                 if (itemsToPractice.length === 0) {
-                    this.showModal("Error", "Not enough learned items to start the final test.");
+                    this.showModal("Lỗi", "Không có đủ mục đã học để bắt đầu bài kiểm tra cuối kỳ.");
                     return;
                 }
 
@@ -731,7 +729,7 @@
                     <div class="bg-white p-6 rounded-xl shadow-lg border-2 border-red-200 fade-in">
                         <div class="mb-6">
                             <div class="flex justify-between items-center mb-2 text-red-700 font-bold">
-                                <p>FINAL TEST - Question ${this.state.currentIndex + 1} / ${total}</p>
+                                <p>BÀI KIỂM TRA CUỐI KỲ - Câu ${this.state.currentIndex + 1} / ${total}</p>
                                 <div id="timer-display" class="text-lg"><i class="fas fa-clock mr-2"></i>${timeString}</div>
                             </div>
                             <div class="progress-bar"><div id="progress-bar-final-test" class="progress-bar-fill bg-red-500" style="width: ${progressPercent}%;"></div></div>
@@ -759,10 +757,10 @@
             startProctoring() {
                 this.proctoringEventHandler = (e) => {
                     this.state.proctoring.violations++;
-                    console.warn(`Violation detected: ${e.type}. Total: ${this.state.proctoring.violations}`);
+                    console.warn(`Phát hiện vi phạm: ${e.type}. Tổng: ${this.state.proctoring.violations}`);
                     const warning = document.createElement('div');
                     warning.className = 'fixed top-4 right-4 bg-yellow-400 text-black p-3 rounded-lg shadow-lg z-50';
-                    warning.innerHTML = `<i class="fas fa-exclamation-triangle mr-2"></i> Warning: Activity detected! Violations: ${this.state.proctoring.violations}`;
+                    warning.innerHTML = `<i class="fas fa-exclamation-triangle mr-2"></i> Cảnh báo: Phát hiện hoạt động! Số lần vi phạm: ${this.state.proctoring.violations}`;
                     document.body.appendChild(warning);
                     setTimeout(() => warning.remove(), 3000);
                     
@@ -799,7 +797,7 @@
 
                 const score = this.state.currentSessionItems.length > 0 ? Math.round((this.state.currentScore / this.state.currentSessionItems.length) * 100) : 0;
                 
-                this.DOM.main.innerHTML = `<div class="text-center p-8"><div class="w-12 h-12 border-4 border-t-violet-500 border-gray-200 rounded-full animate-spin mx-auto"></div><p class="mt-4 font-semibold">Submitting your score...</p></div>`;
+                this.DOM.main.innerHTML = `<div class="text-center p-8"><div class="w-12 h-12 border-4 border-t-violet-500 border-gray-200 rounded-full animate-spin mx-auto"></div><p class="mt-4 font-semibold">Đang nộp điểm của bạn...</p></div>`;
 
                 const payload = {
                     finalTest: {
@@ -817,13 +815,13 @@
                     this.state.session.finalTestTaken = true;
                     this.state.session.finalTestScore = score;
                     this.showModal(
-                        "Test Submitted!",
-                        `You have completed the final test with a score of ${score}%.<br>Violations detected: ${this.state.proctoring.violations}.<br><br>You can now continue to review the materials.`,
+                        "Đã nộp bài!",
+                        `Bạn đã hoàn thành bài kiểm tra cuối kỳ với điểm số ${score}%.<br>Số lần vi phạm: ${this.state.proctoring.violations}.<br><br>Bây giờ bạn có thể tiếp tục ôn tập tài liệu.`,
                         false,
                         () => this.renderDashboard()
                     );
                 } catch(error) {
-                    this.showModal("Error", "Could not submit your test score: " + error.message);
+                    this.showModal("Lỗi", "Không thể nộp điểm kiểm tra: " + error.message);
                 } finally {
                     this.state.isSubmitting = false;
                 }
@@ -837,7 +835,7 @@
                 const distractors = this.shuffleArray(isEngToViet ? [...item.distractors_vi] : [...item.distractors_en]).slice(0, 3);
                 const options = this.shuffleArray([this.state.currentCorrectAnswer, ...distractors]);
 
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Multiple Choice: Select the correct answer</h2><div class="text-2xl font-bold min-h-[60px] mb-8">${question}</div><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Trắc nghiệm: Chọn đáp án đúng</h2><div class="text-2xl font-bold min-h-[60px] mb-8">${question}</div><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             
             getContextualMCQHTML(item, isExample = false) {
@@ -847,7 +845,7 @@
                 const distractors = this.shuffleArray([...item.distractors_en]).slice(0, 3);
                 const options = this.shuffleArray([this.state.currentCorrectAnswer, ...distractors]);
 
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Multiple Choice: Complete the sentence</h2><p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Trắc nghiệm: Hoàn thành câu</h2><p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
 
             getWordFamilyMCQHTML(item, isExample = false) {
@@ -861,13 +859,13 @@
                 const distractors = this.shuffleArray(family.filter(w => w.id !== item.id)).slice(0, 3).map(w => w.word);
                 const options = this.shuffleArray([this.state.currentCorrectAnswer, ...distractors]);
 
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Multiple Choice: Word Family</h2><p class="text-slate-600 mb-4">Choose the correct word from the "<strong>${item.familyRoot}</strong>" family to complete the sentence.</p><p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Trắc nghiệm: Họ từ</h2><p class="text-slate-600 mb-4">Chọn từ đúng từ họ từ "<strong>${item.familyRoot}</strong>" để hoàn thành câu.</p><p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             
             getAudioListeningHTML(item, isExample = false) {
                 this.state.currentCorrectAnswer = item.word;
                 return `<div class="question-block">
-                    <h2 class="text-sm font-semibold text-indigo-600 mb-2">Listening: Type the word</h2>
+                    <h2 class="text-sm font-semibold text-indigo-600 mb-2">Nghe: Gõ lại từ</h2>
                     <div class="text-center mb-6">
                         <button id="play-audio-btn" data-audio-url="${item.audioUrl}" class="text-5xl text-indigo-500 hover:text-indigo-700 transition-colors"><i class="fas fa-play-circle"></i></button>
                     </div>
@@ -879,8 +877,8 @@
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-indigo-500 focus:ring-indigo-500" placeholder="Type what you hear...">
-                        <button id="check-btn" class="btn btn-primary !py-3">Check</button>
+                        <input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-indigo-500 focus:ring-indigo-500" placeholder="Gõ những gì bạn nghe được...">
+                        <button id="check-btn" class="btn btn-primary !py-3">Kiểm tra</button>
                     </div>
                 </div>`;
             },
@@ -888,12 +886,12 @@
             getSentenceUnscrambleHTML(item, isExample = false) {
                 this.state.currentCorrectAnswer = item.exampleSentence;
                 const words = this.shuffleArray(item.exampleSentence.split(' '));
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Unscramble Sentence</h2><p class="text-slate-600 mb-4">Click the words in the correct order to form a complete sentence.</p><div id="unscramble-answer-area" class="token-area mb-4"></div><div id="unscramble-source-area" class="token-area bg-slate-50">${words.map(word => `<span class="word-token">${word}</span>`).join('')}</div><div class="mt-6 text-right"><button id="check-btn" class="btn btn-primary">Check</button></div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Sắp xếp câu</h2><p class="text-slate-600 mb-4">Bấm vào các từ theo đúng thứ tự để tạo thành câu hoàn chỉnh.</p><div id="unscramble-answer-area" class="token-area mb-4"></div><div id="unscramble-source-area" class="token-area bg-slate-50">${words.map(word => `<span class="word-token">${word}</span>`).join('')}</div><div class="mt-6 text-right"><button id="check-btn" class="btn btn-primary">Kiểm tra</button></div></div>`;
             },
 
             getGapFillHTML(item, isExample = false) {
                 this.state.currentCorrectAnswer = item.gapFill.blank;
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Fill in the Blank</h2><p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${item.gapFill.sentence}"</p><div class="flex gap-2"><input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-indigo-500 focus:ring-indigo-500" placeholder="Type the missing word..."><button id="check-btn" class="btn btn-primary !py-3">Check</button></div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Điền vào chỗ trống</h2><p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${item.gapFill.sentence}"</p><div class="flex gap-2"><input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-indigo-500 focus:ring-indigo-500" placeholder="Gõ từ còn thiếu..."><button id="check-btn" class="btn btn-primary !py-3">Kiểm tra</button></div></div>`;
             },
 
             getTriosOfGappedSentenceHTML(item, isExample = false) {
@@ -901,7 +899,7 @@
                 const sentences = this.findSentencesWithWord(item.word);
                 const wordRegex = new RegExp(`\\b${item.word.replace(/s$/, '')}(s?)\\b`, 'gi');
                 const gappedSentences = this.shuffleArray(sentences).slice(0, 3).map(s => s.replace(wordRegex, '______'));
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Find the Common Word</h2><p class="text-slate-600 mb-6">A single word fits into all three blanks below. What is it?</p><div class="space-y-4 mb-6">${gappedSentences.map((s, i) => `<p class="text-lg font-serif italic text-slate-700">${i + 1}. "${s}"</p>`).join('')}</div><div class="flex gap-2"><input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg" placeholder="Type the common word..."><button id="check-btn" class="btn btn-primary !py-3">Check</button></div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Tìm từ chung</h2><p class="text-slate-600 mb-6">Một từ duy nhất phù hợp với cả ba chỗ trống dưới đây. Đó là từ gì?</p><div class="space-y-4 mb-6">${gappedSentences.map((s, i) => `<p class="text-lg font-serif italic text-slate-700">${i + 1}. "${s}"</p>`).join('')}</div><div class="flex gap-2"><input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg" placeholder="Gõ từ chung..."><button id="check-btn" class="btn btn-primary !py-3">Kiểm tra</button></div></div>`;
             },
 
             getErrorCorrectionHTML(item, isExample = false) {
@@ -910,20 +908,20 @@
                 this.state.currentCorrectAnswer = item.errorCorrection.correct;
 
                 return `<div class="question-block" id="error-correction-block">
-                    <h2 class="text-sm font-semibold text-indigo-600 mb-2">Error Correction</h2>
+                    <h2 class="text-sm font-semibold text-indigo-600 mb-2">Sửa lỗi</h2>
                     <p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${sentenceToShow}"</p>
                     <div id="error-step-1">
-                        <p class="text-center font-semibold mb-4">Is this sentence correct or incorrect?</p>
+                        <p class="text-center font-semibold mb-4">Câu này đúng hay sai?</p>
                         <div class="flex justify-center gap-4">
-                            <button data-choice="correct" class="btn btn-secondary !px-8 !py-3 border-green-500 text-green-600 hover:bg-green-50">Correct</button>
-                            <button data-choice="incorrect" class="btn btn-secondary !px-8 !py-3 border-red-500 text-red-600 hover:bg-red-50">Incorrect</button>
+                            <button data-choice="correct" class="btn btn-secondary !px-8 !py-3 border-green-500 text-green-600 hover:bg-green-50">Đúng</button>
+                            <button data-choice="incorrect" class="btn btn-secondary !px-8 !py-3 border-red-500 text-red-600 hover:bg-red-50">Sai</button>
                         </div>
                     </div>
                     <div id="error-step-2" class="hidden">
-                        <p class="font-semibold mb-2">Correct the sentence:</p>
+                        <p class="font-semibold mb-2">Sửa lại câu:</p>
                         <div class="flex gap-2">
                             <input type="text" id="error-correction-input" class="w-full p-3 border-2 border-gray-300 rounded-lg" value="${sentenceToShow}">
-                            <button id="error-correction-check-btn" class="btn btn-primary">Submit</button>
+                            <button id="error-correction-check-btn" class="btn btn-primary">Nộp</button>
                         </div>
                     </div>
                 </div>`;
@@ -942,8 +940,8 @@
                 const distractors = this.shuffleArray(vowels.filter(v => v !== vowelToGuess)).slice(0, 3);
                 const options = this.shuffleArray([vowelToGuess, ...distractors]);
 
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Phonetic Fill</h2>
-                <p class="text-slate-600 mb-4">Choose the correct sound to complete the transcription for the word meaning: <strong class="text-indigo-700">"${item.meaning}"</strong></p>
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Điền phiên âm</h2>
+                <p class="text-slate-600 mb-4">Chọn âm đúng để hoàn thành phiên âm cho từ có nghĩa: <strong class="text-indigo-700">"${item.meaning}"</strong></p>
                 <p class="text-3xl font-mono text-center min-h-[60px] mb-8">${gappedIPA}</p>
                 <div id="answer-options" class="grid grid-cols-2 gap-3">${options.map(opt => `<button class="answer-option font-mono text-center !text-2xl" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
@@ -1068,9 +1066,9 @@
 
                 const bgColor = isCorrect ? 'bg-green-100' : 'bg-red-100';
                 const textColor = isCorrect ? 'text-green-800' : 'text-red-800';
-                let message = isCorrect ? 'Correct!' : `Incorrect! The correct answer was: <strong class="font-bold">${correctAnswer}</strong>`;
+                let message = isCorrect ? 'Chính xác!' : `Không đúng! Đáp án đúng là: <strong class="font-bold">${correctAnswer}</strong>`;
 
-                const nextButtonHTML = isGuide ? '' : `<button id="next-question-btn" class="btn btn-secondary !py-2 !px-4">Next <i class="fas fa-arrow-right ml-2"></i></button>`;
+                const nextButtonHTML = isGuide ? '' : `<button id="next-question-btn" class="btn btn-secondary !py-2 !px-4">Tiếp theo <i class="fas fa-arrow-right ml-2"></i></button>`;
                 container.innerHTML = `
                     <div class="${bgColor} ${textColor} p-4 rounded-lg flex justify-between items-center fade-in">
                         <p class="font-semibold">${message}</p>
@@ -1102,7 +1100,7 @@
                 this.state.audioPlayer.play().catch(e => console.error("Audio play failed:", e));
             },
 
-           async function submitToFirebase(isFinal = false) {
+            async submitToFirebase(isFinal = false) {
                 if (this.state.isSubmitting) return;
                 this.state.isSubmitting = true;
                 this.DOM.loader.classList.remove('hidden');
@@ -1113,7 +1111,7 @@
                 
                 const submissionPayload = {
                     score: score,
-                    totalPoints: 100, // or totalItems
+                    totalPoints: 100, // Score is a percentage
                     status: isFinal ? 'submitted' : 'in-progress',
                     answers: { 
                         learnedCount, 
@@ -1123,23 +1121,22 @@
                 };
 
                 if (isFinal) {
-                    submissionPayload.endTime = serverTimestamp();
-                    submissionPayload.submissionTime = serverTimestamp(); // << ĐÃ THÊM
+                    submissionPayload.submissionTime = serverTimestamp();
                 }
 
                 try {
                     await updateDoc(doc(this.state.db, 'submissions', this.state.submissionId), submissionPayload);
                     if (isFinal) {
                         localStorage.removeItem(`vocabProgress_${this.state.submissionId}`);
-                        this.showModal("Success!", `Progress submitted successfully with a completion of ${score}%.`, false, () => window.close());
+                        this.showModal("Thành công!", `Đã nộp tiến độ thành công với mức độ hoàn thành ${score}%.`, false, () => window.close());
                     }
                 } catch(error) { 
-                    this.showModal("Error", "Could not save progress: " + error.message); 
+                    this.showModal("Lỗi", "Không thể lưu tiến độ: " + error.message); 
                 } finally { 
                     this.state.isSubmitting = false;
                     this.DOM.loader.classList.add('hidden');
                 }
-            }
+            },
 
             shuffleArray(array) {
                 for (let i = array.length - 1; i > 0; i--) {
@@ -1169,8 +1166,8 @@
                 modalContainer.className = "fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4";
                 
                 const buttonsHTML = showCancel 
-                    ? `<button id="modal-cancel-btn" class="btn btn-secondary">Cancel</button><button id="modal-confirm-btn" class="btn btn-primary">Confirm</button>`
-                    : `<button id="modal-confirm-btn" class="btn btn-primary w-full">${isGuide ? 'Close' : 'OK'}</button>`;
+                    ? `<button id="modal-cancel-btn" class="btn btn-secondary">Hủy</button><button id="modal-confirm-btn" class="btn btn-primary">Xác nhận</button>`
+                    : `<button id="modal-confirm-btn" class="btn btn-primary w-full">${isGuide ? 'Đóng' : 'OK'}</button>`;
                 
                 const modalWidth = isGuide ? 'max-w-2xl' : 'max-w-sm';
                 modalContainer.innerHTML = `
