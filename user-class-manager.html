@@ -223,39 +223,69 @@
             }
         }
 
-        async function handleBatchAddStudents() {
-            const studentNames = DOM.studentNameList.value.trim().split('\n').filter(name => name.trim());
-            if (studentNames.length === 0) return alert("Vui lòng nhập danh sách tên.");
+        function slugify(text) {
+            text = text.toString().toLowerCase().trim();
+            const sets = [
+                {to: 'a', from: /[\xE0-\xE5]/g}, {to: 'e', from: /[\xE8-\xEB]/g},
+                {to: 'i', from: /[\xEC-\xEF]/g}, {to: 'o', from: /[\xF2-\xF6]/g},
+                {to: 'u', from: /[\xF9-\xFC]/g}, {to: 'c', from: /[\xE7]/g},
+                {to: 'n', from: /[\xF1]/g}
+            ];
+            for (let i = 0; i < sets.length; i++) { text = text.replace(sets[i].from, sets[i].to); }
+            return text.replace(/\s+/g, '').replace(/[^\w-]/g, '');
+        }
+
+        function handleBatchAddStudents() {
+            const names = DOM.studentNameList.value.trim().split('\n').filter(name => name.trim());
+            if (names.length === 0) return alert("Vui lòng nhập danh sách tên.");
 
             DOM.confirmAddStudentBtn.disabled = true;
-            DOM.confirmAddStudentBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Đang xử lý...`;
-            
-            try {
-                // Gọi Cloud Function
-                const createStudentUsers = httpsCallable(functions, 'createStudentUsers');
-                const result = await createStudentUsers({ 
-                    studentNames: studentNames, 
-                    classId: appState.selectedClassId 
-                });
+            DOM.confirmAddStudentBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Đang mở trình xử lý...`;
+            DOM.addStudentModal.classList.remove('is-open');
 
-                const failedResults = result.data.results.filter(r => !r.success);
+            // Mở cửa sổ worker
+            const workerWindow = window.open('auth-worker.html', 'AuthWorker', 'width=400,height=200');
 
-                if (failedResults.length > 0) {
-                    const errorMessages = failedResults.map(r => `${r.name}: ${r.error}`).join('\n');
-                    alert(`Một số tài khoản tạo thất bại:\n${errorMessages}`);
-                } else {
-                    alert("Tất cả học sinh đã được thêm thành công!");
+            // Tạo danh sách thông tin học sinh
+            const domain = "@student.onscreen.com";
+            const studentInfos = names.map(name => ({
+                displayName: name.trim(),
+                email: `${slugify(name.trim())}${domain}`,
+                password: "123456"
+            }));
+
+            // Lắng nghe tin nhắn từ worker
+            const messageListener = (event) => {
+                if (event.origin !== window.location.origin) return;
+
+                // Khi worker sẵn sàng, gửi dữ liệu cho nó
+                if (event.data === "worker-ready") {
+                    DOM.confirmAddStudentBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Đang tạo tài khoản...`;
+                    workerWindow.postMessage({
+                        studentInfos: studentInfos,
+                        classId: appState.selectedClassId
+                    }, window.location.origin);
                 }
 
-            } catch (error) {
-                console.error("Lỗi khi gọi Cloud Function:", error);
-                alert(`Đã xảy ra lỗi nghiêm trọng: ${error.message}`);
-            } finally {
-                DOM.confirmAddStudentBtn.disabled = false;
-                DOM.confirmAddStudentBtn.textContent = 'Xác nhận & Tạo';
-                DOM.studentNameList.value = '';
-                DOM.addStudentModal.classList.remove('is-open');
-            }
+                // Khi worker hoàn thành
+                if (event.data.status === "completed") {
+                    const failedAccounts = event.data.failedAccounts;
+
+                    if (failedAccounts.length > 0) {
+                        alert(`Một số tài khoản tạo thất bại:\n${failedAccounts.join('\n')}`);
+                    } else {
+                        alert("Tất cả học sinh đã được thêm thành công!");
+                    }
+
+                    // Dọn dẹp
+                    DOM.confirmAddStudentBtn.disabled = false;
+                    DOM.confirmAddStudentBtn.textContent = 'Xác nhận & Tạo';
+                    DOM.studentNameList.value = '';
+                    window.removeEventListener("message", messageListener);
+                }
+            };
+
+            window.addEventListener("message", messageListener);
         }
 
         // --- Event Listeners ---
