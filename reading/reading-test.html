@@ -32,7 +32,7 @@
             --text-primary: #0f172a;
             --app-bg-start: #f5f7ff;
             --app-bg-end: #e0e7ff;
-            --base-font-size: 16px; /* Font size variable */
+            --base-font-size: 16px;
         }
         html, body { height: 100%; overflow: hidden; font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--app-bg-start); }
         body { background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%); }
@@ -260,20 +260,19 @@
             try {
                 appState.currentSubmissionId = submissionId;
                 const submissionRef = doc(appState.db, 'submissions', submissionId);
-                let submissionSnap = await getDoc(submissionRef);
+                const submissionSnap = await getDoc(submissionRef);
                 if (!submissionSnap.exists()) throw new Error("Mã bài làm không hợp lệ.");
                 
                 let submissionData = submissionSnap.data();
                 
                 if (submissionData.status === 'submitted') {
-                    const testData = submissionData.testSnapshot || (await getDoc(doc(appState.db, 'reading_tests', submissionData.testId))).data();
+                    const testData = submissionData.testSnapshot;
                     displayResults(submissionData, testData);
                     return;
                 }
                 
                 appState.testData = submissionData.testSnapshot;
                 
-                // MỚI: Dùng studentId để lấy tên học sinh từ collection 'users'
                 const userDoc = await getDoc(doc(appState.db, "users", submissionData.studentId));
                 if (userDoc.exists()) {
                     DOM.studentNameDisplay.textContent = `Thí sinh: ${userDoc.data().displayName}`;
@@ -289,27 +288,7 @@
                     ProctoringService.start(submissionData.violationCount || 0);
                     if (appState.testData.duration > 0) {
                         DOM.timerDisplay.classList.remove('hidden');
-                        startTimer(submissionData.startTime, appState.testData.duration);
-                    }
-                }
-
-            } catch (error) {
-                 showModal('Lỗi', error.message, () => { window.location.href = 'index.html'; });
-            } finally {
-                hideLoader();
-            }
-        }
-                
-                renderTest(appState.testData, submissionData.answers || {});
-                DOM.studentNameDisplay.textContent = `Thí sinh: ${submissionData.studentName}`;
-                DOM.testContainer.classList.remove('hidden');
-                appState.isTestRunning = true;
-                
-                if (appState.testData.type === 'test') {
-                    ProctoringService.start(submissionData.violationCount || 0);
-                    if (appState.testData.duration > 0) {
-                        DOM.timerDisplay.classList.remove('hidden');
-                        startTimer(submissionData.startTime, appState.testData.duration);
+                        startTimer(submissionData.createdAt, appState.testData.duration);
                     }
                 }
 
@@ -361,7 +340,7 @@
             return answers;
         }
 
-       async function submitTest(isForced = false) {
+        async function submitTest(isForced = false) {
             if (!appState.isTestRunning) return;
             appState.isTestRunning = false;
             ProctoringService.stop();
@@ -384,8 +363,7 @@
                     score,
                     totalPoints: appState.testData.totalQuestions,
                     status: 'submitted',
-                    endTime: serverTimestamp(),
-                    submissionTime: serverTimestamp() // << ĐÃ THÊM
+                    submissionTime: serverTimestamp()
                 };
 
                 await updateDoc(doc(appState.db, 'submissions', appState.currentSubmissionId), finalSubmission);
