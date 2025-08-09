@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảng điều khiển - Bài tập của bạn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-accent: #6d28d9; --text-primary: #0f172a; --app-bg-start: #f5f7ff;
+            --app-bg-end: #e0e7ff; --glass-bg-color: rgba(255, 255, 255, 0.55);
+            --glass-border-color: rgba(255, 255, 255, 0.6);
+        }
+        body { font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--app-bg-start); background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%); }
+        .glass-panel { background: var(--glass-bg-color); backdrop-filter: blur(12px); border-radius: 24px; border: 1px solid var(--glass-border-color); box-shadow: 0 8px 32px 0 rgba(67, 56, 202, 0.15); }
+        .assignment-card { transition: all 0.2s ease-in-out; }
+        .assignment-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="p-8">
+
+    <div id="loader-overlay" class="fixed inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="w-16 h-16 border-4 border-t-violet-500 border-gray-200 rounded-full animate-spin"></div>
+    </div>
+
+    <div id="main-content" class="max-w-screen-lg mx-auto" style="display: none;">
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-4xl font-bold">Bài tập của bạn</h1>
+                <p id="student-name-display" class="text-lg text-gray-600"></p>
+            </div>
+            <button id="logout-btn" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">
+                <i class="fas fa-sign-out-alt mr-2"></i>Đăng xuất
+            </button>
+        </header>
+
+        <main class="space-y-8">
+            <section id="todo-section">
+                <h2 class="text-2xl font-bold mb-4"><i class="fas fa-pencil-alt text-yellow-500 mr-3"></i>Bài tập cần làm</h2>
+                <div id="todo-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <p class="placeholder-text text-gray-500 col-span-full">Tuyệt vời! Bạn đã hoàn thành hết bài tập.</p>
+                </div>
+            </section>
+            
+            <section id="overdue-section">
+                <h2 class="text-2xl font-bold mb-4"><i class="fas fa-exclamation-triangle text-red-500 mr-3"></i>Bài tập quá hạn</h2>
+                <div id="overdue-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                     <p class="placeholder-text text-gray-500 col-span-full">Không có bài tập nào bị quá hạn.</p>
+                </div>
+            </section>
+
+            <section id="completed-section">
+                <h2 class="text-2xl font-bold mb-4"><i class="fas fa-check-circle text-green-500 mr-3"></i>Bài tập đã hoàn thành</h2>
+                <div id="completed-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                     <p class="placeholder-text text-gray-500 col-span-full">Bạn chưa hoàn thành bài tập nào.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getFirestore, collection, doc, getDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+        
+        // --- Firebase Config ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
+            authDomain: "b1-baotram.firebaseapp.com",
+            projectId: "b1-baotram",
+            storageBucket: "b1-baotram.appspot.com",
+            messagingSenderId: "948701163187",
+            appId: "1:948701163187:web:043f2d381d63e741114ac6",
+            measurementId: "G-33NHT07JHE"
+        };
+        
+        // --- App State & Initialization ---
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
+        const DOM = {
+            loader: document.getElementById('loader-overlay'),
+            mainContent: document.getElementById('main-content'),
+            studentNameDisplay: document.getElementById('student-name-display'),
+            logoutBtn: document.getElementById('logout-btn'),
+            todoList: document.getElementById('todo-list'),
+            overdueList: document.getElementById('overdue-list'),
+            completedList: document.getElementById('completed-list'),
+        };
+
+        // --- Authentication ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is logged in, fetch their data and assignments.
+                loadDashboard(user);
+            } else {
+                // User is not logged in, redirect to login page.
+                window.location.href = 'index.html';
+            }
+        });
+        
+        DOM.logoutBtn.addEventListener('click', () => {
+            signOut(auth).catch(err => alert("Lỗi khi đăng xuất."));
+        });
+        
+        async function loadDashboard(user) {
+            // Fetch user's name
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists()) {
+                DOM.studentNameDisplay.textContent = `Xin chào, ${userDoc.data().displayName}!`;
+            }
+            
+            // Listen for assignments
+            const q = query(collection(db, "submissions"), where("studentId", "==", user.uid));
+            onSnapshot(q, (snapshot) => {
+                const submissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderAssignments(submissions);
+                DOM.loader.style.display = 'none';
+                DOM.mainContent.style.display = 'block';
+            });
+        }
+
+        function renderAssignments(submissions) {
+            // Clear current lists
+            DOM.todoList.innerHTML = '';
+            DOM.overdueList.innerHTML = '';
+            DOM.completedList.innerHTML = '';
+
+            const now = new Date();
+            let todoCount = 0, overdueCount = 0, completedCount = 0;
+
+            submissions.forEach(sub => {
+                const test = sub.testSnapshot;
+                if (!test) return; // Skip if snapshot is missing
+
+                const isSubmitted = sub.status === 'submitted';
+                const dueDate = sub.dueDate ? sub.dueDate.toDate() : null;
+                const isOverdue = dueDate && now > dueDate;
+
+                const redirectUrlMap = {
+                    'standard': 'standard/standard-test.html',
+                    'reading': 'reading/reading-test.html',
+                    'listening': 'listening/listening-test.html',
+                    'vocabulary': 'vocabulary/vocabulary-test.html'
+                };
+                const url = `${redirectUrlMap[test.testType]}?submission_id=${sub.id}`;
+
+                let cardHTML = `<div class="assignment-card glass-panel p-6 flex flex-col justify-between">
+                                    <div>
+                                        <p class="text-sm font-bold text-violet-700">${test.testType.toUpperCase()}</p>
+                                        <h3 class="text-lg font-bold mb-2">${test.title}</h3>
+                                    </div>`;
+
+                if (isSubmitted) {
+                    completedCount++;
+                    const onTime = sub.submissionTime && dueDate ? sub.submissionTime.toDate() <= dueDate : true;
+                    cardHTML += `<div class="mt-4">
+                                    <p class="font-semibold">Điểm số: <span class="text-xl font-bold text-green-700">${sub.score}/${sub.totalPoints}</span></p>
+                                    <p class="text-sm text-gray-600">Trạng thái: ${onTime ? 'Nộp đúng hạn' : '<span class="text-red-600 font-bold">Nộp muộn</span>'}</p>
+                                 </div>
+                                 </div>`; // Close card
+                    DOM.completedList.innerHTML += cardHTML;
+                } else {
+                    cardHTML += `<div class="mt-4">
+                                    <p class="text-sm text-gray-600">Hạn nộp: <span class="font-semibold">${dueDate ? dueDate.toLocaleString('vi-VN') : 'Không có'}</span></p>
+                                    <a href="${url}" class="block w-full text-center bg-violet-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-violet-800 transition-colors mt-4">
+                                        ${isOverdue ? 'Làm bài (Quá hạn)' : 'Vào làm bài'}
+                                    </a>
+                                 </div>
+                                 </div>`; // Close card
+                    if (isOverdue) {
+                        overdueCount++;
+                        DOM.overdueList.innerHTML += cardHTML;
+                    } else {
+                        todoCount++;
+                        DOM.todoList.innerHTML += cardHTML;
+                    }
+                }
+            });
+            
+            // Show placeholder if a list is empty
+            if (todoCount === 0) DOM.todoList.innerHTML = `<p class="placeholder-text text-gray-500 col-span-full">Tuyệt vời! Bạn đã hoàn thành hết bài tập.</p>`;
+            if (overdueCount === 0) DOM.overdueList.innerHTML = `<p class="placeholder-text text-gray-500 col-span-full">Không có bài tập nào bị quá hạn.</p>`;
+            if (completedCount === 0) DOM.completedList.innerHTML = `<p class="placeholder-text text-gray-500 col-span-full">Bạn chưa hoàn thành bài tập nào.</p>`;
+        }
+    </script>
+</body>
+</html>
