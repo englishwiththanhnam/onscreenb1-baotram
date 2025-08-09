@@ -169,7 +169,7 @@
                 try {
                     const submissionRef = doc(this.state.db, 'submissions', submissionId);
                     const submissionSnap = await getDoc(submissionRef);
-                    if (!submissionSnap.exists()) throw new Error("Invalid access code.");
+                    if (!submissionSnap.exists()) throw new Error("Mã bài làm không hợp lệ.");
 
                     let submissionData = submissionSnap.data();
                     
@@ -187,7 +187,14 @@
                     const testSnap = await getDoc(testRef);
                     if (!testSnap.exists()) throw new Error("Could not find the corresponding vocabulary set.");
 
-                    this.state.studentName = submissionData.studentName;
+                    // MỚI: Dùng studentId để lấy tên học sinh từ collection 'users'
+                    const userDoc = await getDoc(doc(this.state.db, "users", submissionData.studentId));
+                    if (userDoc.exists()) {
+                        this.state.studentName = userDoc.data().displayName;
+                    } else {
+                        this.state.studentName = "Không rõ";
+                    }
+
                     this.state.testData = testSnap.data();
                     this.state.wordList = this.state.testData.wordList || [];
                     
@@ -202,7 +209,7 @@
                 } catch (error) {
                     this.showModal("Error", error.message);
                 }
-            },
+            }
             
             processData() {
                 const structures = [];
