@@ -132,19 +132,29 @@
         };
 
         // --- Authentication ---
-        onAuthStateChanged(auth, async (user) => {
+        onAuthStateChanged(auth, (user) => {
             if (user) {
-                const userDoc = await getDoc(doc(db, "users", user.uid));
-                if (userDoc.exists() && userDoc.data().role === 'teacher') {
-                    appState.currentUser = user;
-                    DOM.loginScreen.classList.remove('is-open');
-                    DOM.mainContent.style.display = 'block';
-                    startDataListeners();
-                } else {
-                    auth.signOut();
-                    alert("Tài khoản không có quyền truy cập.");
-                }
+                // Chỉ kiểm tra vai trò khi có user, không làm gì ở lần chạy đầu tiên (user=null)
+                getDoc(doc(db, "users", user.uid)).then(userDoc => {
+                    if (userDoc.exists() && userDoc.data().role === 'teacher') {
+                        appState.currentUser = user;
+                        DOM.loginScreen.classList.remove('is-open');
+                        DOM.mainContent.style.display = 'block';
+                        startDataListeners();
+                        // Dòng dưới chỉ có ở test-manager.html, nếu file là user-class-manager thì không cần
+                        if(typeof changeCurrentLocation !== 'undefined') changeCurrentLocation('root', true); 
+                    } else {
+                        auth.signOut(); // Đăng xuất nếu không đúng vai trò
+                        DOM.loginScreen.classList.add('is-open');
+                        DOM.mainContent.style.display = 'none';
+                        alert("Tài khoản không có quyền truy cập.");
+                    }
+                });
             } else {
+                // Nếu chắc chắn không có user nào, hiện màn hình đăng nhập
+                appState.currentUser = null;
+                if(appState.unsubscribers) appState.unsubscribers.forEach(unsub => unsub());
+                appState.unsubscribers = [];
                 DOM.loginScreen.classList.add('is-open');
                 DOM.mainContent.style.display = 'none';
             }
