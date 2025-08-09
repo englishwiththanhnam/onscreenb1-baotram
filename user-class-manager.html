@@ -223,14 +223,22 @@
             }
         }
 
-        async function createStudentAccount(authInstance, studentInfo, classId) {
+        async function createStudentAccount(studentInfo, classId) {
             try {
-                // NOTE: Creating users client-side is for prototyping. In production, this should be a Cloud Function.
-                const tempAuth = initializeApp(firebaseConfig, 'Secondary').auth();
+                // NOTE: Việc tạo tài khoản ở client chỉ dành cho mục đích phát triển.
+                // Trong môi trường thực tế, nên dùng Cloud Function để bảo mật hơn.
+
+                // SỬA LỖI Ở ĐÂY: Khởi tạo một app Firebase phụ tạm thời
+                const secondaryApp = initializeApp(firebaseConfig, `secondary-app-${Date.now()}`);
+                const tempAuth = getAuth(secondaryApp); // Dùng getAuth(app) thay vì .auth()
+
+                // Tạo tài khoản trên app phụ này
                 const userCredential = await createUserWithEmailAndPassword(tempAuth, studentInfo.email, studentInfo.password);
                 const newStudentUid = userCredential.user.uid;
-                await tempAuth.signOut(); // Sign out the temporary user
+                
+                // Vì không cần đăng xuất khỏi app phụ, chúng ta có thể bỏ qua bước signOut.
 
+                // Lưu thông tin học sinh vào Firestore 'users' collection
                 await setDoc(doc(db, "users", newStudentUid), {
                     uid: newStudentUid,
                     displayName: studentInfo.displayName,
@@ -238,12 +246,17 @@
                     role: "student"
                 });
 
+                // Cập nhật lớp học với UID của học sinh mới
                 const classRef = doc(db, "classes", classId);
                 await updateDoc(classRef, { studentUids: arrayUnion(newStudentUid) });
 
                 return { success: true };
             } catch (error) {
                 console.error("Lỗi khi tạo tài khoản cho", studentInfo.displayName, ":", error);
+                // Xử lý lỗi nếu email đã tồn tại
+                if (error.code === 'auth/email-already-in-use') {
+                    return { success: false, error: 'Email đã tồn tại' };
+                }
                 return { success: false, error: error.code };
             }
         }
