@@ -158,616 +158,686 @@
     </div>
 
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getFirestore, collection, doc, addDoc, deleteDoc, query, where, setDoc, updateDoc, onSnapshot, getDoc, getDocs, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+import { getFirestore, collection, doc, addDoc, deleteDoc, query, where, setDoc, updateDoc, onSnapshot, getDoc, getDocs, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
-            authDomain: "b1-baotram.firebaseapp.com",
-            projectId: "b1-baotram",
-            storageBucket: "b1-baotram.appspot.com",
-            messagingSenderId: "948701163187",
-            appId: "1:948701163187:web:043f2d381d63e741114ac6",
-            measurementId: "G-33NHT07JHE"
-        };
+const firebaseConfig = {
+    apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
+    authDomain: "b1-baotram.firebaseapp.com",
+    projectId: "b1-baotram",
+    storageBucket: "b1-baotram.appspot.com",
+    messagingSenderId: "948701163187",
+    appId: "1:948701163187:web:043f2d381d63e741114ac6",
+    measurementId: "G-33NHT07JHE"
+};
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        
-        let appState = {
-            currentUser: null,
-            localTestsCache: [],
-            localFoldersCache: [],
-            localClassesCache: [],
-            localStudentsCache: [],
-            assigningTest: null,
-            locationHistory: ['root'],
-            get currentLocationId() { return this.locationHistory[this.locationHistory.length - 1]; },
-            selectedTestId: null,
-            mainPanelViewMode: 'folder',
-            searchQuery: '',
-            unsubscribers: [],
-            timerInterval: null,
-        };
-        
-        const DOM = {
-            loginScreen: document.getElementById('login-screen'),
-            mainContent: document.getElementById('main-content'),
-            loginBtn: document.getElementById('login-btn'),
-            logoutBtn: document.getElementById('logout-btn'),
-            emailInput: document.getElementById('email-input'),
-            passwordInput: document.getElementById('password-input'),
-            loginError: document.getElementById('login-error'),
-            createTestButtons: document.getElementById('create-test-buttons'),
-            folderTreeContainer: document.getElementById('folder-tree-container'),
-            specialLocationsList: document.getElementById('special-locations-list'),
-            mainPanelView: document.getElementById('main-panel-view'),
-            contextMenu: document.getElementById('context-menu'),
-            modalContainer: document.getElementById('custom-modal-container'),
-            assignmentModal: document.getElementById('assignment-modal'),
-            assignmentTestTitle: document.getElementById('assignment-test-title'),
-            dueDateInput: document.getElementById('due-date-input'),
-            classSelectionContainer: document.getElementById('class-selection-container'),
-            cancelAssignmentBtn: document.getElementById('cancel-assignment-btn'),
-            confirmAssignmentBtn: document.getElementById('confirm-assignment-btn'),
-        };
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
 
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                const userDoc = await getDoc(doc(db, "users", user.uid));
-                if (userDoc.exists() && userDoc.data().role === 'teacher') {
-                    appState.currentUser = user;
-                    DOM.loginScreen.classList.remove('is-open');
-                    DOM.mainContent.style.display = 'block';
-                    startDataListeners();
-                    changeCurrentLocation('root', true);
-                } else {
-                    auth.signOut();
-                    alert("Tài khoản không có quyền truy cập.");
-                }
+let appState = {
+    currentUser: null,
+    localTestsCache: [],
+    localFoldersCache: [],
+    localClassesCache: [],
+    localStudentsCache: [],
+    localSubmissionsCache: [],
+    assigningTest: null,
+    locationHistory: ['root'],
+    get currentLocationId() { return this.locationHistory[this.locationHistory.length - 1]; },
+    selectedTestId: null,
+    selectedClassForGradebook: null,
+    mainPanelViewMode: 'folder', // 'folder', 'details', 'gradebook'
+    searchQuery: '',
+    unsubscribers: [],
+};
+
+const DOM = {
+    loginScreen: document.getElementById('login-screen'),
+    mainContent: document.getElementById('main-content'),
+    loginBtn: document.getElementById('login-btn'),
+    logoutBtn: document.getElementById('logout-btn'),
+    emailInput: document.getElementById('email-input'),
+    passwordInput: document.getElementById('password-input'),
+    loginError: document.getElementById('login-error'),
+    createTestButtons: document.getElementById('create-test-buttons'),
+    folderTreeContainer: document.getElementById('folder-tree-container'),
+    specialLocationsList: document.getElementById('special-locations-list'),
+    mainPanelView: document.getElementById('main-panel-view'),
+    contextMenu: document.getElementById('context-menu'),
+    modalContainer: document.getElementById('custom-modal-container'),
+    assignmentModal: document.getElementById('assignment-modal'),
+    assignmentTestTitle: document.getElementById('assignment-test-title'),
+    dueDateInput: document.getElementById('due-date-input'),
+    classSelectionContainer: document.getElementById('class-selection-container'),
+    cancelAssignmentBtn: document.getElementById('cancel-assignment-btn'),
+    confirmAssignmentBtn: document.getElementById('confirm-assignment-btn'),
+};
+
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists() && userDoc.data().role === 'teacher') {
+            appState.currentUser = user;
+            DOM.loginScreen.classList.remove('is-open');
+            DOM.mainContent.style.display = 'block';
+            startDataListeners();
+            changeCurrentLocation('root', true);
+        } else {
+            auth.signOut();
+            alert("Tài khoản không có quyền truy cập.");
+        }
+    } else {
+        appState.currentUser = null;
+        appState.unsubscribers.forEach(unsub => unsub());
+        appState.unsubscribers = [];
+        DOM.loginScreen.classList.add('is-open');
+        DOM.mainContent.style.display = 'none';
+    }
+});
+
+function startDataListeners() {
+    appState.unsubscribers.forEach(unsub => unsub());
+    appState.unsubscribers = [];
+    const collectionsToWatch = {
+        standard: 'tests', reading: 'reading_tests',
+        listening: 'listening_tests', vocabulary: 'vocab_sets',
+        folders: 'folders'
+    };
+
+    Object.entries(collectionsToWatch).forEach(([type, name]) => {
+        const q = query(collection(db, name));
+        const unsub = onSnapshot(q, (snapshot) => {
+            if (type === 'folders') {
+                appState.localFoldersCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderFolderTree();
             } else {
-                appState.currentUser = null;
-                appState.unsubscribers.forEach(unsub => unsub());
-                appState.unsubscribers = [];
-                DOM.loginScreen.classList.add('is-open');
-                DOM.mainContent.style.display = 'none';
+                snapshot.docs.forEach(doc => {
+                    const testData = { id: doc.id, testType: type, ...doc.data() };
+                    const index = appState.localTestsCache.findIndex(t => t.id === doc.id);
+                    if (index > -1) appState.localTestsCache[index] = testData;
+                    else appState.localTestsCache.push(testData);
+                });
             }
+            if (appState.mainPanelViewMode !== 'details') renderMainPanel();
         });
+        appState.unsubscribers.push(unsub);
+    });
 
-        function startDataListeners() {
-            appState.unsubscribers.forEach(unsub => unsub());
-            appState.unsubscribers = [];
-            const collectionsToWatch = { 
-                standard: 'tests', 
-                reading: 'reading_tests', 
-                listening: 'listening_tests',
-                vocabulary: 'vocab_sets',
-                folders: 'folders' 
-            };
-            let combinedTests = {};
-            
-            Object.entries(collectionsToWatch).forEach(([type, name]) => {
-                const q = query(collection(db, name));
-                const unsub = onSnapshot(q, (snapshot) => {
-                    if (type === 'folders') {
-                        appState.localFoldersCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        renderFolderTree();
+    const qClasses = query(collection(db, "classes"), where("teacherId", "==", appState.currentUser.uid));
+    const unsubClasses = onSnapshot(qClasses, snapshot => {
+        appState.localClassesCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    });
+    appState.unsubscribers.push(unsubClasses);
+
+    const qStudents = query(collection(db, "users"), where("role", "==", "student"));
+    const unsubStudents = onSnapshot(qStudents, snapshot => {
+        appState.localStudentsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    });
+    appState.unsubscribers.push(unsubStudents);
+
+    const qSubmissions = query(collection(db, "submissions"));
+    const unsubSubmissions = onSnapshot(qSubmissions, snapshot => {
+        appState.localSubmissionsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (appState.mainPanelViewMode === 'gradebook' || appState.mainPanelViewMode === 'details') {
+            renderMainPanel();
+        }
+    });
+    appState.unsubscribers.push(unsubSubmissions);
+}
+
+function renderMainPanel(isNavigating = false) {
+    const container = DOM.mainPanelView;
+    const renderFunction = () => {
+        if (appState.mainPanelViewMode === 'details') {
+            const test = appState.localTestsCache.find(t => t.id === appState.selectedTestId);
+            renderDetailsView(test);
+        } else if (appState.mainPanelViewMode === 'gradebook') {
+            renderGradebookView();
+        } else {
+            renderFolderView();
+        }
+    };
+
+    if (isNavigating && container.firstElementChild) {
+        container.firstElementChild.classList.add('anim-fade-out');
+        setTimeout(() => {
+            renderFunction();
+            if(container.firstElementChild) container.firstElementChild.classList.add('anim-fade-in');
+        }, 200);
+    } else {
+        renderFunction();
+        if (container.firstElementChild) container.firstElementChild.classList.add('anim-fade-in');
+    }
+}
+
+function renderGradebookView() {
+    const container = DOM.mainPanelView;
+    let headerHTML = `<div class="flex items-center p-2 mb-4 border-b border-white/30"><h2 class="text-2xl font-bold">Sổ điểm</h2></div>`;
+
+    if (!appState.selectedClassForGradebook) {
+        let classListHTML = appState.localClassesCache.map(cls => `
+            <div class="main-view-item p-4 rounded-xl cursor-pointer text-center bg-white/30" data-class-id="${cls.id}">
+                <i class="fas fa-users text-5xl text-violet-600 mb-2"></i>
+                <p class="font-semibold">${cls.className}</p>
+            </div>`).join('');
+        if(appState.localClassesCache.length === 0) classListHTML = `<p class="col-span-full text-center text-gray-500">Bạn chưa tạo lớp học nào. Vui lòng vào trang Quản lý Lớp học.</p>`;
+        container.innerHTML = headerHTML + `<div class="p-2 grid grid-cols-2 md:grid-cols-4 gap-4">${classListHTML}</div>`;
+    } else {
+        const selectedClass = appState.localClassesCache.find(c => c.id === appState.selectedClassForGradebook);
+        if (!selectedClass) return;
+
+        const studentUidsInClass = selectedClass.studentUids || [];
+        const studentsInClass = appState.localStudentsCache.filter(s => studentUidsInClass.includes(s.uid)).sort((a,b) => a.displayName.localeCompare(b.displayName));
+        
+        const submissionsOfClass = appState.localSubmissionsCache.filter(sub => studentUidsInClass.includes(sub.studentId));
+        const uniqueTestIds = [...new Set(submissionsOfClass.map(s => s.testId))];
+        const assignments = uniqueTestIds.map(id => appState.localTestsCache.find(t => t.id === id)).filter(Boolean);
+
+        let tableHTML = `<div class="overflow-x-auto"><table class="w-full text-left whitespace-nowrap">
+            <thead class="sticky top-0 bg-white/50 backdrop-blur-sm">
+                <tr>
+                    <th class="p-3 border-b border-gray-300">Họ và tên</th>
+                    ${assignments.map(a => `<th class="p-3 border-b border-gray-300 min-w-[150px]">${a.title}</th>`).join('')}
+                </tr>
+            </thead>
+            <tbody>`;
+        
+        studentsInClass.forEach(student => {
+            tableHTML += `<tr class="border-b border-gray-200">
+                            <td class="p-3 font-semibold">${student.displayName}</td>`;
+            assignments.forEach(assign => {
+                const submission = submissionsOfClass.find(s => s.studentId === student.uid && s.testId === assign.id);
+                let cellContent = '<span class="text-gray-400">-</span>';
+                if (submission) {
+                    if (submission.status === 'submitted') {
+                        const onTime = submission.submissionTime && submission.dueDate ? submission.submissionTime.toDate() <= submission.dueDate.toDate() : true;
+                        cellContent = `<span class="font-bold text-green-700">${submission.score !== undefined ? `${submission.score}/${submission.totalPoints}` : 'N/A'}</span>
+                                       ${!onTime ? '<span class="block text-xs text-red-500">Nộp muộn</span>' : ''}`;
+                    } else if (submission.dueDate && new Date() > submission.dueDate.toDate()){
+                        cellContent = '<span class="font-semibold text-red-500">Quá hạn</span>';
                     } else {
-                        snapshot.docs.forEach(doc => {
-                           const testData = { id: doc.id, testType: type, ...doc.data() };
-                           const index = appState.localTestsCache.findIndex(t => t.id === doc.id);
-                           if (index > -1) {
-                               appState.localTestsCache[index] = testData;
-                           } else {
-                               appState.localTestsCache.push(testData);
-                           }
-                        });
+                         cellContent = '<span class="font-semibold text-yellow-600">Chưa nộp</span>';
                     }
-                    renderMainPanel();
-                });
-                appState.unsubscribers.push(unsub);
-            });
-
-            const qClasses = query(collection(db, "classes"), where("teacherId", "==", appState.currentUser.uid));
-            const unsubClasses = onSnapshot(qClasses, snapshot => {
-                appState.localClassesCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            });
-            appState.unsubscribers.push(unsubClasses);
-
-            const qStudents = query(collection(db, "users"), where("role", "==", "student"));
-            const unsubStudents = onSnapshot(qStudents, snapshot => {
-                appState.localStudentsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            });
-            appState.unsubscribers.push(unsubStudents);
-        }
-
-        function renderMainPanel(isNavigating = false) {
-            const container = DOM.mainPanelView;
-            const animateAndRender = (renderFunction, ...args) => {
-                if (isNavigating && container.firstElementChild) {
-                    container.firstElementChild.classList.add('anim-fade-out');
-                    setTimeout(() => {
-                        renderFunction(...args);
-                        if(container.firstElementChild) container.firstElementChild.classList.add('anim-fade-in');
-                    }, 200);
-                } else {
-                    renderFunction(...args);
-                    if (container.firstElementChild) container.firstElementChild.classList.add('anim-fade-in');
                 }
+                tableHTML += `<td class="p-3 text-center">${cellContent}</td>`;
+            });
+            tableHTML += `</tr>`;
+        });
+
+        tableHTML += `</tbody></table></div>`;
+        container.innerHTML = headerHTML + `<div class="p-2"><button id="back-to-class-list-btn" class="btn btn-secondary mb-4"><i class="fas fa-arrow-left mr-2"></i>Chọn lớp khác</button>${tableHTML}</div>`;
+    }
+}
+
+function renderFolderView() {
+    const locationId = appState.currentLocationId;
+    let itemsToShow = [];
+    let isSearchActive = appState.searchQuery.length > 0;
+
+    if (isSearchActive) {
+        const query = appState.searchQuery.toLowerCase();
+        itemsToShow.push(...appState.localFoldersCache.filter(f => f.name.toLowerCase().includes(query)));
+        itemsToShow.push(...appState.localTestsCache.filter(t => t.title.toLowerCase().includes(query)));
+    } else {
+        if (locationId !== 'unassigned') itemsToShow.push(...appState.localFoldersCache.filter(f => f.parentId === locationId));
+        if (locationId === 'unassigned') itemsToShow.push(...appState.localTestsCache.filter(t => !t.folderId));
+        else itemsToShow.push(...appState.localTestsCache.filter(t => t.folderId === locationId));
+    }
+
+    itemsToShow.sort((a,b) => {
+        const aIsFolder = 'parentId' in a; const bIsFolder = 'parentId' in b;
+        if(aIsFolder && !bIsFolder) return -1; if(!aIsFolder && bIsFolder) return 1;
+        return (a.name || a.title).localeCompare(b.name || b.title);
+    });
+
+    let mainContentHTML = `
+        <div id="main-panel-content">
+            <div id="main-panel-header" class="flex items-center p-2 mb-4 border-b border-white/30">
+                <button id="history-back-btn" class="btn btn-secondary !p-3 !rounded-full mr-4 ${appState.locationHistory.length > 1 || appState.mainPanelViewMode === 'details' ? '' : 'hidden'}"><i class="fas fa-arrow-left"></i></button>
+                <div id="breadcrumb-container" class="flex-grow text-gray-600 h-12 flex items-center cursor-pointer">${generateBreadcrumbHTML()}</div>
+                <div id="search-container" class="relative flex-grow hidden"><i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i><input type="text" id="search-input" class="input-field !pl-10 !py-3" placeholder="Tìm kiếm bài tập và thư mục..."></div>
+            </div>
+            <div id="main-content-view" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-2">
+    `;
+
+    if (itemsToShow.length === 0) {
+        mainContentHTML += `<p class="col-span-full text-center text-gray-500 py-10">${isSearchActive ? 'Không tìm thấy kết quả.' : 'Thư mục này trống.'}</p>`;
+    } else {
+        const icons = { folder: '<i class="fas fa-folder text-5xl text-violet-600 mb-2"></i>', standard: '<i class="fas fa-file-alt text-5xl text-violet-600 mb-2"></i>', reading: '<i class="fas fa-book-open text-5xl text-violet-600 mb-2"></i>', listening: '<i class="fas fa-headphones text-5xl text-violet-600 mb-2"></i>', vocabulary: '<i class="fas fa-spell-check text-5xl text-violet-600 mb-2"></i>' };
+        itemsToShow.forEach(item => {
+            const isFolder = 'parentId' in item;
+            mainContentHTML += `<div class="main-view-item flex flex-col items-center justify-center p-4 rounded-xl cursor-pointer text-center bg-white/30" data-item-id="${item.id}" data-item-type="${isFolder ? 'folder' : item.testType}">${icons[isFolder ? 'folder' : item.testType]}<p class="font-semibold text-sm break-words w-full">${item.name || item.title}</p></div>`;
+        });
+    }
+    mainContentHTML += `</div></div>`;
+    DOM.mainPanelView.innerHTML = mainContentHTML;
+    initSortable();
+}
+
+function renderFolderTree(parentId = "root", level = 0) {
+    if (level === 0) DOM.folderTreeContainer.innerHTML = '';
+    const children = appState.localFoldersCache.filter(f => f.parentId === parentId);
+    children.forEach(folder => {
+        const item = document.createElement('div');
+        item.className = `folder-tree-item p-3 rounded-lg cursor-pointer hover:bg-violet-100 transition-colors ${folder.id === appState.currentLocationId ? 'active' : ''}`;
+        item.style.paddingLeft = `${12 + level * 20}px`;
+        item.dataset.itemId = folder.id;
+        item.dataset.itemType = 'folder';
+        item.innerHTML = `<i class="fas fa-folder w-6 text-center mr-2 text-violet-600"></i><span class="font-semibold">${folder.name}</span>`;
+        DOM.folderTreeContainer.appendChild(item);
+        renderFolderTree(folder.id, level + 1);
+    });
+}
+
+function generateBreadcrumbHTML() {
+    let path = [{ name: 'Trang chủ', id: 'root' }];
+    let currentId = appState.currentLocationId;
+    if (currentId === 'unassigned') path.push({ name: 'Danh sách chờ', id: 'unassigned' });
+    else {
+         while (currentId !== 'root' && currentId) {
+            const folder = appState.localFoldersCache.find(f => f.id === currentId);
+            if (folder) { path.splice(1, 0, { name: folder.name, id: folder.id }); currentId = folder.parentId; } 
+            else { break; }
+        }
+    }
+    return path.map((p, i) => i === path.length - 1 ? `<span class="font-bold text-gray-800">${p.name}</span>` : `<a href="#" class="text-violet-700 hover:underline" data-location-id="${p.id}">${p.name}</a>`).join('<span class="mx-2">/</span>');
+}
+
+function renderDetailsView(test) {
+    if (!test) {
+        DOM.mainPanelView.innerHTML = `<div id="main-panel-content" class="text-center text-gray-500 py-16"><i class="fas fa-exclamation-circle text-4xl mb-4"></i><p class="text-xl">Không tìm thấy bài tập.</p></div>`;
+        return;
+    }
+    DOM.mainPanelView.innerHTML = `
+       <div id="main-panel-content">
+           <div class="flex items-center mb-6">
+               <button id="history-back-btn" class="btn btn-secondary !p-3 !rounded-full mr-4"><i class="fas fa-arrow-left"></i></button>
+               <div><h2 class="text-3xl font-bold text-gray-700">${test.title}</h2><p class="font-mono text-sm text-gray-500">${test.id}</p></div>
+           </div>
+
+           <div class="my-6 p-4 bg-white/30 rounded-2xl">
+               <h3 class="font-bold mb-3 text-xl">Giao bài tập</h3>
+               <p class="text-sm mb-4">Giao bài tập này cho các lớp hoặc học sinh cụ thể với một hạn nộp nhất định.</p>
+               <button id="open-assignment-modal-btn" data-testid="${test.id}" data-testtype="${test.testType}" class="btn btn-primary">
+                   <i class="fas fa-paper-plane mr-2"></i>Giao bài tập này
+               </button>
+           </div>
+
+           <div id="settings-panel" class="my-6 p-4 bg-white/30 rounded-2xl" data-testid="${test.id}" data-testtype="${test.testType}"><h3 class="font-bold mb-3">Cài đặt & Trạng thái</h3><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div class="flex items-center justify-between p-3 bg-white/40 rounded-lg"><label for="lock-test-toggle" class="font-medium">Khóa đề thi</label><label class="toggle-switch"><input type="checkbox" id="lock-test-toggle" ${test.isLocked ? 'checked' : ''}><span class="slider"></span></label></div><div class="p-3 bg-white/40 rounded-lg"><span class="font-medium">Công bố kết quả</span><div class="flex justify-around mt-2 custom-radio-group"><input type="radio" name="publish-results" value="none" id="pub-none" ${(!test.resultsPublished || test.resultsPublished === 'none') ? 'checked' : ''}><label for="pub-none">Không</label><input type="radio" name="publish-results" value="correctIncorrect" id="pub-ci" ${test.resultsPublished === 'correctIncorrect' ? 'checked' : ''}><label for="pub-ci">Đúng/Sai</label><input type="radio" name="publish-results" value="full" id="pub-full" ${test.resultsPublished === 'full' ? 'checked' : ''}><label for="pub-full">Toàn bộ</label></div></div></div></div>
+           <div><h3 class="font-bold mb-2">Danh sách các bài đã giao (Submissions)</h3><div class="overflow-x-auto max-h-[45vh]"><table class="w-full text-left border-collapse"><thead class="sticky top-0 bg-white/50 backdrop-blur-sm"><tr><th class="p-3 border-b border-gray-300">Tên</th><th class="p-3 border-b border-gray-300">Hạn nộp</th><th class="p-3 border-b border-gray-300">Trạng thái</th><th class="p-3 border-b border-gray-300">Điểm</th><th class="p-3 border-b border-gray-300">Vi phạm</th><th class="p-3 border-b border-gray-300"></th></tr></thead><tbody id="submission-table-body"><tr><td colspan="6" class="p-4 text-center">Đang tải danh sách...</td></tr></tbody></table></div></div>
+       </div>`;
+    
+    renderSubmissionsTable(appState.localSubmissionsCache.filter(s => s.testId === test.id));
+}
+
+function renderSubmissionsTable(submissions) {
+    const tableBody = document.getElementById('submission-table-body');
+    if (!tableBody) return;
+    if (submissions.length === 0) { tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">Chưa giao bài cho học sinh nào.</td></tr>`; return; }
+    
+    const enrichedSubmissions = submissions.map(sub => {
+        const student = appState.localStudentsCache.find(s => s.id === sub.studentId);
+        return { ...sub, studentName: student ? student.displayName : 'Không rõ' };
+    });
+
+    tableBody.innerHTML = enrichedSubmissions.map(sub => {
+        const statusInfo = getStatusInfo(sub);
+        const scoreDisplay = (sub.status === 'submitted' && sub.score !== undefined) ? `${sub.score}/${sub.totalPoints}` : '-';
+        const dueDate = sub.dueDate ? sub.dueDate.toDate().toLocaleString('vi-VN') : 'N/A';
+        return `<tr class="hover:bg-white/40" data-submission-id="${sub.id}">
+                    <td class="p-3 border-b border-gray-200 font-semibold">${sub.studentName}</td>
+                    <td class="p-3 border-b border-gray-200">${dueDate}</td>
+                    <td class="p-3 border-b border-gray-200"><span class="status-badge ${statusInfo.class}">${statusInfo.text}</span></td>
+                    <td class="p-3 border-b border-gray-200 font-bold">${scoreDisplay}</td>
+                    <td class="p-3 border-b border-gray-200 text-center font-bold ${sub.violationCount > 0 ? 'text-red-500' : ''}">${sub.violationCount || 0}</td>
+                    <td class="p-3 border-b border-gray-200 text-right"><button class="btn-delete-student btn btn-danger !p-2 !rounded-full" data-sub-id="${sub.id}" title="Xóa bài làm"><i class="fas fa-trash text-sm"></i></button></td>
+                </tr>`
+    }).join('');
+}
+
+function getStatusInfo(sub) {
+    const now = new Date();
+    if (sub.status === 'submitted') {
+        const onTime = sub.submissionTime && sub.dueDate ? sub.submissionTime.toDate() <= sub.dueDate.toDate() : true;
+        return { text: onTime ? 'Đã nộp' : 'Nộp muộn', class: 'status-submitted' };
+    }
+    if (sub.dueDate && now > sub.dueDate.toDate()) {
+         return { text: 'Quá hạn', class: 'status-in-progress bg-red-200 !text-red-800' };
+    }
+    if (sub.status === 'in-progress') return { text: 'Đang làm', class: 'status-in-progress' };
+    return { text: 'Chưa làm', class: 'status-not-started' };
+};
+
+function initSortable() {
+    const mainContentView = document.getElementById('main-content-view');
+    if (!mainContentView) return;
+    new Sortable(mainContentView, { group: { name: 'drive', pull: true, put: true }, animation: 150 });
+    document.querySelectorAll('.folder-tree-item, .special-location').forEach(folderEl => {
+        new Sortable(folderEl, { group: { name: 'drive', pull: false, put: true }, onAdd: (evt) => {
+            const destFolderId = evt.to.dataset.itemId || evt.to.dataset.locationId;
+            moveItem(evt.item.dataset.itemId, evt.item.dataset.itemType, destFolderId === 'unassigned' ? null : destFolderId);
+        }});
+    });
+}
+
+async function moveItem(itemId, itemType, destinationFolderId) {
+    const collectionNameMap = { standard: 'tests', reading: 'reading_tests', listening: 'listening_tests', vocabulary: 'vocab_sets', folder: 'folders' };
+    const collectionName = collectionNameMap[itemType];
+    if (!collectionName) return;
+    const itemRef = doc(db, collectionName, itemId);
+    const fieldToUpdate = itemType === 'folder' ? 'parentId' : 'folderId';
+    await updateDoc(itemRef, { [fieldToUpdate]: destinationFolderId });
+}
+
+function changeCurrentLocation(newLocationId, isNewHistory = false) {
+    if (isNewHistory) { appState.locationHistory = [newLocationId]; } 
+    else { if (appState.currentLocationId !== newLocationId) appState.locationHistory.push(newLocationId); }
+    appState.selectedTestId = null;
+    appState.mainPanelViewMode = 'folder';
+    appState.searchQuery = '';
+    document.querySelectorAll('.folder-tree-item, .special-location').forEach(el => {
+        el.classList.toggle('active', (el.dataset.itemId || el.dataset.locationId) === newLocationId);
+    });
+    renderMainPanel(true);
+}
+
+async function handleDetailsViewClick(e) {
+    const settingsPanel = e.target.closest('#settings-panel');
+    if (settingsPanel) {
+        const testId = settingsPanel.dataset.testid; const testType = settingsPanel.dataset.testtype;
+        const collectionNameMap = { standard: 'tests', reading: 'reading_tests', listening: 'listening_tests', vocabulary: 'vocab_sets' };
+        const collectionName = collectionNameMap[testType];
+        const testRef = doc(db, collectionName, testId);
+        if (e.target.id === 'lock-test-toggle') await updateDoc(testRef, { isLocked: e.target.checked });
+        if (e.target.name === 'publish-results') await updateDoc(testRef, { resultsPublished: e.target.value });
+        return;
+    }
+    if (e.target.closest('.btn-delete-student')) {
+        const subId = e.target.closest('.btn-delete-student').dataset.subId;
+        const confirmed = await showConfirmModal("Xác nhận xóa", "Bạn có chắc muốn xóa vĩnh viễn bài làm này của học sinh?");
+        if (confirmed) { await deleteDoc(doc(db, "submissions", subId)); }
+    }
+}
+
+function showConfirmModal(title, message) {
+    return new Promise(resolve => {
+        const modal = document.createElement('div');
+        modal.className = 'modal is-open';
+        modal.innerHTML = `<div class="modal-content glass-panel text-center p-8 w-full max-w-sm"><h3 class="text-xl font-bold text-gray-900 mb-4">${title}</h3><p class="text-gray-600 mb-6">${message}</p><div class="flex gap-4 justify-center"><button class="btn btn-secondary" data-resolve="false">Hủy</button><button class="btn btn-danger" data-resolve="true">Xác nhận</button></div></div>`;
+        DOM.modalContainer.appendChild(modal);
+        modal.querySelectorAll('button').forEach(btn => {
+            btn.onclick = () => {
+                modal.remove();
+                resolve(btn.dataset.resolve === 'true');
             };
+        });
+    });
+}
+function showPromptModal(title, message, defaultValue = '') {
+    return new Promise(resolve => {
+        const modal = document.createElement('div');
+        modal.className = 'modal is-open';
+        modal.innerHTML = `<div class="modal-content glass-panel p-8 w-full max-w-sm"><h3 class="text-xl font-bold text-gray-900 mb-4">${title}</h3><p class="text-gray-600 mb-4">${message}</p><input type="text" class="input-field mb-6" value="${defaultValue}"><div class="flex gap-4 justify-center"><button class="btn btn-secondary" data-resolve="null">Hủy</button><button class="btn btn-primary" data-resolve="value">OK</button></div></div>`;
+        DOM.modalContainer.appendChild(modal);
+        const input = modal.querySelector('input');
+        input.focus();
+        input.select();
+        modal.querySelectorAll('button').forEach(btn => {
+            btn.onclick = () => {
+                const resolution = btn.dataset.resolve === 'value' ? input.value : null;
+                modal.remove();
+                resolve(resolution);
+            };
+        });
+    });
+}
 
-            if (appState.mainPanelViewMode === 'details') {
-                const test = appState.localTestsCache.find(t => t.id === appState.selectedTestId);
-                animateAndRender(renderDetailsView, test);
-            } else {
-                animateAndRender(renderFolderView);
-            }
-        }
+function openAssignmentModal(testId) {
+    const test = appState.localTestsCache.find(t => t.id === testId);
+    if (!test) return alert("Không tìm thấy đề thi.");
 
-        function renderFolderView() {
-            const locationId = appState.currentLocationId;
-            let itemsToShow = [];
-            let isSearchActive = appState.searchQuery.length > 0;
+    appState.assigningTest = test;
+    DOM.assignmentTestTitle.textContent = test.title;
+    DOM.classSelectionContainer.innerHTML = '';
 
-            if (isSearchActive) {
-                const query = appState.searchQuery.toLowerCase();
-                itemsToShow.push(...appState.localFoldersCache.filter(f => f.name.toLowerCase().includes(query)));
-                itemsToShow.push(...appState.localTestsCache.filter(t => t.title.toLowerCase().includes(query)));
-            } else {
-                if (locationId !== 'unassigned') itemsToShow.push(...appState.localFoldersCache.filter(f => f.parentId === locationId));
-                if (locationId === 'unassigned') itemsToShow.push(...appState.localTestsCache.filter(t => !t.folderId));
-                else itemsToShow.push(...appState.localTestsCache.filter(t => t.folderId === locationId));
-            }
-
-            itemsToShow.sort((a,b) => {
-                const aIsFolder = !!a.parentId; const bIsFolder = !!b.parentId;
-                if(aIsFolder && !bIsFolder) return -1; if(!aIsFolder && bIsFolder) return 1;
-                return (a.name || a.title).localeCompare(b.name || b.title);
-            });
-
-            let mainContentHTML = `
-                <div id="main-panel-content">
-                    <div id="main-panel-header" class="flex items-center p-2 mb-4 border-b border-white/30">
-                        <button id="history-back-btn" class="btn btn-secondary !p-3 !rounded-full mr-4 ${appState.locationHistory.length > 1 || appState.mainPanelViewMode === 'details' ? '' : 'hidden'}"><i class="fas fa-arrow-left"></i></button>
-                        <div id="breadcrumb-container" class="flex-grow text-gray-600 h-12 flex items-center cursor-pointer">${generateBreadcrumbHTML()}</div>
-                        <div id="search-container" class="relative flex-grow hidden"><i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i><input type="text" id="search-input" class="input-field !pl-10 !py-3" placeholder="Tìm kiếm bài tập và thư mục..."></div>
-                    </div>
-                    <div id="main-content-view" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-2">
-            `;
-
-            if (itemsToShow.length === 0) {
-                mainContentHTML += `<p class="col-span-full text-center text-gray-500 py-10">${isSearchActive ? 'Không tìm thấy kết quả.' : 'Thư mục này trống.'}</p>`;
-            } else {
-                const icons = { folder: '<i class="fas fa-folder text-5xl text-violet-600 mb-2"></i>', standard: '<i class="fas fa-file-alt text-5xl text-violet-600 mb-2"></i>', reading: '<i class="fas fa-book-open text-5xl text-violet-600 mb-2"></i>', listening: '<i class="fas fa-headphones text-5xl text-violet-600 mb-2"></i>', vocabulary: '<i class="fas fa-spell-check text-5xl text-violet-600 mb-2"></i>' };
-                itemsToShow.forEach(item => {
-                    const isFolder = 'parentId' in item;
-                    mainContentHTML += `<div class="main-view-item flex flex-col items-center justify-center p-4 rounded-xl cursor-pointer text-center bg-white/30" data-item-id="${item.id}" data-item-type="${isFolder ? 'folder' : item.testType}">${icons[isFolder ? 'folder' : item.testType]}<p class="font-semibold text-sm break-words w-full">${item.name || item.title}</p></div>`;
-                });
-            }
-            mainContentHTML += `</div></div>`;
-            DOM.mainPanelView.innerHTML = mainContentHTML;
-            initSortable();
-        }
-
-        function renderFolderTree(parentId = "root", level = 0) {
-            if (level === 0) DOM.folderTreeContainer.innerHTML = '';
-            const children = appState.localFoldersCache.filter(f => f.parentId === parentId);
-            children.forEach(folder => {
-                const item = document.createElement('div');
-                item.className = `folder-tree-item p-3 rounded-lg cursor-pointer hover:bg-violet-100 transition-colors ${folder.id === appState.currentLocationId ? 'active' : ''}`;
-                item.style.paddingLeft = `${12 + level * 20}px`;
-                item.dataset.itemId = folder.id;
-                item.dataset.itemType = 'folder';
-                item.innerHTML = `<i class="fas fa-folder w-6 text-center mr-2 text-violet-600"></i><span class="font-semibold">${folder.name}</span>`;
-                DOM.folderTreeContainer.appendChild(item);
-                renderFolderTree(folder.id, level + 1);
-            });
-        }
-
-        function generateBreadcrumbHTML() {
-            let path = [{ name: 'Trang chủ', id: 'root' }];
-            let currentId = appState.currentLocationId;
-            if (currentId === 'unassigned') path.push({ name: 'Danh sách chờ', id: 'unassigned' });
-            else {
-                 while (currentId !== 'root' && currentId) {
-                    const folder = appState.localFoldersCache.find(f => f.id === currentId);
-                    if (folder) { path.splice(1, 0, { name: folder.name, id: folder.id }); currentId = folder.parentId; } 
-                    else { break; }
-                }
-            }
-            return path.map((p, i) => i === path.length - 1 ? `<span class="font-bold text-gray-800">${p.name}</span>` : `<a href="#" class="text-violet-700 hover:underline" data-location-id="${p.id}">${p.name}</a>`).join('<span class="mx-2">/</span>');
-        }
-
-        function renderDetailsView(test) {
-             if (appState.timerInterval) clearInterval(appState.timerInterval);
-             if (!test) {
-                 DOM.mainPanelView.innerHTML = `<div id="main-panel-content" class="text-center text-gray-500 py-16"><i class="fas fa-exclamation-circle text-4xl mb-4"></i><p class="text-xl">Không tìm thấy bài tập.</p></div>`;
-                 return;
-             }
-             
-             DOM.mainPanelView.innerHTML = `
-                <div id="main-panel-content">
-                    <div class="flex items-center mb-6">
-                        <button id="history-back-btn" class="btn btn-secondary !p-3 !rounded-full mr-4"><i class="fas fa-arrow-left"></i></button>
-                        <div><h2 class="text-3xl font-bold text-gray-700">${test.title}</h2><p class="font-mono text-sm text-gray-500">${test.id}</p></div>
-                    </div>
-
-                    <div class="my-6 p-4 bg-white/30 rounded-2xl">
-                        <h3 class="font-bold mb-3 text-xl">Giao bài tập</h3>
-                        <p class="text-sm mb-4">Giao bài tập này cho các lớp hoặc học sinh cụ thể với một hạn nộp nhất định.</p>
-                        <button id="open-assignment-modal-btn" data-testid="${test.id}" data-testtype="${test.testType}" class="btn btn-primary">
-                            <i class="fas fa-paper-plane mr-2"></i>Giao bài tập này
-                        </button>
-                    </div>
-
-                    <div id="settings-panel" class="my-6 p-4 bg-white/30 rounded-2xl" data-testid="${test.id}" data-testtype="${test.testType}"><h3 class="font-bold mb-3">Cài đặt & Trạng thái</h3><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div class="flex items-center justify-between p-3 bg-white/40 rounded-lg"><label for="lock-test-toggle" class="font-medium">Khóa đề thi</label><label class="toggle-switch"><input type="checkbox" id="lock-test-toggle" ${test.isLocked ? 'checked' : ''}><span class="slider"></span></label></div><div class="p-3 bg-white/40 rounded-lg"><span class="font-medium">Công bố kết quả</span><div class="flex justify-around mt-2 custom-radio-group"><input type="radio" name="publish-results" value="none" id="pub-none" ${(!test.resultsPublished || test.resultsPublished === 'none') ? 'checked' : ''}><label for="pub-none">Không</label><input type="radio" name="publish-results" value="correctIncorrect" id="pub-ci" ${test.resultsPublished === 'correctIncorrect' ? 'checked' : ''}><label for="pub-ci">Đúng/Sai</label><input type="radio" name="publish-results" value="full" id="pub-full" ${test.resultsPublished === 'full' ? 'checked' : ''}><label for="pub-full">Toàn bộ</label></div></div></div></div>
-                    <div><h3 class="font-bold mb-2">Danh sách các bài đã giao (Submissions)</h3><div class="overflow-x-auto max-h-[45vh]"><table class="w-full text-left border-collapse"><thead class="sticky top-0 bg-white/50 backdrop-blur-sm"><tr><th class="p-3 border-b border-gray-300">Tên</th><th class="p-3 border-b border-gray-300">Hạn nộp</th><th class="p-3 border-b border-gray-300">Trạng thái</th><th class="p-3 border-b border-gray-300">Điểm</th><th class="p-3 border-b border-gray-300">Vi phạm</th><th class="p-3 border-b border-gray-300"></th></tr></thead><tbody id="submission-table-body"><tr><td colspan="6" class="p-4 text-center">Đang tải danh sách...</td></tr></tbody></table></div></div>
+    appState.localClassesCache.forEach(cls => {
+        const studentsInClass = appState.localStudentsCache.filter(s => (cls.studentUids || []).includes(s.uid));
+        let classHTML = `
+            <div class="p-2 bg-white/50 rounded-lg mb-2">
+                <div class="flex items-center">
+                    <input type="checkbox" id="class-${cls.id}" data-class-id="${cls.id}" class="class-checkbox h-5 w-5 mr-3 cursor-pointer">
+                    <label for="class-${cls.id}" class="font-bold cursor-pointer">${cls.className}</label>
+                </div>
+                <div class="pl-8 mt-2 space-y-1 student-checkbox-group">`;
+        
+        studentsInClass.forEach(student => {
+            classHTML += `
+                <div class="flex items-center">
+                    <input type="checkbox" id="student-${student.uid}" data-student-uid="${student.uid}" class="student-checkbox h-4 w-4 mr-2 cursor-pointer">
+                    <label for="student-${student.uid}" class="cursor-pointer">${student.displayName}</label>
                 </div>`;
-                
-            const q = query(collection(db, "submissions"), where("testId", "==", test.id));
-            const unsub = onSnapshot(q, async (snapshot) => {
-                const submissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                // Enrich submissions with student names
-                const enrichedSubmissions = await Promise.all(submissions.map(async sub => {
-                    const student = appState.localStudentsCache.find(s => s.id === sub.studentId);
-                    return { ...sub, studentName: student ? student.displayName : 'Không rõ' };
-                }));
-                renderSubmissionsTable(enrichedSubmissions, test);
-            });
-            appState.unsubscribers.push(unsub);
-        }
+        });
 
-        function renderSubmissionsTable(submissions, test) {
-            const tableBody = document.getElementById('submission-table-body');
-            if (!tableBody) return;
-            if (submissions.length === 0) { tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">Chưa giao bài cho học sinh nào.</td></tr>`; return; }
-            tableBody.innerHTML = submissions.map(sub => {
-                const statusInfo = getStatusInfo(sub);
-                const scoreDisplay = (sub.status === 'submitted' && sub.score !== undefined) ? `${sub.score} / ${sub.totalPoints}` : '-';
-                const dueDate = sub.dueDate ? sub.dueDate.toDate().toLocaleString('vi-VN') : 'N/A';
-                return `<tr class="hover:bg-white/40" data-submission-id="${sub.id}">
-                            <td class="p-3 border-b border-gray-200 font-semibold">${sub.studentName}</td>
-                            <td class="p-3 border-b border-gray-200">${dueDate}</td>
-                            <td class="p-3 border-b border-gray-200"><span class="status-badge ${statusInfo.class}">${statusInfo.text}</span></td>
-                            <td class="p-3 border-b border-gray-200 font-bold">${scoreDisplay}</td>
-                            <td class="p-3 border-b border-gray-200 text-center font-bold ${sub.violationCount > 0 ? 'text-red-500' : ''}">${sub.violationCount || 0}</td>
-                            <td class="p-3 border-b border-gray-200 text-right"><button class="btn-delete-student btn btn-danger !p-2 !rounded-full" data-sub-id="${sub.id}" title="Xóa bài làm"><i class="fas fa-trash text-sm"></i></button></td>
-                        </tr>`
-            }).join('');
-        }
+        classHTML += `</div></div>`;
+        DOM.classSelectionContainer.innerHTML += classHTML;
+    });
+    
+    DOM.assignmentModal.classList.add('is-open');
+}
 
-        function getStatusInfo(sub) {
-            const now = new Date();
-            if (sub.status === 'submitted') {
-                const onTime = sub.submissionTime && sub.dueDate ? sub.submissionTime.toDate() <= sub.dueDate.toDate() : true;
-                return { text: onTime ? 'Đã nộp' : 'Nộp muộn', class: 'status-submitted' };
-            }
-            if (sub.dueDate && now > sub.dueDate.toDate()) {
-                 return { text: 'Quá hạn', class: 'status-in-progress bg-red-200 !text-red-800' };
-            }
-            if (sub.status === 'in-progress') return { text: 'Đang làm', class: 'status-in-progress' };
-            return { text: 'Chưa làm', class: 'status-not-started' };
-        };
+async function handleConfirmAssignment() {
+    const dueDate = DOM.dueDateInput.value;
+    if (!dueDate) return alert("Vui lòng chọn hạn nộp bài.");
 
-        function initSortable() {
-            const mainContentView = document.getElementById('main-content-view');
-            if (!mainContentView) return;
-            new Sortable(mainContentView, { group: { name: 'drive', pull: true, put: true }, animation: 150 });
-            document.querySelectorAll('.folder-tree-item, .special-location').forEach(folderEl => {
-                new Sortable(folderEl, { group: { name: 'drive', pull: false, put: true }, onAdd: (evt) => {
-                    const destFolderId = evt.to.dataset.itemId || evt.to.dataset.locationId;
-                    moveItem(evt.item.dataset.itemId, evt.item.dataset.itemType, destFolderId === 'unassigned' ? null : destFolderId);
-                }});
-            });
-        }
-        
-        async function moveItem(itemId, itemType, destinationFolderId) {
-            const collectionNameMap = { standard: 'tests', reading: 'reading_tests', listening: 'listening_tests', vocabulary: 'vocab_sets', folder: 'folders' };
-            const collectionName = collectionNameMap[itemType];
-            if (!collectionName) return;
-            const itemRef = doc(db, collectionName, itemId);
-            const fieldToUpdate = itemType === 'folder' ? 'parentId' : 'folderId';
-            await updateDoc(itemRef, { [fieldToUpdate]: destinationFolderId });
-        }
+    const selectedStudentUids = [...new Set(Array.from(document.querySelectorAll('.student-checkbox:checked')).map(cb => cb.dataset.studentUid))];
+    if (selectedStudentUids.length === 0) return alert("Vui lòng chọn ít nhất một học sinh.");
 
-        function changeCurrentLocation(newLocationId, isNewHistory = false) {
-            if (isNewHistory) { appState.locationHistory = [newLocationId]; } 
-            else { if (appState.currentLocationId !== newLocationId) appState.locationHistory.push(newLocationId); }
-            appState.selectedTestId = null;
-            appState.mainPanelViewMode = 'folder';
-            appState.searchQuery = '';
-            document.querySelectorAll('.folder-tree-item, .special-location').forEach(el => {
-                el.classList.toggle('active', (el.dataset.itemId || el.dataset.locationId) === newLocationId);
-            });
+    const test = appState.assigningTest;
+    const batch = writeBatch(db);
+
+    selectedStudentUids.forEach(studentId => {
+        const submissionRef = doc(collection(db, "submissions"));
+        batch.set(submissionRef, {
+            studentId: studentId,
+            testId: test.id,
+            testSnapshot: test,
+            status: 'not-started',
+            dueDate: new Date(dueDate),
+            createdAt: serverTimestamp(),
+            violationCount: 0,
+            answers: {},
+        });
+    });
+
+    try {
+        await batch.commit();
+        alert(`Đã giao bài thành công cho ${selectedStudentUids.length} học sinh.`);
+        DOM.assignmentModal.classList.remove('is-open');
+    } catch (error) {
+        alert("Lỗi khi giao bài: " + error.message);
+    }
+}
+
+DOM.loginBtn.addEventListener('click', () => { signInWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value).catch(e => DOM.loginError.textContent = 'Đăng nhập thất bại.'); });
+DOM.logoutBtn.addEventListener('click', () => signOut(auth));
+
+DOM.createTestButtons.addEventListener('click', (e) => {
+    const button = e.target.closest('button'); if (!button) return;
+    const type = button.dataset.type;
+    const pageMap = { standard: 'standard/standard-test-maker.html', reading: 'reading/reading-test-maker.html', listening: 'listening/listening-test-maker.html', vocabulary: 'vocabulary/vocabulary-test-maker.html' };
+    if(pageMap[type]) window.open(pageMap[type], '_blank');
+});
+
+document.addEventListener('click', (e) => {
+    const contextItem = e.target.closest('#context-menu');
+    if (!contextItem) DOM.contextMenu.classList.remove('show');
+    
+    const specialLocation = e.target.closest('.special-location');
+    if (specialLocation) {
+        const locationId = specialLocation.dataset.locationId;
+        document.querySelectorAll('.special-location, .folder-tree-item').forEach(el => el.classList.remove('active'));
+        specialLocation.classList.add('active');
+
+        if (locationId === 'gradebook') {
+            appState.mainPanelViewMode = 'gradebook';
+            appState.selectedClassForGradebook = null;
             renderMainPanel(true);
+        } else {
+            appState.mainPanelViewMode = 'folder';
+            changeCurrentLocation(locationId, true);
         }
-
-        async function handleDetailsViewClick(e) {
-            const settingsPanel = e.target.closest('#settings-panel');
-            if (settingsPanel) {
-                const testId = settingsPanel.dataset.testid; const testType = settingsPanel.dataset.testtype;
-                const collectionNameMap = { standard: 'tests', reading: 'reading_tests', listening: 'listening_tests', vocabulary: 'vocab_sets' };
-                const collectionName = collectionNameMap[testType];
-                const testRef = doc(db, collectionName, testId);
-                if (e.target.id === 'lock-test-toggle') await updateDoc(testRef, { isLocked: e.target.checked });
-                if (e.target.name === 'publish-results') await updateDoc(testRef, { resultsPublished: e.target.value });
-                return;
-            }
-            if (e.target.closest('.btn-delete-student')) {
-                const subId = e.target.closest('.btn-delete-student').dataset.subId;
-                const confirmed = await showConfirmModal("Xác nhận xóa", "Bạn có chắc muốn xóa vĩnh viễn bài làm này của học sinh?");
-                if (confirmed) { await deleteDoc(doc(db, "submissions", subId)); }
-            }
+        return;
+    }
+    
+    if (appState.mainPanelViewMode === 'gradebook' && !appState.selectedClassForGradebook) {
+        const classItem = e.target.closest('.main-view-item[data-class-id]');
+        if (classItem) {
+            appState.selectedClassForGradebook = classItem.dataset.classId;
+            renderMainPanel(true);
+            return;
         }
-        
-        // --- MODAL & CONTEXT MENU FUNCTIONS (Giữ nguyên) ---
-        function showConfirmModal(title, message) { /*...*/ }
-        function showPromptModal(title, message, defaultValue = '') { /*...*/ }
-        
-        // --- LOGIC GIAO BÀI MỚI ---
-        function openAssignmentModal(testId) {
-            const test = appState.localTestsCache.find(t => t.id === testId);
-            if (!test) return alert("Không tìm thấy đề thi.");
+    }
+    
+    const backToClassListBtn = e.target.closest('#back-to-class-list-btn');
+    if (backToClassListBtn) {
+        appState.selectedClassForGradebook = null;
+        renderMainPanel(true);
+        return;
+    }
 
-            appState.assigningTest = test;
-            DOM.assignmentTestTitle.textContent = test.title;
-            DOM.classSelectionContainer.innerHTML = '';
+    const folderTreeItem = e.target.closest('.folder-tree-item');
+    if (folderTreeItem) {
+        appState.mainPanelViewMode = 'folder';
+        changeCurrentLocation(folderTreeItem.dataset.itemId);
+        return;
+    }
 
-            appState.localClassesCache.forEach(cls => {
-                const studentsInClass = appState.localStudentsCache.filter(s => (cls.studentUids || []).includes(s.uid));
-                let classHTML = `
-                    <div class="p-2 bg-white/50 rounded-lg mb-2">
-                        <div class="flex items-center">
-                            <input type="checkbox" id="class-${cls.id}" data-class-id="${cls.id}" class="class-checkbox h-5 w-5 mr-3 cursor-pointer">
-                            <label for="class-${cls.id}" class="font-bold cursor-pointer">${cls.className}</label>
-                        </div>
-                        <div class="pl-8 mt-2 space-y-1 student-checkbox-group">`;
-                
-                studentsInClass.forEach(student => {
-                    classHTML += `
-                        <div class="flex items-center">
-                            <input type="checkbox" id="student-${student.uid}" data-student-uid="${student.uid}" class="student-checkbox h-4 w-4 mr-2 cursor-pointer">
-                            <label for="student-${student.uid}" class="cursor-pointer">${student.displayName}</label>
-                        </div>`;
-                });
+    const breadcrumbLink = e.target.closest('#breadcrumb-container a');
+    if (breadcrumbLink) { e.preventDefault(); changeCurrentLocation(breadcrumbLink.dataset.locationId); return; }
 
-                classHTML += `</div></div>`;
-                DOM.classSelectionContainer.innerHTML += classHTML;
+    const historyBackBtn = e.target.closest('#history-back-btn');
+    if (historyBackBtn) {
+        if (appState.mainPanelViewMode === 'details') {
+            appState.mainPanelViewMode = 'folder';
+            appState.selectedTestId = null;
+            renderMainPanel(true);
+        } else if (appState.locationHistory.length > 1) {
+            appState.locationHistory.pop();
+            changeCurrentLocation(appState.currentLocationId);
+        }
+        return;
+    }
+
+    const assignBtn = e.target.closest('#open-assignment-modal-btn');
+    if(assignBtn) {
+        openAssignmentModal(assignBtn.dataset.testid);
+    }
+    
+    handleDetailsViewClick(e);
+});
+
+DOM.mainPanelView.addEventListener('dblclick', e => {
+    const mainViewItem = e.target.closest('.main-view-item');
+    if (!mainViewItem) return;
+    if (mainViewItem.dataset.itemType === 'folder') {
+        changeCurrentLocation(mainViewItem.dataset.itemId);
+    } else {
+        appState.selectedTestId = mainViewItem.dataset.itemId;
+        appState.mainPanelViewMode = 'details';
+        renderMainPanel(true);
+    }
+});
+
+DOM.mainPanelView.addEventListener('input', e => {
+    if (e.target.id === 'search-input') { appState.searchQuery = e.target.value; renderFolderView(); }
+});
+
+document.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    const item = e.target.closest('.main-view-item, .folder-tree-item');
+    let menuItems = `<div class="p-2 hover:bg-violet-200 rounded-md cursor-pointer" data-action="new-folder">Thư mục mới</div>`;
+    let itemId = null, itemType = null;
+    
+    if (item) {
+        itemId = item.dataset.itemId;
+        itemType = item.dataset.itemType;
+        if (itemType === 'folder') {
+            menuItems += `<hr class="my-1 border-white/50"><div class="p-2 hover:bg-violet-200 rounded-md cursor-pointer" data-action="rename">Đổi tên</div><div class="p-2 hover:bg-violet-200 rounded-md cursor-pointer" data-action="delete-folder">Xóa</div>`;
+        } else {
+            menuItems = `<div class="p-2 hover:bg-violet-200 rounded-md cursor-pointer" data-action="open-test">Mở chi tiết</div><div class="p-2 hover:bg-violet-200 rounded-md cursor-pointer" data-action="edit-test">Sửa đề thi</div><hr class="my-1 border-white/50"><div class="p-2 hover:bg-violet-200 rounded-md cursor-pointer" data-action="delete-test">Xóa</div>`;
+        }
+    } else if (!e.target.closest('#main-content-view')) {
+        return;
+    }
+
+    DOM.contextMenu.innerHTML = menuItems;
+    DOM.contextMenu.style.left = `${e.pageX}px`;
+    DOM.contextMenu.style.top = `${e.pageY}px`;
+    DOM.contextMenu.dataset.contextItemId = itemId;
+    DOM.contextMenu.dataset.contextItemType = itemType;
+    requestAnimationFrame(() => { DOM.contextMenu.classList.add('show'); });
+});
+
+DOM.contextMenu.addEventListener('click', async e => {
+    const action = e.target.dataset.action;
+    const itemId = DOM.contextMenu.dataset.contextItemId;
+    const itemType = DOM.contextMenu.dataset.contextItemType;
+    if (!action) return;
+
+    if (action === 'new-folder') {
+        const newName = await showPromptModal("Tạo thư mục mới", "Nhập tên cho thư mục:", "Thư mục không tên");
+        if (newName && newName.trim()) {
+            await addDoc(collection(db, 'folders'), {
+                name: newName.trim(),
+                parentId: appState.currentLocationId === 'unassigned' ? 'root' : appState.currentLocationId,
+                createdAt: serverTimestamp()
             });
-            
-            DOM.assignmentModal.classList.add('is-open');
         }
-
-        async function handleConfirmAssignment() {
-            const dueDate = DOM.dueDateInput.value;
-            if (!dueDate) return alert("Vui lòng chọn hạn nộp bài.");
-
-            const selectedStudentUids = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(cb => cb.dataset.studentUid);
-            if (selectedStudentUids.length === 0) return alert("Vui lòng chọn ít nhất một học sinh.");
-
-            const test = appState.assigningTest;
+    } else if (action === 'delete-folder') {
+        const hasChildren = appState.localFoldersCache.some(f => f.parentId === itemId) || appState.localTestsCache.some(t => t.folderId === itemId);
+        if (hasChildren) { 
+            alert("Không thể xóa. Thư mục phải rỗng trước khi xóa."); 
+            return; 
+        }
+        const confirmed = await showConfirmModal("Xác nhận xóa", "Bạn có chắc muốn xóa vĩnh viễn thư mục này?");
+        if (confirmed) { await deleteDoc(doc(db, 'folders', itemId)); }
+    } else if (action === 'delete-test') {
+        const confirmed = await showConfirmModal("Xác nhận xóa", "Bạn có chắc muốn xóa bài thi này và tất cả bài làm của học sinh? Thao tác này không thể hoàn tác.");
+        if (confirmed) {
+            const submissionsQuery = query(collection(db, "submissions"), where("testId", "==", itemId));
+            const submissionSnapshot = await getDocs(submissionsQuery);
             const batch = writeBatch(db);
-
-            selectedStudentUids.forEach(studentId => {
-                const submissionRef = doc(collection(db, "submissions"));
-                batch.set(submissionRef, {
-                    studentId: studentId,
-                    testId: test.id,
-                    testSnapshot: test,
-                    status: 'not-started',
-                    dueDate: new Date(dueDate),
-                    createdAt: serverTimestamp(),
-                    violationCount: 0,
-                    answers: {},
-                });
-            });
-
-            try {
-                await batch.commit();
-                alert(`Đã giao bài thành công cho ${selectedStudentUids.length} học sinh.`);
-                DOM.assignmentModal.classList.remove('is-open');
-            } catch (error) {
-                alert("Lỗi khi giao bài: " + error.message);
-            }
+            submissionSnapshot.docs.forEach(sDoc => batch.delete(sDoc.ref));
+            await batch.commit();
+            
+            const collectionNameMap = { standard: 'tests', reading: 'reading_tests', listening: 'listening_tests', vocabulary: 'vocab_sets' };
+            const collectionName = collectionNameMap[itemType];
+            await deleteDoc(doc(db, collectionName, itemId));
         }
+    } else if (action === 'rename') {
+        const currentFolder = appState.localFoldersCache.find(f => f.id === itemId);
+        const newName = await showPromptModal("Đổi tên thư mục", "Nhập tên mới:", currentFolder.name);
+        if (newName && newName.trim()) { await updateDoc(doc(db, 'folders', itemId), { name: newName.trim() }); }
+    } else if (action === 'edit-test') {
+         const pageMap = { standard: 'standard/standard-test-maker.html', reading: 'reading/reading-test-maker.html', listening: 'listening/listening-test-maker.html', vocabulary: 'vocabulary/vocabulary-test-maker.html' };
+         window.open(`${pageMap[itemType]}?edit=${itemId}`, '_blank');
+    } else if (action === 'open-test') {
+        appState.selectedTestId = itemId;
+        appState.mainPanelViewMode = 'details';
+        renderMainPanel(true);
+    }
+});
 
-        // --- EVENT LISTENERS ---
-        DOM.loginBtn.addEventListener('click', () => { signInWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value).catch(e => DOM.loginError.textContent = 'Đăng nhập thất bại.'); });
-        DOM.logoutBtn.addEventListener('click', () => signOut(auth));
-        
-        DOM.createTestButtons.addEventListener('click', (e) => {
-            const button = e.target.closest('button'); if (!button) return;
-            const type = button.dataset.type;
-            const pageMap = { standard: 'standard/standard-test-maker.html', reading: 'reading/reading-test-maker.html', listening: 'listening/listening-test-maker.html', vocabulary: 'vocabulary/vocabulary-test-maker.html' };
-            if(pageMap[type]) window.open(pageMap[type], '_blank');
-        });
+DOM.classSelectionContainer.addEventListener('change', (e) => {
+    if (e.target.classList.contains('class-checkbox')) {
+        const studentCheckboxes = e.target.closest('.p-2').querySelectorAll('.student-checkbox');
+        studentCheckboxes.forEach(cb => cb.checked = e.target.checked);
+    }
+});
 
-        document.addEventListener('click', (e) => {
-            const contextItem = e.target.closest('#context-menu');
-            if (!contextItem) DOM.contextMenu.classList.remove('show');
-            
-            const specialLocation = e.target.closest('.special-location');
-            if (specialLocation) { changeCurrentLocation(specialLocation.dataset.locationId, true); return; }
-            
-            const folderTreeItem = e.target.closest('.folder-tree-item');
-            if (folderTreeItem) { changeCurrentLocation(folderTreeItem.dataset.itemId); return; }
-            
-            const breadcrumbLink = e.target.closest('#breadcrumb-container a');
-            if (breadcrumbLink) { e.preventDefault(); changeCurrentLocation(breadcrumbLink.dataset.locationId); return; }
-
-            const historyBackBtn = e.target.closest('#history-back-btn');
-            if (historyBackBtn) {
-                if (appState.mainPanelViewMode === 'details') {
-                    appState.mainPanelViewMode = 'folder';
-                    appState.selectedTestId = null;
-                    renderMainPanel(true);
-                } else if (appState.locationHistory.length > 1) {
-                    appState.locationHistory.pop();
-                    changeCurrentLocation(appState.currentLocationId);
-                }
-                return;
-            }
-
-            const assignBtn = e.target.closest('#open-assignment-modal-btn');
-            if(assignBtn) {
-                openAssignmentModal(assignBtn.dataset.testid);
-            }
-            
-            handleDetailsViewClick(e);
-        });
-
-        DOM.mainPanelView.addEventListener('dblclick', e => {
-            const mainViewItem = e.target.closest('.main-view-item');
-            if (!mainViewItem) return;
-            if (mainViewItem.dataset.itemType === 'folder') {
-                changeCurrentLocation(mainViewItem.dataset.itemId);
-            } else {
-                appState.selectedTestId = mainViewItem.dataset.itemId;
-                appState.mainPanelViewMode = 'details';
-                renderMainPanel(true);
-            }
-        });
-        
-        // Event listeners cho modal giao bài
-        DOM.classSelectionContainer.addEventListener('change', (e) => {
-            if (e.target.classList.contains('class-checkbox')) {
-                const studentCheckboxes = e.target.closest('.p-2').querySelectorAll('.student-checkbox');
-                studentCheckboxes.forEach(cb => cb.checked = e.target.checked);
-            }
-        });
-
-        DOM.cancelAssignmentBtn.addEventListener('click', () => DOM.assignmentModal.classList.remove('is-open'));
-        DOM.confirmAssignmentBtn.addEventListener('click', handleConfirmAssignment);
-
-        // --- MODAL & CONTEXT MENU FUNCTIONS ---
-        function showConfirmModal(title, message) {
-            return new Promise(resolve => {
-                const modal = document.createElement('div');
-                modal.className = 'modal is-open';
-                modal.innerHTML = `<div class="modal-content glass-panel text-center p-8 w-full max-w-sm"><h3 class="text-xl font-bold text-gray-900 mb-4">${title}</h3><p class="text-gray-600 mb-6">${message}</p><div class="flex gap-4 justify-center"><button class="btn btn-secondary" data-resolve="false">Hủy</button><button class="btn btn-danger" data-resolve="true">Xác nhận</button></div></div>`;
-                DOM.modalContainer.appendChild(modal);
-                modal.querySelectorAll('button').forEach(btn => {
-                    btn.onclick = () => {
-                        modal.remove();
-                        resolve(btn.dataset.resolve === 'true');
-                    };
-                });
-            });
-        }
-        function showPromptModal(title, message, defaultValue = '') {
-            return new Promise(resolve => {
-                const modal = document.createElement('div');
-                modal.className = 'modal is-open';
-                modal.innerHTML = `<div class="modal-content glass-panel p-8 w-full max-w-sm"><h3 class="text-xl font-bold text-gray-900 mb-4">${title}</h3><p class="text-gray-600 mb-4">${message}</p><input type="text" class="input-field mb-6" value="${defaultValue}"><div class="flex gap-4 justify-center"><button class="btn btn-secondary" data-resolve="null">Hủy</button><button class="btn btn-primary" data-resolve="value">OK</button></div></div>`;
-                DOM.modalContainer.appendChild(modal);
-                const input = modal.querySelector('input');
-                input.focus();
-                input.select();
-                modal.querySelectorAll('button').forEach(btn => {
-                    btn.onclick = () => {
-                        const resolution = btn.dataset.resolve === 'value' ? input.value : null;
-                        modal.remove();
-                        resolve(resolution);
-                    };
-                });
-            });
-        }
-        
-        // --- EVENT LISTENERS ---
-        DOM.mainPanelView.addEventListener('input', e => {
-            if (e.target.id === 'search-input') { appState.searchQuery = e.target.value; renderFolderView(); }
-        });
-        
-        DOM.mainPanelView.addEventListener('dblclick', e => {
-            const mainViewItem = e.target.closest('.main-view-item');
-            if (!mainViewItem) return;
-            if (mainViewItem.dataset.itemType === 'folder') {
-                changeCurrentLocation(mainViewItem.dataset.itemId);
-            } else {
-                appState.selectedTestId = mainViewItem.dataset.itemId;
-                appState.mainPanelViewMode = 'details';
-                renderMainPanel(true);
-            }
-        });
-
-        document.addEventListener('contextmenu', e => {
-            e.preventDefault();
-            const item = e.target.closest('.main-view-item, .folder-tree-item');
-            let menuItems = `<div class="p-2 hover:bg-violet-200 rounded-md cursor-pointer" data-action="new-folder">Thư mục mới</div>`;
-            let itemId = null, itemType = null;
-            
-            if (item) {
-                itemId = item.dataset.itemId;
-                itemType = item.dataset.itemType;
-                if (itemType === 'folder') {
-                    menuItems += `<hr class="my-1 border-white/50"><div class="p-2 hover:bg-violet-200 rounded-md cursor-pointer" data-action="rename">Đổi tên</div><div class="p-2 hover:bg-violet-200 rounded-md cursor-pointer" data-action="delete-folder">Xóa</div>`;
-                } else {
-                    menuItems = `<div class="p-2 hover:bg-violet-200 rounded-md cursor-pointer" data-action="open-test">Mở chi tiết</div><div class="p-2 hover:bg-violet-200 rounded-md cursor-pointer" data-action="edit-test">Sửa đề thi</div><hr class="my-1 border-white/50"><div class="p-2 hover:bg-violet-200 rounded-md cursor-pointer" data-action="delete-test">Xóa</div>`;
-                }
-            } else if (!e.target.closest('#main-content-view')) {
-                return;
-            }
-
-            DOM.contextMenu.innerHTML = menuItems;
-            DOM.contextMenu.style.left = `${e.pageX}px`;
-            DOM.contextMenu.style.top = `${e.pageY}px`;
-            DOM.contextMenu.dataset.contextItemId = itemId;
-            DOM.contextMenu.dataset.contextItemType = itemType;
-            requestAnimationFrame(() => { DOM.contextMenu.classList.add('show'); });
-        });
-        
-        DOM.contextMenu.addEventListener('click', async e => {
-            const action = e.target.dataset.action;
-            const itemId = DOM.contextMenu.dataset.contextItemId;
-            const itemType = DOM.contextMenu.dataset.contextItemType;
-            if (!action) return;
-
-            if (action === 'new-folder') {
-                const newName = await showPromptModal("Tạo thư mục mới", "Nhập tên cho thư mục:", "Thư mục không tên");
-                if (newName) {
-                    await addDoc(collection(db, 'folders'), {
-                        name: newName.trim(),
-                        parentId: appState.currentLocationId === 'unassigned' ? 'root' : appState.currentLocationId,
-                        createdAt: serverTimestamp()
-                    });
-                }
-            } else if (action === 'delete-folder') {
-                const hasChildren = appState.localFoldersCache.some(f => f.parentId === itemId) || appState.localTestsCache.some(t => t.folderId === itemId);
-                if (hasChildren) { 
-                    alert("Không thể xóa. Thư mục phải rỗng trước khi xóa."); 
-                    return; 
-                }
-                const confirmed = await showConfirmModal("Xác nhận xóa", "Bạn có chắc muốn xóa vĩnh viễn thư mục này?");
-                if (confirmed) { await deleteDoc(doc(db, 'folders', itemId)); }
-            } else if (action === 'delete-test') {
-                const confirmed = await showConfirmModal("Xác nhận xóa", "Bạn có chắc muốn xóa bài thi này và tất cả bài làm của học sinh? Thao tác này không thể hoàn tác.");
-                if (confirmed) {
-                    const submissionsQuery = query(collection(db, "submissions"), where("testId", "==", itemId));
-                    const submissionSnapshot = await getDocs(submissionsQuery);
-                    const batch = writeBatch(db);
-                    submissionSnapshot.docs.forEach(sDoc => batch.delete(sDoc.ref));
-                    await batch.commit();
-                    
-                    const collectionNameMap = { standard: 'tests', reading: 'reading_tests', listening: 'listening_tests', vocabulary: 'vocab_sets' };
-                    const collectionName = collectionNameMap[itemType];
-                    await deleteDoc(doc(db, collectionName, itemId));
-                }
-            } else if (action === 'rename') {
-                const currentFolder = appState.localFoldersCache.find(f => f.id === itemId);
-                const newName = await showPromptModal("Đổi tên thư mục", "Nhập tên mới:", currentFolder.name);
-                if (newName && newName.trim()) { await updateDoc(doc(db, 'folders', itemId), { name: newName.trim() }); }
-            } else if (action === 'edit-test') {
-                 const pageMap = { standard: 'standard/standard-test-maker.html', reading: 'reading/reading-test-maker.html', listening: 'listening/listening-test-maker.html', vocabulary: 'vocabulary/vocabulary-test-maker.html' };
-                 window.open(`${pageMap[itemType]}?edit=${itemId}`, '_blank');
-            } else if (action === 'open-test') {
-                appState.selectedTestId = itemId;
-                appState.mainPanelViewMode = 'details';
-                renderMainPanel(true);
-            }
-        });
-    </script>
+DOM.cancelAssignmentBtn.addEventListener('click', () => DOM.assignmentModal.classList.remove('is-open'));
+DOM.confirmAssignmentBtn.addEventListener('click', handleConfirmAssignment);
 </body>
 </html>
