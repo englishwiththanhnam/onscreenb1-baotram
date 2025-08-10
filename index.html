@@ -2,12 +2,22 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Kiểm Tra Online - Đăng nhập</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LingoLeap - Đăng nhập</title>
     
+    <!-- Google Fonts & Font Awesome for spinner icon -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Poppins:wght@600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- OGL Library for 3D Particles -->
+    <script type="module">
+        import { Renderer, Camera, Transform, Program, Geometry, Mesh } from 'https://cdn.skypack.dev/ogl';
+        window.OGL = { Renderer, Camera, Transform, Program, Geometry, Mesh };
+    </script>
+    
+    <!-- Firebase Config -->
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
@@ -23,107 +33,312 @@
 
     <style>
         :root {
-            --primary-accent: #6d28d9; --text-primary: #0f172a; --app-bg-start: #f5f7ff;
-            --app-bg-end: #e0e7ff; --glass-bg-color: rgba(255, 255, 255, 0.45);
-            --glass-border-color: rgba(255, 255, 255, 0.6);
+            /* Yêu cầu 1: Đổi nền thành màu đen và cập nhật các màu khác */
+            --app-bg: #111827; /* Dark blue-gray */
+            --primary-accent: #8b5cf6;
+            --purple-text: #c4b5fd; /* Lighter purple for title */
+            --text-primary: #f9fafb; /* Light text */
+            --text-secondary: #d1d5db; /* Lighter secondary text */
         }
-        body { font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--app-bg-start); background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%); }
-        .glass-panel { background: var(--glass-bg-color); backdrop-filter: blur(12px); border-radius: 24px; border: 1px solid var(--glass-border-color); box-shadow: 0 8px 32px 0 rgba(67, 56, 202, 0.15); }
-        .btn-primary { background: var(--primary-accent); color: white; transition: all 0.3s ease; padding: 12px 24px; border-radius: 12px; font-weight: 600; }
-        .btn-primary:hover:not(:disabled) { background: #5b21b6; transform: translateY(-2px); }
-        .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
-        .input-field { background: rgba(255, 255, 255, 0.6); border: 2px solid var(--glass-border-color); color: var(--text-primary); width: 100%; padding: 12px; border-radius: 16px; transition: all 0.2s; }
-        .input-field:focus { outline: none; border-color: var(--primary-accent); transform: scale(1.02); }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--app-bg);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .background-shapes {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1; pointer-events: none;
+        }
+        .shape {
+            position: absolute; border-radius: 50%;
+            filter: blur(120px); opacity: 0.5;
+        }
+        .shape1 {
+            width: 40vw; height: 40vw; max-width: 450px; max-height: 450px;
+            background: #a855f7; top: -15%; left: -10%;
+            animation: float 28s infinite alternate ease-in-out;
+        }
+        .shape2 {
+            width: 35vw; height: 35vw; max-width: 400px; max-height: 400px;
+            background: #22d3ee; bottom: -15%; right: -10%;
+            animation: float 32s infinite alternate ease-in-out;
+        }
+        @keyframes float {
+            from { transform: translateY(20px) scale(1) rotate(0deg); }
+            to { transform: translateY(-20px) scale(1.05) rotate(15deg); }
+        }
+        #ogl-canvas-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2;
+        }
+        #ogl-canvas-container canvas { width: 100%; height: 100%; display: block; }
+        .login-container {
+            position: relative; z-index: 3; width: 100%; max-width: 420px;
+            height: auto; border-radius: 24px; padding: 40px;
+            background: radial-gradient(ellipse at center, rgba(31, 41, 55, 0.65) 0%, rgba(31, 41, 55, 0.4) 100%);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+        .login-content { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .title {
+            /* Yêu cầu 2: Sửa lỗi font */
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            font-size: 42px;
+            color: var(--purple-text);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            margin-bottom: 8px; text-align: center;
+        }
+        .subtitle { font-size: 16px; color: var(--text-secondary); margin-bottom: 32px; text-align: center; }
+        .login-form { display: flex; flex-direction: column; gap: 20px; width: 100%; }
+        @property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+        .input-wrapper { position: relative; width: 100%; border-radius: 14px; }
+        .input-wrapper::before, .input-wrapper::after {
+            content: ''; position: absolute; inset: -2px; z-index: -1; border-radius: inherit;
+            background: conic-gradient(from var(--angle), #a855f7, #8b5cf6 30%, #22d3ee 60%, #a855f7);
+            opacity: 0; transition: opacity 0.3s ease; animation: spin 4s linear infinite paused;
+        }
+        .input-wrapper::after { filter: blur(10px); }
+        .input-wrapper:has(.login-input:focus)::before, .input-wrapper:has(.login-input:focus)::after {
+            opacity: 1; animation-play-state: running;
+        }
+        @keyframes spin { to { --angle: 360deg; } }
+        .login-input {
+            width: 100%; padding: 14px 16px; border-radius: 12px; 
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(55, 65, 81, 0.5); 
+            font-family: 'Inter', sans-serif; font-size: 16px; color: var(--text-primary);
+            caret-color: var(--primary-accent); transition: all 0.2s ease-in-out;
+            position: relative; z-index: 1;
+        }
+        .login-input::placeholder { color: var(--text-secondary); }
+        .login-input:focus {
+            outline: none;
+            border-color: rgba(139, 92, 246, 0.6);
+            background: rgba(55, 65, 81, 0.8);
+        }
+        #login-btn {
+            width: 100%; height: 52px; margin-top: 16px; display: grid; place-items: center;
+            border-radius: 16px; border: none; background: var(--primary-accent);
+            cursor: pointer; transition: background 0.2s ease; user-select: none;
+            font-family: 'Poppins', sans-serif; font-size: 18px; font-weight: 600; color: #FFFFFF;
+        }
+        #login-btn:hover:not(:disabled) { background: #5b21b6; }
+        #login-btn:disabled { opacity: 0.8; cursor: not-allowed; }
     </style>
 </head>
 <body>
-    <div id="login-container" class="flex flex-col items-center justify-center min-h-screen p-4">
-        <div class="glass-panel p-8 sm:p-12 w-full max-w-md text-center">
-            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 mb-4">Chào mừng trở lại!</h1>
-            <p class="text-gray-600 mb-8">Đăng nhập để xem bài tập của bạn.</p>
-            
-            <div class="space-y-4">
-                <input type="email" id="email-input" class="input-field" placeholder="Email hoặc Tên đăng nhập" required>
-                <input type="password" id="password-input" class="input-field" placeholder="Mật khẩu" required>
-            </div>
-            
-            <button id="login-btn" class="btn-primary w-full mt-6 text-lg">Đăng nhập</button>
-            <p id="error-message" class="text-red-500 mt-4 h-5"></p>
+    <div class="background-shapes">
+        <div class="shape shape1"></div>
+        <div class="shape shape2"></div>
+    </div>
+    <div id="ogl-canvas-container"></div>
+
+    <div id="login-container" class="login-container">
+        <div class="login-content">
+            <h1 class="title">Chào mừng!</h1>
+            <p class="subtitle">Đăng nhập để bắt đầu hành trình của bạn.</p>
+            <form id="login-form" class="login-form">
+                <div class="input-wrapper">
+                    <input id="email-input" type="email" placeholder="Email" class="login-input" required>
+                </div>
+                <div class="input-wrapper">
+                    <input id="password-input" type="password" placeholder="Mật khẩu" class="login-input" required>
+                </div>
+                <button type="submit" id="login-btn">Đăng nhập</button>
+            </form>
+            <p id="error-message" style="color: #ef4444; margin-top: 1rem; height: 1.25rem;"></p>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
-        const app = initializeApp(window.firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
+        // --- KHỞI TẠO HIỆU ỨNG NỀN ---
+        function runOglParticles() {
+            const { Renderer, Camera, Program, Geometry, Mesh, Transform } = window.OGL;
+            const container = document.getElementById('ogl-canvas-container');
+            if (!container) return;
 
-        const emailInput = document.getElementById('email-input');
-        const passwordInput = document.getElementById('password-input');
-        const loginBtn = document.getElementById('login-btn');
-        const errorMessage = document.getElementById('error-message');
+            const renderer = new Renderer({ dpr: 2, alpha: true });
+            const gl = renderer.gl;
+            container.appendChild(gl.canvas);
+            
+            const camera = new Camera(gl, { fov: 15, near: 1, far: 50 });
+            camera.position.set(0, 0, 20);
 
-        async function handleLogin() {
-            const email = emailInput.value;
-            const password = passwordInput.value;
+            const scene = new Transform();
+            const mouse = { x: 0, y: 0 };
+            const orientation = { beta: 0, gamma: 0 };
+            let useOrientation = false;
 
-            if (!email || !password) {
-                errorMessage.textContent = "Vui lòng nhập đầy đủ thông tin.";
-                return;
+            if (window.DeviceOrientationEvent) {
+                window.addEventListener('deviceorientation', (event) => {
+                    if (event.beta !== null && event.gamma !== null) {
+                        useOrientation = true;
+                        orientation.beta = event.beta;
+                        orientation.gamma = event.gamma;
+                    }
+                }, true);
             }
 
-            loginBtn.disabled = true;
-            loginBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
-            errorMessage.textContent = '';
+            document.addEventListener('mousemove', (e) => {
+                if (!useOrientation) {
+                    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                }
+            });
 
-            try {
-                const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                const user = userCredential.user;
-                
-                // Sau khi đăng nhập thành công, kiểm tra vai trò để điều hướng
-                await redirectUserBasedOnRole(user);
+            const vertex = `
+                attribute vec3 position; attribute vec4 random; attribute vec3 color;
+                uniform mat4 modelMatrix; uniform mat4 viewMatrix; uniform mat4 projectionMatrix;
+                uniform float uTime; uniform float uSpread; uniform float uBaseSize;
+                varying vec4 vRandom; varying vec3 vColor;
+                void main() {
+                    vRandom = random; vColor = color;
+                    vec3 pos = position * uSpread;
+                    vec4 mPos = modelMatrix * vec4(pos, 1.0);
+                    float t = uTime * 0.1;
+                    mPos.x += sin(t * random.z + 6.28 * random.w) * mix(0.1, 1.5, random.x);
+                    mPos.y += sin(t * random.y + 6.28 * random.x) * mix(0.1, 1.5, random.w);
+                    mPos.z += cos(t * random.w + 6.28 * random.y) * mix(0.1, 1.5, random.z);
+                    vec4 mvPos = viewMatrix * mPos;
+                    gl_PointSize = uBaseSize / -mvPos.z;
+                    gl_Position = projectionMatrix * mvPos;
+                }
+            `;
+            const fragment = `
+                precision highp float; varying vec3 vColor;
+                void main() {
+                    vec2 uv = gl_PointCoord.xy; float d = length(uv - vec2(0.5));
+                    float glow = smoothstep(0.5, 0.0, d) * 0.3; float core = smoothstep(0.2, 0.18, d);
+                    float alpha = max(core, glow); if (alpha < 0.01) discard;
+                    vec3 finalColor = vColor + vColor * pow(glow, 2.0) * 2.0;
+                    gl_FragColor = vec4(finalColor, alpha);
+                }
+            `;
+            const count = 800;
+            const positions = new Float32Array(count * 3);
+            const randoms = new Float32Array(count * 4);
+            const colors = new Float32Array(count * 3);
+            const palette = ['#a855f7', '#8b5cf6', '#22d3ee', '#f59e0b'];
+            const hexToRgb = (h) => { const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h); return r ? [parseInt(r[1], 16)/255, parseInt(r[2], 16)/255, parseInt(r[3], 16)/255] : [0,0,0]; };
+            for (let i = 0; i < count; i++) {
+                positions.set([(Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2], i * 3);
+                randoms.set([Math.random(), Math.random(), Math.random(), Math.random()], i * 4);
+                colors.set(hexToRgb(palette[Math.floor(Math.random() * palette.length)]), i * 3);
+            }
+            const geometry = new Geometry(gl, { position: { size: 3, data: positions }, random: { size: 4, data: randoms }, color: { size: 3, data: colors } });
+            const program = new Program(gl, { vertex, fragment, uniforms: { uTime: { value: 0 }, uSpread: { value: 10 }, uBaseSize: { value: 350 } }, transparent: true, depthTest: false });
+            const particles = new Mesh(gl, { mode: gl.POINTS, geometry, program });
+            particles.setParent(scene);
 
-            } catch (error) {
-                errorMessage.textContent = "Tên đăng nhập hoặc mật khẩu không chính xác.";
-                loginBtn.disabled = false;
-                loginBtn.textContent = 'Đăng nhập';
+            const resize = () => {
+                renderer.setSize(container.clientWidth, container.clientHeight);
+                camera.perspective({ aspect: gl.canvas.width / gl.canvas.height });
+            };
+            window.addEventListener("resize", resize, false);
+            resize();
+            
+            requestAnimationFrame(update);
+            function update(t) {
+                requestAnimationFrame(update);
+                program.uniforms.uTime.value = t * 0.001;
+                if (useOrientation) {
+                    scene.rotation.x = orientation.beta * (Math.PI / 180) * 0.2;
+                    scene.rotation.y = orientation.gamma * (Math.PI / 180) * 0.2;
+                } else {
+                    scene.rotation.y += (-mouse.x * 0.2 - scene.rotation.y) * 0.05;
+                    scene.rotation.x += (mouse.y * 0.2 - scene.rotation.x) * 0.05;
+                }
+                renderer.render({ scene, camera });
             }
         }
-        
-        async function redirectUserBasedOnRole(user) {
-            if (!user) return;
-            try {
-                const userDocRef = doc(db, "users", user.uid);
-                const userDocSnap = await getDoc(userDocRef);
 
-                if (userDocSnap.exists()) {
-                    const userData = userDocSnap.data();
-                    if (userData.role === 'teacher') {
-                        window.location.href = 'test-manager.html';
-                    } else if (userData.role === 'student') {
-    window.location.href = 'student-dashboard.html';
-} else {
-                        errorMessage.textContent = 'Tài khoản không được phân quyền.';
+        // --- KHỞI TẠO FIREBASE & LOGIC ĐĂNG NHẬP ---
+        function runLoginSystem() {
+            const app = initializeApp(window.firebaseConfig);
+            const db = getFirestore(app);
+            const auth = getAuth(app);
+
+            const loginForm = document.getElementById('login-form');
+            const emailInput = document.getElementById('email-input');
+            const passwordInput = document.getElementById('password-input');
+            const loginBtn = document.getElementById('login-btn');
+            const errorMessage = document.getElementById('error-message');
+
+            async function handleLogin(e) {
+                e.preventDefault();
+                const email = emailInput.value;
+                const password = passwordInput.value;
+
+                if (!email || !password) {
+                    errorMessage.textContent = "Vui lòng nhập đầy đủ thông tin.";
+                    return;
+                }
+
+                loginBtn.disabled = true;
+                loginBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+                errorMessage.textContent = '';
+
+                try {
+                    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                    await redirectUserBasedOnRole(userCredential.user);
+                } catch (error) {
+                    errorMessage.textContent = "Tên đăng nhập hoặc mật khẩu không chính xác.";
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Đăng nhập';
+                }
+            }
+
+            async function redirectUserBasedOnRole(user) {
+                if (!user) return;
+                try {
+                    const userDocRef = doc(db, "users", user.uid);
+                    const userDocSnap = await getDoc(userDocRef);
+
+                    if (userDocSnap.exists()) {
+                        const userData = userDocSnap.data();
+                        if (userData.role === 'teacher') {
+                            window.location.href = 'test-manager.html';
+                        } else if (userData.role === 'student') {
+                            window.location.href = 'student-dashboard.html';
+                        } else {
+                            errorMessage.textContent = 'Tài khoản không được phân quyền.';
+                            auth.signOut();
+                        }
+                    } else {
+                        errorMessage.textContent = 'Không tìm thấy thông tin người dùng.';
                         auth.signOut();
                     }
-                } else {
-                    errorMessage.textContent = 'Không tìm thấy thông tin người dùng.';
+                } catch (err) {
+                    errorMessage.textContent = 'Lỗi khi xác thực vai trò.';
                     auth.signOut();
+                } finally {
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Đăng nhập';
                 }
-            } catch (err) {
-                 errorMessage.textContent = 'Lỗi khi xác thực vai trò.';
-                 auth.signOut();
             }
+            
+            loginForm.addEventListener('submit', handleLogin);
         }
-        
-        loginBtn.addEventListener('click', handleLogin);
-        passwordInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handleLogin();
-        });
-        
+
+        // --- CHẠY CÁC SCRIPT ---
+        if (window.OGL) {
+            runOglParticles();
+        } else {
+            console.error("OGL library failed to load.");
+        }
+        runLoginSystem();
+
     </script>
 </body>
 </html>
