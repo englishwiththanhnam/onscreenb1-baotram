@@ -7,56 +7,158 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- OGL Library for 3D Particles -->
+    <script type="module">
+        import { Renderer, Camera, Transform, Program, Geometry, Mesh } from 'https://cdn.skypack.dev/ogl';
+        window.OGL = { Renderer, Camera, Transform, Program, Geometry, Mesh };
+    </script>
+    
     <style>
         :root {
-            --primary-accent: #6d28d9; --text-primary: #0f172a; --app-bg-start: #f5f7ff;
-            --app-bg-end: #e0e7ff; --glass-bg-color: rgba(255, 255, 255, 0.55);
-            --glass-border-color: rgba(255, 255, 255, 0.6);
+            --bg-dark: #111827;
+            --text-light: #f0f6fc;
+            --text-muted: #a2a6c3;
+            --glass-bg: rgba(31, 41, 55, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --primary-accent: #8b5cf6;
         }
-        body { font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--app-bg-start); background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%); }
-        .glass-panel { background: var(--glass-bg-color); backdrop-filter: blur(12px); border-radius: 24px; border: 1px solid var(--glass-border-color); box-shadow: 0 8px 32px 0 rgba(67, 56, 202, 0.15); }
-        .assignment-card { transition: all 0.2s ease-in-out; }
-        .assignment-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
-        .progress-bar { background-color: #e5e7eb; border-radius: 9999px; height: 6px; overflow: hidden; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+        }
+
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            overflow-x: hidden;
+        }
+
+        /* --- LỚP NỀN 3D --- */
+        .background-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .shape {
+            position: absolute; border-radius: 50%;
+            filter: blur(120px); opacity: 0.5;
+        }
+        .shape1 {
+            width: 40vw; height: 40vw; max-width: 450px; max-height: 450px;
+            background: #a855f7; top: -15%; left: -10%;
+            animation: float 28s infinite alternate ease-in-out;
+        }
+        .shape2 {
+            width: 35vw; height: 35vw; max-width: 400px; max-height: 400px;
+            background: #22d3ee; bottom: -15%; right: -10%;
+            animation: float 32s infinite alternate ease-in-out;
+        }
+        @keyframes float { from { transform: translateY(20px); } to { transform: translateY(-20px); } }
+
+        /* --- Giao diện chính --- */
+        .main-container {
+            position: relative;
+            z-index: 2;
+        }
+
+        .header-glass {
+            background: rgba(17, 24, 39, 0.6);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--glass-border);
+        }
+        
+        /* --- Thẻ bài tập --- */
+        @property --glow-opacity {
+          syntax: '<number>';
+          initial-value: 0;
+          inherits: false;
+        }
+        .assignment-card {
+            position: relative;
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, --glow-opacity 0.3s ease;
+            transform-style: preserve-3d;
+        }
+        .assignment-card:hover {
+            --glow-opacity: 1;
+            box-shadow: 0 15px 30px -10px rgba(0,0,0,0.4);
+        }
+        .assignment-card::before { /* Lớp viền glow */
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: inherit;
+            background: conic-gradient(from 180deg at 50% 50%, #22d3ee 0%, #a855f7 50%, #22d3ee 100%);
+            opacity: var(--glow-opacity);
+            transition: opacity 0.3s ease;
+            z-index: -1;
+        }
+        
+        .progress-bar { background-color: rgba(0,0,0,0.3); border-radius: 9999px; height: 6px; overflow: hidden; }
         .progress-bar-fill { background-color: var(--primary-accent); height: 100%; transition: width 0.4s ease; }
+
     </style>
 </head>
-<body class="p-8">
+<body class="p-0 sm:p-8">
 
-    <div id="loader-overlay" class="fixed inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-50">
-        <div class="w-16 h-16 border-4 border-t-violet-500 border-gray-200 rounded-full animate-spin"></div>
+    <div class="background-shapes background-layer">
+        <div class="shape shape1"></div>
+        <div class="shape shape2"></div>
+    </div>
+    <div id="ogl-canvas-back" class="background-layer"></div>
+
+    <div id="loader-overlay" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="w-16 h-16 border-4 border-t-violet-500 border-gray-600 rounded-full animate-spin"></div>
     </div>
 
-    <div id="main-content" class="max-w-screen-lg mx-auto" style="display: none;">
-        <header class="flex justify-between items-center mb-8">
+    <div id="main-content" class="main-container max-w-screen-xl mx-auto" style="display: none;">
+        <header class="sticky top-0 sm:top-8 z-10 header-glass p-4 sm:p-6 rounded-none sm:rounded-2xl flex justify-between items-center mb-8">
             <div>
-                <h1 class="text-4xl font-bold">Bài tập của bạn</h1>
-                <p id="student-name-display" class="text-lg text-gray-600"></p>
+                <h1 class="text-3xl font-bold">Bài tập của bạn</h1>
+                <p id="student-name-display" class="text-lg text-gray-400"></p>
             </div>
-            <button id="logout-btn" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">
+            <button id="logout-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">
                 <i class="fas fa-sign-out-alt mr-2"></i>Đăng xuất
             </button>
         </header>
 
-        <main class="space-y-8">
+        <main class="space-y-12 px-4 sm:px-0">
             <section id="todo-section">
                 <h2 class="text-2xl font-bold mb-4"><i class="fas fa-pencil-alt text-yellow-500 mr-3"></i>Bài tập cần làm</h2>
                 <div id="todo-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <p class="placeholder-text text-gray-500 col-span-full">Tuyệt vời! Bạn đã hoàn thành hết bài tập.</p>
+                    <p class="placeholder-text text-gray-400 col-span-full">Tuyệt vời! Bạn đã hoàn thành hết bài tập.</p>
                 </div>
             </section>
             
             <section id="overdue-section">
                 <h2 class="text-2xl font-bold mb-4"><i class="fas fa-exclamation-triangle text-red-500 mr-3"></i>Bài tập quá hạn</h2>
                 <div id="overdue-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                     <p class="placeholder-text text-gray-500 col-span-full">Không có bài tập nào bị quá hạn.</p>
+                     <p class="placeholder-text text-gray-400 col-span-full">Không có bài tập nào bị quá hạn.</p>
                 </div>
             </section>
 
             <section id="completed-section">
                 <h2 class="text-2xl font-bold mb-4"><i class="fas fa-check-circle text-green-500 mr-3"></i>Bài tập đã hoàn thành</h2>
                 <div id="completed-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                     <p class="placeholder-text text-gray-500 col-span-full">Bạn chưa hoàn thành bài tập nào.</p>
+                     <p class="placeholder-text text-gray-400 col-span-full">Bạn chưa hoàn thành bài tập nào.</p>
                 </div>
             </section>
         </main>
@@ -67,6 +169,54 @@
         import { getFirestore, collection, doc, getDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
         
+        // --- KHỞI TẠO 3D BACKGROUND ---
+        const { Renderer, Camera, Transform, Program, Geometry, Mesh } = window.OGL;
+        const container = document.getElementById('ogl-canvas-back');
+        if (container) {
+            const renderer = new Renderer({ dpr: 2, alpha: true });
+            const gl = renderer.gl;
+            container.appendChild(gl.canvas);
+            const camera = new Camera(gl, { fov: 15, near: 1, far: 100 });
+            camera.position.set(0, 0, 25);
+            const scene = new Transform();
+            const program = new Program(gl, {
+                vertex: `attribute vec3 position;attribute vec4 random;attribute vec3 color;uniform mat4 modelMatrix;uniform mat4 viewMatrix;uniform mat4 projectionMatrix;uniform float uTime;uniform float uSpread;uniform float uBaseSize;varying vec4 vRandom;varying vec3 vColor;void main(){vRandom=random;vColor=color;vec3 pos=position*uSpread;vec4 mPos=modelMatrix*vec4(pos,1.);float t=uTime*.1;mPos.x+=sin(t*random.z+6.28*random.w)*mix(.1,1.5,random.x);mPos.y+=sin(t*random.y+6.28*random.x)*mix(.1,1.5,random.w);mPos.z+=cos(t*random.w+6.28*random.y)*mix(.1,1.5,random.z);vec4 mvPos=viewMatrix*mPos;gl_PointSize=uBaseSize/-mvPos.z;gl_Position=projectionMatrix*mvPos;}`,
+                fragment: `precision highp float;varying vec3 vColor;void main(){vec2 uv=gl_PointCoord.xy;float d=length(uv-vec2(.5));float glow=smoothstep(.5,0.,d)*.3;float core=smoothstep(.2,.18,d);float alpha=max(core,glow);if(alpha<.01)discard;vec3 finalColor=vColor+vColor*pow(glow,2.)*2.;gl_FragColor=vec4(finalColor,alpha);}`,
+                uniforms: { uTime: { value: 0 }, uSpread: { value: 10 }, uBaseSize: { value: 350 } },
+                transparent: true, depthTest: false
+            });
+            const count = 1000;
+            const positions = new Float32Array(count * 3);
+            const randoms = new Float32Array(count * 4);
+            const colors = new Float32Array(count * 3);
+            const palette = ['#a855f7', '#8b5cf6', '#22d3ee', '#f59e0b'];
+            const hexToRgb = (h) => { const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h); return r ? [parseInt(r[1], 16)/255, parseInt(r[2], 16)/255, parseInt(r[3], 16)/255] : [0,0,0]; };
+            for (let i = 0; i < count; i++) {
+                const z = (Math.random() - 0.5) * 30;
+                positions.set([(Math.random() - 0.5) * 30, (Math.random() - 0.5) * 30, z], i * 3);
+                randoms.set([Math.random(), Math.random(), Math.random(), Math.random()], i * 4);
+                colors.set(hexToRgb(palette[Math.floor(Math.random() * palette.length)]), i * 3);
+            }
+            const geometry = new Geometry(gl, { position: { size: 3, data: positions }, random: { size: 4, data: randoms }, color: { size: 3, data: colors } });
+            const particles = new Mesh(gl, { mode: gl.POINTS, geometry, program });
+            particles.setParent(scene);
+            
+            function resize() {
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                camera.perspective({ aspect: window.innerWidth / window.innerHeight });
+            }
+            window.addEventListener("resize", resize, false);
+            resize();
+            
+            requestAnimationFrame(update);
+            function update(t) {
+                requestAnimationFrame(update);
+                program.uniforms.uTime.value = t * 0.001;
+                renderer.render({ scene, camera });
+            }
+        }
+
+        // --- KHỞI TẠO FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
@@ -147,51 +297,51 @@
                     ? `<span class="text-xs font-bold uppercase px-2 py-1 bg-red-200 text-red-800 rounded-full">Đề thi</span>`
                     : `<span class="text-xs font-bold uppercase px-2 py-1 bg-blue-200 text-blue-800 rounded-full">Bài tập</span>`;
 
-                let cardHTML = `<a href="${url}" class="assignment-card glass-panel p-6 flex flex-col justify-between">
-                                    <div>
-                                        <div class="flex justify-between items-center mb-2">
-                                            <p class="text-sm font-bold text-violet-700">${test.testType.toUpperCase()}</p>
-                                            ${typeBadge}
-                                        </div>
-                                        <h3 class="text-lg font-bold mb-2">${test.title}</h3>
-                                    </div>`;
+                let cardHTML = `<a href="${url}" class="assignment-card p-6 flex flex-col justify-between">
+                                        <div>
+                                            <div class="flex justify-between items-center mb-2">
+                                                <p class="text-sm font-bold text-violet-400">${test.testType.toUpperCase()}</p>
+                                                ${typeBadge}
+                                            </div>
+                                            <h3 class="text-lg font-bold mb-2 text-white">${test.title}</h3>
+                                        </div>`;
 
                 if (isSubmitted) {
                     completedCount++;
                     if (isVocab) {
                         const progress = sub.answers || {};
                         const finalTest = sub.finalTest || {};
-                        cardHTML += `<div class="mt-4 text-sm space-y-2">
+                        cardHTML += `<div class="mt-4 text-sm space-y-2 text-gray-300">
                                         <div>
-                                            <p>Tiến độ học: <span class="font-bold">${progress.learnedCount || 0}/${progress.totalItems || 'N/A'}</span></p>
+                                            <p>Tiến độ học: <span class="font-bold text-white">${progress.learnedCount || 0}/${progress.totalItems || 'N/A'}</span></p>
                                             <div class="progress-bar mt-1"><div class="progress-bar-fill" style="width: ${sub.score || 0}%;"></div></div>
                                         </div>
-                                        <p>KT cuối kỳ: <span class="font-bold">${finalTest.score !== undefined ? `${finalTest.score}%` : 'Chưa làm'}</span></p>
+                                        <p>KT cuối kỳ: <span class="font-bold text-white">${finalTest.score !== undefined ? `${finalTest.score}%` : 'Chưa làm'}</span></p>
                                         <div class="block w-full text-center bg-green-600 text-white font-bold py-2 px-4 rounded-lg mt-4">
                                             Tiếp tục học
                                         </div>
-                                     </div>`;
+                                    </div>`;
                     } else {
                         const onTime = sub.submissionTime && dueDate ? sub.submissionTime.toDate() <= dueDate : true;
                         cardHTML += `<div class="mt-4">
-                                        <p class="font-semibold">Điểm số: <span class="text-xl font-bold text-green-700">${sub.score}/${sub.totalPoints}</span></p>
-                                        <p class="text-sm text-gray-600">Trạng thái: ${onTime ? 'Nộp đúng hạn' : '<span class="text-red-600 font-bold">Nộp muộn</span>'}</p>
-                                        <div class="block w-full text-center bg-gray-500 text-white font-bold py-2 px-4 rounded-lg mt-4">
+                                        <p class="font-semibold text-gray-300">Điểm số: <span class="text-xl font-bold text-green-400">${sub.score}/${sub.totalPoints}</span></p>
+                                        <p class="text-sm text-gray-400">Trạng thái: ${onTime ? 'Nộp đúng hạn' : '<span class="text-red-400 font-bold">Nộp muộn</span>'}</p>
+                                        <div class="block w-full text-center bg-gray-600 text-white font-bold py-2 px-4 rounded-lg mt-4">
                                             Xem lại bài
                                         </div>
-                                     </div>`;
+                                    </div>`;
                     }
                     cardHTML += `</a>`;
                     DOM.completedList.innerHTML += cardHTML;
                 } else { // Not submitted
                     const buttonText = isVocab ? 'Bắt đầu học' : (isOverdue ? 'Làm bài (Quá hạn)' : 'Vào làm bài');
                     cardHTML += `<div class="mt-4">
-                                    <p class="text-sm text-gray-600">Hạn nộp: <span class="font-semibold">${dueDate ? dueDate.toLocaleString('vi-VN') : 'Không có'}</span></p>
-                                    <div class="block w-full text-center bg-violet-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-violet-800 transition-colors mt-4">
-                                        ${buttonText}
+                                        <p class="text-sm text-gray-400">Hạn nộp: <span class="font-semibold text-gray-200">${dueDate ? dueDate.toLocaleString('vi-VN') : 'Không có'}</span></p>
+                                        <div class="block w-full text-center bg-violet-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-violet-800 transition-colors mt-4">
+                                            ${buttonText}
+                                        </div>
                                     </div>
-                                 </div>
-                                 </a>`;
+                                    </a>`;
                     if (isOverdue) {
                         overdueCount++;
                         DOM.overdueList.innerHTML += cardHTML;
@@ -202,9 +352,24 @@
                 }
             });
             
-            if (todoCount === 0) DOM.todoList.innerHTML = `<p class="placeholder-text text-gray-500 col-span-full">Tuyệt vời! Bạn đã hoàn thành hết bài tập.</p>`;
-            if (overdueCount === 0) DOM.overdueList.innerHTML = `<p class="placeholder-text text-gray-500 col-span-full">Không có bài tập nào bị quá hạn.</p>`;
-            if (completedCount === 0) DOM.completedList.innerHTML = `<p class="placeholder-text text-gray-500 col-span-full">Bạn chưa hoàn thành bài tập nào.</p>`;
+            if (todoCount === 0) DOM.todoList.innerHTML = `<p class="placeholder-text text-gray-400 col-span-full">Tuyệt vời! Bạn đã hoàn thành hết bài tập.</p>`;
+            if (overdueCount === 0) DOM.overdueList.innerHTML = `<p class="placeholder-text text-gray-400 col-span-full">Không có bài tập nào bị quá hạn.</p>`;
+            if (completedCount === 0) DOM.completedList.innerHTML = `<p class="placeholder-text text-gray-400 col-span-full">Bạn chưa hoàn thành bài tập nào.</p>`;
+            
+            // Add 3D hover effect to new cards
+            document.querySelectorAll('.assignment-card').forEach(card => {
+                card.addEventListener('mousemove', (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const rotateX = (y / rect.height - 0.5) * -15; // Invert for natural feel
+                    const rotateY = (x / rect.width - 0.5) * 15;
+                    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0)';
+                });
+            });
         }
     </script>
 </body>
