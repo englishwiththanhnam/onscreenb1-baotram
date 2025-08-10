@@ -33,12 +33,11 @@
 
     <style>
         :root {
-            /* Yêu cầu 1: Đổi nền thành màu đen và cập nhật các màu khác */
-            --app-bg: #111827; /* Dark blue-gray */
+            --app-bg: #111827;
             --primary-accent: #8b5cf6;
-            --purple-text: #c4b5fd; /* Lighter purple for title */
-            --text-primary: #f9fafb; /* Light text */
-            --text-secondary: #d1d5db; /* Lighter secondary text */
+            --purple-text: #c4b5fd;
+            --text-primary: #f9fafb;
+            --text-secondary: #d1d5db;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { width: 100%; height: 100%; overflow: hidden; }
@@ -51,32 +50,32 @@
             justify-content: center;
             padding: 16px;
         }
-        .background-shapes {
+        
+        /* --- HIỆU ỨNG NỀN --- */
+        .background-shapes, #ogl-canvas-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 1; pointer-events: none;
         }
+        #ogl-canvas-container { z-index: 2; }
+
         .shape {
             position: absolute; border-radius: 50%;
-            filter: blur(120px); opacity: 0.5;
+            filter: blur(120px);
+            /* Trạng thái ban đầu cho hiệu ứng xuất hiện */
+            opacity: 0;
+            transform: scale(0.8);
+            transition: opacity 1.5s cubic-bezier(0.16, 1, 0.3, 1), transform 1.5s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .shape1 {
             width: 40vw; height: 40vw; max-width: 450px; max-height: 450px;
             background: #a855f7; top: -15%; left: -10%;
-            animation: float 28s infinite alternate ease-in-out;
         }
         .shape2 {
             width: 35vw; height: 35vw; max-width: 400px; max-height: 400px;
             background: #22d3ee; bottom: -15%; right: -10%;
-            animation: float 32s infinite alternate ease-in-out;
         }
-        @keyframes float {
-            from { transform: translateY(20px) scale(1) rotate(0deg); }
-            to { transform: translateY(-20px) scale(1.05) rotate(15deg); }
-        }
-        #ogl-canvas-container {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2;
-        }
-        #ogl-canvas-container canvas { width: 100%; height: 100%; display: block; }
+        
+        /* --- PANEL ĐĂNG NHẬP --- */
         .login-container {
             position: relative; z-index: 3; width: 100%; max-width: 420px;
             height: auto; border-radius: 24px; padding: 40px;
@@ -84,21 +83,37 @@
             backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            /* Trạng thái ban đầu cho hiệu ứng xuất hiện */
+            opacity: 0;
+            transform: scale(0.95);
+            transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s, transform 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s;
         }
+        
+        /* --- LỚP KÍCH HOẠT HIỆU ỨNG --- */
+        body.is-visible .login-container {
+            opacity: 1;
+            transform: scale(1);
+        }
+        body.is-visible .shape {
+            opacity: 0.5;
+            transform: scale(1);
+        }
+        body.is-exiting .login-container,
+        body.is-exiting .shape {
+            opacity: 0 !important;
+            transform: scale(0.9) !important;
+        }
+
         .login-content { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .title {
-            /* Yêu cầu 2: Sửa lỗi font */
-            font-family: 'Inter', sans-serif;
-            font-weight: 700;
-            font-size: 42px;
-            color: var(--purple-text);
-            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            font-family: 'Inter', sans-serif; font-weight: 700; font-size: 42px;
+            color: var(--purple-text); text-shadow: 0 1px 2px rgba(0,0,0,0.2);
             margin-bottom: 8px; text-align: center;
         }
         .subtitle { font-size: 16px; color: var(--text-secondary); margin-bottom: 32px; text-align: center; }
         .login-form { display: flex; flex-direction: column; gap: 20px; width: 100%; }
-        @property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
         .input-wrapper { position: relative; width: 100%; border-radius: 14px; }
+        @property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
         .input-wrapper::before, .input-wrapper::after {
             content: ''; position: absolute; inset: -2px; z-index: -1; border-radius: inherit;
             background: conic-gradient(from var(--angle), #a855f7, #8b5cf6 30%, #22d3ee 60%, #a855f7);
@@ -111,25 +126,22 @@
         @keyframes spin { to { --angle: 360deg; } }
         .login-input {
             width: 100%; padding: 14px 16px; border-radius: 12px; 
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(55, 65, 81, 0.5); 
+            border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(55, 65, 81, 0.5); 
             font-family: 'Inter', sans-serif; font-size: 16px; color: var(--text-primary);
             caret-color: var(--primary-accent); transition: all 0.2s ease-in-out;
             position: relative; z-index: 1;
         }
         .login-input::placeholder { color: var(--text-secondary); }
         .login-input:focus {
-            outline: none;
-            border-color: rgba(139, 92, 246, 0.6);
-            background: rgba(55, 65, 81, 0.8);
+            outline: none; border-color: rgba(139, 92, 246, 0.6); background: rgba(55, 65, 81, 0.8);
         }
         #login-btn {
             width: 100%; height: 52px; margin-top: 16px; display: grid; place-items: center;
             border-radius: 16px; border: none; background: var(--primary-accent);
-            cursor: pointer; transition: background 0.2s ease; user-select: none;
+            cursor: pointer; transition: background 0.2s ease, transform 0.2s ease; user-select: none;
             font-family: 'Poppins', sans-serif; font-size: 18px; font-weight: 600; color: #FFFFFF;
         }
-        #login-btn:hover:not(:disabled) { background: #5b21b6; }
+        #login-btn:hover:not(:disabled) { background: #5b21b6; transform: translateY(-2px); }
         #login-btn:disabled { opacity: 0.8; cursor: not-allowed; }
     </style>
 </head>
@@ -162,6 +174,9 @@
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
+        // --- BIẾN TOÀN CỤC CHO HIỆU ỨNG ---
+        let exitScene;
+
         // --- KHỞI TẠO HIỆU ỨNG NỀN ---
         function runOglParticles() {
             const { Renderer, Camera, Program, Geometry, Mesh, Transform } = window.OGL;
@@ -182,49 +197,18 @@
 
             if (window.DeviceOrientationEvent) {
                 window.addEventListener('deviceorientation', (event) => {
-                    if (event.beta !== null && event.gamma !== null) {
-                        useOrientation = true;
-                        orientation.beta = event.beta;
-                        orientation.gamma = event.gamma;
-                    }
+                    if (event.beta !== null && event.gamma !== null) { useOrientation = true; orientation.beta = event.beta; orientation.gamma = event.gamma; }
                 }, true);
             }
-
             document.addEventListener('mousemove', (e) => {
-                if (!useOrientation) {
-                    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-                    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-                }
+                if (!useOrientation) { mouse.x = (e.clientX / window.innerWidth) * 2 - 1; mouse.y = -(e.clientY / window.innerHeight) * 2 + 1; }
             });
 
-            const vertex = `
-                attribute vec3 position; attribute vec4 random; attribute vec3 color;
-                uniform mat4 modelMatrix; uniform mat4 viewMatrix; uniform mat4 projectionMatrix;
-                uniform float uTime; uniform float uSpread; uniform float uBaseSize;
-                varying vec4 vRandom; varying vec3 vColor;
-                void main() {
-                    vRandom = random; vColor = color;
-                    vec3 pos = position * uSpread;
-                    vec4 mPos = modelMatrix * vec4(pos, 1.0);
-                    float t = uTime * 0.1;
-                    mPos.x += sin(t * random.z + 6.28 * random.w) * mix(0.1, 1.5, random.x);
-                    mPos.y += sin(t * random.y + 6.28 * random.x) * mix(0.1, 1.5, random.w);
-                    mPos.z += cos(t * random.w + 6.28 * random.y) * mix(0.1, 1.5, random.z);
-                    vec4 mvPos = viewMatrix * mPos;
-                    gl_PointSize = uBaseSize / -mvPos.z;
-                    gl_Position = projectionMatrix * mvPos;
-                }
-            `;
-            const fragment = `
-                precision highp float; varying vec3 vColor;
-                void main() {
-                    vec2 uv = gl_PointCoord.xy; float d = length(uv - vec2(0.5));
-                    float glow = smoothstep(0.5, 0.0, d) * 0.3; float core = smoothstep(0.2, 0.18, d);
-                    float alpha = max(core, glow); if (alpha < 0.01) discard;
-                    vec3 finalColor = vColor + vColor * pow(glow, 2.0) * 2.0;
-                    gl_FragColor = vec4(finalColor, alpha);
-                }
-            `;
+            const vertex = `attribute vec3 position;attribute vec4 random;attribute vec3 color;uniform mat4 modelMatrix;uniform mat4 viewMatrix;uniform mat4 projectionMatrix;uniform float uTime;uniform float uSpread;uniform float uBaseSize;varying vec4 vRandom;varying vec3 vColor;void main(){vRandom=random;vColor=color;vec3 pos=position*uSpread;vec4 mPos=modelMatrix*vec4(pos,1.);float t=uTime*.1;mPos.x+=sin(t*random.z+6.28*random.w)*mix(.1,1.5,random.x);mPos.y+=sin(t*random.y+6.28*random.x)*mix(.1,1.5,random.w);mPos.z+=cos(t*random.w+6.28*random.y)*mix(.1,1.5,random.z);vec4 mvPos=viewMatrix*mPos;gl_PointSize=uBaseSize/-mvPos.z;gl_Position=projectionMatrix*mvPos;}`;
+            const fragment = `precision highp float;varying vec3 vColor;void main(){vec2 uv=gl_PointCoord.xy;float d=length(uv-vec2(.5));float glow=smoothstep(.5,0.,d)*.3;float core=smoothstep(.2,.18,d);float alpha=max(core,glow);if(alpha<.01)discard;vec3 finalColor=vColor+vColor*pow(glow,2.)*2.;gl_FragColor=vec4(finalColor,alpha);}`;
+            
+            const program = new Program(gl, { vertex, fragment, uniforms: { uTime: { value: 0 }, uSpread: { value: 1 }, uBaseSize: { value: 350 } }, transparent: true, depthTest: false });
+            
             const count = 800;
             const positions = new Float32Array(count * 3);
             const randoms = new Float32Array(count * 4);
@@ -237,14 +221,37 @@
                 colors.set(hexToRgb(palette[Math.floor(Math.random() * palette.length)]), i * 3);
             }
             const geometry = new Geometry(gl, { position: { size: 3, data: positions }, random: { size: 4, data: randoms }, color: { size: 3, data: colors } });
-            const program = new Program(gl, { vertex, fragment, uniforms: { uTime: { value: 0 }, uSpread: { value: 10 }, uBaseSize: { value: 350 } }, transparent: true, depthTest: false });
             const particles = new Mesh(gl, { mode: gl.POINTS, geometry, program });
             particles.setParent(scene);
 
-            const resize = () => {
-                renderer.setSize(container.clientWidth, container.clientHeight);
-                camera.perspective({ aspect: gl.canvas.width / gl.canvas.height });
+            // --- HIỆU ỨNG XUẤT HIỆN CHO HẠT ---
+            function animateValue(from, to, duration, easing, onUpdate) {
+                let startTime = null;
+                function animate(timestamp) {
+                    if (!startTime) startTime = timestamp;
+                    const progress = Math.min((timestamp - startTime) / duration, 1);
+                    const value = from + (to - from) * easing(progress);
+                    onUpdate(value);
+                    if (progress < 1) requestAnimationFrame(animate);
+                }
+                requestAnimationFrame(animate);
+            }
+            const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+            const easeInCubic = t => t * t * t;
+            
+            // Bắt đầu hiệu ứng tỏa ra
+            animateValue(1, 10, 2000, easeOutCubic, (value) => {
+                program.uniforms.uSpread.value = value;
+            });
+
+            // Gán hàm cho hiệu ứng biến mất
+            exitScene = () => {
+                animateValue(program.uniforms.uSpread.value, 0, 1000, easeInCubic, (value) => {
+                    program.uniforms.uSpread.value = value;
+                });
             };
+
+            const resize = () => { renderer.setSize(container.clientWidth, container.clientHeight); camera.perspective({ aspect: gl.canvas.width / gl.canvas.height }); };
             window.addEventListener("resize", resize, false);
             resize();
             
@@ -275,15 +282,22 @@
             const loginBtn = document.getElementById('login-btn');
             const errorMessage = document.getElementById('error-message');
 
+            // --- HÀM KÍCH HOẠT HIỆU ỨNG BIẾN MẤT VÀ CHUYỂN TRANG ---
+            function exitAndRedirect(url) {
+                document.body.classList.add('is-exiting');
+                if (typeof exitScene === 'function') {
+                    exitScene();
+                }
+                setTimeout(() => {
+                    window.location.href = url;
+                }, 1200); // Chờ hiệu ứng CSS và JS hoàn tất
+            }
+
             async function handleLogin(e) {
                 e.preventDefault();
                 const email = emailInput.value;
                 const password = passwordInput.value;
-
-                if (!email || !password) {
-                    errorMessage.textContent = "Vui lòng nhập đầy đủ thông tin.";
-                    return;
-                }
+                if (!email || !password) { errorMessage.textContent = "Vui lòng nhập đầy đủ thông tin."; return; }
 
                 loginBtn.disabled = true;
                 loginBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
@@ -291,43 +305,35 @@
 
                 try {
                     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                    await redirectUserBasedOnRole(userCredential.user);
-                } catch (error) {
-                    errorMessage.textContent = "Tên đăng nhập hoặc mật khẩu không chính xác.";
-                    loginBtn.disabled = false;
-                    loginBtn.textContent = 'Đăng nhập';
-                }
-            }
-
-            async function redirectUserBasedOnRole(user) {
-                if (!user) return;
-                try {
+                    const user = userCredential.user;
+                    if (!user) return;
+                    
                     const userDocRef = doc(db, "users", user.uid);
                     const userDocSnap = await getDoc(userDocRef);
 
                     if (userDocSnap.exists()) {
                         const userData = userDocSnap.data();
                         if (userData.role === 'teacher') {
-                            window.location.href = 'test-manager.html';
+                            exitAndRedirect('test-manager.html');
                         } else if (userData.role === 'student') {
-                            window.location.href = 'student-dashboard.html';
+                            exitAndRedirect('student-dashboard.html');
                         } else {
-                            errorMessage.textContent = 'Tài khoản không được phân quyền.';
-                            auth.signOut();
+                            throw new Error('Tài khoản không được phân quyền.');
                         }
                     } else {
-                        errorMessage.textContent = 'Không tìm thấy thông tin người dùng.';
-                        auth.signOut();
+                        throw new Error('Không tìm thấy thông tin người dùng.');
                     }
-                } catch (err) {
-                    errorMessage.textContent = 'Lỗi khi xác thực vai trò.';
-                    auth.signOut();
-                } finally {
+                } catch (error) {
+                    errorMessage.textContent = error.message === 'Tài khoản không được phân quyền.' || error.message === 'Không tìm thấy thông tin người dùng.'
+                        ? error.message
+                        : "Tên đăng nhập hoặc mật khẩu không chính xác.";
+                    
+                    if(error.message.includes('phân quyền') || error.message.includes('tìm thấy')) auth.signOut();
+                    
                     loginBtn.disabled = false;
                     loginBtn.textContent = 'Đăng nhập';
                 }
             }
-            
             loginForm.addEventListener('submit', handleLogin);
         }
 
@@ -338,6 +344,11 @@
             console.error("OGL library failed to load.");
         }
         runLoginSystem();
+
+        // Kích hoạt hiệu ứng xuất hiện sau khi trang đã sẵn sàng
+        window.addEventListener('load', () => {
+            document.body.classList.add('is-visible');
+        });
 
     </script>
 </body>
