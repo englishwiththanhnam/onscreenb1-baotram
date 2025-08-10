@@ -64,7 +64,7 @@
             /* Trạng thái ban đầu cho hiệu ứng xuất hiện */
             opacity: 0;
             transform: scale(0.8);
-            transition: opacity 4s cubic-bezier(0.16, 1, 0.3, 1), transform 4s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: opacity 1.5s cubic-bezier(0.16, 1, 0.3, 1), transform 1.5s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .shape1 {
             width: 40vw; height: 40vw; max-width: 450px; max-height: 450px;
@@ -224,7 +224,7 @@
             const particles = new Mesh(gl, { mode: gl.POINTS, geometry, program });
             particles.setParent(scene);
 
-            // --- HIỆU ỨNG XUẤT HIỆN CHO HẠT ---
+            // --- HIỆU ỨNG XUẤT HIỆN & BIẾN MẤT ---
             function animateValue(from, to, duration, easing, onUpdate) {
                 let startTime = null;
                 function animate(timestamp) {
@@ -246,8 +246,9 @@
 
             // Gán hàm cho hiệu ứng biến mất
             exitScene = () => {
-                animateValue(program.uniforms.uSpread.value, 0, 1000, easeInCubic, (value) => {
-                    program.uniforms.uSpread.value = value;
+                // Hiệu ứng hạt phóng về phía trước bằng cách di chuyển camera
+                animateValue(camera.position.z, -15, 1200, easeInCubic, (value) => {
+                    camera.position.z = value;
                 });
             };
 
