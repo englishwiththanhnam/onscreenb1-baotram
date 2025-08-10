@@ -219,7 +219,7 @@
             localClassesCache: [],
             localStudentsCache: [],
             localSubmissionsCache: [],
-            localContactLeadsCache: [], // <-- Dòng đã thêm
+            localContactLeadsCache: [], 
             assigningTest: null,
             locationHistory: ['root'],
             get currentLocationId() { return this.locationHistory[this.locationHistory.length - 1]; },
@@ -252,7 +252,6 @@
             confirmAssignmentBtn: document.getElementById('confirm-assignment-btn'),
         };
 
-        // HÀM MỚI ĐỂ HIỂN THỊ THÔNG BÁO
         function showToast(message) {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -267,7 +266,6 @@
             }, 5000);
         }
 
-        // HÀM MỚI ĐỂ RENDER BẢNG THÔNG TIN ĐĂNG KÝ
         function renderContactLeadsView() {
             const container = DOM.mainPanelView;
             const leads = appState.localContactLeadsCache.sort((a, b) => {
@@ -326,24 +324,21 @@
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // Chỉ kiểm tra vai trò khi có user, không làm gì ở lần chạy đầu tiên (user=null)
                 getDoc(doc(db, "users", user.uid)).then(userDoc => {
                     if (userDoc.exists() && userDoc.data().role === 'teacher') {
                         appState.currentUser = user;
                         DOM.loginScreen.classList.remove('is-open');
                         DOM.mainContent.style.display = 'block';
                         startDataListeners();
-                        // Dòng dưới chỉ có ở test-manager.html, nếu file là user-class-manager thì không cần
                         if(typeof changeCurrentLocation !== 'undefined') changeCurrentLocation('root', true); 
                     } else {
-                        auth.signOut(); // Đăng xuất nếu không đúng vai trò
+                        auth.signOut();
                         DOM.loginScreen.classList.add('is-open');
                         DOM.mainContent.style.display = 'none';
                         alert("Tài khoản không có quyền truy cập.");
                     }
                 });
             } else {
-                // Nếu chắc chắn không có user nào, hiện màn hình đăng nhập
                 appState.currentUser = null;
                 if(appState.unsubscribers) appState.unsubscribers.forEach(unsub => unsub());
                 appState.unsubscribers = [];
@@ -401,7 +396,6 @@
             });
             appState.unsubscribers.push(unsubSubmissions);
 
-            // Đoạn mã mới để lắng nghe contact-leads
             let isInitialLoad = true;
             const qLeads = query(collection(db, "contact-leads"));
             const unsubLeads = onSnapshot(qLeads, (snapshot) => {
@@ -433,7 +427,7 @@
                     renderDetailsView(test);
                 } else if (appState.mainPanelViewMode === 'gradebook') {
                     renderGradebookView();
-                } else if (appState.mainPanelViewMode === 'contactLeads') { // <-- Case đã thêm
+                } else if (appState.mainPanelViewMode === 'contactLeads') {
                     renderContactLeadsView();
                 } else {
                     renderFolderView();
@@ -771,29 +765,50 @@
             const dueDate = DOM.dueDateInput.value;
             if (!dueDate) return alert("Vui lòng chọn hạn nộp bài.");
 
-            const selectedStudentUids = [...new Set(Array.from(document.querySelectorAll('.student-checkbox:checked')).map(cb => cb.dataset.studentUid))];
-            if (selectedStudentUids.length === 0) return alert("Vui lòng chọn ít nhất một học sinh.");
-
             const test = appState.assigningTest;
             const batch = writeBatch(db);
 
-            selectedStudentUids.forEach(studentId => {
-                const submissionRef = doc(collection(db, "submissions"));
-                batch.set(submissionRef, {
-                    studentId: studentId,
-                    testId: test.id,
-                    testSnapshot: test,
-                    status: 'not-started',
-                    dueDate: new Date(dueDate),
-                    createdAt: serverTimestamp(),
-                    violationCount: 0,
-                    answers: {},
-                });
+            const classCheckboxes = document.querySelectorAll('.class-checkbox:checked');
+            if (classCheckboxes.length === 0) return alert("Vui lòng chọn ít nhất một lớp học.");
+            
+            const assignmentsByClass = {};
+            let totalStudentsAssigned = 0;
+
+            classCheckboxes.forEach(cb => {
+                const classId = cb.dataset.classId;
+                const studentsInClass = Array.from(cb.closest('.p-2').querySelectorAll('.student-checkbox:checked')).map(scb => scb.dataset.studentUid);
+                if (studentsInClass.length > 0) {
+                    assignmentsByClass[classId] = [...new Set(studentsInClass)];
+                }
             });
+
+            if (Object.keys(assignmentsByClass).length === 0) {
+                 return alert("Vui lòng chọn ít nhất một học sinh.");
+            }
+
+            for (const classId in assignmentsByClass) {
+                const studentUidsForClass = assignmentsByClass[classId];
+                totalStudentsAssigned += studentUidsForClass.length;
+
+                studentUidsForClass.forEach(studentId => {
+                    const submissionRef = doc(collection(db, "submissions"));
+                    batch.set(submissionRef, {
+                        studentId: studentId,
+                        classId: classId, // <-- Dòng quan trọng được thêm vào
+                        testId: test.id,
+                        testSnapshot: test,
+                        status: 'not-started',
+                        dueDate: new Date(dueDate),
+                        createdAt: serverTimestamp(),
+                        violationCount: 0,
+                        answers: {},
+                    });
+                });
+            }
 
             try {
                 await batch.commit();
-                alert(`Đã giao bài thành công cho ${selectedStudentUids.length} học sinh.`);
+                alert(`Đã giao bài thành công cho ${totalStudentsAssigned} học sinh.`);
                 DOM.assignmentModal.classList.remove('is-open');
             } catch (error) {
                 alert("Lỗi khi giao bài: " + error.message);
@@ -820,7 +835,6 @@
                 document.querySelectorAll('.special-location, .folder-tree-item').forEach(el => el.classList.remove('active'));
                 specialLocation.classList.add('active');
 
-                // Cập nhật logic điều hướng
                 if (locationId === 'contactLeads') {
                     appState.mainPanelViewMode = 'contactLeads';
                     renderMainPanel(true);
@@ -987,7 +1001,6 @@
         DOM.cancelAssignmentBtn.addEventListener('click', () => DOM.assignmentModal.classList.remove('is-open'));
         DOM.confirmAssignmentBtn.addEventListener('click', handleConfirmAssignment);
 
-        // Event Listener mới để cập nhật trạng thái
         DOM.mainPanelView.addEventListener('change', async (e) => {
             if (e.target.classList.contains('status-select')) {
                 const docId = e.target.dataset.docId;
