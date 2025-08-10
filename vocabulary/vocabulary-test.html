@@ -1,23 +1,13 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Học và Luyện tập Từ vựng</title>
-
-    <!-- Google Fonts & Icons -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <title>Vocabulary Learning & Practice</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- OGL Library for 3D Particles -->
-    <script type="module">
-        import { Renderer, Camera, Transform, Program, Geometry, Mesh } from 'https://cdn.skypack.dev/ogl';
-        window.OGL = { Renderer, Camera, Transform, Program, Geometry, Mesh };
-    </script>
-    
-    <!-- Firebase Config (Giữ nguyên của bạn) -->
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
@@ -30,286 +20,97 @@
         };
         window.firebaseConfig = firebaseConfig;
     </script>
-    
+
     <style>
         :root {
-            --bg-dark: #111827;
-            --text-light: #f0f6fc;
-            --text-secondary: #d1d5db;
-            --glass-bg: radial-gradient(ellipse at center, rgba(31, 41, 55, 0.65) 0%, rgba(31, 41, 55, 0.4) 100%);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --primary-accent: #8b5cf6;
-            --grad-color-1: #d8b4fe;
-            --grad-color-2: #a855f7;
-            --correct-color: #22c55e;
-            --incorrect-color: #ef4444;
+            --primary-color: #6d28d9; --primary-hover: #5b21b6;
+            --correct-color: #16a34a; --incorrect-color: #dc2626;
+            --bg-light: #f5f7ff; --bg-card: #ffffff; --text-primary: #0f172a;
+            --text-secondary: #475569; --border-color: #e5e7eb;
         }
-
-        /* --- CÀI ĐẶT CƠ BẢN --- */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html { scroll-behavior: smooth; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-light);
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        /* --- LỚP NỀN 3D --- */
-        .background-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .background-shapes { z-index: 1; }
-        #ogl-canvas-back { z-index: 2; }
-        #ogl-canvas-front { z-index: 4; }
-        .shape { position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.4; animation: float 20s ease-in-out infinite alternate; }
-        .shape1 { width: 40vw; height: 40vw; max-width: 450px; max-height: 450px; background: var(--grad-color-2); top: -15%; left: -10%; animation-delay: -10s;}
-        .shape2 { width: 35vw; height: 35vw; max-width: 400px; max-height: 400px; background: #22d3ee; bottom: -15%; right: -10%; }
-        @keyframes float { to { transform: translateY(20vh); } }
-
-        /* --- CONTAINER CHÍNH & HIỆU ỨNG PARALLAX --- */
-        #app-container {
-            max-width: 860px;
-            margin: 0 auto;
-            padding: 2rem 1rem;
-            position: relative;
-            z-index: 3;
-            display: none; /* Hiển thị bằng JS */
-            perspective: 1000px;
-        }
-        #app-header, #app-main {
-            transform-style: preserve-3d;
-            transition: transform 0.1s linear;
-        }
+        body { font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--bg-light); color: var(--text-primary); }
+        .btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-primary:hover:not(:disabled) { background-color: var(--primary-hover); }
+        .btn-secondary { background-color: var(--bg-card); color: var(--text-secondary); border-color: var(--border-color); }
+        .btn-secondary:hover { background-color: #f9fafb; }
+        .btn-danger { background-color: var(--incorrect-color); color: white; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .progress-bar { background-color: #e5e7eb; border-radius: 9999px; height: 8px; overflow: hidden; }
+        .progress-bar-fill { background-color: var(--primary-color); height: 100%; transition: width 0.4s ease; }
         
-        /* --- THẺ KÍNH (GLASS CARD) --- */
-        .glass-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            padding: 2rem;
-            border-radius: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        /* --- NÚT BẤM (CTA BUTTON) --- */
-        .cta-btn {
-            position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: 12px;
-            background: linear-gradient(90deg, var(--primary-accent), #6d28d9);
-            font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 16px;
-            padding: 12px 24px; border-radius: 99px; border: none; cursor: pointer;
-            text-decoration: none; color: rgba(255,255,255,0.95);
-            box-shadow: inset 0 1px 1px rgba(255,255,255,0.2), inset 0 -1px 1px rgba(0,0,0,0.1), 0 10px 20px -8px rgba(139, 92, 246, 0.5);
-            transition: all 0.3s ease;
-        }
-        .cta-btn > * { z-index: 2; }
-        .cta-btn:hover:not(:disabled) { transform: translateY(-3px); box-shadow: inset 0 1px 1px rgba(255,255,255,0.2), inset 0 -1px 1px rgba(0,0,0,0.1), 0 12px 25px -8px rgba(139, 92, 246, 0.8); }
-        .cta-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-        .cta-btn.secondary {
-            background: transparent; border: 2px solid #4a5568; box-shadow: none; color: var(--text-secondary);
-        }
-        .cta-btn.secondary:hover:not(:disabled) { background: rgba(139, 92, 246, 0.15); border-color: var(--primary-accent); color: white; }
-        .cta-btn.danger { background: linear-gradient(90deg, #ef4444, #b91c1c); box-shadow: 0 10px 20px -8px rgba(239, 68, 68, 0.5); }
-        .cta-btn.danger:hover:not(:disabled) { box-shadow: 0 12px 25px -8px rgba(239, 68, 68, 0.8); }
-        .cta-btn::before {
-            content: ''; position: absolute; z-index: 1; inset: 0;
-            background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
-            background-size: 250% 100%; background-position: 150% 0; transition: background-position 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .cta-btn:hover:not(:disabled)::before { background-position: -50% 0; }
-
-        /* --- TIÊU ĐỀ & THANH TIẾN ĐỘ --- */
-        .app-header-content { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; }
-        .progress-bar { background-color: rgba(0,0,0,0.2); border-radius: 9999px; height: 8px; overflow: hidden; width: 100%; }
-        .progress-bar-fill { background: linear-gradient(90deg, var(--grad-color-1), var(--primary-accent)); height: 100%; transition: width 0.4s ease; }
-
-        /* --- DASHBOARD --- */
-        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
-        .dashboard-grid .cta-btn { text-align: left; justify-content: flex-start; padding: 1rem; height: 100%; border-radius: 1rem;}
-        .dashboard-grid .cta-btn > div:first-child { width: 2rem; text-align: center; }
-
-        /* --- FLASHCARD --- */
-        .flashcard-viewer { display: flex; flex-direction: column; min-height: 70vh; }
-        .flashcard-main { flex-grow: 1; display: flex; align-items: center; justify-content: center; perspective: 1000px; padding: 1rem 0; }
-        .flashcard { width: 100%; height: 350px; cursor: pointer; position: relative; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1); }
+        .flashcard-viewer { display: flex; flex-direction: column; height: 70vh; max-width: 800px; margin: 0 auto; }
+        .flashcard-main { flex-grow: 1; display: flex; align-items: center; justify-content: center; perspective: 1000px; }
+        .flashcard { width: 100%; height: 80%; max-height: 400px; cursor: pointer; position: relative; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1); }
         .flashcard.is-flipped { transform: rotateY(180deg); }
-        .flashcard-face {
-            position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--glass-border);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); padding: 2rem; border-radius: 1.5rem; text-align: center;
-        }
-        .flashcard-back { transform: rotateY(180deg); background: radial-gradient(ellipse at center, rgba(55, 65, 81, 0.7) 0%, rgba(55, 65, 81, 0.5) 100%); }
-        .audio-btn {
-            position: absolute; top: 1.5rem; right: 1.5rem; width: 44px; height: 44px; border-radius: 50%;
-            background-color: rgba(255, 255, 255, 0.1); color: var(--text-secondary); cursor: pointer;
-            display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; z-index: 10; border: none;
-        }
-        .audio-btn:hover { background-color: var(--primary-accent); color: white; }
-
-        /* --- CÁC THÀNH PHẦN LUYỆN TẬP --- */
-        .answer-option {
-            display: block; width: 100%; padding: 1rem; border: 2px solid var(--glass-border); border-radius: 0.75rem;
-            background-color: rgba(255,255,255,0.05); text-align: left; font-weight: 500; color: var(--text-light);
-            cursor: pointer; transition: all 0.2s ease;
-        }
-        .answer-option:hover:not(.disabled) { border-color: var(--primary-accent); background-color: rgba(139, 92, 246, 0.1); }
-        .answer-option.disabled { cursor: not-allowed; opacity: 0.6; }
-        .answer-option.correct { border-color: var(--correct-color); background-color: rgba(34, 197, 94, 0.1); color: #a7f3d0; font-weight: bold; }
-        .answer-option.incorrect { border-color: var(--incorrect-color); background-color: rgba(239, 68, 68, 0.1); color: #fca5a5; font-weight: bold; }
-        .text-input-wrapper { position: relative; width: 100%; border-radius: 14px; }
-        @property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
-        .text-input-wrapper::before, .text-input-wrapper::after { content: ''; position: absolute; inset: -2px; z-index: -1; border-radius: inherit; background: conic-gradient(from var(--angle), #a855f7, #8b5cf6 30%, #22d3ee 60%, #a855f7); opacity: 0; transition: opacity 0.3s ease; animation: spin 4s linear infinite paused; }
-        .text-input-wrapper::after { filter: blur(10px); }
-        .text-input-wrapper:has(.text-input:focus)::before, .text-input-wrapper:has(.text-input:focus)::after { opacity: 1; animation-play-state: running; }
-        @keyframes spin { to { --angle: 360deg; } }
-        .text-input { width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(55, 65, 81, 0.5); font-family: 'Inter', sans-serif; font-size: 16px; color: var(--text-light); caret-color: var(--primary-accent); transition: all 0.2s ease-in-out; position: relative; z-index: 1; }
-        .text-input::placeholder { color: var(--text-secondary); }
-        .text-input:focus { outline: none; border-color: rgba(139, 92, 246, 0.6); background: rgba(55, 65, 81, 0.8); }
-        .token-area { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 1rem; border: 2px dashed rgba(255, 255, 255, 0.2); border-radius: 0.5rem; min-height: 80px; }
-        .word-token { padding: 0.5rem 1rem; background-color: rgba(139, 92, 246, 0.2); color: #d8b4fe; border-radius: 0.5rem; font-weight: 500; cursor: pointer; transition: background-color 0.2s; }
-        .word-token:hover { background-color: rgba(139, 92, 246, 0.4); }
-
-        /* --- MINDMAP --- */
-        .mindmap-node { position: absolute; width: 120px; height: 120px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: transform 0.3s ease; }
-        .mindmap-node:hover { transform: scale(1.05); }
-        .mindmap-node.center { background: linear-gradient(135deg, var(--primary-accent), #6d28d9); color: white; font-weight: bold; font-size: 1.1rem; z-index: 10; }
-        .mindmap-node.child { background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-light); }
-        .mindmap-line { position: absolute; height: 2px; background: var(--glass-border); transform-origin: 0 50%; z-index: 5; }
-
-        /* --- MODAL --- */
-        #modal-container { position: relative; z-index: 50; }
-        .modal-overlay { position: fixed; inset: 0; background-color: rgba(17, 24, 39, 0.8); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; padding: 1rem; animation: fadeIn 0.3s ease; }
-        .modal-content { max-width: 500px; width: 100%; }
-
-        /* --- LOADER --- */
-        #loader-overlay {
-            position: fixed; inset: 0; background-color: rgba(17, 24, 39, 0.8); backdrop-filter: blur(8px);
-            display: flex; align-items: center; justify-content: center; z-index: 60;
-            flex-direction: column;
-        }
-        .loader-spinner {
-            width: 64px; height: 64px; border: 8px solid rgba(255,255,255,0.2);
-            border-top-color: var(--primary-accent); border-radius: 50%; animation: spin 1s linear infinite;
-        }
+        .flashcard-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 1rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07); padding: 2rem; text-align: center; border: 1px solid var(--border-color); }
+        .flashcard-front { background-image: linear-gradient(to top right, var(--bg-card), #f7f8ff); }
+        .flashcard-back { transform: rotateY(180deg); background-color: #f9fafb; }
         
-        /* --- HIỆU ỨNG --- */
-        .fade-in { animation: fadeIn 0.5s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slideOutLeft { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-100%); opacity: 0; } }
         @keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+        @keyframes slideInLeft { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideInRight { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         .slide-out-left { animation: slideOutLeft 0.3s forwards ease-in-out; }
         .slide-out-right { animation: slideOutRight 0.3s forwards ease-in-out; }
+        .slide-in-left { animation: slideInLeft 0.3s forwards ease-in-out; }
+        .slide-in-right { animation: slideInRight 0.3s forwards ease-in-out; }
+
+        .answer-option { display: block; width: 100%; padding: 1rem; border: 2px solid var(--border-color); border-radius: 0.75rem; background-color: var(--bg-card); text-align: left; font-weight: 500; }
+        .answer-option:hover:not(.disabled) { border-color: var(--primary-color); background-color: #f5f3ff; }
+        .answer-option.disabled { cursor: not-allowed; }
+        .answer-option.correct { border-color: var(--correct-color); background-color: #f0fdf4; color: #14532d; }
+        .answer-option.incorrect { border-color: var(--incorrect-color); background-color: #fef2f2; color: #991b1b; }
+        .token-area { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 1rem; border: 2px dashed #cbd5e1; border-radius: 0.5rem; min-height: 80px; }
+        .word-token { padding: 0.5rem 1rem; background-color: #eef2ff; color: #4338ca; border-radius: 0.5rem; font-weight: 500; cursor: pointer; }
+        .speed-control { display: flex; align-items: center; gap: 0.5rem; background-color: rgba(255, 255, 255, 0.5); padding: 4px 8px; border-radius: 9999px; }
+
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .audio-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: rgba(0,0,0,0.05);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+        .audio-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .mindmap-node { position: absolute; width: 110px; height: 110px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .mindmap-node.center { background-color: var(--primary-color); color: white; font-weight: bold; font-size: 1.1rem; z-index: 10; }
+        .mindmap-node.child { background-color: white; color: var(--text-primary); }
+        .mindmap-line { position: absolute; height: 2px; background-color: #cbd5e1; transform-origin: 0 50%; z-index: 5; }
     </style>
 </head>
 <body>
-    
-    <div class="background-shapes background-layer">
-        <div class="shape shape1"></div>
-        <div class="shape shape2"></div>
+    <div id="loader-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="text-center">
+            <div class="w-16 h-16 border-8 border-t-violet-500 border-gray-200 rounded-full animate-spin"></div>
+            <p id="loader-text" class="text-lg font-semibold text-white mt-4">Loading lesson data...</p>
+        </div>
     </div>
-    <div id="ogl-canvas-back" class="background-layer"></div>
-    <div id="ogl-canvas-front" class="background-layer"></div>
-
-    <div id="loader-overlay">
-        <div class="loader-spinner"></div>
-        <p id="loader-text" style="font-size: 1.125rem; font-weight: 600; color: white; margin-top: 1rem;">Đang tải dữ liệu bài học...</p>
-    </div>
-    
     <div id="modal-container"></div>
-    
-    <div id="app-container">
-        <header id="app-header" style="transform: translateZ(20px);"></header>
-        <main id="app-main" style="transform: translateZ(50px);"></main>
+    <div id="app-container" class="max-w-4xl mx-auto p-4 sm:p-8 hidden">
+        <header id="app-header" class="mb-8"></header>
+        <main id="app-main"></main>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-
-        // --- SCRIPT 3D PARTICLE BACKGROUND ---
-        const OGL = window.OGL;
-        if (OGL) {
-            const createParticleSystem = (containerId, zRange) => {
-                const container = document.getElementById(containerId);
-                if (!container) return null;
-                const renderer = new OGL.Renderer({ dpr: 2, alpha: true });
-                const gl = renderer.gl;
-                container.appendChild(gl.canvas);
-                const camera = new OGL.Camera(gl, { fov: 15, near: 1, far: 100 });
-                camera.position.set(0, 0, 25);
-                const scene = new OGL.Transform();
-                const program = new OGL.Program(gl, {
-                    vertex: `attribute vec3 position;attribute vec4 random;attribute vec3 color;uniform mat4 modelMatrix;uniform mat4 viewMatrix;uniform mat4 projectionMatrix;uniform float uTime;uniform float uSpread;uniform float uBaseSize;varying vec4 vRandom;varying vec3 vColor;void main(){vRandom=random;vColor=color;vec3 pos=position*uSpread;vec4 mPos=modelMatrix*vec4(pos,1.);float t=uTime*.1;mPos.x+=sin(t*random.z+6.28*random.w)*mix(.1,1.5,random.x);mPos.y+=sin(t*random.y+6.28*random.x)*mix(.1,1.5,random.w);mPos.z+=cos(t*random.w+6.28*random.y)*mix(.1,1.5,random.z);vec4 mvPos=viewMatrix*mPos;gl_PointSize=uBaseSize/-mvPos.z;gl_Position=projectionMatrix*mvPos;}`,
-                    fragment: `precision highp float;varying vec3 vColor;void main(){vec2 uv=gl_PointCoord.xy;float d=length(uv-vec2(.5));float glow=smoothstep(.5,0.,d)*.3;float core=smoothstep(.2,.18,d);float alpha=max(core,glow);if(alpha<.01)discard;vec3 finalColor=vColor+vColor*pow(glow,2.)*2.;gl_FragColor=vec4(finalColor,alpha);}`,
-                    uniforms: { uTime: { value: 0 }, uSpread: { value: 1 }, uBaseSize: { value: 350 } },
-                    transparent: true, depthTest: false
-                });
-                const count = 500;
-                const positions = new Float32Array(count * 3);
-                const randoms = new Float32Array(count * 4);
-                const colors = new Float32Array(count * 3);
-                const palette = ['#a855f7', '#8b5cf6', '#22d3ee', '#f59e0b'];
-                const hexToRgb = (h) => { const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h); return r ? [parseInt(r[1], 16)/255, parseInt(r[2], 16)/255, parseInt(r[3], 16)/255] : [0,0,0]; };
-                for (let i = 0; i < count; i++) {
-                    const z = zRange[0] + Math.random() * (zRange[1] - zRange[0]);
-                    positions.set([(Math.random() - 0.5) * 30, (Math.random() - 0.5) * 30, z], i * 3);
-                    randoms.set([Math.random(), Math.random(), Math.random(), Math.random()], i * 4);
-                    colors.set(hexToRgb(palette[Math.floor(Math.random() * palette.length)]), i * 3);
-                }
-                const geometry = new OGL.Geometry(gl, { position: { size: 3, data: positions }, random: { size: 4, data: randoms }, color: { size: 3, data: colors } });
-                const particles = new OGL.Mesh(gl, { mode: gl.POINTS, geometry, program });
-                particles.setParent(scene);
-                return { renderer, camera, scene, program };
-            };
-            const backParticles = createParticleSystem('ogl-canvas-back', [-20, -1]);
-            const frontParticles = createParticleSystem('ogl-canvas-front', [1, 20]);
-            
-            const mouse = { x: 0, y: 0 };
-            document.addEventListener('mousemove', (e) => {
-                mouse.x = (e.clientX / window.innerWidth) - 0.5;
-                mouse.y = (e.clientY / window.innerHeight) - 0.5;
-
-                const rotateX = -mouse.y * 3;
-                const rotateY = mouse.x * 3;
-                
-                const appHeader = document.getElementById('app-header');
-                const appMain = document.getElementById('app-main');
-                if (appHeader) appHeader.style.transform = `translateZ(20px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-                if (appMain) appMain.style.transform = `translateZ(50px) rotateX(${rotateX*1.5}deg) rotateY(${rotateY*1.5}deg)`;
-            });
-
-            const resize = () => {
-                if (backParticles) {
-                    backParticles.renderer.setSize(window.innerWidth, window.innerHeight);
-                    backParticles.camera.perspective({ aspect: window.innerWidth / window.innerHeight });
-                }
-                if (frontParticles) {
-                    frontParticles.renderer.setSize(window.innerWidth, window.innerHeight);
-                    frontParticles.camera.perspective({ aspect: window.innerWidth / window.innerHeight });
-                }
-            };
-            window.addEventListener("resize", resize, false);
-            resize();
-            
-            const update = (t) => {
-                requestAnimationFrame(update);
-                if (backParticles) {
-                    backParticles.program.uniforms.uTime.value = t * 0.001;
-                    backParticles.scene.rotation.y += (-mouse.x * 0.1 - backParticles.scene.rotation.y) * 0.05;
-                    backParticles.scene.rotation.x += (mouse.y * 0.1 - backParticles.scene.rotation.x) * 0.05;
-                    backParticles.renderer.render({ scene: backParticles.scene, camera: backParticles.camera });
-                }
-                if (frontParticles) {
-                    frontParticles.program.uniforms.uTime.value = t * 0.001;
-                    frontParticles.scene.rotation.y += (-mouse.x * 0.15 - frontParticles.scene.rotation.y) * 0.05;
-                    frontParticles.scene.rotation.x += (mouse.y * 0.15 - frontParticles.scene.rotation.x) * 0.05;
-                    frontParticles.renderer.render({ scene: frontParticles.scene, camera: frontParticles.camera });
-                }
-            };
-            requestAnimationFrame(update);
-        }
 
         const App = {
             state: {
@@ -358,10 +159,10 @@
                 const submissionId = params.get('submission_id');
 
                 if (!submissionId) {
-                    this.showModal("Lỗi", "Không tìm thấy mã bài làm (Submission ID).");
+                    this.showModal("Error", "Submission ID not found.");
                     return;
                 }
-
+                
                 this.state.submissionId = submissionId;
                 await this.startSession(submissionId);
             },
@@ -375,6 +176,7 @@
                     let submissionData = submissionSnap.data();
                     
                     this.state.session.isCompleted = submissionData.status === 'submitted';
+
                     if (submissionData.finalTest && submissionData.finalTest.status === 'completed') {
                         this.state.session.finalTestTaken = true;
                         this.state.session.finalTestScore = submissionData.finalTest.score;
@@ -383,21 +185,24 @@
                     this.state.testData = submissionData.testSnapshot;
                     
                     const userDoc = await getDoc(doc(this.state.db, "users", submissionData.studentId));
-                    this.state.studentName = userDoc.exists() ? userDoc.data().displayName : "Không rõ";
+                    if (userDoc.exists()) {
+                        this.state.studentName = userDoc.data().displayName;
+                    } else {
+                        this.state.studentName = "Không rõ";
+                    }
 
                     this.state.wordList = this.state.testData.wordList || [];
                     
                     this.processData();
                     this.loadProgress();
                     
-                    this.DOM.loader.style.display = 'none';
-                    this.DOM.container.style.display = 'block';
+                    this.DOM.loader.classList.add('hidden');
+                    this.DOM.container.classList.remove('hidden');
                     
                     this.renderHeader();
                     this.renderDashboard();
                 } catch (error) {
-                    this.showModal("Lỗi", error.message);
-                    this.DOM.loader.style.display = 'none';
+                    this.showModal("Error", error.message);
                 }
             },
             
@@ -445,16 +250,14 @@
                 const buttonIcon = isCompleted ? "fa-sync-alt" : "fa-check-circle";
 
                 this.DOM.header.innerHTML = `
-                    <div class="glass-card">
-                        <div class="app-header-content">
-                            <div>
-                                <h1 style="font-family: 'Poppins', sans-serif; font-size: 1.75rem; font-weight: 700;">${this.state.testData.title}</h1>
-                                <p style="font-size: 0.9rem; color: var(--text-secondary);">Học sinh: <span style="font-weight: 600; color: var(--text-light);">${this.state.studentName}</span></p>
-                            </div>
-                            <div style="display: flex; gap: 0.75rem;">
-                                <a href="student-dashboard.html" class="cta-btn secondary"><i class="fas fa-arrow-left"></i><span>Dashboard</span></a>
-                                <button id="submit-final-btn" class="cta-btn"><i class="fas ${buttonIcon}"></i><span>${buttonText}</span></button>
-                            </div>
+                    <div class="flex flex-wrap justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-800">${this.state.testData.title}</h1>
+                            <p class="text-sm text-gray-500">Học sinh: <span class="font-medium">${this.state.studentName}</span></p>
+                        </div>
+                        <div>
+                            <a href="student-dashboard.html" class="btn btn-secondary mr-2"><i class="fas fa-arrow-left mr-2"></i> Dashboard</a>
+                            <button id="submit-final-btn" class="btn btn-primary"><i class="fas ${buttonIcon} mr-2"></i> ${buttonText}</button>
                         </div>
                     </div>`;
                 document.getElementById('submit-final-btn').addEventListener('click', () => {
@@ -470,6 +273,7 @@
                 const structLearned = structureList.filter(s => progress.learnedItems.has(s.id)).length;
                 const vocabProgress = wordList.length > 0 ? (vocabLearned / wordList.length * 100) : 0;
                 const structProgress = structureList.length > 0 ? (structLearned / structureList.length * 100) : 0;
+
                 const totalItems = wordList.length + structureList.length;
                 const learnedCount = progress.learnedItems.size;
                 const overallProgress = totalItems > 0 ? (learnedCount / totalItems * 100) : 0;
@@ -484,39 +288,41 @@
                 }
 
                 this.DOM.main.innerHTML = `
-                    <div class="fade-in">
-                        <div class="glass-card">
-                             <h2 style="font-family: 'Poppins'; font-size: 1.25rem; font-weight: 600; margin-bottom: 1.5rem;">Tổng quan Tiến độ</h2>
-                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                                 <div><p style="font-weight: 500; margin-bottom: 0.5rem;">Từ vựng đã học</p><div class="progress-bar"><div class="progress-bar-fill" style="width: ${vocabProgress.toFixed(0)}%;"></div></div><p style="text-align: right; font-size: 0.875rem; margin-top: 0.25rem; color: var(--text-secondary);">${vocabLearned}/${wordList.length}</p></div>
-                                 <div><p style="font-weight: 500; margin-bottom: 0.5rem;">Cấu trúc đã học</p><div class="progress-bar"><div class="progress-bar-fill" style="width: ${structProgress.toFixed(0)}%;"></div></div><p style="text-align: right; font-size: 0.875rem; margin-top: 0.25rem; color: var(--text-secondary);">${structLearned}/${structureList.length}</p></div>
-                             </div>
-                        </div>
-                        <div class="glass-card">
-                            <h2 style="font-family: 'Poppins'; font-size: 1.25rem; font-weight: 600; margin-bottom: 1.5rem;">Chế độ Học 📚</h2>
-                            <div id="study-buttons" class="dashboard-grid">
-                                <button data-study-mode="vocab-flashcard" class="cta-btn secondary"><div><i class="fas fa-clone" style="color:#d8b4fe;"></i></div><div><p style="font-weight: bold;">Flashcard Từ vựng</p><p style="font-size: 0.8rem; font-weight: 400; color: var(--text-secondary);">Học từ mới qua flashcard.</p></div></button>
-                                <button data-study-mode="mindmap" class="cta-btn secondary"><div><i class="fas fa-project-diagram" style="color:#7dd3fc;"></i></div><div><p style="font-weight: bold;">Sơ đồ Từ loại</p><p style="font-size: 0.8rem; font-weight: 400; color: var(--text-secondary);">Khám phá mối liên hệ từ.</p></div></button>
-                                <button data-study-mode="struct-flashcard" class="cta-btn secondary"><div><i class="fas fa-sitemap" style="color:#6ee7b7;"></i></div><div><p style="font-weight: bold;">Flashcard Cấu trúc</p><p style="font-size: 0.8rem; font-weight: 400; color: var(--text-secondary);">Học các cấu trúc câu chính.</p></div></button>
+                    <div class="space-y-8 fade-in">
+                        <div class="bg-white p-6 rounded-xl shadow-sm">
+                             <h2 class="text-xl font-bold mb-4">Tổng quan Tiến độ</h2>
+                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                 <div><p class="font-medium mb-1">Từ vựng đã học</p><div class="progress-bar"><div class="progress-bar-fill" style="width: ${vocabProgress.toFixed(0)}%;"></div></div><p class="text-right text-sm mt-1">${vocabLearned}/${wordList.length}</p></div>
+                                 <div><p class="font-medium mb-1">Cấu trúc đã học</p><div class="progress-bar"><div class="progress-bar-fill" style="width: ${structProgress.toFixed(0)}%;"></div></div><p class="text-right text-sm mt-1">${structLearned}/${structureList.length}</p></div>
                             </div>
                         </div>
-                        <div class="glass-card">
-                            <h2 style="font-family: 'Poppins'; font-size: 1.25rem; font-weight: 600; margin-bottom: 1.5rem;">Chế độ Luyện tập 🏋️‍♀️</h2>
-                            <div id="practice-buttons" style="display: flex; flex-direction: column; gap: 1rem;">
-                                 <div style="display: flex; flex-direction: column; sm:flex-direction: row; gap: 1rem;">
-                                     <button data-practice-mode="normal" class="cta-btn" style="flex:1;"><i class="fas fa-random"></i><span>Luyện tập Thường</span></button>
-                                     <button data-practice-mode="weakness" class="cta-btn secondary" style="flex:1; border-color: #f59e0b; color: #f59e0b;"><i class="fas fa-star-half-alt"></i><span>Ôn tập Điểm yếu</span></button>
-                                 </div>
-                                 ${ isEligibleForFinalTest ? `
-                                     <button id="start-final-test-btn" class="cta-btn danger" style="width: 100%; margin-top: 1rem; padding: 1rem; font-size: 1.1rem;" ${this.state.session.finalTestTaken ? 'disabled' : ''}>
-                                         <i class="fas fa-graduation-cap"></i>
-                                         <span>${this.state.session.finalTestTaken ? `Đã làm KT cuối kỳ (Điểm: ${this.state.session.finalTestScore}%)` : 'Bắt đầu KT cuối kỳ'}</span>
-                                     </button>
-                                 ` : '' }
+                        <div class="bg-white p-6 rounded-xl shadow-sm">
+                            <h2 class="text-xl font-bold mb-4">Chế độ Học 📚</h2>
+                            <div id="study-buttons" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <button data-study-mode="vocab-flashcard" class="btn btn-secondary !p-4 !items-start text-left"><div class="text-lg"><i class="fas fa-clone w-6 text-violet-500"></i></div><div><p class="font-bold">Flashcard Từ vựng</p><p class="text-xs font-normal">Học từ mới qua flashcard.</p></div></button>
+                                <button data-study-mode="mindmap" class="btn btn-secondary !p-4 !items-start text-left"><div class="text-lg"><i class="fas fa-project-diagram w-6 text-sky-500"></i></div><div><p class="font-bold">Sơ đồ Từ loại</p><p class="text-xs font-normal">Khám phá mối liên hệ giữa các từ.</p></div></button>
+                                <button data-study-mode="struct-flashcard" class="btn btn-secondary !p-4 !items-start text-left"><div class="text-lg"><i class="fas fa-sitemap w-6 text-emerald-500"></i></div><div><p class="font-bold">Flashcard Cấu trúc</p><p class="text-xs font-normal">Học các cấu trúc câu chính.</p></div></button>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm">
+                            <h2 class="text-xl font-bold mb-4">Chế độ Luyện tập 🏋️‍♀️</h2>
+                            <div id="practice-guide-buttons" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6"></div>
+                            <div id="practice-buttons" class="flex flex-col gap-4">
+                                <div class="flex flex-col sm:flex-row gap-4">
+                                    <button data-practice-mode="normal" class="btn btn-primary flex-1"><i class="fas fa-random mr-2"></i> Luyện tập Thường</button>
+                                    <button data-practice-mode="weakness" class="btn btn-secondary flex-1 border-amber-500 text-amber-600 hover:bg-amber-50"><i class="fas fa-star-half-alt mr-2"></i> Ôn tập Điểm yếu</button>
+                                </div>
+                                ${ isEligibleForFinalTest ? `
+                                    <button id="start-final-test-btn" class="btn btn-danger w-full mt-4 text-lg py-4" ${this.state.session.finalTestTaken ? 'disabled' : ''}>
+                                        <i class="fas fa-graduation-cap mr-2"></i>
+                                        ${this.state.session.finalTestTaken ? `Đã làm KT cuối kỳ (Điểm: ${this.state.session.finalTestScore}%)` : 'Bắt đầu KT cuối kỳ'}
+                                    </button>
+                                ` : '' }
                             </div>
                         </div>
                     </div>`;
 
+                this.renderPracticeGuide();
                 document.getElementById('study-buttons').addEventListener('click', e => {
                     const button = e.target.closest('button');
                     if (!button || !button.dataset.studyMode) return;
@@ -526,7 +332,8 @@
                     if (mode === 'mindmap') this.renderMindmapFamilySelection();
                 });
 
-                document.getElementById('practice-buttons').addEventListener('click', e => {
+                const practiceButtons = document.getElementById('practice-buttons');
+                practiceButtons.addEventListener('click', e => {
                     const button = e.target.closest('button');
                     if (button && button.dataset.practiceMode) this.startPractice(button.dataset.practiceMode);
                 });
@@ -534,11 +341,17 @@
                 const finalTestBtn = document.getElementById('start-final-test-btn');
                 if (finalTestBtn) {
                     finalTestBtn.addEventListener('click', () => {
-                        this.showModal("Xác nhận KT cuối kỳ", "Đây là bài kiểm tra cuối cùng. Nó chỉ được làm một lần và sẽ được tính giờ. Bạn đã sẵn sàng chưa?", true, this.startFinalTest.bind(this));
+                        this.showModal(
+                            "Xác nhận KT cuối kỳ", 
+                            "Đây là bài kiểm tra cuối cùng. Nó chỉ được làm một lần và sẽ được tính giờ. Bạn đã sẵn sàng chưa?", 
+                            true, 
+                            this.startFinalTest.bind(this)
+                        );
                     });
                 }
+
                 if (Object.keys(this.state.progress.incorrectCounts).length === 0) {
-                    this.DOM.main.querySelector('[data-practice-mode="weakness"]').disabled = true;
+                    practiceButtons.querySelector('[data-practice-mode="weakness"]').disabled = true;
                 }
             },
 
@@ -548,7 +361,7 @@
                 
                 const loaderText = this.state.session.isCompleted ? "Đang cập nhật..." : "Đang nộp bài...";
                 this.DOM.loaderText.textContent = loaderText;
-                this.DOM.loader.style.display = 'flex';
+                this.DOM.loader.classList.remove('hidden');
 
                 const learnedCount = this.state.progress.learnedItems.size;
                 const totalItems = this.state.wordList.length + this.state.structureList.length;
@@ -587,10 +400,11 @@
                     this.showModal("Lỗi", "Không thể lưu tiến độ: " + error.message); 
                 } finally { 
                     this.state.isSubmitting = false;
-                    this.DOM.loader.style.display = 'none';
+                    this.DOM.loader.classList.add('hidden');
                 }
             },
             
+            // ... Dán tất cả các hàm còn lại vào đây ...
             startFlashcardSession(type) {
                 this.state.currentSessionItems = type === 'word' ? this.state.wordList : this.state.structureList;
                 if(this.state.currentSessionItems.length === 0) {
@@ -603,21 +417,21 @@
             
             renderFlashcardViewer() {
                 this.DOM.main.innerHTML = `
-                    <div class="glass-card fade-in">
-                        <div class="flashcard-viewer">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                                <button id="back-to-dashboard-btn" class="cta-btn secondary" style="padding: 8px 16px;"><i class="fas fa-arrow-left"></i><span>Quay lại</span></button>
-                                <div id="card-counter" style="font-weight: 600; color: var(--text-secondary);"></div>
-                            </div>
-                            <div class="flashcard-main"><div class="flashcard" id="flashcard"></div></div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem;">
-                                <button id="prev-card-btn" class="cta-btn secondary" style="border-radius: 50%; width: 56px; height: 56px; font-size: 1.25rem;"><i class="fas fa-arrow-left"></i></button>
-                                <p style="color: var(--text-secondary); font-size: 0.9rem;">Bấm vào thẻ để lật</p>
-                                <button id="next-card-btn" class="cta-btn" style="border-radius: 50%; width: 56px; height: 56px; font-size: 1.25rem;"><i class="fas fa-arrow-right"></i></button>
-                            </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm fade-in">
+                    <div class="flashcard-viewer">
+                        <div class="flex justify-between items-center mb-4">
+                            <button id="back-to-dashboard-btn" class="btn btn-secondary !py-2 !px-4"><i class="fas fa-arrow-left mr-2"></i> Quay lại</button>
+                            <div id="card-counter" class="font-semibold text-slate-700"></div>
                         </div>
-                    </div>`;
-
+                        <div class="flashcard-main"><div class="flashcard" id="flashcard"></div></div>
+                        <div class="flashcard-nav flex justify-between items-center p-4">
+                            <button id="prev-card-btn" class="btn btn-secondary !rounded-full !w-14 !h-14 text-xl"><i class="fas fa-arrow-left"></i></button>
+                            <p class="text-sm text-gray-500">Bấm vào thẻ để lật</p>
+                            <button id="next-card-btn" class="btn btn-secondary !rounded-full !w-14 !h-14 text-xl"><i class="fas fa-arrow-right"></i></button>
+                        </div>
+                    </div>
+                </div>`;
+                
                 this.updateFlashcardView();
                 document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.renderDashboard());
                 document.getElementById('flashcard').addEventListener('click', e => {
@@ -634,23 +448,23 @@
                 if (!item || !card) return;
 
                 card.classList.remove('is-flipped');
-                setTimeout(() => {
-                    const isStructure = item.itemType === 'structure';
-                    const audioBtnHTML = item.audioUrl ? `<button class="audio-btn" data-audio-url="${item.audioUrl}"><i class="fas fa-volume-up"></i></button>` : '';
+                const isStructure = item.itemType === 'structure';
+                const audioBtnHTML = item.audioUrl ? `<button class="audio-btn" data-audio-url="${item.audioUrl}"><i class="fas fa-volume-up"></i></button>` : '';
 
-                    const frontContent = isStructure ? item.phrase : item.word;
-                    const frontHTML = `${audioBtnHTML}<div style="font-family:'Poppins'; font-size: 2.5rem; font-weight: 700;">${frontContent}</div>`;
-                    const backHTML = isStructure
-                        ? `<div style="font-size: 1.5rem; font-weight: 600;">${item.meaning}</div><p style="color: var(--text-secondary); margin-top: 1rem; font-style: italic;">"${item.applicationExamples?.[0] || ''}"</p>`
-                        : `${audioBtnHTML}<div style="font-size: 2rem; font-weight: 600;">${item.meaning}</div><p style="color: var(--text-secondary); margin-top: 0.5rem; font-size: 1.1rem;">${item.pronunciation} <span style="margin: 0 0.5rem;">&bull;</span> ${item.type}</p><p style="color: var(--text-secondary); margin-top: 1rem; font-style: italic;">"${item.exampleSentence || ''}"</p>`;
-
-                    card.innerHTML = `<div class="flashcard-face">${frontHTML}</div><div class="flashcard-face flashcard-back">${backHTML}</div>`;
-
-                    card.querySelectorAll('.audio-btn').forEach(btn => {
-                        btn.addEventListener('click', (e) => { e.stopPropagation(); this.playAudio(e.currentTarget.dataset.audioUrl); });
+                const frontHTML = `${audioBtnHTML}<div class="text-4xl font-bold">${isStructure ? item.phrase : item.word}</div>`;
+                const backHTML = isStructure
+                    ? `<div class="text-2xl font-semibold">${item.meaning}</div><p class="text-slate-500 mt-4 italic">"${item.applicationExamples?.[0] || ''}"</p>`
+                    : `${audioBtnHTML}<div class="text-3xl font-semibold">${item.meaning}</div><p class="text-slate-500 mt-2 text-lg">${item.pronunciation} <span class="mx-2">&bull;</span> ${item.type}</p><p class="text-slate-500 mt-4 italic">"${item.exampleSentence || ''}"</p>`;
+                
+                card.innerHTML = `<div class="flashcard-face flashcard-front">${frontHTML}</div><div class="flashcard-face flashcard-back">${backHTML}</div>`;
+                
+                card.querySelectorAll('.audio-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.playAudio(e.currentTarget.dataset.audioUrl);
                     });
-                }, 100); // Small delay to allow flip animation to reset
-
+                });
+                
                 document.getElementById('card-counter').textContent = `${this.state.currentIndex + 1} / ${this.state.currentSessionItems.length}`;
             },
 
@@ -658,14 +472,15 @@
                 const card = document.getElementById('flashcard');
                 if (!card) return;
                 const animationClass = direction === 1 ? 'slide-out-left' : 'slide-out-right';
-                card.parentElement.classList.add(animationClass);
-                
+                card.classList.add(animationClass);
                 setTimeout(() => {
                     const newIndex = this.state.currentIndex + direction;
                     const total = this.state.currentSessionItems.length;
                     this.state.currentIndex = (newIndex + total) % total;
+                    card.classList.remove('slide-out-left', 'slide-out-right');
                     this.updateFlashcardView();
-                    card.parentElement.classList.remove('slide-out-left', 'slide-out-right');
+                    card.classList.add(direction === 1 ? 'slide-in-right' : 'slide-in-left');
+                    setTimeout(() => card.classList.remove('slide-in-right', 'slide-in-left'), 300);
                 }, 300);
             },
 
@@ -676,14 +491,14 @@
                     return;
                 }
                 this.DOM.main.innerHTML = `
-                <div class="glass-card fade-in">
-                    <div style="display:flex; align-items:center; margin-bottom: 1.5rem;">
-                        <button id="back-to-dashboard-btn" class="cta-btn secondary" style="padding: 8px 16px; margin-right: 1rem;"><i class="fas fa-arrow-left"></i></button>
-                        <h2 style="font-family: 'Poppins'; font-size: 1.25rem; font-weight: 600;">Chọn một họ từ</h2>
+                <div class="bg-white p-6 rounded-xl shadow-sm fade-in">
+                    <div class="flex items-center mb-6">
+                        <button id="back-to-dashboard-btn" class="btn btn-secondary !py-2 !px-4 mr-4"><i class="fas fa-arrow-left"></i></button>
+                        <h2 class="text-xl font-bold">Chọn một họ từ để khám phá</h2>
                     </div>
-                    <div id="family-list" style="display:flex; flex-wrap:wrap; gap: 0.75rem;">
+                    <div id="family-list" class="flex flex-wrap gap-3">
                         ${familiesWithMultipleMembers.map(([root, members]) => `
-                            <button data-family-root="${root}" class="cta-btn secondary">${root} (${members.length})</button>
+                            <button data-family-root="${root}" class="btn btn-secondary !py-3 !px-5">${root} (${members.length})</button>
                         `).join('')}
                     </div>
                 </div>`;
@@ -696,39 +511,103 @@
 
             renderMindmap(familyRoot) {
                 const family = this.state.wordFamilies[familyRoot];
-                const centerWord = family.find(w => w.familyRoot === w.word) || family[0];
-                const children = family.filter(w => w.id !== centerWord.id);
-
+                const centerWord = family[0];
                 this.DOM.main.innerHTML = `
-                <div class="glass-card fade-in">
-                     <div style="display:flex; align-items:center; margin-bottom: 1.5rem;">
-                        <button id="back-to-selection-btn" class="cta-btn secondary" style="padding: 8px 16px; margin-right: 1rem;"><i class="fas fa-arrow-left"></i></button>
-                        <h2 style="font-family: 'Poppins'; font-size: 1.25rem; font-weight: 600;">Họ từ: ${familyRoot}</h2>
+                <div class="bg-white p-6 rounded-xl shadow-sm fade-in">
+                    <div class="flex items-center mb-6">
+                         <button id="back-to-selection-btn" class="btn btn-secondary !py-2 !px-4 mr-4"><i class="fas fa-arrow-left"></i></button>
+                        <h2 class="text-xl font-bold">Họ từ: ${familyRoot}</h2>
                     </div>
-                    <div style="position: relative; width: 100%; height: 60vh; display:flex; align-items:center; justify-content:center;" id="mindmap-container">
+                    <div class="relative w-full h-[60vh] flex items-center justify-center overflow-hidden">
+                        <div id="mindmap" class="relative w-[150px] h-[150px]"></div>
                     </div>
                 </div>`;
                 document.getElementById('back-to-selection-btn').addEventListener('click', () => this.renderMindmapFamilySelection());
 
-                const container = document.getElementById('mindmap-container');
-                let html = `<div class="mindmap-node center" style="position:relative;"><span>${centerWord.word}</span><span style="font-size:0.8rem; opacity:0.8;">(${centerWord.type})</span></div>`;
+                const container = document.getElementById('mindmap');
+                const children = family.slice(1);
+                let html = `<div class="mindmap-node center"><span>${centerWord.word}</span><span class="text-sm font-normal">(${centerWord.type})</span></div>`;
 
-                const radius = Math.min(container.offsetWidth / 2.5, 250);
                 if (children.length > 0) {
                     const angleStep = 360 / children.length;
+                    const radius = Math.min(container.parentElement.offsetWidth / 2.5, 250);
                     children.forEach((child, i) => {
-                        const angle = angleStep * i - 90; // Start from top
+                        const angle = angleStep * i;
                         const x = radius * Math.cos(angle * Math.PI / 180);
                         const y = radius * Math.sin(angle * Math.PI / 180);
-                        
-                        const lineAngle = Math.atan2(y, x) * 180 / Math.PI;
-                        const lineLength = Math.sqrt(x*x + y*y);
-
-                        html += `<div class="mindmap-line" style="width: ${lineLength}px; top: 50%; left: 50%; transform: rotate(${lineAngle}deg);"></div>`;
-                        html += `<div class="mindmap-node child" style="top: 50%; left: 50%; transform: translate(-50%, -50%) translate(${x}px, ${y}px);"><span style="font-weight:600;">${child.word}</span><span style="font-size:0.8rem; opacity:0.8;">(${child.type})</span></div>`;
+                        html += `<div class="mindmap-line" style="width: ${radius}px; transform: translate(75px, 75px) rotate(${angle}deg);"></div>`;
+                        html += `<div class="mindmap-node child" style="transform: translate(${x}px, ${y}px) translate(20px, 20px);"><span class="font-semibold">${child.word}</span><span class="text-xs">(${child.type})</span></div>`;
                     });
                 }
-                container.innerHTML += html;
+                container.innerHTML = html;
+            },
+
+            renderPracticeGuide() {
+                const guideContainer = document.getElementById('practice-guide-buttons');
+                const exerciseTypes = [
+                    { type: 'TraditionalMCQ', name: 'Trắc nghiệm', icon: 'fa-list-check', color: 'text-violet-500' },
+                    { type: 'ContextualMCQ', name: 'Ngữ cảnh', icon: 'fa-quote-left', color: 'text-sky-500' },
+                    { type: 'WordFamilyMCQ', name: 'Họ từ', icon: 'fa-users', color: 'text-blue-500' },
+                    { type: 'SentenceUnscramble', name: 'Sắp xếp', icon: 'fa-sort-alpha-down', color: 'text-indigo-500' },
+                    { type: 'GapFill', name: 'Điền từ', icon: 'fa-edit', color: 'text-emerald-500' },
+                    { type: 'AudioListening', name: 'Nghe', icon: 'fa-volume-up', color: 'text-pink-500' },
+                    { type: 'TriosOfGappedSentence', name: 'Tìm từ', icon: 'fa-search-plus', color: 'text-teal-500' },
+                    { type: 'ErrorCorrection', name: 'Sửa lỗi', icon: 'fa-check-double', color: 'text-rose-500' },
+                    { type: 'IPAFill', name: 'Phiên âm', icon: 'fa-language', color: 'text-orange-500' },
+                ];
+                guideContainer.innerHTML = exerciseTypes.map(ex => `
+                    <button data-guide-type="${ex.type}" class="btn btn-secondary !p-2 !justify-start text-left text-sm">
+                        <i class="fas ${ex.icon} ${ex.color} w-8 text-center text-base"></i>
+                        <span class="font-semibold">${ex.name}</span>
+                    </button>
+                `).join('');
+                
+                guideContainer.addEventListener('click', e => {
+                    const button = e.target.closest('button');
+                    if (button && button.dataset.guideType) {
+                        this.renderGuideModal(button.dataset.guideType);
+                    }
+                });
+            },
+
+            renderGuideModal(exerciseType) {
+                const exerciseInfo = {
+                    'TraditionalMCQ': { name: 'Trắc nghiệm Từ & Nghĩa', desc: 'Chọn nghĩa tiếng Việt đúng cho từ tiếng Anh, hoặc ngược lại.' },
+                    'ContextualMCQ': { name: 'Trắc nghiệm Ngữ cảnh', desc: 'Chọn từ vựng phù hợp nhất để điền vào chỗ trống trong câu ví dụ.' },
+                    'WordFamilyMCQ': { name: 'Trắc nghiệm Họ từ', desc: 'Chọn dạng từ đúng (danh từ, động từ, tính từ...) từ cùng một họ từ để hoàn thành câu.' },
+                    'SentenceUnscramble': { name: 'Sắp xếp câu', desc: 'Bấm vào các từ cho sẵn theo đúng thứ tự để tạo thành một câu hoàn chỉnh.' },
+                    'GapFill': { name: 'Điền từ vào chỗ trống', desc: 'Gõ một từ còn thiếu (thường là giới từ) vào chỗ trống trong một cấu trúc câu.' },
+                    'AudioListening': { name: 'Nghe & Viết', desc: 'Nghe cách phát âm của một từ hoặc câu và gõ lại chính xác những gì bạn nghe được.' },
+                    'TriosOfGappedSentence': { name: 'Tìm từ chung', desc: 'Tìm một từ duy nhất có thể điền vào cả ba chỗ trống trong các câu khác nhau.'},
+                    'ErrorCorrection': { name: 'Sửa lỗi sai', desc: 'Xác định xem một câu cho sẵn là đúng hay sai. Nếu sai, hãy sửa lại cho đúng.' },
+                    'IPAFill': { name: 'Điền phiên âm', desc: 'Chọn nguyên âm đúng để hoàn thành phiên âm IPA của một từ cho trước.' }
+                };
+                
+                const info = exerciseInfo[exerciseType];
+                const allItems = [...this.state.wordList, ...this.state.structureList];
+                const suitableItem = allItems.find(item => this.getPossibleExerciseTypes(item).includes(exerciseType));
+
+                if (!suitableItem) {
+                    this.showModal("Thông báo", "Không tìm thấy dữ liệu phù hợp để tạo ví dụ cho dạng bài này.");
+                    return;
+                }
+                
+                suitableItem.exerciseType = exerciseType;
+                const exampleHTML = this[`get${exerciseType}HTML`](suitableItem, true);
+
+                this.showModal(
+                    `Hướng dẫn: ${info.name}`,
+                    `<p class="text-slate-600 mb-6 text-left">${info.desc}</p>
+                     <div class="bg-slate-50 p-4 rounded-lg border">
+                         <h4 class="font-bold mb-3 text-left">Ví dụ tương tác:</h4>
+                         <div id="guide-question-container">${exampleHTML}</div>
+                         <div id="guide-feedback-container" class="mt-4"></div>
+                     </div>`,
+                    false, null, true
+                );
+                
+                const guideContainer = document.getElementById('guide-question-container');
+                this.attachPracticeEventListeners(suitableItem, guideContainer, true);
             },
 
             startPractice(mode, count = 10) {
@@ -758,23 +637,21 @@
 
             renderPracticeView() {
                 const total = this.state.currentSessionItems.length;
-                const progressPercent = total > 0 ? ((this.state.currentIndex) / total * 100) : 0;
+                const progressPercent = total > 0 ? (this.state.currentIndex / total * 100) : 0;
                 this.DOM.main.innerHTML = `
-                    <div class="glass-card fade-in">
-                        <div style="margin-bottom: 1.5rem;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                                <p style="font-size: 0.9rem; font-weight: 500;">Câu hỏi ${this.state.currentIndex + 1} / ${total}</p>
-                                <button id="exit-practice-btn" style="font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); background: none; border: none; cursor: pointer;"><i class="fas fa-times" style="margin-right: 0.25rem;"></i> Thoát</button>
+                    <div class="bg-white p-6 rounded-xl shadow-sm fade-in">
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-2">
+                                <p class="text-sm font-medium">Câu hỏi ${this.state.currentIndex + 1} / ${total}</p>
+                                <button id="exit-practice-btn" class="text-sm font-semibold text-gray-600 hover:text-red-500"><i class="fas fa-times mr-1"></i> Thoát</button>
                             </div>
                             <div class="progress-bar"><div class="progress-bar-fill" style="width: ${progressPercent}%;"></div></div>
                         </div>
-                        <div id="question-container" style="min-height: 300px;"></div>
-                        <div id="feedback-container" style="margin-top: 1rem;"></div>
+                        <div id="question-container" class="min-h-[300px]"></div>
+                        <div id="feedback-container" class="mt-4"></div>
                     </div>`;
-
-                document.getElementById('exit-practice-btn').addEventListener('click', () => {
-                    this.showModal("Xác nhận Thoát", "Bạn có chắc muốn dừng luyện tập? Tiến độ sẽ không được lưu.", true, () => this.renderDashboard());
-                });
+                
+                document.getElementById('exit-practice-btn').addEventListener('click', () => this.renderDashboard());
                 this.renderNextQuestion();
             },
 
@@ -799,170 +676,58 @@
             getPossibleExerciseTypes(item) {
                 const types = [];
                 if (item.itemType === 'word') {
-                    if (item.distractors_vi?.length >= 3 && item.distractors_en?.length >= 3) types.push('TraditionalMCQ');
+                    if (item.distractors_vi?.length >= 3) types.push('TraditionalMCQ');
                     if (item.exampleSentence && item.distractors_en?.length >=3) types.push('ContextualMCQ');
                     if (item.exampleSentence) types.push('SentenceUnscramble');
+                    if ((this.state.wordFamilies[item.familyRoot]?.length || 0) > 1) types.push('WordFamilyMCQ');
+                    if (this.findSentencesWithWord(item.word).length >= 3) types.push('TriosOfGappedSentence');
+                    if (item.audioUrl) types.push('AudioListening');
+                    if (item.pronunciation) types.push('IPAFill');
                 } else { // structure
-                     const sentence = item.applicationExamples?.[0];
-                     if (sentence) {
+                    const sentence = item.applicationExamples?.[0];
+                    if (sentence) {
                         const phraseParts = item.phrase.split(/\s+/);
                         const blank = phraseParts.find(p => !['be', 'of', 'to', 'sb', 'sth'].includes(p.toLowerCase()) && p.length > 1 && p.length < 5);
                         if (blank && new RegExp(`\\b${blank}\\b`, 'i').test(sentence)) {
                             item.gapFill = { blank, sentence: sentence.replace(new RegExp(`\\b${blank}\\b`, 'i'), '___') };
                             types.push('GapFill');
                         }
-                     }
+                        const commonErrors = {'on': 'in', 'in': 'at', 'at': 'on', 'to': 'for', 'for': 'to'};
+                        for(const correctPrep in commonErrors) {
+                            if (sentence.includes(` ${correctPrep} `)) {
+                                item.errorCorrection = {
+                                    correct: sentence,
+                                    incorrect: sentence.replace(` ${correctPrep} `, ` ${commonErrors[correctPrep]} `)
+                                };
+                                types.push('ErrorCorrection');
+                                break;
+                            }
+                        }
+                    }
                 }
                 return types.length > 0 ? types : ['TraditionalMCQ'];
-            },
-
-            getTraditionalMCQHTML(item, isExample = false) {
-                const isEngToViet = Math.random() > 0.5;
-                const question = isEngToViet ? `${item.word} <span style="font-size: 1rem; font-weight: 400; color: var(--text-secondary);">(${item.type})</span>` : item.meaning;
-                this.state.currentCorrectAnswer = isEngToViet ? item.meaning : item.word;
-
-                const distractors = this.shuffleArray(isEngToViet ? [...(item.distractors_vi || [])] : [...(item.distractors_en || [])]).slice(0, 3);
-                const options = this.shuffleArray([this.state.currentCorrectAnswer, ...distractors]);
-
-                return `<div><h2 style="font-size: 0.9rem; font-weight: 600; color: var(--primary-accent); margin-bottom: 0.5rem;">Trắc nghiệm: Chọn đáp án đúng</h2><div style="font-size: 1.75rem; font-weight: 700; min-height: 60px; margin-bottom: 2rem;">${question}</div><div id="answer-options" style="display:flex; flex-direction: column; gap: 0.75rem;">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
-            },
-            
-            getContextualMCQHTML(item, isExample = false) {
-                this.state.currentCorrectAnswer = item.word;
-                const wordRegex = new RegExp(`\\b${item.word.replace(/s$/, '')}(s?)\\b`, 'gi');
-                const sentence = item.exampleSentence.replace(wordRegex, `<span style="font-weight: bold; color: var(--primary-accent);">[...]</span>`);
-                const distractors = this.shuffleArray([...(item.distractors_en || [])]).slice(0, 3);
-                const options = this.shuffleArray([this.state.currentCorrectAnswer, ...distractors]);
-
-                return `<div><h2 style="font-size: 0.9rem; font-weight: 600; color: var(--primary-accent); margin-bottom: 0.5rem;">Trắc nghiệm: Hoàn thành câu</h2><p style="font-size: 1.25rem; font-style: italic; color: var(--text-secondary); min-height: 60px; margin-bottom: 2rem;">"${sentence}"</p><div id="answer-options" style="display:flex; flex-direction: column; gap: 0.75rem;">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
-            },
-
-            getSentenceUnscrambleHTML(item, isExample = false) {
-                this.state.currentCorrectAnswer = item.exampleSentence;
-                const words = this.shuffleArray(item.exampleSentence.split(' '));
-                return `<div><h2 style="font-size: 0.9rem; font-weight: 600; color: var(--primary-accent); margin-bottom: 0.5rem;">Sắp xếp câu</h2><p style="color: var(--text-secondary); margin-bottom: 1rem;">Bấm vào các từ theo đúng thứ tự để tạo thành câu hoàn chỉnh.</p><div id="unscramble-answer-area" class="token-area" style="margin-bottom: 1rem;"></div><div id="unscramble-source-area" class="token-area" style="background-color: rgba(0,0,0,0.2);">${words.map(word => `<span class="word-token">${word}</span>`).join('')}</div><div style="margin-top: 1.5rem; text-align: right;"><button id="check-btn" class="cta-btn">Kiểm tra</button></div></div>`;
-            },
-
-            getGapFillHTML(item, isExample = false) {
-                this.state.currentCorrectAnswer = item.gapFill.blank;
-                return `<div>
-                    <h2 style="font-size: 0.9rem; font-weight: 600; color: var(--primary-accent); margin-bottom: 0.5rem;">Điền vào chỗ trống</h2>
-                    <p style="font-size: 1.25rem; font-style: italic; color: var(--text-secondary); min-height: 60px; margin-bottom: 2rem;">"${item.gapFill.sentence}"</p>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <div class="text-input-wrapper" style="flex-grow:1;"><input type="text" id="text-input" class="text-input" placeholder="Gõ từ còn thiếu..."></div>
-                        <button id="check-btn" class="cta-btn">Kiểm tra</button>
-                    </div>
-                </div>`;
-            },
-
-            attachPracticeEventListeners(item, container, isGuide = false) {
-                if (!container) return;
-                const checkAnswerFunction = this.checkAnswer.bind(this);
-                
-                switch(item.exerciseType) {
-                    case 'TraditionalMCQ': case 'ContextualMCQ':
-                        container.querySelectorAll('.answer-option').forEach(option => {
-                            option.addEventListener('click', (e) => checkAnswerFunction(e.target.closest('.answer-option').dataset.answer, item, container));
-                        });
-                        break;
-                    case 'GapFill': {
-                        const input = container.querySelector('#text-input');
-                        const checkBtn = container.querySelector('#check-btn');
-                        if (input && checkBtn) {
-                            const doCheck = () => checkAnswerFunction(input.value, item, container);
-                            checkBtn.addEventListener('click', doCheck);
-                            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') doCheck(); });
-                        }
-                        break;
-                    }
-                    case 'SentenceUnscramble': {
-                        const answerArea = container.querySelector('#unscramble-answer-area');
-                        const sourceArea = container.querySelector('#unscramble-source-area');
-                        const moveToken = (e) => {
-                            if (e.target.classList.contains('word-token')) {
-                                const isFromSource = e.currentTarget.id === 'unscramble-source-area';
-                                (isFromSource ? answerArea : sourceArea).appendChild(e.target);
-                            }
-                        };
-                        sourceArea.addEventListener('click', moveToken);
-                        answerArea.addEventListener('click', moveToken);
-                        container.querySelector('#check-btn')?.addEventListener('click', () => {
-                            const answer = Array.from(answerArea.querySelectorAll('.word-token')).map(t => t.textContent).join(' ');
-                            checkAnswerFunction(answer, item, container);
-                        });
-                        break;
-                    }
-                }
-            },
-            
-            checkAnswer(userAnswer, item, container) {
-                if (!item) item = this.state.currentSessionItems[this.state.currentIndex];
-                const correctAnswer = this.state.currentCorrectAnswer;
-                const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
-
-                (container || this.DOM.main).querySelectorAll('button, input').forEach(el => el.disabled = true);
-                
-                const itemId = item.id;
-                if (isCorrect) {
-                    this.state.currentScore++;
-                    this.state.sessionCorrectItems.push(item);
-                    this.state.progress.learnedItems.add(itemId);
-                    delete this.state.progress.incorrectCounts[itemId];
-                } else {
-                    this.state.sessionIncorrectItems.push(item);
-                    this.state.progress.incorrectCounts[itemId] = (this.state.progress.incorrectCounts[itemId] || 0) + 1;
-                }
-                
-                this.saveProgress();
-                this.showFeedback(isCorrect, correctAnswer, container.querySelector('#answer-options')?.parentElement);
-            },
-
-            showFeedback(isCorrect, correctAnswer, container = null, isGuide = false) {
-                const feedbackContainer = document.getElementById('feedback-container');
-                if (!feedbackContainer) return;
-
-                if (container) {
-                     container.querySelectorAll('.answer-option').forEach(opt => {
-                        opt.classList.add('disabled');
-                        if (opt.dataset.answer.toLowerCase() === correctAnswer.toLowerCase()) {
-                            opt.classList.add('correct');
-                        } else if (opt.classList.contains('incorrect')) {
-                           // keep it incorrect if user selected it
-                        }
-                    });
-                }
-                
-                const bgColor = isCorrect ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)';
-                const textColor = isCorrect ? 'var(--correct-color)' : 'var(--incorrect-color)';
-                const message = isCorrect ? 'Chính xác!' : `Không đúng! Đáp án đúng là: <strong style="font-weight: bold; color: var(--text-light);">${correctAnswer}</strong>`;
-
-                const nextButtonHTML = isGuide ? '' : `<button id="next-question-btn" class="cta-btn secondary" style="padding: 8px 16px;">Tiếp theo <i class="fas fa-arrow-right" style="margin-left: 0.5rem;"></i></button>`;
-                feedbackContainer.innerHTML = `
-                    <div style="background-color: ${bgColor}; color: ${textColor}; padding: 1rem; border-radius: 0.75rem; display: flex; justify-content: space-between; align-items: center;" class="fade-in">
-                        <p style="font-weight: 600;">${message}</p>
-                        ${nextButtonHTML}
-                    </div>`;
-
-                if (!isGuide) {
-                    const nextBtn = document.getElementById('next-question-btn');
-                    nextBtn.focus();
-                    nextBtn.addEventListener('click', () => {
-                        this.state.currentIndex++;
-                        this.renderPracticeView();
-                    });
-                }
             },
 
             renderSummary() {
                 const score = this.state.currentScore;
                 const total = this.state.currentSessionItems.length;
                 this.DOM.main.innerHTML = `
-                    <div class="glass-card fade-in" style="text-align: center;">
-                        <h1 style="font-family: 'Poppins'; font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">Hoàn thành Luyện tập!</h1>
-                        <p style="font-size: 1.125rem; color: var(--text-secondary); margin-bottom: 1.5rem;">Bạn đã trả lời đúng ${score} / ${total} câu.</p>
-                        <div style="margin-top: 2rem; display: flex; flex-direction: column; gap: 1rem;">
-                            <button id="continue-practice-btn" class="cta-btn" style="width: 100%;">Luyện tập lại</button>
-                            <button id="back-to-dashboard-btn" class="cta-btn secondary" style="width: 100%;">Thoát</button>
+                    <div class="text-center max-w-lg mx-auto bg-white p-8 rounded-xl shadow-sm fade-in">
+                        <h1 class="text-3xl font-bold mb-2">Hoàn thành Luyện tập!</h1>
+                        <p class="text-lg text-slate-600 mb-6">Bạn đã trả lời đúng ${score} / ${total} câu.</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+                            <div class="bg-green-50 p-4 rounded-lg">
+                                <h3 class="font-bold text-green-800 mb-2">Đúng (${this.state.sessionCorrectItems.length})</h3>
+                                <ul class="text-sm space-y-1 max-h-32 overflow-y-auto">${this.state.sessionCorrectItems.map(item => `<li>${item.word || item.phrase}</li>`).join('')}</ul>
+                            </div>
+                            <div class="bg-red-50 p-4 rounded-lg">
+                                <h3 class="font-bold text-red-800 mb-2">Cần xem lại (${this.state.sessionIncorrectItems.length})</h3>
+                                <ul class="text-sm space-y-1 max-h-32 overflow-y-auto">${this.state.sessionIncorrectItems.map(item => `<li>${item.word || item.phrase}</li>`).join('')}</ul>
+                            </div>
+                        </div>
+                        <div class="mt-8 flex flex-col sm:flex-row gap-4">
+                            <button id="continue-practice-btn" class="btn btn-primary w-full">Luyện tập lại</button>
+                            <button id="back-to-dashboard-btn" class="btn btn-secondary w-full">Thoát</button>
                         </div>
                     </div>`;
                 document.getElementById('continue-practice-btn').addEventListener('click', () => this.startPractice('normal'));
@@ -1006,19 +771,376 @@
             },
 
             renderFinalTestView() {
-                // This function needs to be implemented if you want a final test view
+                const total = this.state.currentSessionItems.length;
+                const progressPercent = total > 0 ? (this.state.currentIndex / total * 100) : 0;
+                
+                const minutes = Math.floor(this.state.proctoring.timeRemaining / 60);
+                const seconds = this.state.proctoring.timeRemaining % 60;
+                const timeString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+                this.DOM.main.innerHTML = `
+                    <div class="bg-white p-6 rounded-xl shadow-lg border-2 border-red-200 fade-in">
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-2 text-red-700 font-bold">
+                                <p>BÀI KIỂM TRA CUỐI KỲ - Câu ${this.state.currentIndex + 1} / ${total}</p>
+                                <div id="timer-display" class="text-lg"><i class="fas fa-clock mr-2"></i>${timeString}</div>
+                            </div>
+                            <div class="progress-bar"><div id="progress-bar-final-test" class="progress-bar-fill bg-red-500" style="width: ${progressPercent}%;"></div></div>
+                        </div>
+                        <div id="question-container" class="min-h-[300px]"></div>
+                        <div id="feedback-container" class="mt-4"></div>
+                    </div>`;
+                
+                this.state.proctoring.timerId = setInterval(() => {
+                    this.state.proctoring.timeRemaining--;
+                    const mins = Math.floor(this.state.proctoring.timeRemaining / 60);
+                    const secs = this.state.proctoring.timeRemaining % 60;
+                    const timerDisplay = document.getElementById('timer-display');
+                    if (timerDisplay) {
+                        timerDisplay.innerHTML = `<i class="fas fa-clock mr-2"></i>${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                    }
+                    if (this.state.proctoring.timeRemaining <= 0) {
+                        this.submitFinalTest();
+                    }
+                }, 1000);
+
+                this.renderNextQuestion();
             },
 
             startProctoring() {
-                // This function needs to be implemented for proctoring
+                this.proctoringEventHandler = (e) => {
+                    this.state.proctoring.violations++;
+                    console.warn(`Phát hiện vi phạm: ${e.type}. Tổng: ${this.state.proctoring.violations}`);
+                    const warning = document.createElement('div');
+                    warning.className = 'fixed top-4 right-4 bg-yellow-400 text-black p-3 rounded-lg shadow-lg z-50';
+                    warning.innerHTML = `<i class="fas fa-exclamation-triangle mr-2"></i> Cảnh báo: Phát hiện hoạt động! Số lần vi phạm: ${this.state.proctoring.violations}`;
+                    document.body.appendChild(warning);
+                    setTimeout(() => warning.remove(), 3000);
+                    
+                    if (e.type === 'copy' || e.type === 'paste' || e.type === 'contextmenu') {
+                        e.preventDefault();
+                    }
+                    if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'))) {
+                        e.preventDefault();
+                    }
+                };
+                
+                document.addEventListener('visibilitychange', this.proctoringEventHandler);
+                window.addEventListener('blur', this.proctoringEventHandler);
+                document.addEventListener('copy', this.proctoringEventHandler);
+                document.addEventListener('paste', this.proctoringEventHandler);
+                document.addEventListener('contextmenu', this.proctoringEventHandler);
+                document.addEventListener('keydown', this.proctoringEventHandler);
             },
-            
+
             stopProctoring() {
-                // This function needs to be implemented to stop proctoring
+                clearInterval(this.state.proctoring.timerId);
+                document.removeEventListener('visibilitychange', this.proctoringEventHandler);
+                window.removeEventListener('blur', this.proctoringEventHandler);
+                document.removeEventListener('copy', this.proctoringEventHandler);
+                document.removeEventListener('paste', this.proctoringEventHandler);
+                document.removeEventListener('contextmenu', this.proctoringEventHandler);
+                document.removeEventListener('keydown', this.proctoringEventHandler);
             },
 
             async submitFinalTest() {
-                // This function needs to be implemented to submit the final test
+                this.stopProctoring();
+                if (this.state.isSubmitting) return;
+                this.state.isSubmitting = true;
+
+                const score = this.state.currentSessionItems.length > 0 ? Math.round((this.state.currentScore / this.state.currentSessionItems.length) * 100) : 0;
+                
+                this.DOM.main.innerHTML = `<div class="text-center p-8"><div class="w-12 h-12 border-4 border-t-violet-500 border-gray-200 rounded-full animate-spin mx-auto"></div><p class="mt-4 font-semibold">Đang nộp điểm của bạn...</p></div>`;
+
+                const payload = {
+                    finalTest: {
+                        status: 'completed',
+                        score: score,
+                        violations: this.state.proctoring.violations,
+                        takenAt: serverTimestamp(),
+                        correctCount: this.state.currentScore,
+                        totalQuestions: this.state.currentSessionItems.length
+                    }
+                };
+
+                try {
+                    await updateDoc(doc(this.state.db, 'submissions', this.state.submissionId), payload);
+                    this.state.session.finalTestTaken = true;
+                    this.state.session.finalTestScore = score;
+                    this.showModal(
+                        "Đã nộp bài!",
+                        `Bạn đã hoàn thành bài kiểm tra cuối kỳ với điểm số ${score}%.<br>Số lần vi phạm: ${this.state.proctoring.violations}.<br><br>Bây giờ bạn có thể tiếp tục ôn tập tài liệu.`,
+                        false,
+                        () => this.renderDashboard()
+                    );
+                } catch(error) {
+                    this.showModal("Lỗi", "Không thể nộp điểm kiểm tra: " + error.message);
+                } finally {
+                    this.state.isSubmitting = false;
+                }
+            },
+
+            getTraditionalMCQHTML(item, isExample = false) {
+                const isEngToViet = Math.random() > 0.5;
+                const question = isEngToViet ? `${item.word} <span class="text-base font-normal text-slate-500">(${item.type})</span>` : item.meaning;
+                this.state.currentCorrectAnswer = isEngToViet ? item.meaning : item.word;
+                
+                const distractors = this.shuffleArray(isEngToViet ? [...item.distractors_vi] : [...item.distractors_en]).slice(0, 3);
+                const options = this.shuffleArray([this.state.currentCorrectAnswer, ...distractors]);
+
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Trắc nghiệm: Chọn đáp án đúng</h2><div class="text-2xl font-bold min-h-[60px] mb-8">${question}</div><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+            },
+            
+            getContextualMCQHTML(item, isExample = false) {
+                this.state.currentCorrectAnswer = item.word;
+                const wordRegex = new RegExp(`\\b${item.word.replace(/s$/, '')}(s?)\\b`, 'gi');
+                const sentence = item.exampleSentence.replace(wordRegex, '<span class="font-bold text-indigo-600">[...]</span>');
+                const distractors = this.shuffleArray([...item.distractors_en]).slice(0, 3);
+                const options = this.shuffleArray([this.state.currentCorrectAnswer, ...distractors]);
+
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Trắc nghiệm: Hoàn thành câu</h2><p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+            },
+
+            getWordFamilyMCQHTML(item, isExample = false) {
+                const family = this.state.wordFamilies[item.familyRoot];
+                if (!family || family.length < 2) return this.getContextualMCQHTML(item);
+
+                this.state.currentCorrectAnswer = item.word;
+                const wordRegex = new RegExp(`\\b${item.word.replace(/s$/, '')}(s?)\\b`, 'gi');
+                const sentence = item.exampleSentence.replace(wordRegex, '<span class="font-bold text-indigo-600">[...]</span>');
+                
+                const distractors = this.shuffleArray(family.filter(w => w.id !== item.id)).slice(0, 3).map(w => w.word);
+                const options = this.shuffleArray([this.state.currentCorrectAnswer, ...distractors]);
+
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Trắc nghiệm: Họ từ</h2><p class="text-slate-600 mb-4">Chọn từ đúng từ họ từ "<strong>${item.familyRoot}</strong>" để hoàn thành câu.</p><p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+            },
+            
+            getAudioListeningHTML(item, isExample = false) {
+                this.state.currentCorrectAnswer = item.word;
+                return `<div class="question-block">
+                    <h2 class="text-sm font-semibold text-indigo-600 mb-2">Nghe: Gõ lại từ</h2>
+                    <div class="text-center mb-6">
+                        <button id="play-audio-btn" data-audio-url="${item.audioUrl}" class="text-5xl text-indigo-500 hover:text-indigo-700 transition-colors"><i class="fas fa-play-circle"></i></button>
+                    </div>
+                    <div class="flex justify-center mb-6">
+                        <div class="speed-control">
+                            <button data-speed="0.75" class="speed-btn px-2 text-sm">0.75x</button>
+                            <button data-speed="1.0" class="speed-btn px-2 text-sm font-bold text-indigo-600">1x</button>
+                            <button data-speed="1.25" class="speed-btn px-2 text-sm">1.25x</button>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-indigo-500 focus:ring-indigo-500" placeholder="Gõ những gì bạn nghe được...">
+                        <button id="check-btn" class="btn btn-primary !py-3">Kiểm tra</button>
+                    </div>
+                </div>`;
+            },
+            
+            getSentenceUnscrambleHTML(item, isExample = false) {
+                this.state.currentCorrectAnswer = item.exampleSentence;
+                const words = this.shuffleArray(item.exampleSentence.split(' '));
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Sắp xếp câu</h2><p class="text-slate-600 mb-4">Bấm vào các từ theo đúng thứ tự để tạo thành câu hoàn chỉnh.</p><div id="unscramble-answer-area" class="token-area mb-4"></div><div id="unscramble-source-area" class="token-area bg-slate-50">${words.map(word => `<span class="word-token">${word}</span>`).join('')}</div><div class="mt-6 text-right"><button id="check-btn" class="btn btn-primary">Kiểm tra</button></div></div>`;
+            },
+
+            getGapFillHTML(item, isExample = false) {
+                this.state.currentCorrectAnswer = item.gapFill.blank;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Điền vào chỗ trống</h2><p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${item.gapFill.sentence}"</p><div class="flex gap-2"><input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-indigo-500 focus:ring-indigo-500" placeholder="Gõ từ còn thiếu..."><button id="check-btn" class="btn btn-primary !py-3">Kiểm tra</button></div></div>`;
+            },
+
+            getTriosOfGappedSentenceHTML(item, isExample = false) {
+                this.state.currentCorrectAnswer = item.word;
+                const sentences = this.findSentencesWithWord(item.word);
+                const wordRegex = new RegExp(`\\b${item.word.replace(/s$/, '')}(s?)\\b`, 'gi');
+                const gappedSentences = this.shuffleArray(sentences).slice(0, 3).map(s => s.replace(wordRegex, '______'));
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Tìm từ chung</h2><p class="text-slate-600 mb-6">Một từ duy nhất phù hợp với cả ba chỗ trống dưới đây. Đó là từ gì?</p><div class="space-y-4 mb-6">${gappedSentences.map((s, i) => `<p class="text-lg font-serif italic text-slate-700">${i + 1}. "${s}"</p>`).join('')}</div><div class="flex gap-2"><input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg" placeholder="Gõ từ chung..."><button id="check-btn" class="btn btn-primary !py-3">Kiểm tra</button></div></div>`;
+            },
+
+            getErrorCorrectionHTML(item, isExample = false) {
+                item.errorCorrection.isActuallyIncorrect = Math.random() > 0.5;
+                const sentenceToShow = item.errorCorrection.isActuallyIncorrect ? item.errorCorrection.incorrect : item.errorCorrection.correct;
+                this.state.currentCorrectAnswer = item.errorCorrection.correct;
+
+                return `<div class="question-block" id="error-correction-block">
+                    <h2 class="text-sm font-semibold text-indigo-600 mb-2">Sửa lỗi</h2>
+                    <p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${sentenceToShow}"</p>
+                    <div id="error-step-1">
+                        <p class="text-center font-semibold mb-4">Câu này đúng hay sai?</p>
+                        <div class="flex justify-center gap-4">
+                            <button data-choice="correct" class="btn btn-secondary !px-8 !py-3 border-green-500 text-green-600 hover:bg-green-50">Đúng</button>
+                            <button data-choice="incorrect" class="btn btn-secondary !px-8 !py-3 border-red-500 text-red-600 hover:bg-red-50">Sai</button>
+                        </div>
+                    </div>
+                    <div id="error-step-2" class="hidden">
+                        <p class="font-semibold mb-2">Sửa lại câu:</p>
+                        <div class="flex gap-2">
+                            <input type="text" id="error-correction-input" class="w-full p-3 border-2 border-gray-300 rounded-lg" value="${sentenceToShow}">
+                            <button id="error-correction-check-btn" class="btn btn-primary">Nộp</button>
+                        </div>
+                    </div>
+                </div>`;
+            },
+            
+            getIPAFillHTML(item, isExample = false) {
+                const ipa = item.pronunciation.replace(/\//g, '');
+                const vowels = ['ɪ', 'e', 'æ', 'ɒ', 'ɔː', 'ʊ', 'uː', 'ʌ', 'ɜː', 'ə', 'eɪ', 'aɪ', 'ɔɪ', 'aʊ', 'əʊ', 'ɪə', 'eə', 'ʊə'];
+                const presentVowels = vowels.filter(v => ipa.includes(v));
+                if (presentVowels.length === 0) return this.getTraditionalMCQHTML(item);
+
+                const vowelToGuess = this.shuffleArray(presentVowels)[0];
+                this.state.currentCorrectAnswer = vowelToGuess;
+                const gappedIPA = `/${ipa.replace(vowelToGuess, '...')}/`;
+
+                const distractors = this.shuffleArray(vowels.filter(v => v !== vowelToGuess)).slice(0, 3);
+                const options = this.shuffleArray([vowelToGuess, ...distractors]);
+
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Điền phiên âm</h2>
+                <p class="text-slate-600 mb-4">Chọn âm đúng để hoàn thành phiên âm cho từ có nghĩa: <strong class="text-indigo-700">"${item.meaning}"</strong></p>
+                <p class="text-3xl font-mono text-center min-h-[60px] mb-8">${gappedIPA}</p>
+                <div id="answer-options" class="grid grid-cols-2 gap-3">${options.map(opt => `<button class="answer-option font-mono text-center !text-2xl" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+            },
+            
+            attachPracticeEventListeners(item, container, isGuide = false) {
+                if (!container) return;
+                const checkAnswerFunction = isGuide ? this.checkGuideAnswer.bind(this) : this.checkAnswer.bind(this);
+                
+                switch(item.exerciseType) {
+                    case 'TraditionalMCQ': case 'ContextualMCQ': case 'WordFamilyMCQ': case 'IPAFill':
+                        container.querySelectorAll('.answer-option').forEach(option => {
+                            option.addEventListener('click', (e) => checkAnswerFunction(e.target.closest('.answer-option').dataset.answer, item, container));
+                        });
+                        break;
+                    case 'AudioListening':
+                        const input = container.querySelector('#text-input');
+                        const checkBtn = container.querySelector('#check-btn');
+                        container.querySelector('#play-audio-btn')?.addEventListener('click', (e) => {
+                            this.playAudio(e.currentTarget.dataset.audioUrl);
+                        });
+                        container.querySelectorAll('.speed-btn').forEach(btn => {
+                            btn.addEventListener('click', e => {
+                                this.state.playbackRate = parseFloat(e.currentTarget.dataset.speed);
+                                container.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('font-bold', 'text-indigo-600'));
+                                e.currentTarget.classList.add('font-bold', 'text-indigo-600');
+                            });
+                        });
+                        if (input && checkBtn) {
+                            const doCheck = () => checkAnswerFunction(input.value, item, container);
+                            checkBtn.addEventListener('click', doCheck);
+                            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') doCheck(); });
+                        }
+                        break;
+                    case 'GapFill': case 'TriosOfGappedSentence': {
+                        const input = container.querySelector('#text-input');
+                        const checkBtn = container.querySelector('#check-btn');
+                        if (input && checkBtn) {
+                            const doCheck = () => checkAnswerFunction(input.value, item, container);
+                            checkBtn.addEventListener('click', doCheck);
+                            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') doCheck(); });
+                        }
+                        break;
+                    }
+                    case 'SentenceUnscramble': {
+                        const answerArea = container.querySelector('#unscramble-answer-area');
+                        const sourceArea = container.querySelector('#unscramble-source-area');
+                        const moveToken = (e) => {
+                            if (e.target.classList.contains('word-token')) {
+                                const isFromSource = e.currentTarget.id === 'unscramble-source-area';
+                                (isFromSource ? answerArea : sourceArea).appendChild(e.target);
+                            }
+                        };
+                        sourceArea.addEventListener('click', moveToken);
+                        answerArea.addEventListener('click', moveToken);
+                        container.querySelector('#check-btn')?.addEventListener('click', () => {
+                            const answer = Array.from(answerArea.querySelectorAll('.word-token')).map(t => t.textContent).join(' ');
+                            checkAnswerFunction(answer, item, container);
+                        });
+                        break;
+                    }
+                    case 'ErrorCorrection':
+                        container.querySelectorAll('#error-step-1 button').forEach(btn => {
+                            btn.addEventListener('click', (e) => {
+                                const userThinksIsCorrect = e.target.closest('button').dataset.choice === 'correct';
+                                const isActuallyCorrect = !item.errorCorrection.isActuallyIncorrect;
+                                if (userThinksIsCorrect === isActuallyCorrect) {
+                                    if (isActuallyCorrect) {
+                                        checkAnswerFunction(item.errorCorrection.correct, item, container);
+                                    } else {
+                                        container.querySelector('#error-step-1')?.classList.add('hidden');
+                                        container.querySelector('#error-step-2')?.classList.remove('hidden');
+                                        container.querySelector('#error-correction-input')?.focus();
+                                    }
+                                } else {
+                                    checkAnswerFunction("user-was-wrong-about-correctness", item, container);
+                                }
+                            });
+                        });
+                        const correctionInput = container.querySelector('#error-correction-input');
+                        const correctionBtn = container.querySelector('#error-correction-check-btn');
+                        if (correctionInput && correctionBtn) {
+                            const doCheck = () => checkAnswerFunction(correctionInput.value, item, container);
+                            correctionBtn.addEventListener('click', doCheck);
+                            correctionInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') doCheck(); });
+                        }
+                        break;
+                }
+            },
+            
+            checkAnswer(userAnswer, item, container) {
+                if (!item) item = this.state.currentSessionItems[this.state.currentIndex];
+                const correctAnswer = this.state.currentCorrectAnswer;
+                const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
+
+                (container || this.DOM.main).querySelectorAll('button, input').forEach(el => el.disabled = true);
+                
+                const itemId = item.id;
+                if (isCorrect) {
+                    this.state.currentScore++;
+                    this.state.sessionCorrectItems.push(item);
+                    this.state.progress.learnedItems.add(itemId);
+                    delete this.state.progress.incorrectCounts[itemId];
+                } else {
+                    this.state.sessionIncorrectItems.push(item);
+                    this.state.progress.incorrectCounts[itemId] = (this.state.progress.incorrectCounts[itemId] || 0) + 1;
+                }
+                
+                this.saveProgress();
+                this.showFeedback(isCorrect, correctAnswer);
+            },
+
+            checkGuideAnswer(userAnswer, item, container) {
+                const correctAnswer = this.state.currentCorrectAnswer;
+                const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
+                container.querySelectorAll('button, input').forEach(el => el.disabled = true);
+                this.showFeedback(isCorrect, correctAnswer, container.parentElement.querySelector('#guide-feedback-container'), true);
+            },
+
+            showFeedback(isCorrect, correctAnswer, container = null, isGuide = false) {
+                if (!container) container = document.getElementById('feedback-container');
+                if (!container) return;
+
+                const bgColor = isCorrect ? 'bg-green-100' : 'bg-red-100';
+                const textColor = isCorrect ? 'text-green-800' : 'text-red-800';
+                let message = isCorrect ? 'Chính xác!' : `Không đúng! Đáp án đúng là: <strong class="font-bold">${correctAnswer}</strong>`;
+
+                const nextButtonHTML = isGuide ? '' : `<button id="next-question-btn" class="btn btn-secondary !py-2 !px-4">Tiếp theo <i class="fas fa-arrow-right ml-2"></i></button>`;
+                container.innerHTML = `
+                    <div class="${bgColor} ${textColor} p-4 rounded-lg flex justify-between items-center fade-in">
+                        <p class="font-semibold">${message}</p>
+                        ${nextButtonHTML}
+                    </div>`;
+
+                if (!isGuide) {
+                    const nextBtn = document.getElementById('next-question-btn');
+                    nextBtn.focus();
+                    nextBtn.addEventListener('click', () => {
+                        this.state.currentIndex++;
+                        const progressBar = document.getElementById('progress-bar-final-test');
+                        if (progressBar) {
+                            this.renderFinalTestView();
+                        } else {
+                            this.renderPracticeView(); 
+                        }
+                    });
+                }
             },
 
             playAudio(url) {
@@ -1049,31 +1171,57 @@
                 return word;
             },
 
-            showModal(title, message, showCancel = false, onConfirm = null) {
-                const modalId = 'main-modal';
+            showModal(title, message, showCancel = false, onConfirm = null, isGuide = false) {
+                const modalId = isGuide ? 'guide-modal' : 'main-modal';
                 const existingModal = document.getElementById(modalId);
                 if (existingModal) existingModal.remove();
 
-                const modalOverlay = document.createElement('div');
-                modalOverlay.id = modalId;
-                modalOverlay.className = "modal-overlay";
-
+                const modalContainer = document.createElement('div');
+                modalContainer.id = modalId;
+                modalContainer.className = "fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4";
+                
                 const buttonsHTML = showCancel 
-                    ? `<button id="modal-cancel-btn" class="cta-btn secondary">Hủy</button><button id="modal-confirm-btn" class="cta-btn">Xác nhận</button>`
-                    : `<button id="modal-confirm-btn" class="cta-btn" style="width: 100%;">OK</button>`;
-
-                modalOverlay.innerHTML = `
-                    <div class="modal-content glass-card fade-in">
-                        <h3 style="font-family: 'Poppins'; font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem;">${title}</h3>
-                        <div style="color: var(--text-secondary); margin-bottom: 1.5rem;">${message}</div>
-                        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">${buttonsHTML}</div>
+                    ? `<button id="modal-cancel-btn" class="btn btn-secondary">Hủy</button><button id="modal-confirm-btn" class="btn btn-primary">Xác nhận</button>`
+                    : `<button id="modal-confirm-btn" class="btn btn-primary w-full">${isGuide ? 'Đóng' : 'OK'}</button>`;
+                
+                const modalWidth = isGuide ? 'max-w-2xl' : 'max-w-sm';
+                modalContainer.innerHTML = `
+                    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg w-full ${modalWidth} fade-in">
+                        <h3 class="text-xl font-bold text-gray-900 mb-4 text-left">${title}</h3>
+                        <div class="text-gray-600 mb-6">${message}</div>
+                        <div class="flex gap-4 justify-end mt-8">${buttonsHTML}</div>
                     </div>`;
-                this.DOM.modal.appendChild(modalOverlay);
+                this.DOM.modal.appendChild(modalContainer);
 
-                const closeModal = () => modalOverlay.remove();
-                modalOverlay.querySelector('#modal-confirm-btn').onclick = () => { closeModal(); if (onConfirm) onConfirm(); };
-                if(showCancel) { modalOverlay.querySelector('#modal-cancel-btn').onclick = closeModal; }
+                const confirmBtn = modalContainer.querySelector('#modal-confirm-btn');
+                const cancelBtn = modalContainer.querySelector('#modal-cancel-btn');
+
+                const closeModal = () => modalContainer.remove();
+
+                confirmBtn.onclick = () => {
+                    closeModal();
+                    if (onConfirm) onConfirm();
+                };
+                if(cancelBtn) {
+                    cancelBtn.onclick = closeModal;
+                }
             },
+
+            findSentencesWithWord(word) {
+                const sentences = new Set();
+                const regex = new RegExp(`\\b${word.replace(/s$/, '')}(s?)\\b`, 'i');
+                this.state.wordList.forEach(w => {
+                    if (w.exampleSentence && regex.test(w.exampleSentence)) sentences.add(w.exampleSentence);
+                    if (w.structures) {
+                        w.structures.forEach(s => {
+                            if (s.applicationExamples) s.applicationExamples.forEach(ex => {
+                                if (regex.test(ex)) sentences.add(ex);
+                            });
+                        });
+                    }
+                });
+                return [...sentences];
+            }
         };
 
         document.addEventListener('DOMContentLoaded', () => App.init());
