@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- OGL Library for 3D Particles -->
     <script type="module">
         import { Renderer, Camera, Transform, Program, Geometry, Mesh } from 'https://cdn.skypack.dev/ogl';
         window.OGL = { Renderer, Camera, Transform, Program, Geometry, Mesh };
@@ -42,7 +41,6 @@
             overflow-x: hidden;
         }
 
-        /* --- LỚP NỀN 3D --- */
         .background-layer {
             position: fixed;
             top: 0;
@@ -68,20 +66,73 @@
         }
         @keyframes float { from { transform: translateY(20px); } to { transform: translateY(-20px); } }
 
-        /* --- Giao diện chính --- */
         .main-container {
             position: relative;
             z-index: 2;
         }
-
-        .header-glass {
-            background: rgba(17, 24, 39, 0.6);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--glass-border);
+        
+        /* === NÂNG CẤP HEADER MỚI === */
+        .header-sticky {
+            position: sticky;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            padding: 1rem 2rem;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            
+            /* Hiệu ứng mờ dần ở cạnh dưới */
+            mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
         }
         
-        /* --- Thẻ bài tập --- */
+        /* Hiệu ứng vignette tối ở cạnh trên */
+        .header-sticky::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100px;
+            background: radial-gradient(ellipse at top, rgba(0,0,0,0.2) 0%, transparent 80%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .header-content {
+            max-width: 1280px; /* max-w-screen-xl */
+            margin-left: auto;
+            margin-right: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .class-filter-style {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .class-filter-style:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.6);
+        }
+        .logout-btn-style {
+             background-color: #dc2626; /* red-600 */
+             color: white;
+             font-weight: bold;
+             padding: 0.5rem 1rem;
+             border-radius: 8px;
+             transition: background-color 0.2s;
+        }
+        .logout-btn-style:hover {
+            background-color: #b91c1c; /* red-700 */
+        }
+        /* === KẾT THÚC NÂNG CẤP HEADER === */
+
         @property --glow-opacity {
           syntax: '<number>';
           initial-value: 0;
@@ -117,7 +168,7 @@
 
     </style>
 </head>
-<body class="p-0 sm:p-8">
+<body class="p-0">
 
     <div class="background-shapes background-layer">
         <div class="shape shape1"></div>
@@ -128,18 +179,25 @@
     <div id="loader-overlay" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm flex items-center justify-center z-50">
         <div class="w-16 h-16 border-4 border-t-violet-500 border-gray-600 rounded-full animate-spin"></div>
     </div>
-
-    <div id="main-content" class="main-container max-w-screen-xl mx-auto" style="display: none;">
-        <header class="sticky top-0 sm:top-8 z-10 header-glass p-4 sm:p-6 rounded-none sm:rounded-2xl flex justify-between items-center mb-8">
+    
+    <header id="app-header" class="header-sticky">
+        <div class="header-content">
             <div>
-                <h1 class="text-3xl font-bold">Bài tập của bạn</h1>
-                <p id="student-name-display" class="text-lg text-gray-400"></p>
+                <h1 class="text-3xl font-bold text-white">Bài tập của bạn</h1>
+                <p id="student-name-display" class="text-lg text-gray-300"></p>
             </div>
-            <button id="logout-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">
-                <i class="fas fa-sign-out-alt mr-2"></i>Đăng xuất
-            </button>
-        </header>
+            <div class="flex items-center gap-4">
+                <select id="class-filter" class="class-filter-style">
+                    <option value="all">Tất cả các lớp</option>
+                    </select>
+                <button id="logout-btn" class="logout-btn-style">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Đăng xuất
+                </button>
+            </div>
+        </div>
+    </header>
 
+    <div id="main-content" class="main-container max-w-screen-xl mx-auto" style="display: none; padding-top: 2rem;">
         <main class="space-y-12 px-4 sm:px-0">
             <section id="todo-section">
                 <h2 class="text-2xl font-bold mb-4"><i class="fas fa-pencil-alt text-yellow-500 mr-3"></i>Bài tập cần làm</h2>
@@ -149,15 +207,21 @@
             </section>
             
             <section id="overdue-section">
-                <h2 class="text-2xl font-bold mb-4"><i class="fas fa-exclamation-triangle text-red-500 mr-3"></i>Bài tập quá hạn</h2>
-                <div id="overdue-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="section-header cursor-pointer flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold"><i class="fas fa-exclamation-triangle text-red-500 mr-3"></i>Bài tập quá hạn</h2>
+                    <i class="fas fa-chevron-down section-toggle-icon text-gray-400"></i>
+                </div>
+                <div id="overdue-list" class="section-content grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" style="display: none;">
                      <p class="placeholder-text text-gray-400 col-span-full">Không có bài tập nào bị quá hạn.</p>
                 </div>
             </section>
 
             <section id="completed-section">
-                <h2 class="text-2xl font-bold mb-4"><i class="fas fa-check-circle text-green-500 mr-3"></i>Bài tập đã hoàn thành</h2>
-                <div id="completed-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="section-header cursor-pointer flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold"><i class="fas fa-check-circle text-green-500 mr-3"></i>Bài tập đã hoàn thành</h2>
+                    <i class="fas fa-chevron-down section-toggle-icon text-gray-400"></i>
+                </div>
+                <div id="completed-list" class="section-content grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" style="display: none;">
                      <p class="placeholder-text text-gray-400 col-span-full">Bạn chưa hoàn thành bài tập nào.</p>
                 </div>
             </section>
@@ -166,10 +230,9 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getFirestore, collection, doc, getDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, getDoc, query, where, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
         
-        // --- KHỞI TẠO 3D BACKGROUND ---
         const { Renderer, Camera, Transform, Program, Geometry, Mesh } = window.OGL;
         const container = document.getElementById('ogl-canvas-back');
         if (container) {
@@ -216,7 +279,6 @@
             }
         }
 
-        // --- KHỞI TẠO FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
@@ -231,6 +293,9 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
         
+        let allSubmissions = [];
+        let allClassDocs = [];
+        
         const DOM = {
             loader: document.getElementById('loader-overlay'),
             mainContent: document.getElementById('main-content'),
@@ -239,6 +304,7 @@
             todoList: document.getElementById('todo-list'),
             overdueList: document.getElementById('overdue-list'),
             completedList: document.getElementById('completed-list'),
+            classFilter: document.getElementById('class-filter'),
         };
 
         onAuthStateChanged(auth, (user) => {
@@ -253,22 +319,43 @@
             signOut(auth).catch(err => alert("Lỗi khi đăng xuất."));
         });
         
+        async function loadUserClasses(user) {
+            const q = query(collection(db, "classes"), where("studentUids", "array-contains", user.uid));
+            const querySnapshot = await getDocs(q);
+            allClassDocs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            DOM.classFilter.innerHTML = '<option value="all">Tất cả các lớp</option>';
+            allClassDocs.forEach(cls => {
+                const option = document.createElement('option');
+                option.value = cls.id;
+                option.textContent = cls.className;
+                DOM.classFilter.appendChild(option);
+            });
+        }
+        
         async function loadDashboard(user) {
             const userDoc = await getDoc(doc(db, "users", user.uid));
             if (userDoc.exists()) {
                 DOM.studentNameDisplay.textContent = `Xin chào, ${userDoc.data().displayName}!`;
             }
             
+            await loadUserClasses(user);
+            
             const q = query(collection(db, "submissions"), where("studentId", "==", user.uid));
             onSnapshot(q, (snapshot) => {
-                const submissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderAssignments(submissions);
+                allSubmissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderAssignments();
                 DOM.loader.style.display = 'none';
                 DOM.mainContent.style.display = 'block';
             });
         }
 
-        function renderAssignments(submissions) {
+        function renderAssignments() {
+            const selectedClassId = DOM.classFilter.value;
+            const submissionsToRender = selectedClassId === 'all'
+                ? allSubmissions
+                : allSubmissions.filter(sub => sub.classId === selectedClassId);
+
             DOM.todoList.innerHTML = '';
             DOM.overdueList.innerHTML = '';
             DOM.completedList.innerHTML = '';
@@ -276,7 +363,7 @@
             const now = new Date();
             let todoCount = 0, overdueCount = 0, completedCount = 0;
 
-            submissions.forEach(sub => {
+            submissionsToRender.forEach(sub => {
                 const test = sub.testSnapshot;
                 if (!test) return;
 
@@ -356,13 +443,12 @@
             if (overdueCount === 0) DOM.overdueList.innerHTML = `<p class="placeholder-text text-gray-400 col-span-full">Không có bài tập nào bị quá hạn.</p>`;
             if (completedCount === 0) DOM.completedList.innerHTML = `<p class="placeholder-text text-gray-400 col-span-full">Bạn chưa hoàn thành bài tập nào.</p>`;
             
-            // Add 3D hover effect to new cards
             document.querySelectorAll('.assignment-card').forEach(card => {
                 card.addEventListener('mousemove', (e) => {
                     const rect = card.getBoundingClientRect();
                     const x = e.clientX - rect.left;
                     const y = e.clientY - rect.top;
-                    const rotateX = (y / rect.height - 0.5) * -15; // Invert for natural feel
+                    const rotateX = (y / rect.height - 0.5) * -15;
                     const rotateY = (x / rect.width - 0.5) * 15;
                     card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
                 });
@@ -371,6 +457,30 @@
                 });
             });
         }
+        
+        DOM.classFilter.addEventListener('change', renderAssignments);
+
+        function setupAccordion() {
+            document.querySelectorAll('.section-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = header.nextElementSibling;
+                    const icon = header.querySelector('.section-toggle-icon');
+                    
+                    if (content.style.display === 'none') {
+                        content.style.display = 'grid';
+                        icon.classList.remove('fa-chevron-down');
+                        icon.classList.add('fa-chevron-up');
+                    } else {
+                        content.style.display = 'none';
+                        icon.classList.remove('fa-chevron-up');
+                        icon.classList.add('fa-chevron-down');
+                    }
+                });
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', setupAccordion);
+
     </script>
 </body>
 </html>
