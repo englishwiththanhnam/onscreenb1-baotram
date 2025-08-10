@@ -1,12 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vocabulary Learning & Practice</title>
+    <title>Học Từ Vựng - lingua Xplore</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    
+    <!-- OGL Library for 3D Particles -->
+    <script type="module">
+        import { Renderer, Camera, Transform, Program, Geometry, Mesh } from 'https://cdn.skypack.dev/ogl';
+        window.OGL = { Renderer, Camera, Transform, Program, Geometry, Mesh };
+    </script>
     
     <script>
         const firebaseConfig = {
@@ -23,87 +31,130 @@
 
     <style>
         :root {
-            --primary-color: #6d28d9; --primary-hover: #5b21b6;
-            --correct-color: #16a34a; --incorrect-color: #dc2626;
-            --bg-light: #f5f7ff; --bg-card: #ffffff; --text-primary: #0f172a;
-            --text-secondary: #475569; --border-color: #e5e7eb;
+            --bg-dark: #111827;
+            --text-light: #f0f6fc;
+            --text-secondary: #a2a6c3;
+            --glass-bg: radial-gradient(ellipse at center, rgba(31, 41, 55, 0.65) 0%, rgba(31, 41, 55, 0.4) 100%);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --primary-accent: #8b5cf6;
+            --primary-accent-glow: rgba(139, 92, 246, 0.5);
+            --correct-color: #22c55e;
+            --incorrect-color: #ef4444;
+            --grad-color-1: #d8b4fe;
+            --grad-color-2: #a855f7;
         }
-        body { font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--bg-light); color: var(--text-primary); }
-        .btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; }
-        .btn-primary { background-color: var(--primary-color); color: white; }
-        .btn-primary:hover:not(:disabled) { background-color: var(--primary-hover); }
-        .btn-secondary { background-color: var(--bg-card); color: var(--text-secondary); border-color: var(--border-color); }
-        .btn-secondary:hover { background-color: #f9fafb; }
-        .btn-danger { background-color: var(--incorrect-color); color: white; }
-        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .progress-bar { background-color: #e5e7eb; border-radius: 9999px; height: 8px; overflow: hidden; }
-        .progress-bar-fill { background-color: var(--primary-color); height: 100%; transition: width 0.4s ease; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; width: 100%; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            overflow-x: hidden;
+        }
         
+        /* --- NỀN 3D & HÌNH KHỐI MỜ --- */
+        .background-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+        .shape { position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.5; }
+        .shape1 { width: 40vw; height: 40vw; max-width: 450px; max-height: 450px; background: #a855f7; top: -15%; left: -10%; animation: float 28s infinite alternate ease-in-out; }
+        .shape2 { width: 35vw; height: 35vw; max-width: 400px; max-height: 400px; background: #22d3ee; bottom: -15%; right: -10%; animation: float 32s infinite alternate ease-in-out; }
+        @keyframes float { from { transform: translateY(20px); } to { transform: translateY(-20px); } }
+
+        /* --- CÁC THÀNH PHẦN GIAO DIỆN CHÍNH --- */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+        .main-container { position: relative; z-index: 2; }
+        .fade-in { animation: fadeIn 0.5s ease-in-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- NÚT BẤM (DỰA TRÊN index.html) --- */
+        .cta-btn {
+            position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 12px;
+            background: linear-gradient(90deg, #8b5cf6, #6d28d9); font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 16px;
+            padding: 12px 24px; border-radius: 99px; border: none; cursor: pointer; text-decoration: none; color: rgba(255,255,255,0.9);
+            box-shadow: 0 10px 30px -10px var(--primary-accent-glow); transition: all 0.3s ease;
+        }
+        .cta-btn:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 15px 30px -10px var(--primary-accent); }
+        .cta-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+        .cta-btn.secondary { background: transparent; border: 2px solid #5c5f89; box-shadow: none; color: #a2a6c3; }
+        .cta-btn.secondary:hover:not(:disabled) { background: rgba(139, 92, 246, 0.2); border-color: var(--primary-accent); color: white; box-shadow: 0 10px 25px -10px var(--primary-accent-glow); }
+        .cta-btn.danger { background: transparent; border: 2px solid var(--incorrect-color); color: var(--incorrect-color); }
+        .cta-btn.danger:hover:not(:disabled) { background: rgba(239, 68, 68, 0.2); color: white; }
+
+        /* --- THANH TIẾN TRÌNH --- */
+        .progress-track { background: rgba(255, 255, 255, 0.1); border-radius: 9999px; height: 10px; overflow: hidden; border: 1px solid var(--glass-border); }
+        .progress-fill { background: linear-gradient(90deg, var(--grad-color-1) 0%, var(--grad-color-2) 100%); height: 100%; transition: width 0.5s cubic-bezier(0.25, 1, 0.5, 1); }
+
+        /* --- FLASHCARD --- */
         .flashcard-viewer { display: flex; flex-direction: column; height: 70vh; max-width: 800px; margin: 0 auto; }
-        .flashcard-main { flex-grow: 1; display: flex; align-items: center; justify-content: center; perspective: 1000px; }
-        .flashcard { width: 100%; height: 80%; max-height: 400px; cursor: pointer; position: relative; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1); }
+        .flashcard-main { flex-grow: 1; display: flex; align-items: center; justify-content: center; perspective: 1500px; }
+        .flashcard { width: 100%; height: 80%; max-height: 400px; cursor: pointer; position: relative; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(0.25, 1, 0.5, 1); }
         .flashcard.is-flipped { transform: rotateY(180deg); }
-        .flashcard-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 1rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07); padding: 2rem; text-align: center; border: 1px solid var(--border-color); }
-        .flashcard-front { background-image: linear-gradient(to top right, var(--bg-card), #f7f8ff); }
-        .flashcard-back { transform: rotateY(180deg); background-color: #f9fafb; }
-        
-        @keyframes slideOutLeft { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-100%); opacity: 0; } }
-        @keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
-        @keyframes slideInLeft { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes slideInRight { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        .slide-out-left { animation: slideOutLeft 0.3s forwards ease-in-out; }
-        .slide-out-right { animation: slideOutRight 0.3s forwards ease-in-out; }
-        .slide-in-left { animation: slideInLeft 0.3s forwards ease-in-out; }
-        .slide-in-right { animation: slideInRight 0.3s forwards ease-in-out; }
-
-        .answer-option { display: block; width: 100%; padding: 1rem; border: 2px solid var(--border-color); border-radius: 0.75rem; background-color: var(--bg-card); text-align: left; font-weight: 500; }
-        .answer-option:hover:not(.disabled) { border-color: var(--primary-color); background-color: #f5f3ff; }
-        .answer-option.disabled { cursor: not-allowed; }
-        .answer-option.correct { border-color: var(--correct-color); background-color: #f0fdf4; color: #14532d; }
-        .answer-option.incorrect { border-color: var(--incorrect-color); background-color: #fef2f2; color: #991b1b; }
-        .token-area { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 1rem; border: 2px dashed #cbd5e1; border-radius: 0.5rem; min-height: 80px; }
-        .word-token { padding: 0.5rem 1rem; background-color: #eef2ff; color: #4338ca; border-radius: 0.5rem; font-weight: 500; cursor: pointer; }
-        .speed-control { display: flex; align-items: center; gap: 0.5rem; background-color: rgba(255, 255, 255, 0.5); padding: 4px 8px; border-radius: 9999px; }
-
-        .fade-in { animation: fadeIn 0.5s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
+        .flashcard-face {
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 2rem; text-align: center;
+            /* Áp dụng style glass-panel */
+            background: var(--glass-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+        .flashcard-back { transform: rotateY(180deg); }
+        .flashcard-word { font-family: 'Poppins', sans-serif; font-size: clamp(2rem, 8vw, 4rem); font-weight: 700; }
+        .flashcard-pronunciation { font-family: 'Inter', sans-serif; color: var(--text-secondary); margin-top: 0.5rem; }
+        .flashcard-meaning { font-family: 'Poppins', sans-serif; font-size: clamp(1.5rem, 6vw, 2.5rem); font-weight: 600; }
+        .flashcard-example { font-style: italic; color: var(--text-secondary); margin-top: 1.5rem; }
         .audio-btn {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background-color: rgba(0,0,0,0.05);
-            color: var(--text-secondary);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-            z-index: 10;
+            position: absolute; top: 1.5rem; right: 1.5rem; width: 44px; height: 44px; border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.1); color: var(--text-secondary); cursor: pointer;
+            display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; z-index: 10;
         }
-        .audio-btn:hover {
-            background-color: var(--primary-color);
-            color: white;
+        .audio-btn:hover { background-color: var(--primary-accent); color: white; }
+
+        /* --- BÀI TẬP TRẮC NGHIỆM --- */
+        .answer-option {
+            display: block; width: 100%; padding: 1rem; border-radius: 16px; text-align: left; font-weight: 500;
+            background: transparent; border: 2px solid #5c5f89; color: #a2a6c3; transition: all 0.2s ease;
         }
-        
-        .mindmap-node { position: absolute; width: 110px; height: 110px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .mindmap-node.center { background-color: var(--primary-color); color: white; font-weight: bold; font-size: 1.1rem; z-index: 10; }
-        .mindmap-node.child { background-color: white; color: var(--text-primary); }
-        .mindmap-line { position: absolute; height: 2px; background-color: #cbd5e1; transform-origin: 0 50%; z-index: 5; }
+        .answer-option:hover:not(.disabled) { border-color: var(--primary-accent); background: rgba(139, 92, 246, 0.2); color: white; }
+        .answer-option.disabled { cursor: not-allowed; opacity: 0.6; }
+        .answer-option.correct { border-color: var(--correct-color); background: rgba(34, 197, 94, 0.2); color: #bbf7d0; }
+        .answer-option.incorrect { border-color: var(--incorrect-color); background: rgba(239, 68, 68, 0.2); color: #fecaca; }
+
+        /* --- BÀI TẬP SẮP XẾP & ĐIỀN TỪ --- */
+        .token-area { display: flex; flex-wrap: wrap; gap: 0.75rem; padding: 1rem; border: 2px dashed #5c5f89; border-radius: 16px; min-height: 80px; }
+        .word-token {
+            padding: 0.5rem 1rem; border-radius: 12px; font-weight: 600; cursor: pointer;
+            background: linear-gradient(90deg, #8b5cf6, #6d28d9); color: white;
+            box-shadow: 0 4px 15px -5px var(--primary-accent-glow); transition: all 0.2s ease;
+        }
+        .word-token:hover { transform: translateY(-2px); box-shadow: 0 6px 20px -5px var(--primary-accent); }
+        .text-input-styled {
+            background: rgba(55, 65, 81, 0.5); border: 1px solid var(--glass-border); border-radius: 12px;
+            padding: 0.75rem 1rem; color: var(--text-light); caret-color: var(--primary-accent);
+        }
+        .text-input-styled:focus { outline: none; border-color: var(--primary-accent); box-shadow: 0 0 0 3px var(--primary-accent-glow); }
+
     </style>
 </head>
 <body>
-    <div id="loader-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
+    <div class="background-layer">
+        <div class="shape shape1"></div>
+        <div class="shape shape2"></div>
+    </div>
+    <div id="ogl-canvas-back" class="background-layer"></div>
+
+    <div id="loader-overlay" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm flex items-center justify-center z-50">
         <div class="text-center">
-            <div class="w-16 h-16 border-8 border-t-violet-500 border-gray-200 rounded-full animate-spin"></div>
-            <p id="loader-text" class="text-lg font-semibold text-white mt-4">Loading lesson data...</p>
+            <div class="w-16 h-16 border-4 border-t-violet-500 border-gray-600 rounded-full animate-spin"></div>
+            <p id="loader-text" class="text-lg font-semibold text-white mt-4">Đang tải dữ liệu bài học...</p>
         </div>
     </div>
     <div id="modal-container"></div>
-    <div id="app-container" class="max-w-4xl mx-auto p-4 sm:p-8 hidden">
+    
+    <div id="app-container" class="max-w-5xl mx-auto p-4 sm:p-8 hidden">
         <header id="app-header" class="mb-8"></header>
         <main id="app-main"></main>
     </div>
@@ -112,6 +163,47 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
+        // --- PARTICLE BACKGROUND SCRIPT ---
+        if (window.OGL) {
+            const { Renderer, Camera, Program, Geometry, Mesh, Transform } = window.OGL;
+            const container = document.getElementById('ogl-canvas-back');
+            if (container) {
+                const renderer = new Renderer({ dpr: 2, alpha: true });
+                const gl = renderer.gl;
+                container.appendChild(gl.canvas);
+                const camera = new Camera(gl, { fov: 15, near: 1, far: 100 });
+                camera.position.set(0, 0, 25);
+                const scene = new Transform();
+                const program = new Program(gl, {
+                    vertex: `attribute vec3 position;attribute vec4 random;attribute vec3 color;uniform mat4 modelMatrix;uniform mat4 viewMatrix;uniform mat4 projectionMatrix;uniform float uTime;uniform float uSpread;uniform float uBaseSize;varying vec4 vRandom;varying vec3 vColor;void main(){vRandom=random;vColor=color;vec3 pos=position*uSpread;vec4 mPos=modelMatrix*vec4(pos,1.);float t=uTime*.1;mPos.x+=sin(t*random.z+6.28*random.w)*mix(.1,1.5,random.x);mPos.y+=sin(t*random.y+6.28*random.x)*mix(.1,1.5,random.w);mPos.z+=cos(t*random.w+6.28*random.y)*mix(.1,1.5,random.z);vec4 mvPos=viewMatrix*mPos;gl_PointSize=uBaseSize/-mvPos.z;gl_Position=projectionMatrix*mvPos;}`,
+                    fragment: `precision highp float;varying vec3 vColor;void main(){vec2 uv=gl_PointCoord.xy;float d=length(uv-vec2(.5));float glow=smoothstep(.5,0.,d)*.3;float core=smoothstep(.2,.18,d);float alpha=max(core,glow);if(alpha<.01)discard;vec3 finalColor=vColor+vColor*pow(glow,2.)*2.;gl_FragColor=vec4(finalColor,alpha);}`,
+                    uniforms: { uTime: { value: 0 }, uSpread: { value: 10 }, uBaseSize: { value: 350 } },
+                    transparent: true, depthTest: false
+                });
+                const count = 1000;
+                const positions = new Float32Array(count * 3);
+                const randoms = new Float32Array(count * 4);
+                const colors = new Float32Array(count * 3);
+                const palette = ['#a855f7', '#8b5cf6', '#22d3ee', '#f59e0b'];
+                const hexToRgb = (h) => { const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h); return r ? [parseInt(r[1], 16)/255, parseInt(r[2], 16)/255, parseInt(r[3], 16)/255] : [0,0,0]; };
+                for (let i = 0; i < count; i++) {
+                    const z = (Math.random() - 0.5) * 30;
+                    positions.set([(Math.random() - 0.5) * 30, (Math.random() - 0.5) * 30, z], i * 3);
+                    randoms.set([Math.random(), Math.random(), Math.random(), Math.random()], i * 4);
+                    colors.set(hexToRgb(palette[Math.floor(Math.random() * palette.length)]), i * 3);
+                }
+                const geometry = new Geometry(gl, { position: { size: 3, data: positions }, random: { size: 4, data: randoms }, color: { size: 3, data: colors } });
+                const particles = new Mesh(gl, { mode: gl.POINTS, geometry, program });
+                particles.setParent(scene);
+                function resize() { renderer.setSize(window.innerWidth, window.innerHeight); camera.perspective({ aspect: window.innerWidth / window.innerHeight }); }
+                window.addEventListener("resize", resize, false);
+                resize();
+                requestAnimationFrame(update);
+                function update(t) { requestAnimationFrame(update); program.uniforms.uTime.value = t * 0.001; renderer.render({ scene, camera }); }
+            }
+        }
+
+        // --- TOÀN BỘ LOGIC CỦA ỨNG DỤNG (KHÔNG THAY ĐỔI) ---
         const App = {
             state: {
                 db: null,
@@ -250,14 +342,14 @@
                 const buttonIcon = isCompleted ? "fa-sync-alt" : "fa-check-circle";
 
                 this.DOM.header.innerHTML = `
-                    <div class="flex flex-wrap justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
+                    <div class="glass-panel p-4 flex flex-wrap justify-between items-center gap-4">
                         <div>
-                            <h1 class="text-2xl font-bold text-gray-800">${this.state.testData.title}</h1>
-                            <p class="text-sm text-gray-500">Học sinh: <span class="font-medium">${this.state.studentName}</span></p>
+                            <h1 class="text-2xl font-bold font-poppins">${this.state.testData.title}</h1>
+                            <p class="text-sm text-text-secondary">Học sinh: <span class="font-medium text-text-light">${this.state.studentName}</span></p>
                         </div>
-                        <div>
-                            <a href="student-dashboard.html" class="btn btn-secondary mr-2"><i class="fas fa-arrow-left mr-2"></i> Dashboard</a>
-                            <button id="submit-final-btn" class="btn btn-primary"><i class="fas ${buttonIcon} mr-2"></i> ${buttonText}</button>
+                        <div class="flex items-center gap-4">
+                            <a href="student-dashboard.html" class="cta-btn secondary !py-2 !px-4"><i class="fas fa-arrow-left mr-2"></i> Dashboard</a>
+                            <button id="submit-final-btn" class="cta-btn !py-2 !px-4"><i class="fas ${buttonIcon} mr-2"></i> ${buttonText}</button>
                         </div>
                     </div>`;
                 document.getElementById('submit-final-btn').addEventListener('click', () => {
@@ -289,31 +381,31 @@
 
                 this.DOM.main.innerHTML = `
                     <div class="space-y-8 fade-in">
-                        <div class="bg-white p-6 rounded-xl shadow-sm">
-                             <h2 class="text-xl font-bold mb-4">Tổng quan Tiến độ</h2>
+                        <div class="glass-panel p-6">
+                             <h2 class="text-xl font-bold font-poppins mb-4">Tổng quan Tiến độ</h2>
                              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                 <div><p class="font-medium mb-1">Từ vựng đã học</p><div class="progress-bar"><div class="progress-bar-fill" style="width: ${vocabProgress.toFixed(0)}%;"></div></div><p class="text-right text-sm mt-1">${vocabLearned}/${wordList.length}</p></div>
-                                 <div><p class="font-medium mb-1">Cấu trúc đã học</p><div class="progress-bar"><div class="progress-bar-fill" style="width: ${structProgress.toFixed(0)}%;"></div></div><p class="text-right text-sm mt-1">${structLearned}/${structureList.length}</p></div>
+                                 <div><p class="font-medium mb-1 text-text-secondary">Từ vựng đã học: <span class="text-text-light font-semibold">${vocabLearned}/${wordList.length}</span></p><div class="progress-track"><div class="progress-fill" style="width: ${vocabProgress.toFixed(0)}%;"></div></div></div>
+                                 <div><p class="font-medium mb-1 text-text-secondary">Cấu trúc đã học: <span class="text-text-light font-semibold">${structLearned}/${structureList.length}</span></p><div class="progress-track"><div class="progress-fill" style="width: ${structProgress.toFixed(0)}%;"></div></div></div>
                             </div>
                         </div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm">
-                            <h2 class="text-xl font-bold mb-4">Chế độ Học 📚</h2>
+                        <div class="glass-panel p-6">
+                            <h2 class="text-xl font-bold font-poppins mb-4">Chế độ Học 📚</h2>
                             <div id="study-buttons" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <button data-study-mode="vocab-flashcard" class="btn btn-secondary !p-4 !items-start text-left"><div class="text-lg"><i class="fas fa-clone w-6 text-violet-500"></i></div><div><p class="font-bold">Flashcard Từ vựng</p><p class="text-xs font-normal">Học từ mới qua flashcard.</p></div></button>
-                                <button data-study-mode="mindmap" class="btn btn-secondary !p-4 !items-start text-left"><div class="text-lg"><i class="fas fa-project-diagram w-6 text-sky-500"></i></div><div><p class="font-bold">Sơ đồ Từ loại</p><p class="text-xs font-normal">Khám phá mối liên hệ giữa các từ.</p></div></button>
-                                <button data-study-mode="struct-flashcard" class="btn btn-secondary !p-4 !items-start text-left"><div class="text-lg"><i class="fas fa-sitemap w-6 text-emerald-500"></i></div><div><p class="font-bold">Flashcard Cấu trúc</p><p class="text-xs font-normal">Học các cấu trúc câu chính.</p></div></button>
+                                <button data-study-mode="vocab-flashcard" class="cta-btn secondary !p-4 !items-start !text-left !rounded-2xl"><div class="text-lg"><i class="fas fa-clone w-6 text-primary-accent"></i></div><div><p class="font-bold">Flashcard Từ vựng</p><p class="text-xs font-normal">Học từ mới qua flashcard.</p></div></button>
+                                <button data-study-mode="mindmap" class="cta-btn secondary !p-4 !items-start !text-left !rounded-2xl"><div class="text-lg"><i class="fas fa-project-diagram w-6 text-sky-400"></i></div><div><p class="font-bold">Sơ đồ Từ loại</p><p class="text-xs font-normal">Khám phá mối liên hệ.</p></div></button>
+                                <button data-study-mode="struct-flashcard" class="cta-btn secondary !p-4 !items-start !text-left !rounded-2xl"><div class="text-lg"><i class="fas fa-sitemap w-6 text-emerald-400"></i></div><div><p class="font-bold">Flashcard Cấu trúc</p><p class="text-xs font-normal">Học các cấu trúc câu.</p></div></button>
                             </div>
                         </div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm">
-                            <h2 class="text-xl font-bold mb-4">Chế độ Luyện tập 🏋️‍♀️</h2>
-                            <div id="practice-guide-buttons" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6"></div>
+                        <div class="glass-panel p-6">
+                            <h2 class="text-xl font-bold font-poppins mb-4">Chế độ Luyện tập 🏋️‍♀️</h2>
+                            <div id="practice-guide-buttons" class="flex flex-wrap gap-3 mb-6"></div>
                             <div id="practice-buttons" class="flex flex-col gap-4">
                                 <div class="flex flex-col sm:flex-row gap-4">
-                                    <button data-practice-mode="normal" class="btn btn-primary flex-1"><i class="fas fa-random mr-2"></i> Luyện tập Thường</button>
-                                    <button data-practice-mode="weakness" class="btn btn-secondary flex-1 border-amber-500 text-amber-600 hover:bg-amber-50"><i class="fas fa-star-half-alt mr-2"></i> Ôn tập Điểm yếu</button>
+                                    <button data-practice-mode="normal" class="cta-btn flex-1"><i class="fas fa-random mr-2"></i> Luyện tập Thường</button>
+                                    <button data-practice-mode="weakness" class="cta-btn secondary flex-1"><i class="fas fa-star-half-alt mr-2"></i> Ôn tập Điểm yếu</button>
                                 </div>
                                 ${ isEligibleForFinalTest ? `
-                                    <button id="start-final-test-btn" class="btn btn-danger w-full mt-4 text-lg py-4" ${this.state.session.finalTestTaken ? 'disabled' : ''}>
+                                    <button id="start-final-test-btn" class="cta-btn danger w-full mt-4 text-lg !py-4" ${this.state.session.finalTestTaken ? 'disabled' : ''}>
                                         <i class="fas fa-graduation-cap mr-2"></i>
                                         ${this.state.session.finalTestTaken ? `Đã làm KT cuối kỳ (Điểm: ${this.state.session.finalTestScore}%)` : 'Bắt đầu KT cuối kỳ'}
                                     </button>
@@ -404,7 +496,6 @@
                 }
             },
             
-            // ... Dán tất cả các hàm còn lại vào đây ...
             startFlashcardSession(type) {
                 this.state.currentSessionItems = type === 'word' ? this.state.wordList : this.state.structureList;
                 if(this.state.currentSessionItems.length === 0) {
@@ -417,17 +508,17 @@
             
             renderFlashcardViewer() {
                 this.DOM.main.innerHTML = `
-                <div class="bg-white p-6 rounded-xl shadow-sm fade-in">
+                <div class="glass-panel p-6 fade-in">
                     <div class="flashcard-viewer">
                         <div class="flex justify-between items-center mb-4">
-                            <button id="back-to-dashboard-btn" class="btn btn-secondary !py-2 !px-4"><i class="fas fa-arrow-left mr-2"></i> Quay lại</button>
-                            <div id="card-counter" class="font-semibold text-slate-700"></div>
+                            <button id="back-to-dashboard-btn" class="cta-btn secondary !py-2 !px-4"><i class="fas fa-arrow-left mr-2"></i> Quay lại</button>
+                            <div id="card-counter" class="font-semibold text-text-secondary"></div>
                         </div>
                         <div class="flashcard-main"><div class="flashcard" id="flashcard"></div></div>
                         <div class="flashcard-nav flex justify-between items-center p-4">
-                            <button id="prev-card-btn" class="btn btn-secondary !rounded-full !w-14 !h-14 text-xl"><i class="fas fa-arrow-left"></i></button>
-                            <p class="text-sm text-gray-500">Bấm vào thẻ để lật</p>
-                            <button id="next-card-btn" class="btn btn-secondary !rounded-full !w-14 !h-14 text-xl"><i class="fas fa-arrow-right"></i></button>
+                            <button id="prev-card-btn" class="cta-btn secondary !rounded-full !w-14 !h-14 text-xl"><i class="fas fa-arrow-left"></i></button>
+                            <p class="text-sm text-text-secondary">Bấm vào thẻ để lật</p>
+                            <button id="next-card-btn" class="cta-btn secondary !rounded-full !w-14 !h-14 text-xl"><i class="fas fa-arrow-right"></i></button>
                         </div>
                     </div>
                 </div>`;
@@ -451,10 +542,10 @@
                 const isStructure = item.itemType === 'structure';
                 const audioBtnHTML = item.audioUrl ? `<button class="audio-btn" data-audio-url="${item.audioUrl}"><i class="fas fa-volume-up"></i></button>` : '';
 
-                const frontHTML = `${audioBtnHTML}<div class="text-4xl font-bold">${isStructure ? item.phrase : item.word}</div>`;
+                const frontHTML = `${audioBtnHTML}<div class="flashcard-word">${isStructure ? item.phrase : item.word}</div>`;
                 const backHTML = isStructure
-                    ? `<div class="text-2xl font-semibold">${item.meaning}</div><p class="text-slate-500 mt-4 italic">"${item.applicationExamples?.[0] || ''}"</p>`
-                    : `${audioBtnHTML}<div class="text-3xl font-semibold">${item.meaning}</div><p class="text-slate-500 mt-2 text-lg">${item.pronunciation} <span class="mx-2">&bull;</span> ${item.type}</p><p class="text-slate-500 mt-4 italic">"${item.exampleSentence || ''}"</p>`;
+                    ? `<div class="flashcard-meaning">${item.meaning}</div><p class="flashcard-example">"${item.applicationExamples?.[0] || ''}"</p>`
+                    : `${audioBtnHTML}<div class="flashcard-meaning">${item.meaning}</div><p class="flashcard-pronunciation">${item.pronunciation} <span class="mx-2">&bull;</span> ${item.type}</p><p class="flashcard-example">"${item.exampleSentence || ''}"</p>`;
                 
                 card.innerHTML = `<div class="flashcard-face flashcard-front">${frontHTML}</div><div class="flashcard-face flashcard-back">${backHTML}</div>`;
                 
@@ -471,17 +562,11 @@
             navigateCard(direction) {
                 const card = document.getElementById('flashcard');
                 if (!card) return;
-                const animationClass = direction === 1 ? 'slide-out-left' : 'slide-out-right';
-                card.classList.add(animationClass);
-                setTimeout(() => {
-                    const newIndex = this.state.currentIndex + direction;
-                    const total = this.state.currentSessionItems.length;
-                    this.state.currentIndex = (newIndex + total) % total;
-                    card.classList.remove('slide-out-left', 'slide-out-right');
-                    this.updateFlashcardView();
-                    card.classList.add(direction === 1 ? 'slide-in-right' : 'slide-in-left');
-                    setTimeout(() => card.classList.remove('slide-in-right', 'slide-in-left'), 300);
-                }, 300);
+                const newIndex = this.state.currentIndex + direction;
+                const total = this.state.currentSessionItems.length;
+                this.state.currentIndex = (newIndex + total) % total;
+                // A simple update is enough for the new theme, no need for slide animations
+                this.updateFlashcardView();
             },
 
             renderMindmapFamilySelection() {
@@ -491,14 +576,14 @@
                     return;
                 }
                 this.DOM.main.innerHTML = `
-                <div class="bg-white p-6 rounded-xl shadow-sm fade-in">
+                <div class="glass-panel p-6 fade-in">
                     <div class="flex items-center mb-6">
-                        <button id="back-to-dashboard-btn" class="btn btn-secondary !py-2 !px-4 mr-4"><i class="fas fa-arrow-left"></i></button>
-                        <h2 class="text-xl font-bold">Chọn một họ từ để khám phá</h2>
+                        <button id="back-to-dashboard-btn" class="cta-btn secondary !py-2 !px-4 mr-4"><i class="fas fa-arrow-left"></i></button>
+                        <h2 class="text-xl font-bold font-poppins">Chọn một họ từ để khám phá</h2>
                     </div>
                     <div id="family-list" class="flex flex-wrap gap-3">
                         ${familiesWithMultipleMembers.map(([root, members]) => `
-                            <button data-family-root="${root}" class="btn btn-secondary !py-3 !px-5">${root} (${members.length})</button>
+                            <button data-family-root="${root}" class="cta-btn secondary !py-3 !px-5">${root} (${members.length})</button>
                         `).join('')}
                     </div>
                 </div>`;
@@ -513,10 +598,10 @@
                 const family = this.state.wordFamilies[familyRoot];
                 const centerWord = family[0];
                 this.DOM.main.innerHTML = `
-                <div class="bg-white p-6 rounded-xl shadow-sm fade-in">
+                <div class="glass-panel p-6 fade-in">
                     <div class="flex items-center mb-6">
-                         <button id="back-to-selection-btn" class="btn btn-secondary !py-2 !px-4 mr-4"><i class="fas fa-arrow-left"></i></button>
-                        <h2 class="text-xl font-bold">Họ từ: ${familyRoot}</h2>
+                         <button id="back-to-selection-btn" class="cta-btn secondary !py-2 !px-4 mr-4"><i class="fas fa-arrow-left"></i></button>
+                        <h2 class="text-xl font-bold font-poppins">Họ từ: ${familyRoot}</h2>
                     </div>
                     <div class="relative w-full h-[60vh] flex items-center justify-center overflow-hidden">
                         <div id="mindmap" class="relative w-[150px] h-[150px]"></div>
@@ -545,18 +630,18 @@
             renderPracticeGuide() {
                 const guideContainer = document.getElementById('practice-guide-buttons');
                 const exerciseTypes = [
-                    { type: 'TraditionalMCQ', name: 'Trắc nghiệm', icon: 'fa-list-check', color: 'text-violet-500' },
-                    { type: 'ContextualMCQ', name: 'Ngữ cảnh', icon: 'fa-quote-left', color: 'text-sky-500' },
-                    { type: 'WordFamilyMCQ', name: 'Họ từ', icon: 'fa-users', color: 'text-blue-500' },
-                    { type: 'SentenceUnscramble', name: 'Sắp xếp', icon: 'fa-sort-alpha-down', color: 'text-indigo-500' },
-                    { type: 'GapFill', name: 'Điền từ', icon: 'fa-edit', color: 'text-emerald-500' },
-                    { type: 'AudioListening', name: 'Nghe', icon: 'fa-volume-up', color: 'text-pink-500' },
-                    { type: 'TriosOfGappedSentence', name: 'Tìm từ', icon: 'fa-search-plus', color: 'text-teal-500' },
-                    { type: 'ErrorCorrection', name: 'Sửa lỗi', icon: 'fa-check-double', color: 'text-rose-500' },
-                    { type: 'IPAFill', name: 'Phiên âm', icon: 'fa-language', color: 'text-orange-500' },
+                    { type: 'TraditionalMCQ', name: 'Trắc nghiệm', icon: 'fa-list-check', color: 'text-violet-400' },
+                    { type: 'ContextualMCQ', name: 'Ngữ cảnh', icon: 'fa-quote-left', color: 'text-sky-400' },
+                    { type: 'WordFamilyMCQ', name: 'Họ từ', icon: 'fa-users', color: 'text-blue-400' },
+                    { type: 'SentenceUnscramble', name: 'Sắp xếp', icon: 'fa-sort-alpha-down', color: 'text-indigo-400' },
+                    { type: 'GapFill', name: 'Điền từ', icon: 'fa-edit', color: 'text-emerald-400' },
+                    { type: 'AudioListening', name: 'Nghe', icon: 'fa-volume-up', color: 'text-pink-400' },
+                    { type: 'TriosOfGappedSentence', name: 'Tìm từ', icon: 'fa-search-plus', color: 'text-teal-400' },
+                    { type: 'ErrorCorrection', name: 'Sửa lỗi', icon: 'fa-check-double', color: 'text-rose-400' },
+                    { type: 'IPAFill', name: 'Phiên âm', icon: 'fa-language', color: 'text-orange-400' },
                 ];
                 guideContainer.innerHTML = exerciseTypes.map(ex => `
-                    <button data-guide-type="${ex.type}" class="btn btn-secondary !p-2 !justify-start text-left text-sm">
+                    <button data-guide-type="${ex.type}" class="cta-btn secondary !p-2 !justify-start !text-left !rounded-lg !text-sm">
                         <i class="fas ${ex.icon} ${ex.color} w-8 text-center text-base"></i>
                         <span class="font-semibold">${ex.name}</span>
                     </button>
@@ -597,8 +682,8 @@
 
                 this.showModal(
                     `Hướng dẫn: ${info.name}`,
-                    `<p class="text-slate-600 mb-6 text-left">${info.desc}</p>
-                     <div class="bg-slate-50 p-4 rounded-lg border">
+                    `<p class="text-text-secondary mb-6 text-left">${info.desc}</p>
+                     <div class="bg-bg-dark p-4 rounded-lg border border-glass-border">
                          <h4 class="font-bold mb-3 text-left">Ví dụ tương tác:</h4>
                          <div id="guide-question-container">${exampleHTML}</div>
                          <div id="guide-feedback-container" class="mt-4"></div>
@@ -639,13 +724,13 @@
                 const total = this.state.currentSessionItems.length;
                 const progressPercent = total > 0 ? (this.state.currentIndex / total * 100) : 0;
                 this.DOM.main.innerHTML = `
-                    <div class="bg-white p-6 rounded-xl shadow-sm fade-in">
+                    <div class="glass-panel p-6 fade-in">
                         <div class="mb-6">
                             <div class="flex justify-between items-center mb-2">
-                                <p class="text-sm font-medium">Câu hỏi ${this.state.currentIndex + 1} / ${total}</p>
-                                <button id="exit-practice-btn" class="text-sm font-semibold text-gray-600 hover:text-red-500"><i class="fas fa-times mr-1"></i> Thoát</button>
+                                <p class="text-sm font-medium text-text-secondary">Câu hỏi ${this.state.currentIndex + 1} / ${total}</p>
+                                <button id="exit-practice-btn" class="text-sm font-semibold text-text-secondary hover:text-incorrect-color"><i class="fas fa-times mr-1"></i> Thoát</button>
                             </div>
-                            <div class="progress-bar"><div class="progress-bar-fill" style="width: ${progressPercent}%;"></div></div>
+                            <div class="progress-track"><div class="progress-fill" style="width: ${progressPercent}%;"></div></div>
                         </div>
                         <div id="question-container" class="min-h-[300px]"></div>
                         <div id="feedback-container" class="mt-4"></div>
@@ -712,22 +797,22 @@
                 const score = this.state.currentScore;
                 const total = this.state.currentSessionItems.length;
                 this.DOM.main.innerHTML = `
-                    <div class="text-center max-w-lg mx-auto bg-white p-8 rounded-xl shadow-sm fade-in">
-                        <h1 class="text-3xl font-bold mb-2">Hoàn thành Luyện tập!</h1>
-                        <p class="text-lg text-slate-600 mb-6">Bạn đã trả lời đúng ${score} / ${total} câu.</p>
+                    <div class="text-center max-w-lg mx-auto glass-panel p-8 fade-in">
+                        <h1 class="text-3xl font-bold font-poppins mb-2">Hoàn thành Luyện tập!</h1>
+                        <p class="text-lg text-text-secondary mb-6">Bạn đã trả lời đúng ${score} / ${total} câu.</p>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-                            <div class="bg-green-50 p-4 rounded-lg">
-                                <h3 class="font-bold text-green-800 mb-2">Đúng (${this.state.sessionCorrectItems.length})</h3>
+                            <div class="bg-bg-dark p-4 rounded-lg border border-glass-border">
+                                <h3 class="font-bold text-green-400 mb-2">Đúng (${this.state.sessionCorrectItems.length})</h3>
                                 <ul class="text-sm space-y-1 max-h-32 overflow-y-auto">${this.state.sessionCorrectItems.map(item => `<li>${item.word || item.phrase}</li>`).join('')}</ul>
                             </div>
-                            <div class="bg-red-50 p-4 rounded-lg">
-                                <h3 class="font-bold text-red-800 mb-2">Cần xem lại (${this.state.sessionIncorrectItems.length})</h3>
+                            <div class="bg-bg-dark p-4 rounded-lg border border-glass-border">
+                                <h3 class="font-bold text-red-400 mb-2">Cần xem lại (${this.state.sessionIncorrectItems.length})</h3>
                                 <ul class="text-sm space-y-1 max-h-32 overflow-y-auto">${this.state.sessionIncorrectItems.map(item => `<li>${item.word || item.phrase}</li>`).join('')}</ul>
                             </div>
                         </div>
                         <div class="mt-8 flex flex-col sm:flex-row gap-4">
-                            <button id="continue-practice-btn" class="btn btn-primary w-full">Luyện tập lại</button>
-                            <button id="back-to-dashboard-btn" class="btn btn-secondary w-full">Thoát</button>
+                            <button id="continue-practice-btn" class="cta-btn w-full">Luyện tập lại</button>
+                            <button id="back-to-dashboard-btn" class="cta-btn secondary w-full">Thoát</button>
                         </div>
                     </div>`;
                 document.getElementById('continue-practice-btn').addEventListener('click', () => this.startPractice('normal'));
@@ -779,13 +864,13 @@
                 const timeString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
                 this.DOM.main.innerHTML = `
-                    <div class="bg-white p-6 rounded-xl shadow-lg border-2 border-red-200 fade-in">
+                    <div class="glass-panel p-6 border-2 border-red-500/50 fade-in">
                         <div class="mb-6">
-                            <div class="flex justify-between items-center mb-2 text-red-700 font-bold">
+                            <div class="flex justify-between items-center mb-2 text-red-400 font-bold">
                                 <p>BÀI KIỂM TRA CUỐI KỲ - Câu ${this.state.currentIndex + 1} / ${total}</p>
                                 <div id="timer-display" class="text-lg"><i class="fas fa-clock mr-2"></i>${timeString}</div>
                             </div>
-                            <div class="progress-bar"><div id="progress-bar-final-test" class="progress-bar-fill bg-red-500" style="width: ${progressPercent}%;"></div></div>
+                            <div class="progress-track"><div id="progress-bar-final-test" class="progress-fill bg-red-500" style="width: ${progressPercent}%;"></div></div>
                         </div>
                         <div id="question-container" class="min-h-[300px]"></div>
                         <div id="feedback-container" class="mt-4"></div>
@@ -882,23 +967,23 @@
 
             getTraditionalMCQHTML(item, isExample = false) {
                 const isEngToViet = Math.random() > 0.5;
-                const question = isEngToViet ? `${item.word} <span class="text-base font-normal text-slate-500">(${item.type})</span>` : item.meaning;
+                const question = isEngToViet ? `<span class="font-poppins font-bold text-3xl">${item.word}</span> <span class="text-base font-normal text-text-secondary">(${item.type})</span>` : `<span class="font-poppins font-bold text-3xl">${item.meaning}</span>`;
                 this.state.currentCorrectAnswer = isEngToViet ? item.meaning : item.word;
                 
                 const distractors = this.shuffleArray(isEngToViet ? [...item.distractors_vi] : [...item.distractors_en]).slice(0, 3);
                 const options = this.shuffleArray([this.state.currentCorrectAnswer, ...distractors]);
 
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Trắc nghiệm: Chọn đáp án đúng</h2><div class="text-2xl font-bold min-h-[60px] mb-8">${question}</div><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Trắc nghiệm: Chọn đáp án đúng</h2><div class="min-h-[60px] mb-8">${question}</div><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             
             getContextualMCQHTML(item, isExample = false) {
                 this.state.currentCorrectAnswer = item.word;
                 const wordRegex = new RegExp(`\\b${item.word.replace(/s$/, '')}(s?)\\b`, 'gi');
-                const sentence = item.exampleSentence.replace(wordRegex, '<span class="font-bold text-indigo-600">[...]</span>');
+                const sentence = item.exampleSentence.replace(wordRegex, '<span class="font-bold text-primary-accent">[...]</span>');
                 const distractors = this.shuffleArray([...item.distractors_en]).slice(0, 3);
                 const options = this.shuffleArray([this.state.currentCorrectAnswer, ...distractors]);
 
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Trắc nghiệm: Hoàn thành câu</h2><p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Trắc nghiệm: Hoàn thành câu</h2><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
 
             getWordFamilyMCQHTML(item, isExample = false) {
@@ -907,31 +992,31 @@
 
                 this.state.currentCorrectAnswer = item.word;
                 const wordRegex = new RegExp(`\\b${item.word.replace(/s$/, '')}(s?)\\b`, 'gi');
-                const sentence = item.exampleSentence.replace(wordRegex, '<span class="font-bold text-indigo-600">[...]</span>');
+                const sentence = item.exampleSentence.replace(wordRegex, '<span class="font-bold text-primary-accent">[...]</span>');
                 
                 const distractors = this.shuffleArray(family.filter(w => w.id !== item.id)).slice(0, 3).map(w => w.word);
                 const options = this.shuffleArray([this.state.currentCorrectAnswer, ...distractors]);
 
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Trắc nghiệm: Họ từ</h2><p class="text-slate-600 mb-4">Chọn từ đúng từ họ từ "<strong>${item.familyRoot}</strong>" để hoàn thành câu.</p><p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Trắc nghiệm: Họ từ</h2><p class="text-text-secondary mb-4">Chọn từ đúng từ họ từ "<strong>${item.familyRoot}</strong>" để hoàn thành câu.</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             
             getAudioListeningHTML(item, isExample = false) {
                 this.state.currentCorrectAnswer = item.word;
                 return `<div class="question-block">
-                    <h2 class="text-sm font-semibold text-indigo-600 mb-2">Nghe: Gõ lại từ</h2>
+                    <h2 class="text-sm font-semibold text-primary-accent mb-2">Nghe: Gõ lại từ</h2>
                     <div class="text-center mb-6">
-                        <button id="play-audio-btn" data-audio-url="${item.audioUrl}" class="text-5xl text-indigo-500 hover:text-indigo-700 transition-colors"><i class="fas fa-play-circle"></i></button>
+                        <button id="play-audio-btn" data-audio-url="${item.audioUrl}" class="text-6xl text-primary-accent hover:text-violet-400 transition-colors"><i class="fas fa-play-circle"></i></button>
                     </div>
                     <div class="flex justify-center mb-6">
-                        <div class="speed-control">
-                            <button data-speed="0.75" class="speed-btn px-2 text-sm">0.75x</button>
-                            <button data-speed="1.0" class="speed-btn px-2 text-sm font-bold text-indigo-600">1x</button>
-                            <button data-speed="1.25" class="speed-btn px-2 text-sm">1.25x</button>
+                        <div class="flex items-center gap-2 bg-black/20 p-1 rounded-full text-xs">
+                            <button data-speed="0.75" class="speed-btn px-3 py-1 rounded-full">0.75x</button>
+                            <button data-speed="1.0" class="speed-btn px-3 py-1 rounded-full font-bold bg-primary-accent">1x</button>
+                            <button data-speed="1.25" class="speed-btn px-3 py-1 rounded-full">1.25x</button>
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-indigo-500 focus:ring-indigo-500" placeholder="Gõ những gì bạn nghe được...">
-                        <button id="check-btn" class="btn btn-primary !py-3">Kiểm tra</button>
+                        <input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Gõ những gì bạn nghe được...">
+                        <button id="check-btn" class="cta-btn !py-3">Kiểm tra</button>
                     </div>
                 </div>`;
             },
@@ -939,12 +1024,12 @@
             getSentenceUnscrambleHTML(item, isExample = false) {
                 this.state.currentCorrectAnswer = item.exampleSentence;
                 const words = this.shuffleArray(item.exampleSentence.split(' '));
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Sắp xếp câu</h2><p class="text-slate-600 mb-4">Bấm vào các từ theo đúng thứ tự để tạo thành câu hoàn chỉnh.</p><div id="unscramble-answer-area" class="token-area mb-4"></div><div id="unscramble-source-area" class="token-area bg-slate-50">${words.map(word => `<span class="word-token">${word}</span>`).join('')}</div><div class="mt-6 text-right"><button id="check-btn" class="btn btn-primary">Kiểm tra</button></div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Sắp xếp câu</h2><p class="text-text-secondary mb-4">Bấm vào các từ theo đúng thứ tự để tạo thành câu hoàn chỉnh.</p><div id="unscramble-answer-area" class="token-area mb-4"></div><div id="unscramble-source-area" class="token-area bg-black/20">${words.map(word => `<span class="word-token">${word}</span>`).join('')}</div><div class="mt-6 text-right"><button id="check-btn" class="cta-btn">Kiểm tra</button></div></div>`;
             },
 
             getGapFillHTML(item, isExample = false) {
                 this.state.currentCorrectAnswer = item.gapFill.blank;
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Điền vào chỗ trống</h2><p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${item.gapFill.sentence}"</p><div class="flex gap-2"><input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-indigo-500 focus:ring-indigo-500" placeholder="Gõ từ còn thiếu..."><button id="check-btn" class="btn btn-primary !py-3">Kiểm tra</button></div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Điền vào chỗ trống</h2><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${item.gapFill.sentence}"</p><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Gõ từ còn thiếu..."><button id="check-btn" class="cta-btn !py-3">Kiểm tra</button></div></div>`;
             },
 
             getTriosOfGappedSentenceHTML(item, isExample = false) {
@@ -952,7 +1037,7 @@
                 const sentences = this.findSentencesWithWord(item.word);
                 const wordRegex = new RegExp(`\\b${item.word.replace(/s$/, '')}(s?)\\b`, 'gi');
                 const gappedSentences = this.shuffleArray(sentences).slice(0, 3).map(s => s.replace(wordRegex, '______'));
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Tìm từ chung</h2><p class="text-slate-600 mb-6">Một từ duy nhất phù hợp với cả ba chỗ trống dưới đây. Đó là từ gì?</p><div class="space-y-4 mb-6">${gappedSentences.map((s, i) => `<p class="text-lg font-serif italic text-slate-700">${i + 1}. "${s}"</p>`).join('')}</div><div class="flex gap-2"><input type="text" id="text-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg" placeholder="Gõ từ chung..."><button id="check-btn" class="btn btn-primary !py-3">Kiểm tra</button></div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Tìm từ chung</h2><p class="text-text-secondary mb-6">Một từ duy nhất phù hợp với cả ba chỗ trống dưới đây. Đó là từ gì?</p><div class="space-y-4 mb-6">${gappedSentences.map((s, i) => `<p class="text-lg font-serif italic text-text-secondary">${i + 1}. "${s}"</p>`).join('')}</div><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Gõ từ chung..."><button id="check-btn" class="cta-btn !py-3">Kiểm tra</button></div></div>`;
             },
 
             getErrorCorrectionHTML(item, isExample = false) {
@@ -961,20 +1046,20 @@
                 this.state.currentCorrectAnswer = item.errorCorrection.correct;
 
                 return `<div class="question-block" id="error-correction-block">
-                    <h2 class="text-sm font-semibold text-indigo-600 mb-2">Sửa lỗi</h2>
-                    <p class="text-xl font-serif italic text-slate-700 min-h-[60px] mb-8">"${sentenceToShow}"</p>
+                    <h2 class="text-sm font-semibold text-primary-accent mb-2">Sửa lỗi</h2>
+                    <p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentenceToShow}"</p>
                     <div id="error-step-1">
                         <p class="text-center font-semibold mb-4">Câu này đúng hay sai?</p>
                         <div class="flex justify-center gap-4">
-                            <button data-choice="correct" class="btn btn-secondary !px-8 !py-3 border-green-500 text-green-600 hover:bg-green-50">Đúng</button>
-                            <button data-choice="incorrect" class="btn btn-secondary !px-8 !py-3 border-red-500 text-red-600 hover:bg-red-50">Sai</button>
+                            <button data-choice="correct" class="cta-btn secondary !px-8 !py-3">Đúng</button>
+                            <button data-choice="incorrect" class="cta-btn secondary !px-8 !py-3">Sai</button>
                         </div>
                     </div>
                     <div id="error-step-2" class="hidden">
                         <p class="font-semibold mb-2">Sửa lại câu:</p>
                         <div class="flex gap-2">
-                            <input type="text" id="error-correction-input" class="w-full p-3 border-2 border-gray-300 rounded-lg" value="${sentenceToShow}">
-                            <button id="error-correction-check-btn" class="btn btn-primary">Nộp</button>
+                            <input type="text" id="error-correction-input" class="text-input-styled w-full" value="${sentenceToShow}">
+                            <button id="error-correction-check-btn" class="cta-btn">Nộp</button>
                         </div>
                     </div>
                 </div>`;
@@ -993,8 +1078,8 @@
                 const distractors = this.shuffleArray(vowels.filter(v => v !== vowelToGuess)).slice(0, 3);
                 const options = this.shuffleArray([vowelToGuess, ...distractors]);
 
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-indigo-600 mb-2">Điền phiên âm</h2>
-                <p class="text-slate-600 mb-4">Chọn âm đúng để hoàn thành phiên âm cho từ có nghĩa: <strong class="text-indigo-700">"${item.meaning}"</strong></p>
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Điền phiên âm</h2>
+                <p class="text-text-secondary mb-4">Chọn âm đúng để hoàn thành phiên âm cho từ có nghĩa: <strong class="text-primary-accent">"${item.meaning}"</strong></p>
                 <p class="text-3xl font-mono text-center min-h-[60px] mb-8">${gappedIPA}</p>
                 <div id="answer-options" class="grid grid-cols-2 gap-3">${options.map(opt => `<button class="answer-option font-mono text-center !text-2xl" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
@@ -1018,8 +1103,8 @@
                         container.querySelectorAll('.speed-btn').forEach(btn => {
                             btn.addEventListener('click', e => {
                                 this.state.playbackRate = parseFloat(e.currentTarget.dataset.speed);
-                                container.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('font-bold', 'text-indigo-600'));
-                                e.currentTarget.classList.add('font-bold', 'text-indigo-600');
+                                container.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('font-bold', 'bg-primary-accent'));
+                                e.currentTarget.classList.add('font-bold', 'bg-primary-accent');
                             });
                         });
                         if (input && checkBtn) {
@@ -1117,11 +1202,11 @@
                 if (!container) container = document.getElementById('feedback-container');
                 if (!container) return;
 
-                const bgColor = isCorrect ? 'bg-green-100' : 'bg-red-100';
-                const textColor = isCorrect ? 'text-green-800' : 'text-red-800';
-                let message = isCorrect ? 'Chính xác!' : `Không đúng! Đáp án đúng là: <strong class="font-bold">${correctAnswer}</strong>`;
+                const bgColor = isCorrect ? 'bg-green-500/20' : 'bg-red-500/20';
+                const textColor = isCorrect ? 'text-green-300' : 'text-red-300';
+                let message = isCorrect ? 'Chính xác!' : `Không đúng! Đáp án đúng là: <strong class="font-bold text-white">${correctAnswer}</strong>`;
 
-                const nextButtonHTML = isGuide ? '' : `<button id="next-question-btn" class="btn btn-secondary !py-2 !px-4">Tiếp theo <i class="fas fa-arrow-right ml-2"></i></button>`;
+                const nextButtonHTML = isGuide ? '' : `<button id="next-question-btn" class="cta-btn secondary !py-2 !px-4">Tiếp theo <i class="fas fa-arrow-right ml-2"></i></button>`;
                 container.innerHTML = `
                     <div class="${bgColor} ${textColor} p-4 rounded-lg flex justify-between items-center fade-in">
                         <p class="font-semibold">${message}</p>
@@ -1178,17 +1263,17 @@
 
                 const modalContainer = document.createElement('div');
                 modalContainer.id = modalId;
-                modalContainer.className = "fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4";
+                modalContainer.className = "fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4";
                 
                 const buttonsHTML = showCancel 
-                    ? `<button id="modal-cancel-btn" class="btn btn-secondary">Hủy</button><button id="modal-confirm-btn" class="btn btn-primary">Xác nhận</button>`
-                    : `<button id="modal-confirm-btn" class="btn btn-primary w-full">${isGuide ? 'Đóng' : 'OK'}</button>`;
+                    ? `<button id="modal-cancel-btn" class="cta-btn secondary">Hủy</button><button id="modal-confirm-btn" class="cta-btn">Xác nhận</button>`
+                    : `<button id="modal-confirm-btn" class="cta-btn w-full">${isGuide ? 'Đóng' : 'OK'}</button>`;
                 
                 const modalWidth = isGuide ? 'max-w-2xl' : 'max-w-sm';
                 modalContainer.innerHTML = `
-                    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg w-full ${modalWidth} fade-in">
-                        <h3 class="text-xl font-bold text-gray-900 mb-4 text-left">${title}</h3>
-                        <div class="text-gray-600 mb-6">${message}</div>
+                    <div class="glass-panel p-6 sm:p-8 w-full ${modalWidth} fade-in">
+                        <h3 class="text-xl font-bold font-poppins mb-4 text-left">${title}</h3>
+                        <div class="text-text-secondary mb-6">${message}</div>
                         <div class="flex gap-4 justify-end mt-8">${buttonsHTML}</div>
                     </div>`;
                 this.DOM.modal.appendChild(modalContainer);
