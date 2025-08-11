@@ -235,13 +235,12 @@
             document.getElementById('alert-ok-btn').onclick = () => DOM.alertModal.classList.remove('is-open');
         }
 
-        // NÂNG CẤP: Cấu trúc dữ liệu mới
+        // NÂNG CẤP: Khôi phục xử lý file structures.csv
         function parseAndStructureCSV(vocabText, structuresText) {
             const vocabRows = vocabText.trim().split(/\r?\n/);
             const vocab = vocabRows.map((row, index) => {
                 const columns = row.split(',').map(c => c.trim().replace(/"/g, ''));
                 if (columns.length >= 4 && columns[0]) {
-                    // Cấu trúc khởi tạo mới
                     return { 
                         id: index + 1, 
                         word: columns[0], 
@@ -250,7 +249,7 @@
                         meaning: columns[3], 
                         audioUrl: '', 
                         isEnriched: false,
-                        // Dữ liệu mới sẽ được AI điền vào
+                        structures: [], // Khởi tạo mảng structures
                         general_distractors: { en: [], vi: [] },
                         contextual_examples: []
                     };
@@ -258,12 +257,29 @@
                 return null;
             }).filter(Boolean);
             
-            // Phần xử lý structures có thể giữ lại nếu cần tham chiếu, nhưng không trực tiếp gán vào word nữa
-            // Hoặc có thể truyền vào prompt để AI có thêm ngữ cảnh
+            // Xử lý và ánh xạ structures nếu có
+            if (structuresText) {
+                const structureRows = structuresText.trim().split(/\r?\n/);
+                const structures = structureRows.map(row => {
+                    const columns = row.split(',').map(c => c.trim().replace(/"/g, ''));
+                    if (columns.length >= 2 && columns[0]) return { phrase: columns[0], meaning: columns[1] };
+                    return null;
+                }).filter(Boolean);
+
+                vocab.forEach(v => {
+                    const wordLower = v.word.toLowerCase();
+                    // Regex tìm kiếm từ dưới dạng một từ riêng biệt (word boundary)
+                    const matchRegex = new RegExp(`\\b${wordLower}(s|es|ing|ed)?\\b`, 'i');
+                    v.structures = structures
+                        .filter(s => matchRegex.test(s.phrase))
+                        .map(s => ({...s, contextual_examples: [] })); // Khởi tạo cấu trúc mới cho structure
+                });
+            }
+            
             localWordList = vocab;
         }
 
-        // NÂNG CẤP: Render bảng với cấu trúc dữ liệu mới
+        // NÂNG CẤP: Render bảng với dữ liệu cấu trúc
         function renderTable() {
             DOM.dataTableBody.innerHTML = '';
             localWordList.forEach((word, wordIndex) => {
@@ -272,7 +288,6 @@
 
                 const audioIconHTML = word.audioUrl ? `<a href="${word.audioUrl}" target="_blank" title="Nghe"><i class="fas fa-volume-up ml-2 text-blue-500"></i></a>` : '';
                 
-                // Hiển thị thông tin từ vựng cơ bản
                 const wordInfoHTML = `
                     <td class="p-3">
                         <div class="flex items-center">
@@ -284,8 +299,8 @@
                         <p class="mt-2 text-sm" contenteditable="true" data-path="meaning" data-word-index="${wordIndex}">${word.meaning}</p>
                     </td>`;
 
-                // Hiển thị các ví dụ ngữ cảnh và chỗ đục lỗ
-                const contextualExamplesHTML = (word.contextual_examples || []).map((ex, exIndex) => {
+                // Hiển thị các ví dụ cho từ chính
+                const mainWordExamplesHTML = (word.contextual_examples || []).map((ex, exIndex) => {
                     const sentenceHTML = ex.sentence_template.replace(/\{\{(.*?)\}\}/g, '<span class="blank-word">$1</span>');
                     const blanksHTML = (ex.blanks || []).map((blank, blankIndex) => `
                         <div class="ml-4 mt-2">
@@ -293,15 +308,44 @@
                             <ul class="list-disc list-inside text-xs">
                                 ${blank.distractors.map((d, dIndex) => `<li contenteditable="true" data-path="contextual_examples[${exIndex}].blanks[${blankIndex}].distractors[${dIndex}]" data-word-index="${wordIndex}">${d}</li>`).join('')}
                             </ul>
-                        </div>
-                    `).join('');
-                    return `<div class="p-2 my-2 bg-green-100 dark:bg-emerald-900/50 rounded-md">
-                                <p class="sentence-template-display">${sentenceHTML}</p>
-                                ${blanksHTML}
-                            </div>`;
+                        </div>`).join('');
+                    return `<div class="p-2 my-1 bg-green-100 dark:bg-emerald-900/50 rounded-md">${sentenceHTML}${blanksHTML}</div>`;
                 }).join('');
 
-                // Hiển thị bộ từ gây nhiễu chung
+                // Hiển thị các ví dụ cho cấu trúc
+                const structuresExamplesHTML = (word.structures || []).map((structure, structIndex) => {
+                    const structureContextualExample = (structure.contextual_examples && structure.contextual_examples[0]) ? structure.contextual_examples[0] : null;
+                    let exampleContent = '<p class="text-xs text-gray-400 italic">Chưa có ví dụ từ AI.</p>';
+                    if(structureContextualExample) {
+                        const sentenceHTML = structureContextualExample.sentence_template.replace(/\{\{(.*?)\}\}/g, '<span class="blank-word">$1</span>');
+                        const blanksHTML = (structureContextualExample.blanks || []).map((blank, blankIndex) => `
+                        <div class="ml-4 mt-1">
+                            <p class="font-semibold text-sky-700 dark:text-sky-300">Lỗ trống cho: <span class="font-bold text-sky-500">${blank.target_word}</span></p>
+                            <ul class="list-disc list-inside text-xs">
+                                ${blank.distractors.map((d, dIndex) => `<li contenteditable="true" data-path="structures[${structIndex}].contextual_examples[0].blanks[${blankIndex}].distractors[${dIndex}]" data-word-index="${wordIndex}">${d}</li>`).join('')}
+                            </ul>
+                        </div>`).join('');
+                        exampleContent = `${sentenceHTML}${blanksHTML}`;
+                    }
+                    
+                    return `<div class="p-2 my-1 bg-violet-100 dark:bg-slate-700 rounded-md">
+                                <p class="font-semibold text-violet-800 dark:text-violet-300">${structure.phrase}</p>
+                                <p class="text-xs text-slate-600 dark:text-slate-400 mb-1">${structure.meaning}</p>
+                                <div class="sentence-template-display text-xs">${exampleContent}</div>
+                           </div>`;
+                }).join('');
+
+                const contextualContentHTML = `
+                    <div>
+                        <h4 class="font-bold text-sm">Cho từ chính:</h4>
+                        ${mainWordExamplesHTML || '<p class="text-xs text-gray-400 italic">Chưa có</p>'}
+                    </div>
+                    <div class="mt-4">
+                        <h4 class="font-bold text-sm">Cho cấu trúc liên quan:</h4>
+                        ${structuresExamplesHTML || '<p class="text-xs text-gray-400 italic">Không có cấu trúc liên quan.</p>'}
+                    </div>
+                `;
+
                 const generalDistractorsHTML = `
                     <div class="text-xs">
                         <p class="font-semibold">EN:</p>
@@ -317,9 +361,9 @@
 
                 row.innerHTML = `
                     ${wordInfoHTML}
-                    <td class="p-3 text-xs">${contextualExamplesHTML || '<span class="text-gray-400">Chưa có</span>'}</td>
+                    <td class="p-3 text-xs">${contextualContentHTML}</td>
                     <td class="p-3">${generalDistractorsHTML}</td>
-                    <td class="p-3 text-center">${word.isEnriched ? '<i class="fas fa-check-circle text-2xl text-green-500"></i>' : '<i class="fas fa-hourglass-half text-2xl text-gray-400"></i>'}</td>
+                    <td class="p-3 text-center align-middle">${word.isEnriched ? '<i class="fas fa-check-circle text-2xl text-green-500"></i>' : '<i class="fas fa-hourglass-half text-2xl text-gray-400"></i>'}</td>
                 `;
                 DOM.dataTableBody.appendChild(row);
             });
@@ -380,7 +424,6 @@
             const result = await response.json();
             const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
             if (!responseText) throw new Error("Cấu trúc phản hồi API không hợp lệ.");
-            // Thêm try-catch để debug lỗi parse JSON từ AI
             try {
                 return JSON.parse(responseText);
             } catch (e) {
@@ -389,14 +432,16 @@
             }
         }
 
-        // NÂNG CẤP: Prompt hoàn toàn mới
+        // NÂNG CẤP: Prompt hoàn toàn mới, bao gồm cả xử lý structures
         function getPromptForBatch(batch) {
             const cefrLevel = getCefrLevelDescription();
             const batchInput = batch.map(wordData => ({
                 id: wordData.id,
                 word: wordData.word,
                 type: wordData.type,
-                meaning: wordData.meaning
+                meaning: wordData.meaning,
+                // Gửi kèm các cấu trúc liên quan để AI xử lý
+                structures: wordData.structures.map(s => ({ phrase: s.phrase, meaning: s.meaning }))
             }));
 
             return `
@@ -418,14 +463,18 @@ Mỗi object kết quả phải có cấu trúc JSON lồng nhau như sau:
   },
   "contextual_examples": [
     {
-      "sentence_template": "Câu ví dụ 1, với các từ có thể đục lỗ được đánh dấu bằng {{từ_đó}}.",
-      "blanks": [
-        {
-          "target_word": "từ_đó",
-          "distractors": ["Nhiễu 1 cho từ_đó", "Nhiễu 2", "Nhiễu 3"]
-        }
-      ]
+      "sentence_template": "Câu ví dụ cho TỪ GỐC, với các từ có thể đục lỗ được đánh dấu bằng {{từ_đó}}.",
+      "blanks": [ { "target_word": "từ_đó", "distractors": ["Nhiễu 1", "Nhiễu 2", "Nhiễu 3"] } ]
     }
+  ],
+  "structure_examples": [
+      {
+          "phrase": "Cấu trúc gốc 1 được cung cấp",
+          "contextual_example": {
+              "sentence_template": "Câu ví dụ cho CẤU TRÚC, với từ được đục lỗ {{từ_trong_cấu_trúc}}.",
+              "blanks": [ { "target_word": "từ_trong_cấu_trúc", "distractors": ["Nhiễu 1", "Nhiễu 2", "Nhiễu 3"] } ]
+          }
+      }
   ]
 }
 
@@ -433,37 +482,22 @@ Mỗi object kết quả phải có cấu trúc JSON lồng nhau như sau:
 
 ## YÊU CẦU CHI TIẾT
 
-### 1. Về "contextual_examples" (Dữ liệu cho bài Đục lỗ):
-- Tạo ra **1 đến 2** câu ví dụ tiếng Anh tự nhiên, phong phú, thể hiện rõ cách dùng của từ gốc.
-- Trong mỗi câu, hãy xác định **1 đến 2** từ "đắt giá" nhất (bao gồm từ gốc và có thể cả các từ quan trọng khác) để làm bài tập điền từ.
-- **Đánh dấu** các từ đó bằng cách bọc chúng trong cặp dấu ngoặc nhọn kép. Ví dụ: \`{{word}}\`.
-- Với **MỖI** từ được đánh dấu, hãy tạo một object "blanks" tương ứng:
-    - \`target_word\`: Chính là từ bị đục lỗ.
-    - \`distractors\`: Tạo 3 từ gây nhiễu **chất lượng cao** dành riêng cho ngữ cảnh của câu đó. Các từ nhiễu phải cùng loại từ và có vẻ hợp lý (plausible) khi đặt vào chỗ trống.
+### 1. Về "contextual_examples" (Dữ liệu cho TỪ GỐC):
+- Tạo ra **1 đến 2** câu ví dụ tiếng Anh tự nhiên, phong phú cho TỪ GỐC.
+- Trong mỗi câu, xác định **1 đến 2** từ "đắt giá" nhất để làm bài tập điền từ và **đánh dấu** chúng bằng \`{{word}}\`.
+- Với **MỖI** từ được đánh dấu, tạo một object "blanks" tương ứng với \`target_word\` và 3 \`distractors\` chất lượng cao.
 
-**Ví dụ tư duy cho "contextual_examples":**
-- Từ gốc: "effort" (n)
-- Kết quả mong muốn:
-  \`\`\`json
-  {
-    "sentence_template": "She made a real {{effort}} to {{finish}} the project on time.",
-    "blanks": [
-      {
-        "target_word": "effort",
-        "distractors": ["attempt", "trial", "impression"]
-      },
-      {
-        "target_word": "finish",
-        "distractors": ["complete", "end", "achieve"]
-      }
-    ]
-  }
-  \`\`\`
+### 2. Về "structure_examples" (Dữ liệu cho CẤU TRÚC LIÊN QUAN):
+- Với **MỖI** object trong mảng "structures" được cung cấp ở đầu vào, hãy tạo một object tương ứng trong mảng "structure_examples" ở kết quả.
+- \`phrase\`: Giữ nguyên cụm từ gốc.
+- \`contextual_example\`: Tạo **MỘT** ví dụ ngữ cảnh cho cấu trúc đó.
+    - \`sentence_template\`: Câu ví dụ phải chứa cấu trúc, và cũng phải **đánh dấu** \`{{word}}\` cho một từ phù hợp để làm bài tập đục lỗ.
+    - \`blanks\`: Tạo một mảng chứa 1 object cho từ được đánh dấu đó, bao gồm \`target_word\` và 3 \`distractors\`.
 
-### 2. Về "general_distractors" (Dữ liệu cho bài Hỏi nghĩa):
-- Tạo một bộ gây nhiễu **chung**, không phụ thuộc vào ngữ cảnh câu nào.
-- \`en\`: 3 từ tiếng Anh gây nhiễu, cùng loại từ, cùng trường nghĩa nhưng không đồng nghĩa hoàn toàn.
-- \`vi\`: 3 nghĩa tiếng Việt gây nhiễu, có thể là nghĩa của các từ "en" bạn vừa tạo, hoặc các nghĩa liên quan nhưng không chính xác.
+### 3. Về "general_distractors" (Dữ liệu cho bài Hỏi nghĩa):
+- Tạo một bộ gây nhiễu **chung**, không phụ thuộc vào ngữ cảnh.
+- \`en\`: 3 từ tiếng Anh gây nhiễu, cùng loại từ, cùng trường nghĩa.
+- \`vi\`: 3 nghĩa tiếng Việt gây nhiễu, có thể là nghĩa của các từ "en" bạn vừa tạo.
 
 ---
 
@@ -471,16 +505,27 @@ Mỗi object kết quả phải có cấu trúc JSON lồng nhau như sau:
 `;
         }
 
-        // NÂNG CẤP: Xử lý kết quả AI với cấu trúc mới
+        // NÂNG CẤP: Xử lý kết quả AI với cấu trúc mới, bao gồm cả structures
         function processAiResults(aiDataArray) {
             if (!Array.isArray(aiDataArray)) throw new Error("Kết quả AI không phải là một mảng.");
             
             aiDataArray.forEach(enrichedData => {
                 const wordToUpdate = localWordList.find(w => w.id === enrichedData.id);
                 if (wordToUpdate) {
-                    // Cẩn thận gán giá trị, kiểm tra null/undefined để tránh lỗi
                     wordToUpdate.general_distractors = enrichedData.general_distractors || { en: [], vi: [] };
                     wordToUpdate.contextual_examples = enrichedData.contextual_examples || [];
+                    
+                    // Ánh xạ dữ liệu ví dụ cho các cấu trúc
+                    if (enrichedData.structure_examples && Array.isArray(enrichedData.structure_examples)) {
+                        enrichedData.structure_examples.forEach(enrichedStruct => {
+                            const originalStruct = wordToUpdate.structures.find(s => s.phrase === enrichedStruct.phrase);
+                            if (originalStruct && enrichedStruct.contextual_example) {
+                                // Gán vào mảng để đồng nhất cấu trúc
+                                originalStruct.contextual_examples = [enrichedStruct.contextual_example];
+                            }
+                        });
+                    }
+
                     wordToUpdate.isEnriched = true;
                 }
             });
@@ -511,7 +556,6 @@ Mỗi object kết quả phải có cấu trúc JSON lồng nhau như sau:
             
             DOM.processFilesBtn.addEventListener('click', () => {
                 if (!vocabCsvText) return showAlert("Vui lòng tải lên file CSV từ vựng.");
-                // File cấu trúc giờ là tùy chọn
                 parseAndStructureCSV(vocabCsvText, structuresCsvText || '');
                 renderTable();
                 DOM.dataReviewSection.classList.remove('hidden');
@@ -554,7 +598,7 @@ Mỗi object kết quả phải có cấu trúc JSON lồng nhau như sau:
                 button.disabled = true;
                 button.innerHTML = `<div class="loader"></div><span class="ml-2">Đang xử lý...</span>`;
                 try {
-                    const BATCH_SIZE = 20; // Giảm batch size vì prompt phức tạp hơn
+                    const BATCH_SIZE = 15; // Giảm batch size hơn nữa vì prompt giờ rất phức tạp
                     for (let i = 0; i < wordsToEnrich.length; i += BATCH_SIZE) {
                         const batch = wordsToEnrich.slice(i, i + BATCH_SIZE);
                         const prompt = getPromptForBatch(batch);
@@ -596,7 +640,6 @@ Mỗi object kết quả phải có cấu trúc JSON lồng nhau như sau:
                 }
             });
             
-            // NÂNG CẤP: Logic chỉnh sửa dữ liệu lồng nhau
             DOM.dataTableBody.addEventListener('blur', (e) => {
                 const target = e.target;
                 if (target.hasAttribute('contenteditable')) {
@@ -606,15 +649,11 @@ Mỗi object kết quả phải có cấu trúc JSON lồng nhau như sau:
 
                     if (isNaN(wordIndex) || !localWordList[wordIndex] || !path) return;
                     
-                    // Sử dụng một hàm để cập nhật giá trị trong object lồng nhau
                     function updateNestedObject(obj, path, value) {
                         const keys = path.replace(/\[(\w+)\]/g, '.$1').replace(/^\./, '').split('.');
                         let current = obj;
                         for (let i = 0; i < keys.length - 1; i++) {
-                            if (current[keys[i]] === undefined) {
-                                // Nếu đường dẫn không tồn tại, không làm gì cả
-                                return;
-                            }
+                            if (current[keys[i]] === undefined) return;
                             current = current[keys[i]];
                         }
                         current[keys[keys.length - 1]] = value;
@@ -643,6 +682,10 @@ Mỗi object kết quả phải có cấu trúc JSON lồng nhau như sau:
                     localWordList.forEach(word => {
                         if (!word.general_distractors) word.general_distractors = { en: [], vi: [] };
                         if (!word.contextual_examples) word.contextual_examples = [];
+                        if (!word.structures) word.structures = [];
+                        word.structures.forEach(s => {
+                            if (!s.contextual_examples) s.contextual_examples = [];
+                        })
                     });
 
                     renderTable();
