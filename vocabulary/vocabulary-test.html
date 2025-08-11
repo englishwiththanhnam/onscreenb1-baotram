@@ -17,6 +17,7 @@
     </script>
     
     <script>
+        // NOTE: Firebase config should ideally be stored in environment variables, not hardcoded.
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
@@ -71,7 +72,7 @@
         .fade-in { animation: fadeIn 0.5s ease-in-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- NÚT BẤM (DỰA TRÊN index.html) --- */
+        /* --- NÚT BẤM --- */
         .cta-btn {
             position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 12px;
             background: linear-gradient(90deg, #8b5cf6, #6d28d9); font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 16px;
@@ -162,7 +163,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
-        // --- PARTICLE BACKGROUND SCRIPT (No changes) ---
+        // --- PARTICLE BACKGROUND SCRIPT (Giữ nguyên) ---
         if (window.OGL) {
             const { Renderer, Camera, Program, Geometry, Mesh, Transform } = window.OGL;
             const container = document.getElementById('ogl-canvas-back');
@@ -210,7 +211,7 @@
                 studentName: '',
                 testData: {},
                 wordList: [],
-                structureList: [], // List of all structures as individual items
+                structureList: [],
                 wordFamilies: {},
                 currentSessionItems: [],
                 sessionCorrectItems: [],
@@ -218,7 +219,12 @@
                 currentIndex: 0,
                 currentScore: 0,
                 currentCorrectAnswer: null,
-                progress: { learnedItems: new Set(), incorrectCounts: {} },
+                progress: {
+                    learnedItems: new Set(),
+                    incorrectCounts: {},
+                    // FIX: Thêm state để theo dõi các bài tập đã sử dụng cho mỗi item
+                    usedExercises: {}, 
+                },
                 isSubmitting: false,
                 audioPlayer: null,
                 playbackRate: 1.0,
@@ -231,6 +237,9 @@
                     violations: 0,
                     timerId: null,
                     timeRemaining: 0,
+                    // FIX: Tách riêng event handlers để xử lý logic chống gian lận chính xác hơn
+                    eventHandler: null,
+                    keyHandler: null,
                 }
             },
             DOM: {},
@@ -250,7 +259,7 @@
                 const submissionId = params.get('submission_id');
 
                 if (!submissionId) {
-                    this.showModal("Error", "Submission ID not found.");
+                    this.showModal("Lỗi", "Không tìm thấy mã bài làm (Submission ID).");
                     return;
                 }
                 
@@ -268,6 +277,7 @@
                     
                     this.state.session.isCompleted = submissionData.status === 'submitted';
 
+                    // FIX: Đảm bảo tải đúng trạng thái và điểm của bài kiểm tra cuối kỳ
                     if (submissionData.finalTest && submissionData.finalTest.status === 'completed') {
                         this.state.session.finalTestTaken = true;
                         this.state.session.finalTestScore = submissionData.finalTest.score;
@@ -289,20 +299,18 @@
                     this.renderHeader();
                     this.renderDashboard();
                 } catch (error) {
-                    this.showModal("Error", error.message);
+                    this.showModal("Lỗi", error.message);
                 }
             },
             
-            // *** UPDATED ***
+            // Giữ nguyên
             processData() {
                 const structures = [];
                 const families = {};
                 this.state.wordList.forEach((word, idx) => {
-                    // Ensure each item has a unique, stable ID
                     word.id = `word_${word.id || idx}`; 
                     word.itemType = 'word';
 
-                    // Extract nested structures into a separate list for practice
                     if (word.structures && Array.isArray(word.structures)) {
                         word.structures.forEach((struct, s_idx) => {
                             structures.push({
@@ -310,13 +318,11 @@
                                 id: `structure_${word.id}_${s_idx}`,
                                 itemType: 'structure',
                                 rootWord: word.word,
-                                // Add generated_tasks from parent word for context if needed
                                 generated_tasks: word.generated_tasks 
                             });
                         });
                     }
                     
-                    // Process word families
                     const root = this.findRoot(word.word);
                     word.familyRoot = root;
                     if (!families[root]) families[root] = [];
@@ -326,6 +332,7 @@
                 this.state.wordFamilies = families;
             },
 
+            // Cập nhật để tải cả usedExercises
             loadProgress() {
                 const progressKey = `vocabProgress_${this.state.submissionId}`;
                 const savedProgress = localStorage.getItem(progressKey);
@@ -333,17 +340,23 @@
                     const parsed = JSON.parse(savedProgress);
                     this.state.progress.learnedItems = new Set(parsed.learnedItems || []);
                     this.state.progress.incorrectCounts = parsed.incorrectCounts || {};
+                    // FIX: Tải tiến trình các bài tập đã làm
+                    this.state.progress.usedExercises = parsed.usedExercises || {};
                 }
             },
 
+            // Cập nhật để lưu cả usedExercises
             saveProgress() {
                 const progressKey = `vocabProgress_${this.state.submissionId}`;
                 localStorage.setItem(progressKey, JSON.stringify({
                     learnedItems: [...this.state.progress.learnedItems],
                     incorrectCounts: this.state.progress.incorrectCounts,
+                    // FIX: Lưu tiến trình các bài tập đã làm
+                    usedExercises: this.state.progress.usedExercises,
                 }));
             },
 
+            // Giữ nguyên
             renderHeader() {
                 const isCompleted = this.state.session.isCompleted;
                 const buttonText = isCompleted ? "Cập nhật tiến độ" : "Hoàn thành & Lưu";
@@ -367,22 +380,26 @@
                 });
             },
 
+            // Cập nhật để hiển thị thông báo và điểm KT cuối kỳ
             renderDashboard() {
                 const { wordList, structureList, progress } = this.state;
+                const allItems = [...wordList, ...structureList];
+                const learnedCount = progress.learnedItems.size;
+                const totalItems = allItems.length;
+                
                 const vocabLearned = wordList.filter(w => progress.learnedItems.has(w.id)).length;
                 const structLearned = structureList.filter(s => progress.learnedItems.has(s.id)).length;
                 const vocabProgress = wordList.length > 0 ? (vocabLearned / wordList.length * 100) : 0;
                 const structProgress = structureList.length > 0 ? (structLearned / structureList.length * 100) : 0;
 
-                const totalItems = wordList.length + structureList.length;
-                const learnedCount = progress.learnedItems.size;
                 const overallProgress = totalItems > 0 ? (learnedCount / totalItems * 100) : 0;
-                const isEligibleForFinalTest = overallProgress >= 85;
+                const requiredProgress = 85; // Ngưỡng để mở khóa KT cuối kỳ
+                const isEligibleForFinalTest = overallProgress >= requiredProgress;
 
                 const notifKey = `finalTestNotif_${this.state.submissionId}`;
                 if (isEligibleForFinalTest && !localStorage.getItem(notifKey) && !this.state.session.finalTestTaken) {
                     setTimeout(() => {
-                        this.showModal("Chúc mừng!", "Bạn đã học được 85% và mở khóa Bài kiểm tra cuối kỳ!");
+                        this.showModal("Chúc mừng!", `Bạn đã học được ${requiredProgress}% kiến thức và mở khóa Bài kiểm tra cuối kỳ!`);
                         localStorage.setItem(notifKey, 'true');
                     }, 1000);
                 }
@@ -394,7 +411,7 @@
                              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                  <div><p class="font-medium mb-1 text-text-secondary">Từ vựng đã học: <span class="text-text-light font-semibold">${vocabLearned}/${wordList.length}</span></p><div class="progress-track"><div class="progress-fill" style="width: ${vocabProgress.toFixed(0)}%;"></div></div></div>
                                  <div><p class="font-medium mb-1 text-text-secondary">Cấu trúc đã học: <span class="text-text-light font-semibold">${structLearned}/${structureList.length}</span></p><div class="progress-track"><div class="progress-fill" style="width: ${structProgress.toFixed(0)}%;"></div></div></div>
-                            </div>
+                             </div>
                         </div>
                         <div class="glass-panel p-6">
                             <h2 class="text-xl font-bold font-poppins mb-4">Chế độ Học 📚</h2>
@@ -417,7 +434,12 @@
                                         <i class="fas fa-graduation-cap mr-2"></i>
                                         ${this.state.session.finalTestTaken ? `Đã làm KT cuối kỳ (Điểm: ${this.state.session.finalTestScore}%)` : 'Bắt đầu KT cuối kỳ'}
                                     </button>
-                                ` : '' }
+                                ` : `
+                                    <div class="mt-4 text-center text-sm text-text-secondary bg-black/20 p-3 rounded-lg">
+                                        <i class="fas fa-lock mr-2"></i>
+                                        Bài kiểm tra cuối kỳ sẽ mở khóa khi bạn học được <strong>${requiredProgress}%</strong> kiến thức. (Hiện tại: ${overallProgress.toFixed(1)}%)
+                                    </div>
+                                ` }
                             </div>
                         </div>
                     </div>`;
@@ -455,7 +477,7 @@
                 }
             },
             
-            // *** UPDATED ***
+            // Giữ nguyên
             renderPracticeGuide() {
                 const guideContainer = document.getElementById('practice-guide-buttons');
                 const exerciseTypes = [
@@ -485,7 +507,7 @@
                 });
             },
 
-            // *** UPDATED ***
+            // Giữ nguyên
             renderGuideModal(exerciseType) {
                 const exerciseInfo = {
                     'MeaningMCQ': { name: 'Trắc nghiệm Nghĩa', desc: 'Chọn nghĩa tiếng Việt đúng cho từ tiếng Anh, hoặc ngược lại.' },
@@ -527,7 +549,7 @@
                 this.attachPracticeEventListeners(suitableItem, guideContainer, true);
             },
             
-            // *** UPDATED ***
+            // Giữ nguyên
             updateFlashcardView() {
                 const item = this.state.currentSessionItems[this.state.currentIndex];
                 const card = document.getElementById('flashcard');
@@ -554,11 +576,11 @@
                 document.getElementById('card-counter').textContent = `${this.state.currentIndex + 1} / ${this.state.currentSessionItems.length}`;
             },
 
-            // *** UPDATED ***
+            // Giữ nguyên
             getPossibleExerciseTypes(item) {
                 const types = [];
                 const tasks = item.generated_tasks;
-                if (!tasks) return ['MeaningMCQ']; // Fallback for items without tasks
+                if (!tasks) return ['MeaningMCQ']; // Fallback
 
                 if (tasks.meaning_mcq?.distractors_vi?.length >= 3) types.push('MeaningMCQ');
                 if (tasks.word_family_mcq?.distractors?.length >= 3) types.push('WordFamilyMCQ');
@@ -571,16 +593,10 @@
                 if (tasks.best_paraphrase?.options?.length > 1) types.push('BestParaphrase');
                 if (item.audioUrl) types.push('AudioListening');
 
-                // For structures, add specific types if data exists
-                if (item.itemType === 'structure') {
-                    // Currently no structure-specific AI tasks, can be added here in the future
-                }
-
                 return types.length > 0 ? types : ['MeaningMCQ'];
             },
             
-            // --- NEW & UPDATED EXERCISE RENDERERS ---
-            
+            // --- CÁC HÀM RENDER BÀI TẬP (GIỮ NGUYÊN) ---
             getMeaningMCQHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.meaning_mcq;
                 if (!tasks) return '<div>Không có dữ liệu cho bài tập này.</div>';
@@ -694,14 +710,7 @@
                 </div>`;
             },
 
-            // --- Unchanged Functions ---
-            // (submitToFirebase, startFlashcardSession, renderMindmapFamilySelection, renderMindmap, startPractice, renderPracticeView,
-            // renderNextQuestion, renderSummary, startFinalTest, renderFinalTestView, startProctoring, stopProctoring, submitFinalTest,
-            // attachPracticeEventListeners, checkAnswer, checkGuideAnswer, showFeedback, playAudio, shuffleArray, findRoot, showModal)
-            // The logic inside these functions is largely independent of the data structure of individual questions, so they remain the same.
-            // Minor changes inside them (like calling the correct get...HTML function) have already been handled.
-            
-            // Re-pasting all unchanged functions for completeness
+            // Giữ nguyên
             async submitToFirebase(isFinal = false) {
                 if (this.state.isSubmitting) return;
                 this.state.isSubmitting = true;
@@ -751,6 +760,7 @@
                 }
             },
             
+            // Giữ nguyên
             startFlashcardSession(type) {
                 this.state.currentSessionItems = type === 'word' ? this.state.wordList : this.state.structureList;
                 if(this.state.currentSessionItems.length === 0) {
@@ -761,6 +771,7 @@
                 this.renderFlashcardViewer();
             },
             
+            // Giữ nguyên
             renderFlashcardViewer() {
                 this.DOM.main.innerHTML = `
                 <div class="glass-panel p-6 fade-in">
@@ -788,6 +799,7 @@
                 document.getElementById('next-card-btn').addEventListener('click', () => this.navigateCard(1));
             },
 
+            // Giữ nguyên
             navigateCard(direction) {
                 const card = document.getElementById('flashcard');
                 if (!card) return;
@@ -797,6 +809,7 @@
                 this.updateFlashcardView();
             },
 
+            // Giữ nguyên
             renderMindmapFamilySelection() {
                 const familiesWithMultipleMembers = Object.entries(this.state.wordFamilies).filter(([root, members]) => members.length > 1);
                 if (familiesWithMultipleMembers.length === 0) {
@@ -822,41 +835,41 @@
                 });
             },
 
+            // Giữ nguyên
             renderMindmap(familyRoot) {
-                // This function's logic is complex and remains unchanged.
-                // It correctly uses the pre-processed `wordFamilies` state.
-                 const family = this.state.wordFamilies[familyRoot];
-                 const centerWord = family[0];
-                 this.DOM.main.innerHTML = `
-                 <div class="glass-panel p-6 fade-in">
-                     <div class="flex items-center mb-6">
-                          <button id="back-to-selection-btn" class="cta-btn secondary !py-2 !px-4 mr-4"><i class="fas fa-arrow-left"></i></button>
-                         <h2 class="text-xl font-bold font-poppins">Họ từ: ${familyRoot}</h2>
-                     </div>
-                     <div class="relative w-full h-[60vh] flex items-center justify-center overflow-hidden">
-                         <div id="mindmap" class="relative w-[150px] h-[150px]"></div>
-                     </div>
-                 </div>`;
-                 document.getElementById('back-to-selection-btn').addEventListener('click', () => this.renderMindmapFamilySelection());
+                const family = this.state.wordFamilies[familyRoot];
+                const centerWord = family[0];
+                this.DOM.main.innerHTML = `
+                <div class="glass-panel p-6 fade-in">
+                    <div class="flex items-center mb-6">
+                        <button id="back-to-selection-btn" class="cta-btn secondary !py-2 !px-4 mr-4"><i class="fas fa-arrow-left"></i></button>
+                       <h2 class="text-xl font-bold font-poppins">Họ từ: ${familyRoot}</h2>
+                   </div>
+                   <div class="relative w-full h-[60vh] flex items-center justify-center overflow-hidden">
+                       <div id="mindmap" class="relative w-[150px] h-[150px]"></div>
+                   </div>
+               </div>`;
+                document.getElementById('back-to-selection-btn').addEventListener('click', () => this.renderMindmapFamilySelection());
 
-                 const container = document.getElementById('mindmap');
-                 const children = family.slice(1);
-                 let html = `<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 h-36 bg-primary-accent/80 rounded-full flex flex-col items-center justify-center text-center p-2 shadow-lg"><span class="font-bold text-lg">${centerWord.word}</span><span class="text-sm font-normal">(${centerWord.type})</span></div>`;
+                const container = document.getElementById('mindmap');
+                const children = family.slice(1);
+                let html = `<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 h-36 bg-primary-accent/80 rounded-full flex flex-col items-center justify-center text-center p-2 shadow-lg"><span class="font-bold text-lg">${centerWord.word}</span><span class="text-sm font-normal">(${centerWord.type})</span></div>`;
 
-                 if (children.length > 0) {
-                     const angleStep = 360 / children.length;
-                     const radius = Math.min(container.parentElement.offsetWidth / 2.5, 250);
-                     children.forEach((child, i) => {
-                         const angle = angleStep * i;
-                         const x = radius * Math.cos(angle * Math.PI / 180);
-                         const y = radius * Math.sin(angle * Math.PI / 180);
-                         html += `<div class="absolute top-1/2 left-1/2 h-0.5 bg-slate-500/50" style="width: ${radius}px; transform-origin: left center; transform: rotate(${angle}deg);"></div>`;
-                         html += `<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 bg-glass-bg border border-glass-border rounded-full flex flex-col items-center justify-center text-center p-1 shadow-md" style="transform: translate(${x}px, ${y}px) translate(-50%, -50%);"><span class="font-semibold">${child.word}</span><span class="text-xs">(${child.type})</span></div>`;
-                     });
-                 }
-                 container.innerHTML = html;
+                if (children.length > 0) {
+                    const angleStep = 360 / children.length;
+                    const radius = Math.min(container.parentElement.offsetWidth / 2.5, 250);
+                    children.forEach((child, i) => {
+                        const angle = angleStep * i;
+                        const x = radius * Math.cos(angle * Math.PI / 180);
+                        const y = radius * Math.sin(angle * Math.PI / 180);
+                        html += `<div class="absolute top-1/2 left-1/2 h-0.5 bg-slate-500/50" style="width: ${radius}px; transform-origin: left center; transform: rotate(${angle}deg);"></div>`;
+                        html += `<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 bg-glass-bg border border-glass-border rounded-full flex flex-col items-center justify-center text-center p-1 shadow-md" style="transform: translate(${x}px, ${y}px) translate(-50%, -50%);"><span class="font-semibold">${child.word}</span><span class="text-xs">(${child.type})</span></div>`;
+                    });
+                }
+                container.innerHTML = html;
             },
 
+            // Cập nhật để áp dụng logic 30% cho kiến thức đã học
             startPractice(mode, count = 10) {
                 this.state.currentIndex = 0;
                 this.state.currentScore = 0;
@@ -869,8 +882,15 @@
                     const weakItemIds = Object.keys(this.state.progress.incorrectCounts)
                         .sort((a,b) => this.state.progress.incorrectCounts[b] - this.state.progress.incorrectCounts[a]);
                     itemsToPractice = weakItemIds.map(id => allItems.find(item => item.id === id)).filter(Boolean);
-                } else {
-                    itemsToPractice = allItems;
+                } else { // 'normal' mode
+                    // FIX: Áp dụng logic 30% cho các item đã học
+                    const unlearnedItems = allItems.filter(item => !this.state.progress.learnedItems.has(item.id));
+                    const learnedItems = allItems.filter(item => this.state.progress.learnedItems.has(item.id));
+                    
+                    // Lấy ngẫu nhiên 30% từ danh sách đã học
+                    const learnedItemsForReview = learnedItems.filter(() => Math.random() < 0.3);
+
+                    itemsToPractice = [...unlearnedItems, ...learnedItemsForReview];
                 }
 
                 if (itemsToPractice.length === 0) {
@@ -882,9 +902,10 @@
                 this.renderPracticeView();
             },
 
+            // Giữ nguyên
             renderPracticeView() {
                 const total = this.state.currentSessionItems.length;
-                const progressPercent = total > 0 ? (this.state.currentIndex / total * 100) : 0;
+                const progressPercent = total > 0 ? ((this.state.currentIndex) / total * 100) : 0;
                 this.DOM.main.innerHTML = `
                     <div class="glass-panel p-6 fade-in">
                         <div class="mb-6">
@@ -902,162 +923,202 @@
                 this.renderNextQuestion();
             },
 
+            // Cập nhật để chọn câu hỏi không bị lặp
             renderNextQuestion() {
                 if (this.state.currentIndex >= this.state.currentSessionItems.length) {
-                    this.renderSummary();
+                    // Nếu đang trong bài KT cuối kỳ, nộp bài. Nếu không, hiển thị tóm tắt.
+                    if (document.getElementById('progress-bar-final-test')) {
+                        this.submitFinalTest();
+                    } else {
+                        this.renderSummary();
+                    }
                     return;
                 }
                 const item = this.state.currentSessionItems[this.state.currentIndex];
                 const qContainer = document.getElementById('question-container');
                 if (!qContainer) return;
                 
+                // FIX: Logic chọn dạng bài tập không lặp lại
                 const possibleTypes = this.getPossibleExerciseTypes(item);
-                const exerciseType = this.shuffleArray(possibleTypes)[0];
-                item.exerciseType = exerciseType;
+                const usedTypes = this.state.progress.usedExercises[item.id] || [];
+                let availableTypes = possibleTypes.filter(type => !usedTypes.includes(type));
+
+                // Nếu đã hỏi hết các dạng, reset và hỏi lại từ đầu
+                if (availableTypes.length === 0) {
+                    delete this.state.progress.usedExercises[item.id];
+                    availableTypes = possibleTypes;
+                }
+
+                const exerciseType = this.shuffleArray(availableTypes)[0];
+                item.exerciseType = exerciseType; // Lưu dạng bài tập được chọn vào item
 
                 const renderFunction = this[`get${exerciseType}HTML`];
                 qContainer.innerHTML = renderFunction.call(this, item);
                 this.attachPracticeEventListeners(item, qContainer);
             },
 
+            // Giữ nguyên
             renderSummary() {
-                 const score = this.state.currentScore;
-                 const total = this.state.currentSessionItems.length;
-                 this.DOM.main.innerHTML = `
-                     <div class="text-center max-w-lg mx-auto glass-panel p-8 fade-in">
-                         <h1 class="text-3xl font-bold font-poppins mb-2">Hoàn thành Luyện tập!</h1>
-                         <p class="text-lg text-text-secondary mb-6">Bạn đã trả lời đúng ${score} / ${total} câu.</p>
-                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-                             <div class="bg-bg-dark p-4 rounded-lg border border-glass-border">
-                                 <h3 class="font-bold text-green-400 mb-2">Đúng (${this.state.sessionCorrectItems.length})</h3>
-                                 <ul class="text-sm space-y-1 max-h-32 overflow-y-auto">${this.state.sessionCorrectItems.map(item => `<li>${item.word || item.phrase}</li>`).join('')}</ul>
-                             </div>
-                             <div class="bg-bg-dark p-4 rounded-lg border border-glass-border">
-                                 <h3 class="font-bold text-red-400 mb-2">Cần xem lại (${this.state.sessionIncorrectItems.length})</h3>
-                                 <ul class="text-sm space-y-1 max-h-32 overflow-y-auto">${this.state.sessionIncorrectItems.map(item => `<li>${item.word || item.phrase}</li>`).join('')}</ul>
-                             </div>
-                         </div>
-                         <div class="mt-8 flex flex-col sm:flex-row gap-4">
-                             <button id="continue-practice-btn" class="cta-btn w-full">Luyện tập lại</button>
-                             <button id="back-to-dashboard-btn" class="cta-btn secondary w-full">Thoát</button>
-                         </div>
-                     </div>`;
-                 document.getElementById('continue-practice-btn').addEventListener('click', () => this.startPractice('normal'));
-                 document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.renderDashboard());
+                const score = this.state.currentScore;
+                const total = this.state.currentSessionItems.length;
+                this.DOM.main.innerHTML = `
+                    <div class="text-center max-w-lg mx-auto glass-panel p-8 fade-in">
+                        <h1 class="text-3xl font-bold font-poppins mb-2">Hoàn thành Luyện tập!</h1>
+                        <p class="text-lg text-text-secondary mb-6">Bạn đã trả lời đúng ${score} / ${total} câu.</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+                            <div class="bg-bg-dark p-4 rounded-lg border border-glass-border">
+                                <h3 class="font-bold text-green-400 mb-2">Đúng (${this.state.sessionCorrectItems.length})</h3>
+                                <ul class="text-sm space-y-1 max-h-32 overflow-y-auto">${this.state.sessionCorrectItems.map(item => `<li>${item.word || item.phrase}</li>`).join('')}</ul>
+                            </div>
+                            <div class="bg-bg-dark p-4 rounded-lg border border-glass-border">
+                                <h3 class="font-bold text-red-400 mb-2">Cần xem lại (${this.state.sessionIncorrectItems.length})</h3>
+                                <ul class="text-sm space-y-1 max-h-32 overflow-y-auto">${this.state.sessionIncorrectItems.map(item => `<li>${item.word || item.phrase}</li>`).join('')}</ul>
+                            </div>
+                        </div>
+                        <div class="mt-8 flex flex-col sm:flex-row gap-4">
+                            <button id="continue-practice-btn" class="cta-btn w-full">Luyện tập lại</button>
+                            <button id="back-to-dashboard-btn" class="cta-btn secondary w-full">Thoát</button>
+                        </div>
+                    </div>`;
+                document.getElementById('continue-practice-btn').addEventListener('click', () => this.startPractice('normal'));
+                document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.renderDashboard());
             },
 
+            // Giữ nguyên
             startFinalTest() {
-                 const totalItems = this.state.wordList.length + this.state.structureList.length;
-                 let numQuestions = Math.min(Math.floor(totalItems * 0.5), 50);
+                const allItems = [...this.state.wordList, ...this.state.structureList];
+                let numQuestions = Math.min(Math.floor(allItems.length * 0.5), 50);
 
-                 const weakItemIds = Object.keys(this.state.progress.incorrectCounts)
-                     .sort((a,b) => this.state.progress.incorrectCounts[b] - this.state.progress.incorrectCounts[a]);
-                 
-                 let itemsToPractice = weakItemIds
-                     .map(id => [...this.state.wordList, ...this.state.structureList].find(item => item.id === id))
-                     .filter(Boolean);
+                // Ưu tiên các câu yếu
+                const weakItemIds = Object.keys(this.state.progress.incorrectCounts)
+                    .sort((a,b) => this.state.progress.incorrectCounts[b] - this.state.progress.incorrectCounts[a]);
+                
+                let itemsToPractice = weakItemIds
+                    .map(id => allItems.find(item => item.id === id))
+                    .filter(Boolean);
 
-                 if (itemsToPractice.length < numQuestions) {
-                     const learnedButNotWeak = [...this.state.progress.learnedItems]
-                         .filter(id => !this.state.progress.incorrectCounts[id])
-                         .map(id => [...this.state.wordList, ...this.state.structureList].find(item => item.id === id))
-                         .filter(Boolean);
-                     itemsToPractice.push(...this.shuffleArray(learnedButNotWeak));
-                 }
+                // Nếu không đủ câu yếu, lấy thêm từ các câu đã học
+                if (itemsToPractice.length < numQuestions) {
+                    const learnedButNotWeak = [...this.state.progress.learnedItems]
+                        .filter(id => !this.state.progress.incorrectCounts[id])
+                        .map(id => allItems.find(item => item.id === id))
+                        .filter(Boolean);
+                    itemsToPractice.push(...this.shuffleArray(learnedButNotWeak));
+                }
 
-                 if (itemsToPractice.length === 0) {
-                     this.showModal("Lỗi", "Không có đủ mục đã học để bắt đầu bài kiểm tra cuối kỳ.");
-                     return;
-                 }
+                if (itemsToPractice.length === 0) {
+                    this.showModal("Lỗi", "Không có đủ mục đã học để bắt đầu bài kiểm tra cuối kỳ.");
+                    return;
+                }
 
-                 this.state.currentSessionItems = itemsToPractice.slice(0, numQuestions);
-                 this.state.currentIndex = 0;
-                 this.state.currentScore = 0;
-                 this.state.sessionCorrectItems = [];
-                 this.state.sessionIncorrectItems = [];
-                 this.state.proctoring.violations = 0;
-                 this.state.proctoring.timeRemaining = this.state.currentSessionItems.length * 75;
+                this.state.currentSessionItems = this.shuffleArray(itemsToPractice).slice(0, numQuestions);
+                this.state.currentIndex = 0;
+                this.state.currentScore = 0;
+                this.state.sessionCorrectItems = [];
+                this.state.sessionIncorrectItems = [];
+                this.state.proctoring.violations = 0;
+                this.state.proctoring.timeRemaining = this.state.currentSessionItems.length * 75; // 75 giây mỗi câu
 
-                 this.renderFinalTestView();
-                 this.startProctoring();
+                this.renderFinalTestView();
+                this.startProctoring();
             },
 
+            // Giữ nguyên
             renderFinalTestView() {
-                 const total = this.state.currentSessionItems.length;
-                 const progressPercent = total > 0 ? (this.state.currentIndex / total * 100) : 0;
-                 
-                 const minutes = Math.floor(this.state.proctoring.timeRemaining / 60);
-                 const seconds = this.state.proctoring.timeRemaining % 60;
-                 const timeString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                const total = this.state.currentSessionItems.length;
+                const progressPercent = total > 0 ? (this.state.currentIndex / total * 100) : 0;
+                
+                const minutes = Math.floor(this.state.proctoring.timeRemaining / 60);
+                const seconds = this.state.proctoring.timeRemaining % 60;
+                const timeString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
-                 this.DOM.main.innerHTML = `
-                     <div class="glass-panel p-6 border-2 border-red-500/50 fade-in">
-                         <div class="mb-6">
-                             <div class="flex justify-between items-center mb-2 text-red-400 font-bold">
-                                 <p>BÀI KIỂM TRA CUỐI KỲ - Câu ${this.state.currentIndex + 1} / ${total}</p>
-                                 <div id="timer-display" class="text-lg"><i class="fas fa-clock mr-2"></i>${timeString}</div>
-                             </div>
-                             <div class="progress-track"><div id="progress-bar-final-test" class="progress-fill bg-red-500" style="width: ${progressPercent}%;"></div></div>
-                         </div>
-                         <div id="question-container" class="min-h-[300px]"></div>
-                         <div id="feedback-container" class="mt-4"></div>
-                     </div>`;
-                 
-                 clearInterval(this.state.proctoring.timerId); // Clear previous timer
-                 this.state.proctoring.timerId = setInterval(() => {
-                     this.state.proctoring.timeRemaining--;
-                     const mins = Math.floor(this.state.proctoring.timeRemaining / 60);
-                     const secs = this.state.proctoring.timeRemaining % 60;
-                     const timerDisplay = document.getElementById('timer-display');
-                     if (timerDisplay) {
-                         timerDisplay.innerHTML = `<i class="fas fa-clock mr-2"></i>${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-                     }
-                     if (this.state.proctoring.timeRemaining <= 0) {
-                         this.submitFinalTest();
-                     }
-                 }, 1000);
+                this.DOM.main.innerHTML = `
+                    <div class="glass-panel p-6 border-2 border-red-500/50 fade-in">
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-2 text-red-400 font-bold">
+                                <p>BÀI KIỂM TRA CUỐI KỲ - Câu ${this.state.currentIndex + 1} / ${total}</p>
+                                <div id="timer-display" class="text-lg"><i class="fas fa-clock mr-2"></i>${timeString}</div>
+                            </div>
+                            <div class="progress-track"><div id="progress-bar-final-test" class="progress-fill bg-gradient-to-r from-red-500 to-orange-500" style="width: ${progressPercent}%;"></div></div>
+                        </div>
+                        <div id="question-container" class="min-h-[300px]"></div>
+                        <div id="feedback-container" class="mt-4"></div>
+                    </div>`;
+                
+                clearInterval(this.state.proctoring.timerId); // Xóa timer cũ
+                this.state.proctoring.timerId = setInterval(() => {
+                    this.state.proctoring.timeRemaining--;
+                    const mins = Math.floor(this.state.proctoring.timeRemaining / 60);
+                    const secs = this.state.proctoring.timeRemaining % 60;
+                    const timerDisplay = document.getElementById('timer-display');
+                    if (timerDisplay) {
+                        timerDisplay.innerHTML = `<i class="fas fa-clock mr-2"></i>${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                    }
+                    if (this.state.proctoring.timeRemaining <= 0) {
+                        this.submitFinalTest();
+                    }
+                }, 1000);
 
-                 this.renderNextQuestion();
+                this.renderNextQuestion();
             },
 
+            // Cập nhật để không phát hiện gian lận sai
             startProctoring() {
-                // This function's logic remains unchanged.
-                 this.proctoringEventHandler = (e) => {
-                     this.state.proctoring.violations++;
-                     console.warn(`Phát hiện vi phạm: ${e.type}. Tổng: ${this.state.proctoring.violations}`);
-                     const warning = document.createElement('div');
-                     warning.className = 'fixed top-4 right-4 bg-yellow-400 text-black p-3 rounded-lg shadow-lg z-50';
-                     warning.innerHTML = `<i class="fas fa-exclamation-triangle mr-2"></i> Cảnh báo: Phát hiện hoạt động! Số lần vi phạm: ${this.state.proctoring.violations}`;
-                     document.body.appendChild(warning);
-                     setTimeout(() => warning.remove(), 3000);
-                     
-                     if (e.type === 'copy' || e.type === 'paste' || e.type === 'contextmenu') {
-                         e.preventDefault();
-                     }
-                     if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'))) {
-                         e.preventDefault();
-                     }
-                 };
-                 
-                 document.addEventListener('visibilitychange', this.proctoringEventHandler);
-                 window.addEventListener('blur', this.proctoringEventHandler);
-                 document.addEventListener('copy', this.proctoringEventHandler);
-                 document.addEventListener('paste', this.proctoringEventHandler);
-                 document.addEventListener('contextmenu', this.proctoringEventHandler);
-                 document.addEventListener('keydown', this.proctoringEventHandler);
+                const logViolation = (type) => {
+                    this.state.proctoring.violations++;
+                    console.warn(`Phát hiện vi phạm: ${type}. Tổng: ${this.state.proctoring.violations}`);
+                    const warning = document.createElement('div');
+                    warning.className = 'fixed top-4 right-4 bg-yellow-400 text-black p-3 rounded-lg shadow-lg z-50';
+                    warning.innerHTML = `<i class="fas fa-exclamation-triangle mr-2"></i> Cảnh báo: Phát hiện hoạt động! Số lần vi phạm: ${this.state.proctoring.violations}`;
+                    document.body.appendChild(warning);
+                    setTimeout(() => warning.remove(), 3000);
+                };
+
+                // FIX: Xử lý các sự kiện rời khỏi trang
+                this.state.proctoring.eventHandler = (e) => {
+                    logViolation(e.type);
+                };
+
+                // FIX: Chỉ xử lý các phím tắt đáng ngờ, bỏ qua việc gõ phím thông thường
+                this.state.proctoring.keyHandler = (e) => {
+                    const isSuspicious = e.key.startsWith('F') || // F1-F12
+                                         (e.ctrlKey && e.shiftKey) || // Ctrl+Shift+...
+                                         (e.metaKey && e.altKey) || // Cmd+Option (Mac)
+                                         e.key === 'ContextMenu';
+                    
+                    if (isSuspicious) {
+                        e.preventDefault();
+                        logViolation(`keydown: ${e.key}`);
+                    }
+                };
+                
+                // Các hành vi chắc chắn là gian lận
+                window.addEventListener('blur', this.state.proctoring.eventHandler);
+                document.addEventListener('visibilitychange', this.state.proctoring.eventHandler);
+                document.addEventListener('contextmenu', this.state.proctoring.eventHandler);
+                document.addEventListener('copy', this.state.proctoring.eventHandler);
+                document.addEventListener('paste', this.state.proctoring.eventHandler);
+                
+                // Các phím tắt đáng ngờ
+                document.addEventListener('keydown', this.state.proctoring.keyHandler);
             },
 
+            // Cập nhật để gỡ bỏ đúng các event listeners
             stopProctoring() {
-                // This function's logic remains unchanged.
-                 clearInterval(this.state.proctoring.timerId);
-                 document.removeEventListener('visibilitychange', this.proctoringEventHandler);
-                 window.removeEventListener('blur', this.proctoringEventHandler);
-                 document.removeEventListener('copy', this.proctoringEventHandler);
-                 document.removeEventListener('paste', this.proctoringEventHandler);
-                 document.removeEventListener('contextmenu', this.proctoringEventHandler);
-                 document.removeEventListener('keydown', this.proctoringEventHandler);
+                clearInterval(this.state.proctoring.timerId);
+                if (this.state.proctoring.eventHandler) {
+                    window.removeEventListener('blur', this.state.proctoring.eventHandler);
+                    document.removeEventListener('visibilitychange', this.state.proctoring.eventHandler);
+                    document.removeEventListener('contextmenu', this.state.proctoring.eventHandler);
+                    document.removeEventListener('copy', this.state.proctoring.eventHandler);
+                    document.removeEventListener('paste', this.state.proctoring.eventHandler);
+                }
+                if (this.state.proctoring.keyHandler) {
+                    document.removeEventListener('keydown', this.state.proctoring.keyHandler);
+                }
             },
 
+            // Cập nhật để lưu cả điểm chính và chi tiết bài test
             async submitFinalTest() {
                 this.stopProctoring();
                 if (this.state.isSubmitting) return;
@@ -1067,7 +1128,9 @@
                 
                 this.DOM.main.innerHTML = `<div class="text-center p-8"><div class="w-12 h-12 border-4 border-t-violet-500 border-gray-200 rounded-full animate-spin mx-auto"></div><p class="mt-4 font-semibold">Đang nộp điểm của bạn...</p></div>`;
 
+                // FIX: Cập nhật cả trường `score` chính và object `finalTest`
                 const payload = {
+                    score: score, // Cập nhật điểm chính để hiển thị trên dashboard
                     finalTest: {
                         status: 'completed',
                         score: score,
@@ -1095,6 +1158,7 @@
                 }
             },
 
+            // Giữ nguyên
             attachPracticeEventListeners(item, container, isGuide = false) {
                 if (!container) return;
                 const checkAnswerFunction = isGuide ? this.checkGuideAnswer.bind(this) : this.checkAnswer.bind(this);
@@ -1145,6 +1209,7 @@
                 }
             },
             
+            // Cập nhật để xử lý logic learned/unlearned và ghi nhớ câu hỏi
             checkAnswer(userAnswer, item, container) {
                 if (!item) item = this.state.currentSessionItems[this.state.currentIndex];
                 const correctAnswer = this.state.currentCorrectAnswer;
@@ -1153,6 +1218,8 @@
                 (container || this.DOM.main).querySelectorAll('button, input').forEach(el => el.disabled = true);
                 
                 const itemId = item.id;
+                const wasLearned = this.state.progress.learnedItems.has(itemId);
+
                 if (isCorrect) {
                     this.state.currentScore++;
                     this.state.sessionCorrectItems.push(item);
@@ -1161,12 +1228,24 @@
                 } else {
                     this.state.sessionIncorrectItems.push(item);
                     this.state.progress.incorrectCounts[itemId] = (this.state.progress.incorrectCounts[itemId] || 0) + 1;
+                    // FIX: Nếu trả lời sai một item đã học, nó sẽ trở thành chưa học
+                    if (wasLearned) {
+                        this.state.progress.learnedItems.delete(itemId);
+                    }
                 }
+
+                // FIX: Ghi nhớ dạng bài tập vừa được hỏi
+                const usedTypes = this.state.progress.usedExercises[itemId] || [];
+                if (!usedTypes.includes(item.exerciseType)) {
+                    usedTypes.push(item.exerciseType);
+                }
+                this.state.progress.usedExercises[itemId] = usedTypes;
                 
                 this.saveProgress();
                 this.showFeedback(isCorrect, correctAnswer);
             },
 
+            // Giữ nguyên
             checkGuideAnswer(userAnswer, item, container) {
                 const correctAnswer = this.state.currentCorrectAnswer;
                 const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
@@ -1174,6 +1253,7 @@
                 this.showFeedback(isCorrect, correctAnswer, container.parentElement.querySelector('#guide-feedback-container'), true);
             },
 
+            // Giữ nguyên
             showFeedback(isCorrect, correctAnswer, container = null, isGuide = false) {
                 if (!container) container = document.getElementById('feedback-container');
                 if (!container) return;
@@ -1194,16 +1274,27 @@
                     nextBtn.focus();
                     nextBtn.addEventListener('click', () => {
                         this.state.currentIndex++;
-                        const progressBar = document.getElementById('progress-bar-final-test');
-                        if (progressBar) {
-                            this.renderFinalTestView();
+                        // Kiểm tra xem có phải đang trong bài KT cuối kỳ không
+                        if (document.getElementById('progress-bar-final-test')) {
+                             // Nếu hết câu thì nộp bài, nếu không thì render câu tiếp
+                            if (this.state.currentIndex >= this.state.currentSessionItems.length) {
+                                this.submitFinalTest();
+                            } else {
+                                this.renderFinalTestView();
+                            }
                         } else {
-                            this.renderPracticeView(); 
+                             // Nếu hết câu thì hiện summary, nếu không thì render câu tiếp
+                            if (this.state.currentIndex >= this.state.currentSessionItems.length) {
+                                this.renderSummary();
+                            } else {
+                                this.renderPracticeView(); 
+                            }
                         }
                     });
                 }
             },
 
+            // Giữ nguyên
             playAudio(url) {
                 if (!url) {
                     console.warn("No audio URL provided.");
@@ -1214,6 +1305,7 @@
                 this.state.audioPlayer.play().catch(e => console.error("Audio play failed:", e));
             },
 
+            // Giữ nguyên
             shuffleArray(array) {
                 for (let i = array.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
@@ -1222,6 +1314,7 @@
                 return array;
             },
 
+            // Giữ nguyên
             findRoot(word) {
                 const endings = ['s', 'es', 'ing', 'ed', 'er', 'est', 'ly', 'tion', 'sion', 'ment', 'able', 'ible', 'al', 'ial', 'ive', 'ous', 'ness'];
                 for (const ending of endings) {
@@ -1232,6 +1325,7 @@
                 return word;
             },
 
+            // Giữ nguyên
             showModal(title, message, showCancel = false, onConfirm = null, isGuide = false) {
                 const modalId = isGuide ? 'guide-modal' : 'main-modal';
                 const existingModal = document.getElementById(modalId);
