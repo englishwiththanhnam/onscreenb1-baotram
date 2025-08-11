@@ -27,347 +27,185 @@
             --grad-color-1: #d8b4fe;
             --grad-color-2: #a855f7;
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html, body {
-            height: 100%;
-            width: 100%;
-            overflow: hidden;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; width: 100%; overflow: hidden; }
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-dark);
             color: var(--text-light);
+            opacity: 0; /* Bắt đầu với body ẩn */
+            transition: opacity 0.5s ease;
         }
-
+        body.loaded {
+            opacity: 1; /* Hiển thị body khi trang đã tải xong */
+        }
         /* --- LỚP NỀN 3D --- */
         .background-layer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            transition: transform 1s cubic-bezier(0.65, 0, 0.35, 1), opacity 1s ease;
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%; pointer-events: none;
+            transition: opacity 1s ease;
         }
         .background-shapes { z-index: 1; }
         #ogl-canvas-back { z-index: 2; }
         #ogl-canvas-front { z-index: 4; }
-
         .shape {
             position: absolute; border-radius: 50%;
             filter: blur(120px); opacity: 0;
             transform: scale(0.8);
             transition: opacity 1.5s cubic-bezier(0.16, 1, 0.3, 1), transform 1.5s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .shape1 {
-            width: 40vw; height: 40vw; max-width: 450px; max-height: 450px;
-            background: #a855f7; top: -15%; left: -10%;
-        }
-        .shape2 {
-            width: 35vw; height: 35vw; max-width: 400px; max-height: 400px;
-            background: #22d3ee; bottom: -15%; right: -10%;
-        }
-        body.is-visible .shape {
-            opacity: 0.5;
-            transform: scale(1);
-        }
+        .shape1 { width: 40vw; height: 40vw; max-width: 450px; max-height: 450px; background: #a855f7; top: -15%; left: -10%; }
+        .shape2 { width: 35vw; height: 35vw; max-width: 400px; max-height: 400px; background: #22d3ee; bottom: -15%; right: -10%; }
+        body.loaded .shape { opacity: 0.5; transform: scale(1); }
 
         /* --- Giao diện người dùng --- */
         .ui-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            padding: 24px 8%;
-            position: relative;
-            z-index: 3;
+            width: 100%; height: 100%;
+            display: flex; flex-direction: column; padding: 24px 8%;
+            position: relative; z-index: 3;
             transition: transform 1s cubic-bezier(0.65, 0, 0.35, 1), opacity 1s ease;
         }
-        
+
         /* --- Main Content & 3D Interaction --- */
         .main-content {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
+            flex-grow: 1; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; text-align: center;
             perspective: 1000px;
         }
+
+        /* --- HIỆU ỨNG XUẤT HIỆN MỚI --- */
+        #center-content > * {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s cubic-bezier(0.2, 1, 0.3, 1), transform 0.8s cubic-bezier(0.2, 1, 0.3, 1);
+        }
+        body.loaded #center-content > * {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        body.loaded #action-buttons {
+            transition-delay: 0.2s; /* Nút xuất hiện sau tiêu đề */
+        }
+        /* --- KẾT THÚC HIỆU ỨNG XUẤT HIỆN MỚI --- */
 
         .hero-title {
             font-family: 'Poppins', sans-serif;
             font-size: clamp(2rem, 7vw, 4.5rem);
-            font-weight: 700;
-            display: flex;
-            white-space: nowrap;
-            justify-content: center;
-            align-items: center;
-            gap: 0.25em;
-            animation: fadeInUp 1s ease-out;
+            font-weight: 700; display: flex;
+            white-space: nowrap; justify-content: center;
+            align-items: center; gap: 0.25em;
             transform-style: preserve-3d;
             transition: transform 0.1s linear;
         }
-        
         .gradient-text {
             background: linear-gradient(90deg, var(--grad-color-1) 0%, var(--grad-color-2) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            color: transparent;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text; color: transparent;
         }
-
         .rotating-text-container {
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            vertical-align: bottom;
+            position: relative; display: flex; justify-content: center;
+            align-items: center; vertical-align: bottom;
             border-radius: clamp(8px, 2vw, 16px);
             background: linear-gradient(90deg, var(--grad-color-1) 0%, var(--grad-color-2) 100%);
             padding: 0.15em 0.5em;
             transition: width 0.5s cubic-bezier(0.65, 0, 0.35, 1), height 0.5s cubic-bezier(0.65, 0, 0.35, 1);
         }
-
         .word-wrapper {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: absolute;
-            inset: 0;
-            color: var(--bg-dark);
-            line-height: 1;
+            display: flex; justify-content: center; align-items: center;
+            position: absolute; inset: 0; color: var(--bg-dark); line-height: 1;
         }
-        
-        .char-wrapper {
-            display: inline-block;
-            overflow: hidden;
-        }
-
-        .char {
-            display: inline-block;
-            transform: translateY(110%);
-            transition: transform 0.6s cubic-bezier(0.2, 1, 0.3, 1);
-        }
-
-        .char.in {
-            transform: translateY(0);
-        }
-
-        .char.out {
-            transform: translateY(-110%);
-        }
+        .char-wrapper { display: inline-block; overflow: hidden; }
+        .char { display: inline-block; transform: translateY(110%); transition: transform 0.6s cubic-bezier(0.2, 1, 0.3, 1); }
+        .char.in { transform: translateY(0); }
+        .char.out { transform: translateY(-110%); }
 
         .action-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 24px;
-            margin-top: 48px;
+            display: flex; justify-content: center;
+            gap: 24px; margin-top: 48px;
             transform-style: preserve-3d;
             transition: transform 0.1s linear;
-            animation: fadeInUp 1s ease-out 0.2s;
-            animation-fill-mode: backwards;
         }
-
         .cta-btn {
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            gap: 12px;
+            position: relative; overflow: hidden; display: flex;
+            align-items: center; gap: 12px;
             background: linear-gradient(90deg, #8b5cf6, #6d28d9);
-            font-family: 'Poppins', sans-serif;
-            font-weight: 600;
-            font-size: 16px;
-            padding: 12px 16px 12px 24px;
-            border-radius: 99px;
-            border: none;
-            cursor: pointer;
-            text-decoration: none;
-            color: rgba(255,255,255,0.9);
-            box-shadow: 
-                inset 0 2px 2px rgba(255,255,255,0.2), 
-                inset 0 -2px 2px rgba(0,0,0,0.2),
-                0 10px 30px -10px rgba(139, 92, 246, 0.6);
-            transform-style: preserve-3d;
-            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif; font-weight: 600;
+            font-size: 16px; padding: 12px 16px 12px 24px;
+            border-radius: 99px; border: none; cursor: pointer;
+            text-decoration: none; color: rgba(255,255,255,0.9);
+            box-shadow: inset 0 2px 2px rgba(255,255,255,0.2), inset 0 -2px 2px rgba(0,0,0,0.2), 0 10px 30px -10px rgba(139, 92, 246, 0.6);
+            transform-style: preserve-3d; transition: all 0.3s ease;
         }
         .cta-btn:hover {
             transform: translateY(-4px) translateZ(10px);
-            box-shadow: 
-                inset 0 2px 2px rgba(255,255,255,0.2), 
-                inset 0 -2px 2px rgba(0,0,0,0.2),
-                0 15px 30px -10px rgba(139, 92, 246, 1);
+            box-shadow: inset 0 2px 2px rgba(255,255,255,0.2), inset 0 -2px 2px rgba(0,0,0,0.2), 0 15px 30px -10px rgba(139, 92, 246, 1);
             background: linear-gradient(90deg, #a855f7, #8b5cf6);
         }
-        
         .cta-btn::before {
-            content: '';
-            position: absolute;
-            z-index: 1;
-            inset: 0;
-            background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.5) 50%, transparent 65%);
-            background-size: 250% 100%;
-            background-position: 150% 0;
+            content: ''; position: absolute; z-index: 1;
+            inset: 0; background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.5) 50%, transparent 65%);
+            background-size: 250% 100%; background-position: 150% 0;
             transition: background-position 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .cta-btn:hover::before {
-            background-position: -50% 0;
-        }
-
-        .cta-btn > span {
-            position: relative;
-            z-index: 2;
-        }
-
+        .cta-btn:hover::before { background-position: -50% 0; }
+        .cta-btn > span { position: relative; z-index: 2; }
         .cta-btn .icon-wrapper {
-            display: grid;
-            place-items: center;
-            width: 32px;
-            height: 32px;
-            background-color: white;
-            border-radius: 50%;
-            color: #6d28d9;
-            box-shadow: 
-                inset 0 1px 1px rgba(255,255,255,0.5), 
-                inset 0 -1px 1px rgba(0,0,0,0.2);
+            display: grid; place-items: center; width: 32px; height: 32px;
+            background-color: white; border-radius: 50%; color: #6d28d9;
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(0,0,0,0.2);
             transition: transform 0.3s ease;
         }
-        .cta-btn:hover .icon-wrapper {
-            transform: translateZ(10px);
-        }
-        
-        .cta-btn.secondary {
-            background: transparent;
-            border: 2px solid #5c5f89;
-            box-shadow: none;
-            color: #a2a6c3;
-        }
-        .cta-btn.secondary:hover {
-            background: rgba(139, 92, 246, 0.2);
-            border-color: #8b5cf6;
-            color: white;
-            box-shadow: 0 10px 25px -10px rgba(139, 92, 246, 0.5);
-        }
-        .cta-btn.secondary .icon-wrapper {
-            background-color: #5c5f89;
-            color: #111827;
-        }
-        .cta-btn.secondary:hover .icon-wrapper {
-             background-color: #8b5cf6;
-             color: white;
-        }
+        .cta-btn:hover .icon-wrapper { transform: translateZ(10px); }
+        .cta-btn.secondary { background: transparent; border: 2px solid #5c5f89; box-shadow: none; color: #a2a6c3; }
+        .cta-btn.secondary:hover { background: rgba(139, 92, 246, 0.2); border-color: #8b5cf6; color: white; box-shadow: 0 10px 25px -10px rgba(139, 92, 246, 0.5); }
+        .cta-btn.secondary .icon-wrapper { background-color: #5c5f89; color: #111827; }
+        .cta-btn.secondary:hover .icon-wrapper { background-color: #8b5cf6; color: white; }
 
-        /* --- HIỆU ỨNG CHUYỂN CẢNH --- */
-        body.is-exiting .ui-container,
-        body.is-exiting .background-layer {
-            transform: translateY(-120%);
+        /* --- HIỆU ỨNG CHUYỂN CẢNH KHI CLICK LINK --- */
+        body.is-navigating-out .ui-container {
             opacity: 0;
+            transform: scale(0.8);
+            transition: opacity 1s ease, transform 1s ease;
         }
+        body.is-navigating-out .background-shapes {
+            opacity: 0 !important;
+            transition: opacity 1s ease;
+        }
+        /* --- KẾT THÚC HIỆU ỨNG CHUYỂN CẢNH --- */
 
-        /* --- BIỂU MẪU ĐĂNG KÝ (REVISED) --- */
+        /* Logic form không đổi */
         .form-section {
-            position: fixed;
-            inset: 0;
-            z-index: 10;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.5s ease 0.5s;
+            position: fixed; inset: 0; z-index: 10;
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.5s ease 0.5s;
         }
-        .form-section.is-visible {
-            opacity: 1;
-            pointer-events: auto;
-        }
+        .form-section.is-visible { opacity: 1; pointer-events: auto; }
         .info-form {
-            width: 100%;
-            max-width: 450px;
+            width: 100%; max-width: 450px;
             background: radial-gradient(ellipse at center, rgba(31, 41, 55, 0.65) 0%, rgba(31, 41, 55, 0.4) 100%);
             backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            padding: 40px;
-            border-radius: 24px;
+            padding: 40px; border-radius: 24px;
             transform: scale(0.95);
             transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.5s;
         }
-        .form-section.is-visible .info-form {
-            transform: scale(1);
-        }
-        .info-form h2 {
-            font-family: 'Poppins', sans-serif;
-            font-size: 28px;
-            margin-bottom: 8px;
-            color: var(--text-light);
-        }
-        .info-form p {
-            color: var(--text-secondary);
-            margin-bottom: 32px;
-        }
-        .form-fields {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            width: 100%;
-        }
-        .input-wrapper {
-            position: relative;
-            width: 100%;
-            border-radius: 14px;
-        }
+        .form-section.is-visible .info-form { transform: scale(1); }
+        .info-form h2 { font-family: 'Poppins', sans-serif; font-size: 28px; margin-bottom: 8px; color: var(--text-light); }
+        .info-form p { color: var(--text-secondary); margin-bottom: 32px; }
+        .form-fields { display: flex; flex-direction: column; gap: 20px; width: 100%; }
+        .input-wrapper { position: relative; width: 100%; border-radius: 14px; }
         @property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
-        .input-wrapper::before, .input-wrapper::after {
-            content: ''; position: absolute; inset: -2px; z-index: -1; border-radius: inherit;
-            background: conic-gradient(from var(--angle), #a855f7, #8b5cf6 30%, #22d3ee 60%, #a855f7);
-            opacity: 0; transition: opacity 0.3s ease; animation: spin 4s linear infinite paused;
-        }
+        .input-wrapper::before, .input-wrapper::after { content: ''; position: absolute; inset: -2px; z-index: -1; border-radius: inherit; background: conic-gradient(from var(--angle), #a855f7, #8b5cf6 30%, #22d3ee 60%, #a855f7); opacity: 0; transition: opacity 0.3s ease; animation: spin 4s linear infinite paused; }
         .input-wrapper::after { filter: blur(10px); }
-        .input-wrapper:has(.form-input:focus)::before, .input-wrapper:has(.form-input:focus)::after {
-            opacity: 1; animation-play-state: running;
-        }
+        .input-wrapper:has(.form-input:focus)::before, .input-wrapper:has(.form-input:focus)::after { opacity: 1; animation-play-state: running; }
         @keyframes spin { to { --angle: 360deg; } }
-        .form-input {
-            width: 100%; padding: 14px 16px; border-radius: 12px; 
-            border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(55, 65, 81, 0.5); 
-            font-family: 'Inter', sans-serif; font-size: 16px; color: var(--text-light);
-            caret-color: var(--primary-accent); transition: all 0.2s ease-in-out;
-            position: relative; z-index: 1;
-        }
+        .form-input { width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(55, 65, 81, 0.5); font-family: 'Inter', sans-serif; font-size: 16px; color: var(--text-light); caret-color: var(--primary-accent); transition: all 0.2s ease-in-out; position: relative; z-index: 1; }
         .form-input::placeholder { color: var(--text-secondary); }
-        .form-input:focus {
-            outline: none; border-color: rgba(139, 92, 246, 0.6); background: rgba(55, 65, 81, 0.8);
-        }
-        .submit-btn {
-            width: 100%;
-            height: 52px;
-            margin-top: 16px;
-            justify-content: center;
-        }
-        .submit-btn:disabled {
-            opacity: 0.8;
-            cursor: not-allowed;
-        }
-        .success-message {
-            text-align: center;
-        }
-
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .form-input:focus { outline: none; border-color: rgba(139, 92, 246, 0.6); background: rgba(55, 65, 81, 0.8); }
+        .submit-btn { width: 100%; height: 52px; margin-top: 16px; justify-content: center; }
+        .submit-btn:disabled { opacity: 0.8; cursor: not-allowed; }
+        .success-message { text-align: center; }
 
     </style>
 </head>
@@ -392,13 +230,13 @@
 
                 <div id="action-buttons" class="action-buttons">
                      <a href="https://englishwiththanhnam.github.io/onscreenb1-baotram/login.html" class="cta-btn secondary">
-                        <span>Đăng nhập</span>
-                        <span class="icon-wrapper"><i class="fas fa-sign-in-alt"></i></span>
-                    </a>
+                         <span>Đăng nhập</span>
+                         <span class="icon-wrapper"><i class="fas fa-sign-in-alt"></i></span>
+                     </a>
                      <a href="#" id="learn-more-btn" class="cta-btn">
-                        <span>Tìm hiểu thêm</span>
-                        <span class="icon-wrapper"><i class="fas fa-arrow-right"></i></span>
-                    </a>
+                         <span>Tìm hiểu thêm</span>
+                         <span class="icon-wrapper"><i class="fas fa-arrow-right"></i></span>
+                     </a>
                 </div>
             </div>
         </main>
@@ -410,18 +248,10 @@
             <h2>Để lại thông tin tư vấn</h2>
             <p>Chúng tôi sẽ liên hệ với bạn trong thời gian sớm nhất.</p>
             <form id="contact-form" class="form-fields">
-                <div class="input-wrapper">
-                    <input type="text" name="fullName" placeholder="Họ và tên" class="form-input" required>
-                </div>
-                <div class="input-wrapper">
-                    <input type="tel" name="phone" placeholder="Số điện thoại" class="form-input" required>
-                </div>
-                <div class="input-wrapper">
-                    <input type="tel" name="parentPhone" placeholder="Số điện thoại phụ huynh" class="form-input">
-                </div>
-                <div class="input-wrapper">
-                    <input type="email" name="email" placeholder="Email" class="form-input" required>
-                </div>
+                <div class="input-wrapper"><input type="text" name="fullName" placeholder="Họ và tên" class="form-input" required></div>
+                <div class="input-wrapper"><input type="tel" name="phone" placeholder="Số điện thoại" class="form-input" required></div>
+                <div class="input-wrapper"><input type="tel" name="parentPhone" placeholder="Số điện thoại phụ huynh" class="form-input"></div>
+                <div class="input-wrapper"><input type="email" name="email" placeholder="Email" class="form-input" required></div>
                 <button type="submit" id="submit-btn" class="cta-btn submit-btn">
                     <span>Gửi thông tin</span>
                     <span class="icon-wrapper"><i class="fas fa-paper-plane"></i></span>
@@ -447,7 +277,11 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // --- SCRIPT 3D VÀ HIỆU ỨNG CHỮ ---
+        // --- SCRIPT 3D, HIỆU ỨNG CHỮ VÀ CHUYỂN CẢNH ---
+
+        // Khai báo biến particle ở phạm vi cao hơn để có thể truy cập từ các hàm khác
+        let backParticles, frontParticles;
+
         document.fonts.ready.then(function () {
             const { Renderer, Camera, Transform, Program, Geometry, Mesh } = window.OGL;
 
@@ -461,9 +295,10 @@
                 camera.position.set(0, 0, 25);
                 const scene = new Transform();
                 const program = new Program(gl, {
+                    // CẬP NHẬT SHADER VỚI BIẾN `uSpread`
                     vertex: `attribute vec3 position;attribute vec4 random;attribute vec3 color;uniform mat4 modelMatrix;uniform mat4 viewMatrix;uniform mat4 projectionMatrix;uniform float uTime;uniform float uSpread;uniform float uBaseSize;varying vec4 vRandom;varying vec3 vColor;void main(){vRandom=random;vColor=color;vec3 pos=position*uSpread;vec4 mPos=modelMatrix*vec4(pos,1.);float t=uTime*.1;mPos.x+=sin(t*random.z+6.28*random.w)*mix(.1,1.5,random.x);mPos.y+=sin(t*random.y+6.28*random.x)*mix(.1,1.5,random.w);mPos.z+=cos(t*random.w+6.28*random.y)*mix(.1,1.5,random.z);vec4 mvPos=viewMatrix*mPos;gl_PointSize=uBaseSize/-mvPos.z;gl_Position=projectionMatrix*mvPos;}`,
                     fragment: `precision highp float;varying vec3 vColor;void main(){vec2 uv=gl_PointCoord.xy;float d=length(uv-vec2(.5));float glow=smoothstep(.5,0.,d)*.3;float core=smoothstep(.2,.18,d);float alpha=max(core,glow);if(alpha<.01)discard;vec3 finalColor=vColor+vColor*pow(glow,2.)*2.;gl_FragColor=vec4(finalColor,alpha);}`,
-                    uniforms: { uTime: { value: 0 }, uSpread: { value: 1 }, uBaseSize: { value: 350 } },
+                    uniforms: { uTime: { value: 0 }, uSpread: { value: 1.0 }, uBaseSize: { value: 350 } }, // Thêm uSpread với giá trị ban đầu là 1
                     transparent: true, depthTest: false
                 });
                 const count = 500;
@@ -484,8 +319,8 @@
                 return { renderer, camera, scene, program };
             }
 
-            const backParticles = createParticleSystem('ogl-canvas-back', [-20, -1]);
-            const frontParticles = createParticleSystem('ogl-canvas-front', [1, 20]);
+            backParticles = createParticleSystem('ogl-canvas-back', [-20, -1]);
+            frontParticles = createParticleSystem('ogl-canvas-front', [1, 20]);
             
             const heroTitle = document.getElementById('hero-title');
             const actionButtons = document.getElementById('action-buttons');
@@ -494,21 +329,18 @@
                 mouse.x = (e.clientX / window.innerWidth) - 0.5;
                 mouse.y = (e.clientY / window.innerHeight) - 0.5;
 
-                const rotateX = -mouse.y * 10;
-                const rotateY = mouse.x * 10;
-                heroTitle.style.transform = `translateZ(20px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-                actionButtons.style.transform = `translateZ(60px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+                // Chỉ áp dụng hiệu ứng khi không đang chuyển trang
+                if (!document.body.classList.contains('is-navigating-out')) {
+                    const rotateX = -mouse.y * 10;
+                    const rotateY = mouse.x * 10;
+                    heroTitle.style.transform = `translateZ(20px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+                    actionButtons.style.transform = `translateZ(60px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+                }
             });
 
             function resize() {
-                if (backParticles) {
-                    backParticles.renderer.setSize(window.innerWidth, window.innerHeight);
-                    backParticles.camera.perspective({ aspect: window.innerWidth / window.innerHeight });
-                }
-                if (frontParticles) {
-                    frontParticles.renderer.setSize(window.innerWidth, window.innerHeight);
-                    frontParticles.camera.perspective({ aspect: window.innerWidth / window.innerHeight });
-                }
+                if (backParticles) { backParticles.renderer.setSize(window.innerWidth, window.innerHeight); backParticles.camera.perspective({ aspect: window.innerWidth / window.innerHeight }); }
+                if (frontParticles) { frontParticles.renderer.setSize(window.innerWidth, window.innerHeight); frontParticles.camera.perspective({ aspect: window.innerWidth / window.innerHeight }); }
             }
             window.addEventListener("resize", resize, false);
             resize();
@@ -530,121 +362,66 @@
                 }
             }
 
+            // --- Logic xoay chữ không đổi ---
             const container = document.getElementById('rotating-text-container');
             if (!container) return;
-
-            const words = [
-                'Xplore', 'franca', 'mundi', 'global', 'connect', 'speak', 
-                'learn', 'discover', 'verse', 'world', 'bridge', 'future', 
-                'odyssey', 'quest', 'journey', 'scribe', 'talk', 'nexus',
-                'unite', 'evolve'
-            ];
-            
+            const words = ['Xplore','franca','mundi','global','connect','speak','learn','discover','verse','world','bridge','future','odyssey','quest','journey','scribe','talk','nexus','unite','evolve'];
             const xploreFont = "'Playfair Display', serif";
-            const otherFonts = ["'Poppins', sans-serif", "'Roboto Slab', serif", "'Oswald', sans-serif", "'Merriweather', serif", "'Montserrat', sans-serif", "'Raleway', sans-serif", "'Lora', serif", "'Nunito', sans-serif", "'Inter', sans-serif"];
-            
-            let currentIndex = 0;
-            let isAnimating = false;
-            const rotationInterval = 2000;
-            const staggerDuration = 0.025;
-
-            function updateContainerSize(word, font) {
-                const tempSpan = document.createElement('span');
-                const titleStyle = getComputedStyle(document.querySelector('.hero-title'));
-                
-                tempSpan.style.fontFamily = font;
-                tempSpan.style.fontSize = titleStyle.fontSize;
-                tempSpan.style.fontWeight = titleStyle.fontWeight;
-                tempSpan.style.visibility = "hidden";
-                tempSpan.style.position = "absolute";
-                tempSpan.textContent = word;
-
-                document.body.appendChild(tempSpan);
-                const rect = tempSpan.getBoundingClientRect();
-                document.body.removeChild(tempSpan);
-
-                const paddingX = parseFloat(getComputedStyle(container).paddingLeft) + parseFloat(getComputedStyle(container).paddingRight);
-                const paddingY = parseFloat(getComputedStyle(container).paddingTop) + parseFloat(getComputedStyle(container).paddingBottom);
-
-                container.style.width = (rect.width + paddingX) + 'px';
-                container.style.height = (rect.height + paddingY) + 'px';
-            }
-
-            function animateWord() {
-                if (isAnimating) return;
-                isAnimating = true;
-
-                const currentWordWrapper = container.querySelector('.word-wrapper');
-                if (currentWordWrapper) {
-                    const chars = currentWordWrapper.querySelectorAll('.char');
-                    const totalChars = chars.length;
-                    chars.forEach((char, index) => {
-                        const delay = (totalChars - 1 - index) * staggerDuration;
-                        char.style.transitionDelay = `${delay}s`;
-                        char.classList.remove('in');
-                        char.classList.add('out');
-                    });
-                     setTimeout(() => currentWordWrapper.remove(), 1000);
-                }
-                
-                const nextWord = words[currentIndex];
-                const nextFont = (nextWord === 'Xplore') ? xploreFont : otherFonts[Math.floor(Math.random() * otherFonts.length)];
-                
-                updateContainerSize(nextWord, nextFont);
-
-                const newWordWrapper = document.createElement('div');
-                newWordWrapper.className = 'word-wrapper';
-                newWordWrapper.style.fontFamily = nextFont;
-
-                const chars = nextWord.split('');
-                const totalChars = chars.length;
-
-                chars.forEach((char, index) => {
-                    const charWrapper = document.createElement('span');
-                    charWrapper.className = 'char-wrapper';
-                    
-                    const charSpan = document.createElement('span');
-                    charSpan.className = 'char';
-                    charSpan.textContent = char;
-                    
-                    const delay = (totalChars - 1 - index) * staggerDuration;
-                    charSpan.style.transitionDelay = `${delay}s`;
-                    
-                    charWrapper.appendChild(charSpan);
-                    newWordWrapper.appendChild(charWrapper);
-                });
-
-                container.appendChild(newWordWrapper);
-
-                setTimeout(() => {
-                    const newChars = newWordWrapper.querySelectorAll('.char');
-                    newChars.forEach(char => char.classList.add('in'));
-                }, 50);
-                
-                setTimeout(() => {
-                    isAnimating = false;
-                }, 500);
-
-                currentIndex = (currentIndex + 1) % words.length;
-            }
-
-            function initialize() {
-                setTimeout(() => {
-                     animateWord();
-                     setInterval(animateWord, rotationInterval);
-                }, 500);
-            }
-
+            const otherFonts = ["'Poppins', sans-serif","'Roboto Slab', serif","'Oswald', sans-serif","'Merriweather', serif","'Montserrat', sans-serif","'Raleway', sans-serif","'Lora', serif","'Nunito', sans-serif","'Inter', sans-serif"];
+            let currentIndex = 0; let isAnimating = false;
+            const rotationInterval = 2000; const staggerDuration = 0.025;
+            function updateContainerSize(word,font){const tempSpan=document.createElement('span');const titleStyle=getComputedStyle(document.querySelector('.hero-title'));tempSpan.style.fontFamily=font;tempSpan.style.fontSize=titleStyle.fontSize;tempSpan.style.fontWeight=titleStyle.fontWeight;tempSpan.style.visibility="hidden";tempSpan.style.position="absolute";tempSpan.textContent=word;document.body.appendChild(tempSpan);const rect=tempSpan.getBoundingClientRect();document.body.removeChild(tempSpan);const paddingX=parseFloat(getComputedStyle(container).paddingLeft)+parseFloat(getComputedStyle(container).paddingRight);const paddingY=parseFloat(getComputedStyle(container).paddingTop)+parseFloat(getComputedStyle(container).paddingBottom);container.style.width=(rect.width+paddingX)+'px';container.style.height=(rect.height+paddingY)+'px';}
+            function animateWord(){if(isAnimating)return;isAnimating=true;const currentWordWrapper=container.querySelector('.word-wrapper');if(currentWordWrapper){const chars=currentWordWrapper.querySelectorAll('.char');const totalChars=chars.length;chars.forEach((char,index)=>{const delay=(totalChars-1-index)*staggerDuration;char.style.transitionDelay=`${delay}s`;char.classList.remove('in');char.classList.add('out');});setTimeout(()=>currentWordWrapper.remove(),1000);}const nextWord=words[currentIndex];const nextFont=(nextWord==='Xplore')?xploreFont:otherFonts[Math.floor(Math.random()*otherFonts.length)];updateContainerSize(nextWord,nextFont);const newWordWrapper=document.createElement('div');newWordWrapper.className='word-wrapper';newWordWrapper.style.fontFamily=nextFont;const chars=nextWord.split('');const totalChars=chars.length;chars.forEach((char,index)=>{const charWrapper=document.createElement('span');charWrapper.className='char-wrapper';const charSpan=document.createElement('span');charSpan.className='char';charSpan.textContent=char;const delay=(totalChars-1-index)*staggerDuration;charSpan.style.transitionDelay=`${delay}s`;charWrapper.appendChild(charSpan);newWordWrapper.appendChild(charWrapper);});container.appendChild(newWordWrapper);setTimeout(()=>{const newChars=newWordWrapper.querySelectorAll('.char');newChars.forEach(char=>char.classList.add('in'));},50);setTimeout(()=>{isAnimating=false;},500);currentIndex=(currentIndex+1)%words.length;}
+            function initialize(){setTimeout(()=>{animateWord();setInterval(animateWord,rotationInterval);},500);}
             initialize();
-            window.addEventListener('resize', () => {
-                const currentWord = words[(currentIndex - 1 + words.length) % words.length];
-                const currentFont = container.querySelector('.word-wrapper')?.style.fontFamily || xploreFont;
-                updateContainerSize(currentWord, currentFont);
+            window.addEventListener('resize',()=>{const currentWord=words[(currentIndex-1+words.length)%words.length];const currentFont=container.querySelector('.word-wrapper')?.style.fontFamily||xploreFont;updateContainerSize(currentWord,currentFont);});
+
+            // --- KÍCH HOẠT HIỆU ỨNG XUẤT HIỆN BAN ĐẦU ---
+            document.body.classList.add('loaded');
+
+            // --- LOGIC CHUYỂN CẢNH KHI CLICK LINK VÀ FORM ---
+            
+            // Hàm co các hạt lại
+            function animateParticlesOut(duration, onComplete) {
+                const startTime = performance.now();
+                function animate(currentTime) {
+                    const elapsedTime = currentTime - startTime;
+                    const progress = Math.min(elapsedTime / duration, 1);
+                    // Dùng easing function để hiệu ứng mượt hơn
+                    const easedProgress = 0.5 - 0.5 * Math.cos(progress * Math.PI);
+                    const newSpread = 1.0 - easedProgress; // Animate giá trị spread từ 1 về 0
+
+                    if (backParticles) backParticles.program.uniforms.uSpread.value = newSpread;
+                    if (frontParticles) frontParticles.program.uniforms.uSpread.value = newSpread;
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        if (onComplete) onComplete();
+                    }
+                }
+                requestAnimationFrame(animate);
+            }
+
+            // Bắt sự kiện click trên tất cả các link không phải là link nội bộ (#)
+            document.querySelectorAll('a[href]:not([href^="#"])').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    // Ngăn chặn hành vi mặc định của link
+                    e.preventDefault();
+                    const url = link.href;
+
+                    // Thêm class để kích hoạt hiệu ứng biến mất cho UI
+                    document.body.classList.add('is-navigating-out');
+
+                    // Gọi hàm co các hạt lại trong 5 giây (5000ms)
+                    animateParticlesOut(5000, () => {
+                        // Sau khi hiệu ứng hoàn tất, chuyển đến trang mới
+                        window.location.href = url;
+                    });
+                });
             });
 
-            document.body.classList.add('is-visible');
-
-            // --- LOGIC CHUYỂN CẢNH VÀ FORM ---
+            // Logic cho nút "Tìm hiểu thêm" (chuyển sang form)
             const learnMoreBtn = document.getElementById('learn-more-btn');
             const formSection = document.getElementById('form-section');
             const contactForm = document.getElementById('contact-form');
@@ -652,49 +429,17 @@
 
             learnMoreBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                document.body.classList.add('is-exiting');
-
+                // Logic cũ của nút này, không có hiệu ứng co hạt
+                document.body.classList.add('is-navigating-out'); // Tận dụng hiệu ứng UI đã có
                 setTimeout(() => {
                     document.querySelector('.ui-container').style.display = 'none';
                     formSection.classList.add('is-visible');
                 }, 1000);
             });
 
-            contactForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const submitBtn = document.getElementById('submit-btn');
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = `<span>Đang gửi...</span><span class="icon-wrapper"><i class="fas fa-spinner fa-spin"></i></span>`;
-
-                const formData = new FormData(contactForm);
-                const data = {
-                    fullName: formData.get('fullName'),
-                    phone: formData.get('phone'),
-                    parentPhone: formData.get('parentPhone'),
-                    email: formData.get('email'),
-                    submittedAt: new Date()
-                };
-
-                try {
-                    await addDoc(collection(db, "contact-leads"), data);
-                    formContainer.innerHTML = `
-                        <div class="success-message">
-                            <h2>Cảm ơn bạn!</h2>
-                            <p>Chúng tôi đã nhận được thông tin và sẽ liên hệ lại sớm nhất có thể.</p>
-                        </div>
-                    `;
-                } catch (error) {
-                    console.error("Error adding document: ", error);
-                    formContainer.innerHTML = `
-                        <div class="success-message">
-                            <h2>Đã có lỗi xảy ra</h2>
-                            <p>Vui lòng thử lại sau. Lỗi: ${error.message}</p>
-                        </div>
-                    `;
-                }
-            });
+            // Logic submit form không đổi
+            contactForm.addEventListener('submit',async(e)=>{e.preventDefault();const submitBtn=document.getElementById('submit-btn');submitBtn.disabled=true;submitBtn.innerHTML=`<span>Đang gửi...</span><span class="icon-wrapper"><i class="fas fa-spinner fa-spin"></i></span>`;const formData=new FormData(contactForm);const data={fullName:formData.get('fullName'),phone:formData.get('phone'),parentPhone:formData.get('parentPhone'),email:formData.get('email'),submittedAt:new Date()};try{await addDoc(collection(db,"contact-leads"),data);formContainer.innerHTML=`<div class="success-message"><h2>Cảm ơn bạn!</h2><p>Chúng tôi đã nhận được thông tin và sẽ liên hệ lại sớm nhất có thể.</p></div>`;}catch(error){console.error("Error adding document: ",error);formContainer.innerHTML=`<div class="success-message"><h2>Đã có lỗi xảy ra</h2><p>Vui lòng thử lại sau. Lỗi: ${error.message}</p></div>`;}});
         });
     </script>
-
 </body>
 </html>
