@@ -332,18 +332,26 @@
                 id: wordData.id, word: wordData.word, type: wordData.type, meaning: wordData.meaning,
                 structures: wordData.structures.map(s => ({ phrase: s.phrase, meaning: s.meaning }))
             }));
-            return `Bạn là một AI chuyên gia ngôn ngữ Anh. Hãy xử lý mảng JSON sau. Với MỖI object, hãy tạo ra một object mới trong mảng kết quả.
+            return `Bạn là một người thật sự chuyên gia ngôn ngữ Anh, từ ngữ học, giáo viên giảng dạy 10 năm kinh nghiệm luyện thi chuyên anh và tiếng anh nâng cao. Hãy xử lý mảng JSON sau. Với MỖI object, hãy tạo ra một object mới trong mảng kết quả.
 Đầu vào: ${JSON.stringify(batchInput)}
 YÊU CẦU:
 Trả về một mảng JSON. Mỗi object phải có cấu trúc:
 { "id": id_gốc, "ex": "Một câu ví dụ cho từ chính", "d_en": ["Từ gây nhiễu 1", "Từ 2", "Từ 3"], "d_vi": ["Nghĩa gây nhiễu 1", "Nghĩa 2", "Nghĩa 3"], "s": [ { "p": "Cấu trúc gốc 1", "exs": ["Ví dụ ứng dụng 1"] } ] }
 YÊU CẦU CHI TIẾT:
 1. "ex": Tạo MỘT câu ví dụ tiếng Anh tự nhiên.
-2. "d_en": Tạo 3 từ tiếng Anh gây nhiễu, cùng loại từ, KHÔNG đồng nghĩa trực tiếp, nhưng liên quan về chủ đề.
+2. "d_en": Tạo 3 từ tiếng Anh gây nhiễu, cùng loại từ, KHÔNG đồng nghĩa, nhưng liên quan về chủ đề. Các từ đồng nghĩa này có thể giúp tôi tạo thành một bài tập trắc nghiệm nhiều lựa chọn. Ví dụ: 
+You should make a(n) _____________ to overcome this problem.
+Từ gốc: effort
+Tư nhiễu: impression, trial, apology
+Ví dụ này chỉ minh họa về mặt cách thực hiện, không minh họa về level của từ.
 3. "d_vi": Tạo 3 định nghĩa tiếng Việt gây nhiễu, KHÔNG dịch thẳng từ "d_en".
+Ví dụ:
+Từ gốc: nỗ lực
+ từ nhiễu: sự thúc đẩy, sự tiến bộ, sự chịu đựng
 4. "s": Với mỗi cấu trúc, tạo MỘT ví dụ ứng dụng trong mảng "exs".
-5. QUAN TRỌNG: Toàn bộ nội dung phải phù hợp với trình độ ${cefrLevel}.
-CHỈ trả về mảng JSON, không giải thích gì thêm.`;
+5. QUAN TRỌNG: Toàn bộ nội dung phải phù hợp và ở trình độ ${cefrLevel}.
+CHỈ trả về mảng JSON, không giải thích gì thêm.
+`;
         }
 
         function processAiResults(aiDataArray) {
