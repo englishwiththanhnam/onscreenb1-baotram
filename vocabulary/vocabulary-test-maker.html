@@ -44,6 +44,20 @@
         #data-table th { position: sticky; top: 0; background-color: rgba(255,255,255,0.6); backdrop-filter: blur(5px); z-index: 10; }
         body.dark #data-table th { background-color: rgba(29, 39, 58, 0.6); }
         [contenteditable]:focus { outline: 2px solid var(--primary-accent); background-color: rgba(255, 255, 255, 0.7); border-radius: 4px; }
+        .sentence-template-display {
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 8px;
+            border-radius: 8px;
+            font-family: monospace;
+            color: var(--text-primary);
+        }
+        .sentence-template-display .blank-word {
+            background-color: var(--primary-accent);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -61,7 +75,7 @@
         </div>
     </div>
 
-    <div id="main-content" class="max-w-screen-xl mx-auto" style="display: none;">
+    <div id="main-content" class="max-w-screen-2xl mx-auto" style="display: none;">
         <header class="flex justify-between items-center mb-8">
             <h1 id="page-title" class="text-4xl font-bold">Trình Soạn Thảo Bộ Từ Vựng</h1>
             <div class="flex items-center gap-4">
@@ -132,7 +146,12 @@
                     <div id="table-container" class="max-h-[80vh] overflow-auto rounded-lg border border-white/50">
                         <table id="data-table" class="w-full text-sm">
                             <thead>
-                                <tr class="text-left"><th class="p-3">Từ vựng / Phiên âm</th><th class="p-3">Nghĩa</th><th class="p-3">Cấu trúc & Ví dụ</th><th class="p-3">Từ gây nhiễu</th><th class="p-3 text-center">AI</th></tr>
+                                <tr class="text-left">
+                                    <th class="p-3">Từ vựng</th>
+                                    <th class="p-3">Ví dụ & Đục lỗ theo Ngữ cảnh</th>
+                                    <th class="p-3">Nhiễu chung (Hỏi nghĩa)</th>
+                                    <th class="p-3 text-center">AI</th>
+                                </tr>
                             </thead>
                             <tbody id="data-table-body"></tbody>
                         </table>
@@ -169,7 +188,6 @@
     </div>
 
     <script type="module">
-        // *** THAY ĐỔI: Thêm getDoc vào import
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
@@ -217,49 +235,90 @@
             document.getElementById('alert-ok-btn').onclick = () => DOM.alertModal.classList.remove('is-open');
         }
 
+        // NÂNG CẤP: Cấu trúc dữ liệu mới
         function parseAndStructureCSV(vocabText, structuresText) {
             const vocabRows = vocabText.trim().split(/\r?\n/);
             const vocab = vocabRows.map((row, index) => {
                 const columns = row.split(',').map(c => c.trim().replace(/"/g, ''));
                 if (columns.length >= 4 && columns[0]) {
-                    return { id: index + 1, word: columns[0], type: columns[1], pronunciation: columns[2], meaning: columns[3], audioUrl: '', structures: [], exampleSentence: '', distractors_en: [], distractors_vi: [], isEnriched: false };
+                    // Cấu trúc khởi tạo mới
+                    return { 
+                        id: index + 1, 
+                        word: columns[0], 
+                        type: columns[1], 
+                        pronunciation: columns[2], 
+                        meaning: columns[3], 
+                        audioUrl: '', 
+                        isEnriched: false,
+                        // Dữ liệu mới sẽ được AI điền vào
+                        general_distractors: { en: [], vi: [] },
+                        contextual_examples: []
+                    };
                 }
                 return null;
             }).filter(Boolean);
-
-            const structureRows = structuresText.trim().split(/\r?\n/);
-            const structures = structureRows.map(row => {
-                const columns = row.split(',').map(c => c.trim().replace(/"/g, ''));
-                if (columns.length >= 2 && columns[0]) return { phrase: columns[0], meaning: columns[1] };
-                return null;
-            }).filter(Boolean);
-
-            vocab.forEach(v => {
-                const wordLower = v.word.toLowerCase();
-                const matchRegex = new RegExp(`\\b${wordLower}s?\\b`, 'i');
-                v.structures = structures.filter(s => matchRegex.test(s.phrase)).map(s => ({...s, applicationExamples: []}));
-            });
+            
+            // Phần xử lý structures có thể giữ lại nếu cần tham chiếu, nhưng không trực tiếp gán vào word nữa
+            // Hoặc có thể truyền vào prompt để AI có thêm ngữ cảnh
             localWordList = vocab;
         }
 
+        // NÂNG CẤP: Render bảng với cấu trúc dữ liệu mới
         function renderTable() {
             DOM.dataTableBody.innerHTML = '';
-            localWordList.forEach((word, index) => {
+            localWordList.forEach((word, wordIndex) => {
                 const row = document.createElement('tr');
                 row.className = 'border-b dark:border-slate-700 align-top';
+
                 const audioIconHTML = word.audioUrl ? `<a href="${word.audioUrl}" target="_blank" title="Nghe"><i class="fas fa-volume-up ml-2 text-blue-500"></i></a>` : '';
-                const structuresHTML = word.structures.map((s, sIdx) => {
-                    const examplesHTML = (s.applicationExamples || []).map((ex, exIdx) => `<li contenteditable="true" data-word-index="${index}" data-structure-index="${sIdx}" data-example-index="${exIdx}">${ex}</li>`).join('');
-                    return `<div class="p-1.5 my-1 bg-violet-100 dark:bg-slate-700 rounded-md"><p class="font-semibold text-violet-800 dark:text-violet-300">${s.phrase}</p><p class="text-xs text-slate-600 dark:text-slate-400">${s.meaning}</p>${examplesHTML ? `<ul class="list-disc list-inside mt-1 text-sky-700 dark:text-sky-400">${examplesHTML}</ul>` : ''}</div>`;
+                
+                // Hiển thị thông tin từ vựng cơ bản
+                const wordInfoHTML = `
+                    <td class="p-3">
+                        <div class="flex items-center">
+                            <p class="font-bold text-base" contenteditable="true" data-path="word" data-word-index="${wordIndex}">${word.word}</p>
+                            ${audioIconHTML}
+                        </div>
+                        <p class="font-mono text-sm text-violet-700 dark:text-violet-400" contenteditable="true" data-path="pronunciation" data-word-index="${wordIndex}">${word.pronunciation}</p>
+                        <p class="text-xs text-slate-500">(${word.type})</p>
+                        <p class="mt-2 text-sm" contenteditable="true" data-path="meaning" data-word-index="${wordIndex}">${word.meaning}</p>
+                    </td>`;
+
+                // Hiển thị các ví dụ ngữ cảnh và chỗ đục lỗ
+                const contextualExamplesHTML = (word.contextual_examples || []).map((ex, exIndex) => {
+                    const sentenceHTML = ex.sentence_template.replace(/\{\{(.*?)\}\}/g, '<span class="blank-word">$1</span>');
+                    const blanksHTML = (ex.blanks || []).map((blank, blankIndex) => `
+                        <div class="ml-4 mt-2">
+                            <p class="font-semibold text-sky-700 dark:text-sky-300">Lỗ trống cho: <span class="font-bold text-sky-500">${blank.target_word}</span></p>
+                            <ul class="list-disc list-inside text-xs">
+                                ${blank.distractors.map((d, dIndex) => `<li contenteditable="true" data-path="contextual_examples[${exIndex}].blanks[${blankIndex}].distractors[${dIndex}]" data-word-index="${wordIndex}">${d}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `).join('');
+                    return `<div class="p-2 my-2 bg-green-100 dark:bg-emerald-900/50 rounded-md">
+                                <p class="sentence-template-display">${sentenceHTML}</p>
+                                ${blanksHTML}
+                            </div>`;
                 }).join('');
-                const exampleHTML = word.exampleSentence ? `<div class="mt-2 p-1.5 bg-green-100 dark:bg-emerald-900/50 rounded-md"><p class="font-semibold text-green-800 dark:text-green-300">Ví dụ:</p><p class="text-xs" contenteditable="true" data-word-index="${index}" data-field="exampleSentence">${word.exampleSentence}</p></div>` : '';
-                const distractorsHTML = word.distractors_en.length > 0 ? `<div class="text-xs"><p class="font-semibold">EN:</p><ul class="list-disc list-inside" data-word-index="${index}" data-field="distractors_en">${word.distractors_en.map((d, d_idx) => `<li contenteditable="true" data-distractor-index="${d_idx}">${d}</li>`).join('')}</ul><p class="font-semibold mt-1">VI:</p><ul class="list-disc list-inside" data-word-index="${index}" data-field="distractors_vi">${word.distractors_vi.map((d, d_idx) => `<li contenteditable="true" data-distractor-index="${d_idx}">${d}</li>`).join('')}</ul></div>` : '<span class="text-xs text-gray-400">Chưa có</span>';
+
+                // Hiển thị bộ từ gây nhiễu chung
+                const generalDistractorsHTML = `
+                    <div class="text-xs">
+                        <p class="font-semibold">EN:</p>
+                        <ul class="list-disc list-inside">
+                            ${(word.general_distractors.en || []).map((d, dIndex) => `<li contenteditable="true" data-path="general_distractors.en[${dIndex}]" data-word-index="${wordIndex}">${d}</li>`).join('')}
+                        </ul>
+                        <p class="font-semibold mt-1">VI:</p>
+                        <ul class="list-disc list-inside">
+                            ${(word.general_distractors.vi || []).map((d, dIndex) => `<li contenteditable="true" data-path="general_distractors.vi[${dIndex}]" data-word-index="${wordIndex}">${d}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
 
                 row.innerHTML = `
-                    <td class="p-3"><div class="flex items-center"><p class="font-bold text-base" contenteditable="true" data-word-index="${index}" data-field="word">${word.word}</p>${audioIconHTML}</div><p class="font-mono text-sm text-violet-700 dark:text-violet-400" contenteditable="true" data-word-index="${index}" data-field="pronunciation">${word.pronunciation}</p><p class="text-xs text-slate-500">(${word.type})</p></td>
-                    <td class="p-3" contenteditable="true" data-word-index="${index}" data-field="meaning">${word.meaning}</td>
-                    <td class="p-3 text-xs">${structuresHTML}${exampleHTML}</td>
-                    <td class="p-3">${distractorsHTML}</td>
+                    ${wordInfoHTML}
+                    <td class="p-3 text-xs">${contextualExamplesHTML || '<span class="text-gray-400">Chưa có</span>'}</td>
+                    <td class="p-3">${generalDistractorsHTML}</td>
                     <td class="p-3 text-center">${word.isEnriched ? '<i class="fas fa-check-circle text-2xl text-green-500"></i>' : '<i class="fas fa-hourglass-half text-2xl text-gray-400"></i>'}</td>
                 `;
                 DOM.dataTableBody.appendChild(row);
@@ -275,9 +334,7 @@
             try {
                 await setDoc(doc(db, "vocab_sets", testId), { title, wordList: localWordList, updatedAt: serverTimestamp() }, { merge: true });
                 DOM.uploadLog.textContent = 'Lưu THÀNH CÔNG!';
-                setTimeout(() => {
-                    DOM.uploadLog.textContent = '';
-                }, 3000);
+                setTimeout(() => { DOM.uploadLog.textContent = ''; }, 3000);
             } catch (error) {
                 DOM.uploadLog.textContent = `LỖI: ${error.message}`;
             } finally {
@@ -323,96 +380,107 @@
             const result = await response.json();
             const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
             if (!responseText) throw new Error("Cấu trúc phản hồi API không hợp lệ.");
-            return JSON.parse(responseText);
+            // Thêm try-catch để debug lỗi parse JSON từ AI
+            try {
+                return JSON.parse(responseText);
+            } catch (e) {
+                console.error("Lỗi parse JSON từ API:", responseText);
+                throw new Error("Kết quả trả về từ AI không phải là JSON hợp lệ.");
+            }
         }
 
+        // NÂNG CẤP: Prompt hoàn toàn mới
         function getPromptForBatch(batch) {
-    const cefrLevel = getCefrLevelDescription();
-    const batchInput = batch.map(wordData => ({
-        id: wordData.id,
-        word: wordData.word,
-        type: wordData.type,
-        meaning: wordData.meaning,
-        // Chỉ gửi những thông tin cần thiết nhất
-        // Cung cấp một câu ví dụ mẫu nếu có để AI có ngữ cảnh
-        context_sentence: `She made a real ______ to finish the project on time.` // Đây là ví dụ, thực tế bạn nên tạo câu ví dụ liên quan đến từ
-    }));
+            const cefrLevel = getCefrLevelDescription();
+            const batchInput = batch.map(wordData => ({
+                id: wordData.id,
+                word: wordData.word,
+                type: wordData.type,
+                meaning: wordData.meaning
+            }));
 
-    return `
+            return `
 Bạn là một chuyên gia khảo thí ngôn ngữ (Language Assessment Expert) với 10 năm kinh nghiệm ra đề thi tiếng Anh.
-Nhiệm vụ của bạn là tạo ra các phương án gây nhiễu (distractors) chất lượng cao cho các câu hỏi trắc nghiệm từ vựng dựa trên dữ liệu đầu vào.
+Nhiệm vụ của bạn là làm giàu dữ liệu từ vựng để tạo ra hai loại câu hỏi trắc nghiệm: (1) điền từ vào ngữ cảnh (đục lỗ) và (2) hỏi nghĩa của từ.
 
 Đầu vào: ${JSON.stringify(batchInput)}
 
 ## YÊU CẦU CHUNG
 Với MỖI object trong mảng đầu vào, hãy tạo một object mới trong mảng JSON kết quả.
-Mỗi object kết quả phải có cấu trúc:
-{ 
-  "id": id_gốc, 
-  "ex": "Một câu ví dụ chất lượng, tự nhiên cho từ chính, thể hiện rõ nét nghĩa của nó.",
-  "d_en": ["Từ gây nhiễu tiếng Anh 1", "Từ 2", "Từ 3"], 
-  "d_vi": ["Nghĩa gây nhiễu tiếng Việt 1", "Nghĩa 2", "Nghĩa 3"]
+Toàn bộ nội dung phải phù hợp với trình độ ${cefrLevel}.
+Mỗi object kết quả phải có cấu trúc JSON lồng nhau như sau:
+
+{
+  "id": id_gốc,
+  "general_distractors": {
+    "en": ["Từ gây nhiễu chung 1", "Từ 2", "Từ 3"],
+    "vi": ["Nghĩa gây nhiễu chung 1", "Nghĩa 2", "Nghĩa 3"]
+  },
+  "contextual_examples": [
+    {
+      "sentence_template": "Câu ví dụ 1, với các từ có thể đục lỗ được đánh dấu bằng {{từ_đó}}.",
+      "blanks": [
+        {
+          "target_word": "từ_đó",
+          "distractors": ["Nhiễu 1 cho từ_đó", "Nhiễu 2", "Nhiễu 3"]
+        }
+      ]
+    }
+  ]
 }
 
 ---
 
-## ## YÊU CẦU CHI TIẾT VỀ TỪ GÂY NHIỄU (DISTRACTORS)
+## YÊU CẦU CHI TIẾT
 
-**Mục tiêu:** Tạo ra các lựa chọn sai nhưng **có vẻ hợp lý (plausible)**, có thể đánh lừa được học sinh nếu họ không nắm vững ngữ nghĩa hoặc cách dùng của từ trong ngữ cảnh.
+### 1. Về "contextual_examples" (Dữ liệu cho bài Đục lỗ):
+- Tạo ra **1 đến 2** câu ví dụ tiếng Anh tự nhiên, phong phú, thể hiện rõ cách dùng của từ gốc.
+- Trong mỗi câu, hãy xác định **1 đến 2** từ "đắt giá" nhất (bao gồm từ gốc và có thể cả các từ quan trọng khác) để làm bài tập điền từ.
+- **Đánh dấu** các từ đó bằng cách bọc chúng trong cặp dấu ngoặc nhọn kép. Ví dụ: \`{{word}}\`.
+- Với **MỖI** từ được đánh dấu, hãy tạo một object "blanks" tương ứng:
+    - \`target_word\`: Chính là từ bị đục lỗ.
+    - \`distractors\`: Tạo 3 từ gây nhiễu **chất lượng cao** dành riêng cho ngữ cảnh của câu đó. Các từ nhiễu phải cùng loại từ và có vẻ hợp lý (plausible) khi đặt vào chỗ trống.
 
-### 1. Về "d_en" (Distractors tiếng Anh):
-Tạo 3 từ tiếng Anh gây nhiễu. Các từ này phải:
-- **Cùng loại từ** với từ gốc (danh từ, động từ, tính từ...).
-- **KHÔNG ĐƯỢC ĐỒNG NGHĨA HOÀN TOÀN**.
-- Được lựa chọn theo thứ tự ưu tiên sau để đảm bảo chất lượng gây nhiễu tốt nhất:
-    1.  **Cùng trường nghĩa (Same Semantic Field):** Các từ có liên quan chặt chẽ về mặt ý nghĩa nhưng không thể thay thế cho nhau trong ngữ cảnh của câu ví dụ.
-    2.  **Gần nghĩa nhưng khác sắc thái (Different Nuance):** Các từ có vẻ giống nhau nhưng mang sắc thái ý nghĩa hoặc cách dùng khác biệt.
-    3.  **Trông/Nghe giống nhau (Similar Sound/Spelling):** Các từ dễ gây nhầm lẫn về mặt chính tả hoặc phát âm (ví dụ: affect/effect, principle/principal).
+**Ví dụ tư duy cho "contextual_examples":**
+- Từ gốc: "effort" (n)
+- Kết quả mong muốn:
+  \`\`\`json
+  {
+    "sentence_template": "She made a real {{effort}} to {{finish}} the project on time.",
+    "blanks": [
+      {
+        "target_word": "effort",
+        "distractors": ["attempt", "trial", "impression"]
+      },
+      {
+        "target_word": "finish",
+        "distractors": ["complete", "end", "achieve"]
+      }
+    ]
+  }
+  \`\`\`
 
-**Ví dụ về tư duy tạo "d_en":**
-- **Từ gốc:** "effort" (n) - sự nỗ lực, sự cố gắng
-- **Câu ví dụ ngữ cảnh:** "You should make a(n) ______ to overcome this problem."
-- **Tư duy sai (kết quả tệ):** ["work", "job", "task"] -> Quá khác biệt, không gây nhiễu.
-- **Tư duy ĐÚNG (kết quả tốt):** ["attempt", "trial", "impression"] -> Rất hợp lý. "attempt" (sự cố gắng/thử) rất gần nghĩa. "trial" (sự thử nghiệm) cũng có nét tương đồng. "impression" (sự gây ấn tượng) là một lựa chọn sai nhưng vẫn có thể làm học sinh phân vân.
-
-### 2. Về "d_vi" (Distractors tiếng Việt):
-Tạo 3 nghĩa tiếng Việt gây nhiễu. Các nghĩa này phải:
-- **KHÔNG phải là nghĩa đúng** của từ gốc.
-- **Là những lựa chọn hợp lý** khi dùng để hỏi trong câu trắc nghiệm nối từ Anh-Việt.
-- Được tạo ra bằng các cách sau:
-    1.  Lấy **nghĩa tiếng Việt của các từ "d_en"** mà bạn vừa tạo. Đây là cách tốt nhất.
-    2.  Cung cấp một nghĩa **hẹp hơn hoặc rộng hơn** nghĩa gốc.
-    3.  Cung cấp một nghĩa liên quan đến một **khía cạnh/ngữ cảnh khác** của từ gốc.
-
-**Ví dụ về tư duy tạo "d_vi":**
-- **Từ gốc:** "effort" - sự nỗ lực
-- **Các từ "d_en" đã tạo:** ["attempt", "trial", "impression"]
-- **Tư duy ĐÚNG (kết quả tốt):** ["sự thử", "sự thử nghiệm", "sự gây ấn tượng"] -> Trực tiếp dịch từ "d_en", rất hiệu quả.
-- **Tư duy khác (cũng tốt):** ["sự tiến bộ", "sự chịu đựng", "sự thúc đẩy"] -> Các khái niệm liên quan trong chủ đề "phát triển bản thân" nhưng không phải là "nỗ lực".
+### 2. Về "general_distractors" (Dữ liệu cho bài Hỏi nghĩa):
+- Tạo một bộ gây nhiễu **chung**, không phụ thuộc vào ngữ cảnh câu nào.
+- \`en\`: 3 từ tiếng Anh gây nhiễu, cùng loại từ, cùng trường nghĩa nhưng không đồng nghĩa hoàn toàn.
+- \`vi\`: 3 nghĩa tiếng Việt gây nhiễu, có thể là nghĩa của các từ "en" bạn vừa tạo, hoặc các nghĩa liên quan nhưng không chính xác.
 
 ---
 
-**QUAN TRỌNG:** Toàn bộ nội dung ("ex", "d_en", "d_vi") phải phù hợp với trình độ ${cefrLevel}.
-**CHỈ trả về một mảng JSON hợp lệ, không có bất kỳ giải thích nào khác.**
+**QUAN TRỌNG:** CHỈ trả về một mảng JSON hợp lệ, không có bất kỳ giải thích nào khác.
 `;
-}
+        }
 
+        // NÂNG CẤP: Xử lý kết quả AI với cấu trúc mới
         function processAiResults(aiDataArray) {
             if (!Array.isArray(aiDataArray)) throw new Error("Kết quả AI không phải là một mảng.");
+            
             aiDataArray.forEach(enrichedData => {
                 const wordToUpdate = localWordList.find(w => w.id === enrichedData.id);
                 if (wordToUpdate) {
-                    wordToUpdate.exampleSentence = enrichedData.ex || '';
-                    wordToUpdate.distractors_en = enrichedData.d_en || [];
-                    wordToUpdate.distractors_vi = enrichedData.d_vi || [];
-                    if (enrichedData.s && Array.isArray(enrichedData.s)) {
-                        enrichedData.s.forEach(enrichedStruct => {
-                            const originalStruct = wordToUpdate.structures.find(s => s.phrase === enrichedStruct.p);
-                            if (originalStruct) {
-                                originalStruct.applicationExamples = enrichedStruct.exs || [];
-                            }
-                        });
-                    }
+                    // Cẩn thận gán giá trị, kiểm tra null/undefined để tránh lỗi
+                    wordToUpdate.general_distractors = enrichedData.general_distractors || { en: [], vi: [] };
+                    wordToUpdate.contextual_examples = enrichedData.contextual_examples || [];
                     wordToUpdate.isEnriched = true;
                 }
             });
@@ -421,11 +489,10 @@ Tạo 3 nghĩa tiếng Việt gây nhiễu. Các nghĩa này phải:
 
         function setupEventListeners() {
             onAuthStateChanged(auth, user => {
-                // *** THAY ĐỔI: Chỉ khởi tạo trang sau khi đăng nhập thành công
                 if (user) {
                     DOM.loginScreen.classList.remove('is-open');
                     DOM.mainContent.style.display = 'block';
-                    initializePage(); // Tải dữ liệu hoặc chuẩn bị cho trang mới
+                    initializePage();
                 } else {
                     DOM.loginScreen.classList.add('is-open');
                     DOM.mainContent.style.display = 'none';
@@ -443,8 +510,9 @@ Tạo 3 nghĩa tiếng Việt gây nhiễu. Các nghĩa này phải:
             DOM.structuresCsvUploadInput.addEventListener('change', (e) => handleFileUpload(e, 'structures'));
             
             DOM.processFilesBtn.addEventListener('click', () => {
-                if (!vocabCsvText || !structuresCsvText) return showAlert("Vui lòng tải lên cả hai file CSV.");
-                parseAndStructureCSV(vocabCsvText, structuresCsvText);
+                if (!vocabCsvText) return showAlert("Vui lòng tải lên file CSV từ vựng.");
+                // File cấu trúc giờ là tùy chọn
+                parseAndStructureCSV(vocabCsvText, structuresCsvText || '');
                 renderTable();
                 DOM.dataReviewSection.classList.remove('hidden');
             });
@@ -486,7 +554,7 @@ Tạo 3 nghĩa tiếng Việt gây nhiễu. Các nghĩa này phải:
                 button.disabled = true;
                 button.innerHTML = `<div class="loader"></div><span class="ml-2">Đang xử lý...</span>`;
                 try {
-                    const BATCH_SIZE = 50;
+                    const BATCH_SIZE = 20; // Giảm batch size vì prompt phức tạp hơn
                     for (let i = 0; i < wordsToEnrich.length; i += BATCH_SIZE) {
                         const batch = wordsToEnrich.slice(i, i + BATCH_SIZE);
                         const prompt = getPromptForBatch(batch);
@@ -528,31 +596,35 @@ Tạo 3 nghĩa tiếng Việt gây nhiễu. Các nghĩa này phải:
                 }
             });
             
+            // NÂNG CẤP: Logic chỉnh sửa dữ liệu lồng nhau
             DOM.dataTableBody.addEventListener('blur', (e) => {
                 const target = e.target;
                 if (target.hasAttribute('contenteditable')) {
                     const wordIndex = parseInt(target.dataset.wordIndex, 10);
-                    const field = target.dataset.field;
+                    const path = target.dataset.path;
                     const newText = target.textContent;
-                    if (isNaN(wordIndex) || !localWordList[wordIndex]) return;
+
+                    if (isNaN(wordIndex) || !localWordList[wordIndex] || !path) return;
                     
-                    const wordData = localWordList[wordIndex];
-                    if (field) {
-                        wordData[field] = newText;
-                    } else if (target.dataset.structureIndex !== undefined) {
-                        const sIdx = parseInt(target.dataset.structureIndex, 10);
-                        const eIdx = parseInt(target.dataset.exampleIndex, 10);
-                        if (!isNaN(sIdx) && !isNaN(eIdx)) wordData.structures[sIdx].applicationExamples[eIdx] = newText;
-                    } else if (target.dataset.distractorIndex !== undefined) {
-                        const dIdx = parseInt(target.dataset.distractorIndex, 10);
-                        const dField = target.closest('ul').dataset.field;
-                        if (!isNaN(dIdx) && dField) wordData[dField][dIdx] = newText;
+                    // Sử dụng một hàm để cập nhật giá trị trong object lồng nhau
+                    function updateNestedObject(obj, path, value) {
+                        const keys = path.replace(/\[(\w+)\]/g, '.$1').replace(/^\./, '').split('.');
+                        let current = obj;
+                        for (let i = 0; i < keys.length - 1; i++) {
+                            if (current[keys[i]] === undefined) {
+                                // Nếu đường dẫn không tồn tại, không làm gì cả
+                                return;
+                            }
+                            current = current[keys[i]];
+                        }
+                        current[keys[keys.length - 1]] = value;
                     }
+                    
+                    updateNestedObject(localWordList[wordIndex], path, newText);
                 }
             }, true);
         }
         
-        // *** THÊM MỚI: Hàm tải và điền dữ liệu có sẵn
         async function loadAndPopulateTestData(testId) {
             showAlert("Đang tải dữ liệu đề thi...");
             const docRef = doc(db, "vocab_sets", testId);
@@ -561,21 +633,23 @@ Tạo 3 nghĩa tiếng Việt gây nhiễu. Các nghĩa này phải:
                 if (docSnap.exists()) {
                     const testData = docSnap.data();
                     
-                    // Điền thông tin chung
                     DOM.pageTitle.textContent = "Chỉnh sửa Bộ từ vựng";
                     DOM.testIdInput.value = testId;
-                    DOM.testIdInput.disabled = true; // Không cho sửa ID khi đang edit
+                    DOM.testIdInput.disabled = true;
                     DOM.testTitleInput.value = testData.title || "";
                     
-                    // Điền dữ liệu vào bảng
                     localWordList = testData.wordList || [];
+                    // Đảm bảo dữ liệu cũ tương thích
+                    localWordList.forEach(word => {
+                        if (!word.general_distractors) word.general_distractors = { en: [], vi: [] };
+                        if (!word.contextual_examples) word.contextual_examples = [];
+                    });
+
                     renderTable();
                     DOM.dataReviewSection.classList.remove('hidden');
                     
-                    // Cập nhật nút Lưu
                     DOM.uploadBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Cập nhật Bộ Từ Vựng';
                     
-                    // Ẩn modal loading
                     DOM.alertModal.classList.remove('is-open');
 
                 } else {
@@ -587,21 +661,17 @@ Tạo 3 nghĩa tiếng Việt gây nhiễu. Các nghĩa này phải:
             }
         }
 
-        // *** THÊM MỚI: Hàm khởi tạo trang, quyết định tải dữ liệu hay tạo mới
         async function initializePage() {
             const urlParams = new URLSearchParams(window.location.search);
             const testIdToEdit = urlParams.get('edit');
 
             if (testIdToEdit) {
-                // Chế độ chỉnh sửa
                 await loadAndPopulateTestData(testIdToEdit);
-                // Vô hiệu hóa phần tải file lên khi đang chỉnh sửa
                 const uploadSection = DOM.processFilesBtn.closest('.glass-panel');
                 uploadSection.style.opacity = '0.5';
                 uploadSection.style.pointerEvents = 'none';
                 uploadSection.title = 'Không thể nhập file CSV khi đang chỉnh sửa.';
             } else {
-                // Chế độ tạo mới (giữ nguyên)
                 DOM.pageTitle.textContent = "Trình Soạn Thảo Bộ Từ Vựng";
                 DOM.uploadBtn.innerHTML = '<i class="fas fa-cloud-upload-alt mr-2"></i>Lưu Bộ Từ Vựng';
             }
