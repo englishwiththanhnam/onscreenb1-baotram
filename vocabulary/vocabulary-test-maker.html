@@ -19,8 +19,8 @@
             --shadow-color: rgba(0, 0, 0, 0.25); --primary-accent: #a78bfa; --text-primary: #f1f5f9;
             --text-secondary: #94a3b8; --app-bg-start: #0f172a; --app-bg-end: #1e293b;
         }
-        body { font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--app-bg-start); background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%); color: var(--text-primary); }
-        body.dark h1, body.dark h2, body.dark label, body.dark p, body.dark input, body.dark textarea, body.dark select { color: var(--text-primary); }
+        body { font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--app-bg-start); background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%); color: var(--text-primary); transition: background-color 0.3s, color 0.3s; }
+        body.dark h1, body.dark h2, body.dark label, body.dark p, body.dark input, body.dark textarea, body.dark select, body.dark summary, body.dark th { color: var(--text-primary); }
         body.dark .text-gray-700 { color: var(--text-primary) !important; }
         body.dark #dark-mode-label .fa-moon { color: var(--primary-accent); } #dark-mode-label .fa-sun { color: #f59e0b; }
         .background-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
@@ -28,27 +28,39 @@
         .shape1 { width: 250px; height: 250px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); top: 10%; left: 5%; }
         .shape2 { width: 180px; height: 180px; background: linear-gradient(135deg, #14b8a6, #67e8f9); bottom: 15%; right: 10%; animation-duration: 35s; }
         @keyframes float { from { transform: translateY(20px) scale(1); } to { transform: translateY(-20px) scale(1.05); } }
-        .glass-panel { background: var(--glass-bg-color); backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity)); border-radius: 24px; border: 1px solid var(--glass-border-color); box-shadow: 0 8px 32px 0 var(--shadow-color); }
-        .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        .glass-panel { background: var(--glass-bg-color); backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity)); border-radius: 24px; border: 1px solid var(--glass-border-color); box-shadow: 0 8px 32px 0 var(--shadow-color); transition: background 0.3s, border 0.3s; }
+        .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; user-select: none; }
         .btn:disabled { cursor: not-allowed; opacity: 0.6; transform: none !important; }
+        .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .btn-primary { background: var(--primary-accent); color: white; }
         .btn-secondary { background: rgba(255, 255, 255, 0.4); color: var(--text-primary); border: 1px solid rgba(255, 255, 255, 0.6); }
         body.dark .btn-secondary { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
         .btn-danger { background: #ef4444; color: white; }
-        .input-field { background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.5); width: 100%; padding: 12px; border-radius: 12px; }
+        .input-field { background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.5); width: 100%; padding: 12px; border-radius: 12px; transition: background 0.3s, border 0.3s; }
+        .input-field:focus { outline: none; box-shadow: 0 0 0 2px var(--primary-accent); }
+        body.dark .input-field { background: rgba(0,0,0,0.2); border-color: rgba(255,255,255,0.2); }
         .input-field:disabled { background-color: rgba(229, 231, 235, 0.5); cursor: not-allowed; }
-        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); align-items: center; justify-content: center; }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); align-items: center; justify-content: center; animation: fadeIn 0.3s ease; }
         .modal.is-open { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .loader { width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid var(--primary-accent); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         #data-table th { position: sticky; top: 0; background-color: rgba(255,255,255,0.6); backdrop-filter: blur(5px); z-index: 10; }
         body.dark #data-table th { background-color: rgba(29, 39, 58, 0.6); }
         [contenteditable]:focus { outline: 2px solid var(--primary-accent); background-color: rgba(255, 255, 255, 0.7); border-radius: 4px; }
+        body.dark [contenteditable]:focus { background-color: rgba(0, 0, 0, 0.3); }
+        .task-details { border-left: 2px solid var(--primary-accent); padding-left: 12px; margin-top: 8px; }
+        .task-summary { font-weight: 700; cursor: pointer; list-style: none; }
+        .task-summary::-webkit-details-marker { display: none; }
+        .task-content { font-size: 12px; margin-top: 8px; color: var(--text-secondary); }
+        .task-content .sentence { background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 6px; margin: 4px 0; color: var(--text-primary); }
+        body.dark .task-content .sentence { background: rgba(255,255,255,0.08); }
     </style>
 </head>
 <body class="p-4 sm:p-8">
     <div class="background-shapes"><div class="shape shape1"></div><div class="shape shape2"></div></div>
 
+    <!-- Login Screen -->
     <div id="login-screen" class="modal is-open">
         <div class="glass-panel p-8 rounded-2xl shadow-xl text-center w-full max-w-sm">
             <h2 class="text-2xl font-bold mb-6">Đăng nhập</h2>
@@ -61,7 +73,8 @@
         </div>
     </div>
 
-    <div id="main-content" class="max-w-screen-xl mx-auto" style="display: none;">
+    <!-- Main Content -->
+    <div id="main-content" class="max-w-screen-2xl mx-auto" style="display: none;">
         <header class="flex justify-between items-center mb-8">
             <h1 id="page-title" class="text-4xl font-bold">Trình Soạn Thảo Bộ Từ Vựng</h1>
             <div class="flex items-center gap-4">
@@ -79,6 +92,7 @@
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <!-- Left Panel: Controls -->
             <aside class="lg:col-span-2 space-y-8">
                 <div class="glass-panel p-6">
                     <h2 class="text-2xl font-bold text-gray-700 mb-4">1. Thông tin chung</h2>
@@ -94,15 +108,15 @@
                              <label class="block text-sm font-medium mb-1">File Từ vựng (.csv)</label>
                              <label for="vocab-csv-upload" class="btn btn-secondary w-full"><i class="fas fa-upload mr-2"></i>Tải lên</label>
                              <input type="file" id="vocab-csv-upload" class="hidden" accept=".csv">
-                             <p id="vocab-file-name" class="text-gray-600 mt-2 text-sm text-center"></p>
+                             <p id="vocab-file-name" class="text-gray-600 mt-2 text-sm text-center truncate"></p>
                          </div>
                          <div>
                              <label class="block text-sm font-medium mb-1">File Cấu trúc (.csv)</label>
                              <label for="structures-csv-upload" class="btn btn-secondary w-full"><i class="fas fa-upload mr-2"></i>Tải lên</label>
                              <input type="file" id="structures-csv-upload" class="hidden" accept=".csv">
-                             <p id="structures-file-name" class="text-gray-600 mt-2 text-sm text-center"></p>
+                             <p id="structures-file-name" class="text-gray-600 mt-2 text-sm text-center truncate"></p>
                          </div>
-                    </div>
+                     </div>
                     <div class="mt-6">
                         <label for="cefr-level-slider" class="block text-sm font-medium mb-1">Trình độ (CEFR)</label>
                         <input type="range" id="cefr-level-slider" min="0" max="100" value="50" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700">
@@ -126,13 +140,18 @@
                 </div>
             </aside>
 
+            <!-- Right Panel: Data and Actions -->
             <main class="lg:col-span-3 space-y-8">
                 <div id="data-review-section" class="glass-panel p-6 hidden">
-                     <h2 class="text-2xl font-bold text-gray-700 mb-4">4. Bảng dữ liệu & Làm giàu</h2>
+                     <h2 class="text-2xl font-bold text-gray-700 mb-4">4. Dữ liệu Khảo thí do AI tạo</h2>
                     <div id="table-container" class="max-h-[80vh] overflow-auto rounded-lg border border-white/50">
                         <table id="data-table" class="w-full text-sm">
                             <thead>
-                                <tr class="text-left"><th class="p-3">Từ vựng / Phiên âm</th><th class="p-3">Nghĩa</th><th class="p-3">Cấu trúc & Ví dụ</th><th class="p-3">Từ gây nhiễu</th><th class="p-3 text-center">AI</th></tr>
+                                <tr class="text-left">
+                                    <th class="p-3 w-1/4">Từ vựng & Cấu trúc</th>
+                                    <th class="p-3 w-3/4">Các Gói Bài Tập</th>
+                                    <th class="p-3 text-center">AI</th>
+                                </tr>
                             </thead>
                             <tbody id="data-table-body"></tbody>
                         </table>
@@ -148,6 +167,7 @@
         </div>
     </div>
     
+    <!-- Modals -->
     <div id="custom-alert-modal" class="modal"></div>
     <div id="manual-prompt-modal" class="modal">
         <div class="glass-panel p-8 w-full max-w-4xl max-h-[90vh] flex flex-col">
@@ -169,27 +189,30 @@
     </div>
 
     <script type="module">
-        // *** THAY ĐỔI: Thêm getDoc vào import
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
+        // --- CONFIGURATION ---
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
             projectId: "b1-baotram",
-            storageBucket: "b1-baotram.firebasestorage.app",
+            storageBucket: "b1-baotram.appspot.com",
             messagingSenderId: "948701163187",
             appId: "1:948701163187:web:043f2d381d63e741114ac6",
             measurementId: "G-33NHT07JHE"
         };
         const CLOUD_FUNCTION_URL = "https://getoaldaudio-asjwauz37q-uc.a.run.app";
+        const AI_BATCH_SIZE = 5; // Process 5 words per API call
 
+        // --- INITIALIZATION ---
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
         let localWordList = [], vocabCsvText = '', structuresCsvText = '';
 
+        // --- DOM ELEMENTS ---
         const DOM = {
             loginScreen: document.getElementById('login-screen'), mainContent: document.getElementById('main-content'),
             loginBtn: document.getElementById('login-btn'), logoutBtn: document.getElementById('logout-btn'),
@@ -211,95 +234,401 @@
             pageTitle: document.getElementById('page-title'),
         };
 
-        function showAlert(message) {
-            DOM.alertModal.innerHTML = `<div class="glass-panel text-center p-8 rounded-lg"><p class="text-lg mb-6">${message}</p><button id="alert-ok-btn" class="btn btn-primary">OK</button></div>`;
+        // --- UI & HELPERS ---
+        function showAlert(message, type = 'info') {
+            const colors = { info: 'blue', success: 'green', error: 'red' };
+            const colorClass = `bg-${colors[type]}-500`;
+            DOM.alertModal.innerHTML = `<div class="glass-panel text-center p-8 rounded-lg"><p class="text-lg mb-6">${message}</p><button id="alert-ok-btn" class="btn ${colorClass} text-white">OK</button></div>`;
             DOM.alertModal.classList.add('is-open');
             document.getElementById('alert-ok-btn').onclick = () => DOM.alertModal.classList.remove('is-open');
         }
-
-        function parseAndStructureCSV(vocabText, structuresText) {
-            const vocabRows = vocabText.trim().split(/\r?\n/);
-            const vocab = vocabRows.map((row, index) => {
-                const columns = row.split(',').map(c => c.trim().replace(/"/g, ''));
-                if (columns.length >= 4 && columns[0]) {
-                    return { id: index + 1, word: columns[0], type: columns[1], pronunciation: columns[2], meaning: columns[3], audioUrl: '', structures: [], exampleSentence: '', distractors_en: [], distractors_vi: [], isEnriched: false };
-                }
-                return null;
-            }).filter(Boolean);
-
-            const structureRows = structuresText.trim().split(/\r?\n/);
-            const structures = structureRows.map(row => {
-                const columns = row.split(',').map(c => c.trim().replace(/"/g, ''));
-                if (columns.length >= 2 && columns[0]) return { phrase: columns[0], meaning: columns[1] };
-                return null;
-            }).filter(Boolean);
-
-            vocab.forEach(v => {
-                const wordLower = v.word.toLowerCase();
-                const matchRegex = new RegExp(`\\b${wordLower}s?\\b`, 'i');
-                v.structures = structures.filter(s => matchRegex.test(s.phrase)).map(s => ({...s, applicationExamples: []}));
-            });
-            localWordList = vocab;
-        }
-
-        function renderTable() {
-            DOM.dataTableBody.innerHTML = '';
-            localWordList.forEach((word, index) => {
-                const row = document.createElement('tr');
-                row.className = 'border-b dark:border-slate-700 align-top';
-                const audioIconHTML = word.audioUrl ? `<a href="${word.audioUrl}" target="_blank" title="Nghe"><i class="fas fa-volume-up ml-2 text-blue-500"></i></a>` : '';
-                const structuresHTML = word.structures.map((s, sIdx) => {
-                    const examplesHTML = (s.applicationExamples || []).map((ex, exIdx) => `<li contenteditable="true" data-word-index="${index}" data-structure-index="${sIdx}" data-example-index="${exIdx}">${ex}</li>`).join('');
-                    return `<div class="p-1.5 my-1 bg-violet-100 dark:bg-slate-700 rounded-md"><p class="font-semibold text-violet-800 dark:text-violet-300">${s.phrase}</p><p class="text-xs text-slate-600 dark:text-slate-400">${s.meaning}</p>${examplesHTML ? `<ul class="list-disc list-inside mt-1 text-sky-700 dark:text-sky-400">${examplesHTML}</ul>` : ''}</div>`;
-                }).join('');
-                const exampleHTML = word.exampleSentence ? `<div class="mt-2 p-1.5 bg-green-100 dark:bg-emerald-900/50 rounded-md"><p class="font-semibold text-green-800 dark:text-green-300">Ví dụ:</p><p class="text-xs" contenteditable="true" data-word-index="${index}" data-field="exampleSentence">${word.exampleSentence}</p></div>` : '';
-                const distractorsHTML = word.distractors_en.length > 0 ? `<div class="text-xs"><p class="font-semibold">EN:</p><ul class="list-disc list-inside" data-word-index="${index}" data-field="distractors_en">${word.distractors_en.map((d, d_idx) => `<li contenteditable="true" data-distractor-index="${d_idx}">${d}</li>`).join('')}</ul><p class="font-semibold mt-1">VI:</p><ul class="list-disc list-inside" data-word-index="${index}" data-field="distractors_vi">${word.distractors_vi.map((d, d_idx) => `<li contenteditable="true" data-distractor-index="${d_idx}">${d}</li>`).join('')}</ul></div>` : '<span class="text-xs text-gray-400">Chưa có</span>';
-
-                row.innerHTML = `
-                    <td class="p-3"><div class="flex items-center"><p class="font-bold text-base" contenteditable="true" data-word-index="${index}" data-field="word">${word.word}</p>${audioIconHTML}</div><p class="font-mono text-sm text-violet-700 dark:text-violet-400" contenteditable="true" data-word-index="${index}" data-field="pronunciation">${word.pronunciation}</p><p class="text-xs text-slate-500">(${word.type})</p></td>
-                    <td class="p-3" contenteditable="true" data-word-index="${index}" data-field="meaning">${word.meaning}</td>
-                    <td class="p-3 text-xs">${structuresHTML}${exampleHTML}</td>
-                    <td class="p-3">${distractorsHTML}</td>
-                    <td class="p-3 text-center">${word.isEnriched ? '<i class="fas fa-check-circle text-2xl text-green-500"></i>' : '<i class="fas fa-hourglass-half text-2xl text-gray-400"></i>'}</td>
-                `;
-                DOM.dataTableBody.appendChild(row);
-            });
-        }
-        
-        async function uploadToFirebase() {
-            const testId = DOM.testIdInput.value.trim();
-            const title = DOM.testTitleInput.value.trim();
-            if (!testId || !title || localWordList.length === 0) return showAlert("Vui lòng nhập ID, Tiêu đề và xử lý dữ liệu.");
-            DOM.uploadBtn.disabled = true;
-            DOM.uploadLog.textContent = 'Đang lưu...';
-            try {
-                await setDoc(doc(db, "vocab_sets", testId), { title, wordList: localWordList, updatedAt: serverTimestamp() }, { merge: true });
-                DOM.uploadLog.textContent = 'Lưu THÀNH CÔNG!';
-                setTimeout(() => {
-                    DOM.uploadLog.textContent = '';
-                }, 3000);
-            } catch (error) {
-                DOM.uploadLog.textContent = `LỖI: ${error.message}`;
-            } finally {
-                DOM.uploadBtn.disabled = false;
-            }
-        }
-        
-        const handleFileUpload = (event, type) => {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                if (type === 'vocab') { vocabCsvText = e.target.result; DOM.vocabFileNameDisplay.textContent = file.name; } 
-                else { structuresCsvText = e.target.result; DOM.structuresFileNameDisplay.textContent = file.name; }
-            };
-            reader.readAsText(file);
-        };
 
         function getCefrLevelDescription() {
             const value = parseInt(DOM.cefrSlider.value, 10);
             if (value <= 10) return "A1"; if (value <= 30) return "A2"; if (value <= 50) return "B1";
             if (value <= 70) return "B2"; if (value <= 90) return "C1"; return "C2";
+        }
+
+        function updateButtonState(button, isLoading, originalHTML, loadingText = 'Đang xử lý...') {
+            button.disabled = isLoading;
+            if (isLoading) {
+                button.innerHTML = `<div class="loader"></div><span class="ml-2">${loadingText}</span>`;
+            } else {
+                button.innerHTML = originalHTML;
+            }
+        }
+
+        // --- DATA PROCESSING ---
+        function parseAndStructureCSV(vocabText, structuresText) {
+            const vocabRows = vocabText.trim().split(/\r?\n/).filter(Boolean);
+            const vocab = vocabRows.map((row, index) => {
+                const columns = row.split(',').map(c => c.trim().replace(/"/g, ''));
+                if (columns.length >= 4 && columns[0]) {
+                    return { 
+                        id: index + 1, word: columns[0], type: columns[1], 
+                        pronunciation: columns[2], meaning: columns[3], 
+                        audioUrl: '', isEnriched: false, structures: [], generated_tasks: null
+                    };
+                }
+                return null;
+            }).filter(Boolean);
+            
+            if (structuresText) {
+                const structureRows = structuresText.trim().split(/\r?\n/).filter(Boolean);
+                const structures = structureRows.map(row => {
+                    const columns = row.split(',').map(c => c.trim().replace(/"/g, ''));
+                    if (columns.length >= 2 && columns[0]) return { phrase: columns[0], meaning: columns[1] };
+                    return null;
+                }).filter(Boolean);
+
+                vocab.forEach(v => {
+                    const wordLower = v.word.toLowerCase();
+                    // Match whole word to avoid matching substrings (e.g., 'art' in 'start')
+                    const matchRegex = new RegExp(`\\b${wordLower}(s|es|ing|ed)?\\b`, 'i');
+                    v.structures = structures
+                        .filter(s => matchRegex.test(s.phrase.toLowerCase()))
+                        .map(s => ({...s}));
+                });
+            }
+            localWordList = vocab;
+        }
+
+        function renderTable() {
+            DOM.dataTableBody.innerHTML = '';
+            localWordList.forEach((word, wordIndex) => {
+                const row = document.createElement('tr');
+                row.className = 'border-b dark:border-slate-700 align-top';
+
+                const audioIconHTML = word.audioUrl ? `<a href="${word.audioUrl}" target="_blank" title="Nghe"><i class="fas fa-volume-up ml-2 text-blue-500 hover:text-blue-400"></i></a>` : '';
+                
+                // *** NEW ***: Generate HTML for related structures
+                const structuresHTML = word.structures && word.structures.length > 0
+                    ? `<div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-600">
+                        <h4 class="font-semibold text-xs uppercase text-slate-400 dark:text-slate-500">Cấu trúc liên quan</h4>
+                        <ul class="mt-1 space-y-2">
+                            ${word.structures.map((structure, structIndex) => `
+                                <li class="text-sm">
+                                    <p class="font-semibold" contenteditable="true" data-path="structures[${structIndex}].phrase" data-word-index="${wordIndex}">${structure.phrase}</p>
+                                    <p class="text-xs text-slate-500" contenteditable="true" data-path="structures[${structIndex}].meaning" data-word-index="${wordIndex}">${structure.meaning}</p>
+                                </li>
+                            `).join('')}
+                        </ul>
+                       </div>`
+                    : '';
+
+                const wordInfoHTML = `
+                    <td class="p-3">
+                        <div class="flex items-center">
+                            <p class="font-bold text-base" contenteditable="true" data-path="word" data-word-index="${wordIndex}">${word.word}</p>
+                            ${audioIconHTML}
+                        </div>
+                        <p class="font-mono text-sm text-violet-700 dark:text-violet-400" contenteditable="true" data-path="pronunciation" data-word-index="${wordIndex}">${word.pronunciation}</p>
+                        <p class="text-xs text-slate-500">(${word.type})</p>
+                        <p class="mt-2 text-sm" contenteditable="true" data-path="meaning" data-word-index="${wordIndex}">${word.meaning}</p>
+                        ${structuresHTML}
+                    </td>`;
+
+                let tasksHTML = '<span class="text-xs text-gray-400 italic">Chưa có dữ liệu AI.</span>';
+                const tasks = word.generated_tasks;
+
+                if (tasks) {
+                    const renderTask = (taskData, title, contentRenderer) => {
+                        if (!taskData) return '';
+                        return `
+                            <details class="mt-2">
+                                <summary class="task-summary">${title}</summary>
+                                <div class="task-details">
+                                    ${contentRenderer(taskData)}
+                                </div>
+                            </details>`;
+                    };
+
+                    tasksHTML = [
+                        renderTask(tasks.basic_example, '1. Ví dụ cơ bản', data => `<div class="task-content"><p class="sentence" contenteditable="true" data-path="generated_tasks.basic_example" data-word-index="${wordIndex}">${data}</p></div>`),
+                        renderTask(tasks.meaning_mcq, '2. Trắc nghiệm nghĩa', data => `
+                            <div class="task-content">
+                                <p><b>Nhiễu (EN):</b></p>
+                                <ul>${(data.distractors_en || []).map((d, i) => `<li contenteditable="true" data-path="generated_tasks.meaning_mcq.distractors_en[${i}]" data-word-index="${wordIndex}">${d}</li>`).join('')}</ul>
+                                <p class="mt-2"><b>Nhiễu (VI):</b></p>
+                                <ul>${(data.distractors_vi || []).map((d, i) => `<li contenteditable="true" data-path="generated_tasks.meaning_mcq.distractors_vi[${i}]" data-word-index="${wordIndex}">${d}</li>`).join('')}</ul>
+                            </div>`),
+                        renderTask(tasks.word_family_mcq, '3. Trắc nghiệm Họ từ', data => `
+                            <div class="task-content">
+                                <p class="sentence">${(data.sentence || '').replace(data.blank_placeholder, `<b>[____]</b>`)}</p>
+                                <p><b>Đáp án:</b> ${data.correct_answer || ''}</p>
+                                <p><b>Nhiễu:</b></p>
+                                <ul>${(data.distractors || []).map((d, i) => `<li contenteditable="true" data-path="generated_tasks.word_family_mcq.distractors[${i}]" data-word-index="${wordIndex}">${d}</li>`).join('')}</ul>
+                            </div>`),
+                        renderTask(tasks.sentence_unscramble, '4. Sắp xếp câu', data => `
+                            <div class="task-content">
+                                <p><b>Câu đúng:</b></p>
+                                <p class="sentence" contenteditable="true" data-path="generated_tasks.sentence_unscramble.correct_sentence" data-word-index="${wordIndex}">${data.correct_sentence || ''}</p>
+                            </div>`),
+                        renderTask(tasks.error_correction, '5. Sửa lỗi sai', data => `
+                             <div class="task-content">
+                                 <p><b>Câu sai:</b></p>
+                                 <p class="sentence" contenteditable="true" data-path="generated_tasks.error_correction.incorrect_sentence" data-word-index="${wordIndex}">${data.incorrect_sentence || ''}</p>
+                                 <p class="mt-2"><b>Câu đúng:</b></p>
+                                 <p class="sentence" contenteditable="true" data-path="generated_tasks.error_correction.correct_sentence" data-word-index="${wordIndex}">${data.correct_sentence || ''}</p>
+                             </div>`),
+                        renderTask(tasks.ipa_fill, '6. Điền phiên âm', data => `
+                            <div class="task-content">
+                                <p><b>Phiên âm đục lỗ:</b> ${data.gapped_ipa || ''}</p>
+                                <p><b>Nguyên âm đúng:</b> ${data.correct_vowel || ''}</p>
+                                <p><b>Nhiễu:</b></p>
+                                <ul>${(data.distractors || []).map((d, i) => `<li contenteditable="true" data-path="generated_tasks.ipa_fill.distractors[${i}]" data-word-index="${wordIndex}">${d}</li>`).join('')}</ul>
+                            </div>`),
+                        renderTask(tasks.collocation_odd_one_out, '7. Collocation Odd-One-Out', data => `
+                            <div class="task-content">
+                                <p class="sentence" contenteditable="true" data-path="generated_tasks.collocation_odd_one_out.question" data-word-index="${wordIndex}">${data.question || ''}</p>
+                                <ul>${(data.options || []).map((opt, i) => `<li contenteditable="true" data-path="generated_tasks.collocation_odd_one_out.options[${i}]" data-word-index="${wordIndex}">${opt} ${opt === data.answer ? '<b>(Đáp án)</b>' : ''}</li>`).join('')}</ul>
+                            </div>`),
+                        renderTask(tasks.best_fit_replacement, '8. Best-fit Replacement', data => `
+                            <div class="task-content">
+                                <p class="sentence" contenteditable="true" data-path="generated_tasks.best_fit_replacement.sentence" data-word-index="${wordIndex}">${(data.sentence || '').replace(data.word_to_replace, `<b><u>${data.word_to_replace}</u></b>`)}</p>
+                                <ul>
+                                    <li contenteditable="true" data-path="generated_tasks.best_fit_replacement.correct_answer" data-word-index="${wordIndex}">${data.correct_answer || ''} <b>(Đáp án)</b></li>
+                                    ${(data.distractors || []).map((opt, i) => `<li contenteditable="true" data-path="generated_tasks.best_fit_replacement.distractors[${i}]" data-word-index="${wordIndex}">${opt}</li>`).join('')}
+                                </ul>
+                            </div>`),
+                        renderTask(tasks.inference_from_scenario, '9. Inference from Scenario', data => `
+                            <div class="task-content">
+                                <p class="sentence" contenteditable="true" data-path="generated_tasks.inference_from_scenario.scenario" data-word-index="${wordIndex}">${data.scenario || ''}</p>
+                                <p class="mt-2" contenteditable="true" data-path="generated_tasks.inference_from_scenario.question" data-word-index="${wordIndex}">${data.question || ''}</p>
+                                <ul>
+                                    <li contenteditable="true" data-path="generated_tasks.inference_from_scenario.correct_answer" data-word-index="${wordIndex}">${data.correct_answer || ''} <b>(Đáp án)</b></li>
+                                    ${(data.distractors || []).map((opt, i) => `<li contenteditable="true" data-path="generated_tasks.inference_from_scenario.distractors[${i}]" data-word-index="${wordIndex}">${opt}</li>`).join('')}
+                                </ul>
+                            </div>`),
+                        renderTask(tasks.best_paraphrase, '10. Best Paraphrase', data => `
+                            <div class="task-content">
+                                <p><b>Câu gốc:</b></p>
+                                <p class="sentence" contenteditable="true" data-path="generated_tasks.best_paraphrase.original_sentence" data-word-index="${wordIndex}">${data.original_sentence || ''}</p>
+                                <p class="mt-2"><b>Các lựa chọn:</b></p>
+                                <ul>${(data.options || []).map((opt, i) => `<li contenteditable="true" data-path="generated_tasks.best_paraphrase.options[${i}].text" data-word-index="${wordIndex}">${opt.text} <b>(${opt.similarity}%${opt.is_correct ? ', Đáp án' : ''})</b></li>`).join('')}</ul>
+                            </div>`)
+                    ].join('');
+                }
+
+                row.innerHTML = `
+                    ${wordInfoHTML}
+                    <td class="p-3">${tasksHTML}</td>
+                    <td class="p-3 text-center align-middle">${word.isEnriched ? '<i class="fas fa-check-circle text-2xl text-green-500"></i>' : '<i class="fas fa-hourglass-half text-2xl text-gray-400"></i>'}</td>
+                `;
+                DOM.dataTableBody.appendChild(row);
+            });
+        }
+        
+        function updateNestedObject(obj, path, value) {
+            const keys = path.replace(/\[(\w+)\]/g, '.$1').replace(/^\./, '').split('.');
+            let current = obj;
+            for (let i = 0; i < keys.length - 1; i++) {
+                if (current[keys[i]] === undefined || current[keys[i]] === null) {
+                    console.error(`Path does not exist: ${keys.slice(0, i + 1).join('.')}`);
+                    return;
+                }
+                current = current[keys[i]];
+            }
+            current[keys[keys.length - 1]] = value;
+        }
+
+        // --- AI & API ---
+        
+        function getPromptForBatch(batch) {
+            const cefrLevel = getCefrLevelDescription();
+            const batchInput = batch.map(wordData => ({
+                id: wordData.id,
+                word: wordData.word,
+                type: wordData.type,
+                meaning: wordData.meaning,
+                pronunciation: wordData.pronunciation,
+                // *** NEW ***: Send the full structure object {phrase, meaning}
+                structures: wordData.structures 
+            }));
+
+            return `
+# BỐI CẢNH & VAI TRÒ
+Bạn là một chuyên gia thiết kế nội dung giáo dục và khảo thí ngôn ngữ Anh với 20 năm kinh nghiệm, am hiểu sâu sắc về tâm lý học nhận thức và các phương pháp sư phạm hiện đại. Nhiệm vụ của bạn không chỉ là tạo ra câu hỏi, mà là tạo ra những "bài toán tư duy" (cognitive puzzles) giúp kiểm tra và củng cố kiến thức của học viên một cách toàn diện.
+
+# NHIỆM VỤ TỔNG QUÁT
+Dựa trên danh sách từ vựng được cung cấp, hãy tạo ra một bộ dữ liệu bài tập hoàn chỉnh cho MỖI từ. Mỗi bài tập phải được thiết kế một cách thông minh, có chủ đích sư phạm rõ ràng và tuân thủ NGHIÊM NGẶT cấu trúc JSON được yêu cầu. Toàn bộ nội dung phải phù hợp với trình độ ${cefrLevel}.
+***QUAN TRỌNG***: Hãy tận dụng thông tin về **Cấu trúc liên quan (structures)** được cung cấp (bao gồm cả ý nghĩa của chúng) để tạo ra các câu ví dụ và bài tập ngữ cảnh chính xác và tự nhiên hơn.
+
+# DỮ LIỆU ĐẦU VÀO (INPUT)
+Một mảng JSON chứa các đối tượng từ vựng:
+${JSON.stringify(batchInput, null, 2)}
+
+# CẤU TRÚC ĐẦU RA (OUTPUT)
+BẮT BUỘC trả về một mảng JSON (a valid JSON array), và CHỈ DUY NHẤT mảng JSON này, không có bất kỳ văn bản nào khác (kể cả markdown "'''json"). Mỗi đối tượng trong mảng phải có cấu trúc chính xác như sau:
+{
+  "id": "id_gốc_của_từ",
+  "generated_tasks": {
+    "basic_example": "...",
+    "meaning_mcq": { "distractors_en": ["..."], "distractors_vi": ["..."] },
+    "word_family_mcq": { "sentence": "...", "blank_placeholder": "[BLANK]", "correct_answer": "...", "distractors": ["..."] },
+    "sentence_unscramble": { "correct_sentence": "..." },
+    "error_correction": { "incorrect_sentence": "...", "correct_sentence": "..." },
+    "ipa_fill": { "gapped_ipa": "...", "correct_vowel": "...", "distractors": ["..."] },
+    "collocation_odd_one_out": { "question": "...", "options": ["...", "..."], "answer": "..." },
+    "best_fit_replacement": { "sentence": "...", "word_to_replace": "...", "correct_answer": "...", "distractors": ["..."] },
+    "inference_from_scenario": { "scenario": "...", "question": "...", "correct_answer": "...", "distractors": ["..."] },
+    "best_paraphrase": { "original_sentence": "...", "options": [ {"text": "...", "similarity": 100, "is_correct": true}, ... ] }
+  }
+}
+
+---
+
+# 🧠 CÁC NGUYÊN TẮC VÀNG ĐỂ TẠO CÂU HỎI CHẤT LƯỢNG CAO 🧠
+Hãy áp dụng 4 phương pháp tư duy sau để tạo ra các phương án nhiễu (distractors) thực sự thách thức. Đây là kim chỉ nam cho nhiệm vụ của bạn.
+
+## 1. Phương pháp Ưu tiên: Bẫy Logic & Ngữ cảnh hẹp (Logic & Micro-context Traps)
+* **Nguyên tắc:** Các phương án nhiễu đều có vẻ hợp lý nếu chỉ xét nghĩa chung, nhưng lại trở nên vô lý hoặc mâu thuẫn khi soi chiếu với một TỪ, CỤM TỪ, hoặc MỆNH ĐỀ cụ thể trong câu (ngữ cảnh hẹp). Đây là phương pháp kiểm tra khả năng đọc hiểu sâu.
+* **Ví dụ TỐT:**
+    * Câu: "Although he is a talented pianist, his recent performance was a huge ______; the critics' reviews were overwhelmingly negative."
+    * Đáp án đúng: **disappointment**
+    * Các bẫy tư duy:
+        * \`success\` (Mâu thuẫn logic trực tiếp với vế "reviews were overwhelmingly negative").
+        * \`surprise\` (Có thể đúng trong một ngữ cảnh khác, nhưng "disappointment" hợp logic hơn vì nó kết nối trực tiếp đến "negative reviews").
+        * \`achievement\` (Mâu thuẫn logic tương tự \`success\`).
+* **Ví dụ XẤU:**
+    * Câu: "The performance was a ______."
+    * Các phương án nhiễu: \`disappointment\`, \`cat\`, \`table\`, \`running\`. (Quá dễ, không có bẫy logic).
+
+## 2. Bẫy Giới từ & Cấu trúc theo sau (Preposition & Structural Traps)
+* **Nguyên tắc:** Các phương án nhiễu là những từ có nghĩa tương tự đáp án đúng, nhưng chúng yêu cầu một giới từ hoặc một dạng cấu trúc ngữ pháp (V-ing, to-V...) khác so với cấu trúc được cung cấp trong câu.
+* **Ví dụ TỐT:**
+    * Câu: "The team is incapable ______ completing the project on time."
+    * Đáp án đúng: **of**
+    * Các bẫy tư duy khi kiểm tra từ "incapable": Nếu câu hỏi là điền từ, các phương án nhiễu có thể là:
+        * \`unable\` (Yêu cầu cấu trúc: "unable **to complete**").
+        * \`difficult\` (Yêu cầu cấu trúc: "**It is difficult for** the team to complete...").
+        * \`impossible\` (Tương tự \`difficult\`).
+* **Ví dụ XẤU:**
+    * Câu: "He is interested ______ art."
+    * Phương án nhiễu: \`on\`, \`at\`, \`for\`. (Chỉ là các giới từ ngẫu nhiên, không dựa trên các từ đồng nghĩa có cấu trúc khác).
+
+## 3. Bẫy Từ loại (Word Form Traps)
+* **Nguyên tắc:** Cung cấp các phương án nhiễu là những dạng từ khác (danh từ, động từ, tính từ, trạng từ) của cùng một từ gốc.
+* **Ví dụ TỐT:**
+    * Câu: "The ______ of the new policy was met with public resistance."
+    * Đáp án đúng: **implementation** (danh từ)
+    * Các bẫy tư duy:
+        * \`implement\` (động từ).
+        * \`implementing\` (V-ing/danh động từ).
+        * \`implementable\` (tính từ).
+* **Ví dụ XẤU:**
+    * Câu: "The policy was ______."
+    * Phương án nhiễu: \`good\`, \`implement\`, \`bad\`. (Trộn lẫn các loại từ không liên quan, không tạo thành bẫy hệ thống).
+
+## 4. Bẫy "Bạn Thân Giả" (False Friends Traps)
+* **Nguyên tắc:** Sử dụng các từ tiếng Anh trông hoặc nghe giống một từ trong tiếng Việt nhưng lại mang ý nghĩa hoàn toàn khác. Sử dụng như một lựa chọn cuối cùng để tăng độ khó và sự thú vị.
+* **Ví dụ TỐT:**
+    * Câu: "The company will finally ______ its new product next month."
+    * Đáp án đúng: **launch** (ra mắt)
+    * Các bẫy tư duy:
+        * \`lunch\` (Bẫy "Bạn thân giả" với từ "ra mắt" khi phát âm nhanh).
+        * \`present\` (Nghĩa là "trình bày", không mạnh và không đặc trưng cho việc ra mắt sản phẩm như "launch").
+* **Ví dụ XẤU:**
+    * Sử dụng các bẫy quá rõ ràng hoặc không liên quan đến ngữ cảnh.
+
+---
+
+# HƯỚNG DẪN CHI TIẾT CHO TỪNG DẠNG BÀI TẬP
+
+**Với mỗi từ trong \`batchInput\`, hãy tạo các bài tập sau:**
+
+**1. \`basic_example\`**
+* **Mục tiêu:** Cung cấp một câu ví dụ đơn giản, rõ ràng, dễ hiểu nhất có thể để học viên nắm được cách dùng cơ bản của từ.
+* **Kết quả TỐT:** (Từ: \`ubiquitous\`) "Smartphones have become ubiquitous in modern society."
+* **Kết quả XẤU:** "The ubiquitous nature of the phenomenon was perplexing to the researchers." (Câu quá phức tạp cho một ví dụ cơ bản).
+
+**2. \`meaning_mcq\`**
+* **Mục tiêu:** Tạo các phương án nhiễu cho câu hỏi trắc nghiệm nghĩa (cả tiếng Anh và tiếng Việt).
+* **Phương pháp áp dụng:** **Bẫy Logic & Ngữ cảnh hẹp**. Các phương án nhiễu nên là các từ có liên quan về chủ đề hoặc là từ trái nghĩa, gần nghĩa.
+* **Kết quả TỐT:** (Từ: \`diligent\`, nghĩa: siêng năng, cần cù)
+    * \`distractors_en\`: ["lazy", "intelligent", "creative"] (lazy là trái nghĩa, intelligent và creative là các phẩm chất khác có thể gây nhầm lẫn).
+    * \`distractors_vi\`: ["lười biếng", "thông minh", "sáng tạo"]
+* **Kết quả XẤU:** \`distractors_en\`: ["happy", "blue", "fast"]. (Không liên quan, không tạo ra thách thức).
+
+**3. \`word_family_mcq\`**
+* **Mục tiêu:** Kiểm tra kiến thức về các dạng từ (danh từ, động từ, tính từ...).
+* **Phương pháp áp dụng:** **Bẫy Từ loại**.
+* **Kết quả TỐT:** (Từ gốc: \`generous\` (adj))
+    * \`sentence\`: "Her ______ to the charity was greatly appreciated."
+    * \`correct_answer\`: "generosity" (danh từ)
+    * \`distractors\`: ["generous", "generously", "generate"]
+* **Kết quả XẤU:** \`distractors\`: ["kind", "give", "nicely"]. (Không phải là các dạng từ của từ gốc).
+
+**4. \`sentence_unscramble\`**
+* **Mục tiêu:** Giúp học viên nhận diện cấu trúc câu đúng.
+* **Kết quả TỐT:** (Từ: \`collaborate\`) \`correct_sentence\`: "The two scientists decided to collaborate on the research project." (Câu tự nhiên, có độ dài vừa phải).
+* **Kết quả XẤU:** \`correct_sentence\`: "They collaborate." (Quá ngắn, không có giá trị học tập).
+
+**5. \`error_correction\`**
+* **Mục tiêu:** Kiểm tra khả năng nhận diện các lỗi sai tinh vi về ngữ pháp hoặc cách dùng từ.
+* **Phương pháp áp dụng:** **Bẫy Giới từ & Cấu trúc theo sau**. Tập trung vào lỗi collocation (kết hợp từ) hoặc lỗi giới từ.
+* **Kết quả TỐT:** (Từ: \`responsible\`)
+    * \`incorrect_sentence\`: "He is responsible **at** managing the team's budget."
+    * \`correct_sentence\`: "He is responsible **for** managing the team's budget."
+* **Kết quả XẤU:** \`incorrect_sentence\`: "He responsible for team." (Lỗi quá cơ bản và rõ ràng).
+
+**6. \`ipa_fill\`**
+* **Mục tiêu:** Kiểm tra khả năng nhận diện âm vị trong phiên âm.
+* **Hướng dẫn:** Dựa vào phiên âm IPA được cung cấp, đục lỗ MỘT nguyên âm (vowel) và tạo 3 nguyên âm nhiễu có cách phát âm gần giống.
+* **Kết quả TỐT:** (Từ: \`heat\` /hiːt/)
+    * \`gapped_ipa\`: "/h_t/"
+    * \`correct_vowel\`: "iː"
+    * \`distractors\`: ["ɪ", "e", "eɪ"] (Các âm dễ nhầm lẫn với /iː/).
+* **Kết quả XẤU:** \`distractors\`: ["a", "b", "c"]. (Không phải âm vị).
+
+**7. \`collocation_odd_one_out\`**
+* **Mục tiêu:** Kiểm tra kiến thức về kết hợp từ (collocation).
+* **Phương pháp áp dụng:** **Bẫy "Bạn Thân Giả"** có thể được dùng cho phương án loại trừ.
+* **Kết quả TỐT:** (Từ: \`effort\`)
+    * \`question\`: "Which verb does NOT collocate with 'effort'?"
+    * \`options\`: ["make", "put in", "do", "save"]
+    * \`answer\`: "do" (Chúng ta nói "make an effort", không nói "do an effort").
+* **Kết quả XẤU:** \`options\`: ["make", "put in", "run", "save"]. ("run" quá khác biệt, không gây nhiễu).
+
+**8. \`best_fit_replacement\`**
+* **Mục tiêu:** Kiểm tra khả năng hiểu sắc thái nghĩa của từ trong ngữ cảnh hẹp.
+* **Phương pháp áp dụng:** **Bẫy Logic & Ngữ cảnh hẹp**.
+* **Kết quả TỐT:** (Từ gốc để thay thế: \`crucial\`)
+    * \`sentence\`: "Getting enough sleep is **vital** for both physical and mental health; without it, our cognitive functions decline sharply."
+    * \`word_to_replace\`: "vital"
+    * \`correct_answer\`: "crucial"
+    * \`distractors\`: ["important", "helpful", "optional"] ("important" và "helpful" đúng về nghĩa chung nhưng không mạnh bằng "vital/crucial" theo gợi ý của vế sau).
+* **Kết quả XẤU:** \`distractors\`: ["bad", "sad", "red"]. (Không liên quan).
+
+**9. \`inference_from_scenario\`**
+* **Mục tiêu:** Kiểm tra khả năng suy luận và hiểu ý ngầm dựa trên một kịch bản.
+* **Phương pháp áp dụng:** **Bẫy Logic & Ngữ cảnh hẹp**.
+* **Kết quả TỐT:** (Từ: \`reluctant\`)
+    * \`scenario\`: "John was offered a promotion that required moving to another city. He looked at photos of his family and friends, sighed, and told his boss he needed more time to think."
+    * \`question\`: "How does John likely feel about the promotion?"
+    * \`correct_answer\`: "He is reluctant to accept it."
+    * \`distractors\`: ["He is excited to start a new life.", "He is indifferent to the offer.", "He has already decided to reject it."]
+* **Kết quả XẤU:** \`scenario\`: "John was reluctant." \`question\`: "How does John feel?" (Không có kịch bản để suy luận).
+
+**10. \`best_paraphrase\`**
+* **Mục tiêu:** Kiểm tra khả năng nhận diện câu có nghĩa tương đồng nhất.
+* **Hướng dẫn:** Tạo một câu gốc và 4 câu diễn giải. Một câu phải là đáp án đúng (similarity 100%). Các câu còn lại phải có mức độ tương đồng giảm dần, tạo ra sự phân vân tinh vi.
+* **Kết quả TỐT:** (Từ: \`mitigate\`)
+    * \`original_sentence\`: "The government has implemented new policies to mitigate the effects of climate change."
+    * \`options\`: [
+        {"text": "The government has introduced new policies to lessen the impact of climate change.", "similarity": 100, "is_correct": true},
+        {"text": "The government is studying the effects of climate change through new policies.", "similarity": 70, "is_correct": false},
+        {"text": "The government has stopped climate change with its new policies.", "similarity": 40, "is_correct": false},
+        {"text": "The government's new policies are a result of climate change.", "similarity": 20, "is_correct": false}
+    ]
+* **Kết quả XẤU:** Các câu \`options\` có nghĩa hoàn toàn khác nhau, không kiểm tra được khả năng nhận diện sắc thái.
+
+---
+**NHẮC LẠI YÊU CẦU CUỐI CÙNG:**
+- Đảm bảo tất cả nội dung phù hợp với trình độ **${cefrLevel}**.
+- Chỉ trả về một mảng JSON hợp lệ. Không thêm bất kỳ giải thích hay ghi chú nào ngoài cấu trúc JSON đã định.
+- Hãy bắt đầu!
+`;
         }
 
         async function callGeminiAPI(prompt, model) {
@@ -323,185 +652,51 @@
             const result = await response.json();
             const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
             if (!responseText) throw new Error("Cấu trúc phản hồi API không hợp lệ.");
-            return JSON.parse(responseText);
-        }
-
-        function getPromptForBatch(batch) {
-            const cefrLevel = getCefrLevelDescription();
-            const batchInput = batch.map(wordData => ({
-                id: wordData.id, word: wordData.word, type: wordData.type, meaning: wordData.meaning,
-                structures: wordData.structures.map(s => ({ phrase: s.phrase, meaning: s.meaning }))
-            }));
-            return `Bạn là một AI chuyên gia ngôn ngữ Anh. Hãy xử lý mảng JSON sau. Với MỖI object, hãy tạo ra một object mới trong mảng kết quả.
-Đầu vào: ${JSON.stringify(batchInput)}
-YÊU CẦU:
-Trả về một mảng JSON. Mỗi object phải có cấu trúc:
-{ "id": id_gốc, "ex": "Một câu ví dụ cho từ chính", "d_en": ["Từ gây nhiễu 1", "Từ 2", "Từ 3"], "d_vi": ["Nghĩa gây nhiễu 1", "Nghĩa 2", "Nghĩa 3"], "s": [ { "p": "Cấu trúc gốc 1", "exs": ["Ví dụ ứng dụng 1"] } ] }
-YÊU CẦU CHI TIẾT:
-1. "ex": Tạo MỘT câu ví dụ tiếng Anh tự nhiên.
-2. "d_en": Tạo 3 từ tiếng Anh gây nhiễu, cùng loại từ, KHÔNG đồng nghĩa trực tiếp, nhưng liên quan về chủ đề.
-3. "d_vi": Tạo 3 định nghĩa tiếng Việt gây nhiễu, KHÔNG dịch thẳng từ "d_en".
-4. "s": Với mỗi cấu trúc, tạo MỘT ví dụ ứng dụng trong mảng "exs".
-5. QUAN TRỌNG: Toàn bộ nội dung phải phù hợp với trình độ ${cefrLevel}.
-CHỈ trả về mảng JSON, không giải thích gì thêm.`;
+            try {
+                return JSON.parse(responseText);
+            } catch (e) {
+                console.error("Lỗi parse JSON từ API:", responseText);
+                throw new Error("Kết quả trả về từ AI không phải là JSON hợp lệ.");
+            }
         }
 
         function processAiResults(aiDataArray) {
             if (!Array.isArray(aiDataArray)) throw new Error("Kết quả AI không phải là một mảng.");
+            
             aiDataArray.forEach(enrichedData => {
                 const wordToUpdate = localWordList.find(w => w.id === enrichedData.id);
                 if (wordToUpdate) {
-                    wordToUpdate.exampleSentence = enrichedData.ex || '';
-                    wordToUpdate.distractors_en = enrichedData.d_en || [];
-                    wordToUpdate.distractors_vi = enrichedData.d_vi || [];
-                    if (enrichedData.s && Array.isArray(enrichedData.s)) {
-                        enrichedData.s.forEach(enrichedStruct => {
-                            const originalStruct = wordToUpdate.structures.find(s => s.phrase === enrichedStruct.p);
-                            if (originalStruct) {
-                                originalStruct.applicationExamples = enrichedStruct.exs || [];
-                            }
-                        });
-                    }
+                    wordToUpdate.generated_tasks = enrichedData.generated_tasks || null;
                     wordToUpdate.isEnriched = true;
                 }
             });
             renderTable();
         }
 
-        function setupEventListeners() {
-            onAuthStateChanged(auth, user => {
-                // *** THAY ĐỔI: Chỉ khởi tạo trang sau khi đăng nhập thành công
-                if (user) {
-                    DOM.loginScreen.classList.remove('is-open');
-                    DOM.mainContent.style.display = 'block';
-                    initializePage(); // Tải dữ liệu hoặc chuẩn bị cho trang mới
-                } else {
-                    DOM.loginScreen.classList.add('is-open');
-                    DOM.mainContent.style.display = 'none';
-                }
-            });
-
-            DOM.loginBtn.addEventListener('click', async () => {
-                try { await signInWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value); } 
-                catch (e) { DOM.loginError.textContent = 'Email hoặc mật khẩu không đúng.'; }
-            });
-
-            DOM.logoutBtn.addEventListener('click', () => signOut(auth));
-            DOM.uploadBtn.addEventListener('click', uploadToFirebase);
-            DOM.vocabCsvUploadInput.addEventListener('change', (e) => handleFileUpload(e, 'vocab'));
-            DOM.structuresCsvUploadInput.addEventListener('change', (e) => handleFileUpload(e, 'structures'));
-            
-            DOM.processFilesBtn.addEventListener('click', () => {
-                if (!vocabCsvText || !structuresCsvText) return showAlert("Vui lòng tải lên cả hai file CSV.");
-                parseAndStructureCSV(vocabCsvText, structuresCsvText);
-                renderTable();
-                DOM.dataReviewSection.classList.remove('hidden');
-            });
-
-            DOM.darkModeToggle.addEventListener('change', () => {
-                document.body.classList.toggle('dark');
-                DOM.darkModeToggle.nextElementSibling.nextElementSibling.style.transform = DOM.darkModeToggle.checked ? 'translateX(100%)' : 'translateX(0)';
-            });
-            
-            DOM.cefrSlider.addEventListener('input', () => DOM.cefrDisplay.textContent = getCefrLevelDescription());
-            
-            DOM.fetchAudioBtn.addEventListener('click', async () => {
-                if (localWordList.length === 0) return showAlert("Chưa có dữ liệu.");
-                const button = DOM.fetchAudioBtn;
-                const originalHTML = button.innerHTML;
-                button.disabled = true;
-                for (let i = 0; i < localWordList.length; i++) {
-                    const wordData = localWordList[i];
-                    button.innerHTML = `<div class="loader"></div><span class="ml-2">Đang tìm... (${i + 1}/${localWordList.length})</span>`;
-                    if (wordData.audioUrl || !wordData.word) continue;
-                    try {
-                        const response = await fetch(`${CLOUD_FUNCTION_URL}?word=${encodeURIComponent(wordData.word)}`);
-                        if (!response.ok) throw new Error(`Server error`);
-                        const result = await response.json();
-                        if (result.success) wordData.audioUrl = result.audioUrl;
-                    } catch (error) { console.error(`Lỗi với từ '${wordData.word}':`, error); }
-                    await new Promise(resolve => setTimeout(resolve, 50));
-                }
-                renderTable();
-                button.disabled = false;
-                button.innerHTML = originalHTML;
-            });
-
-            DOM.enrichAiBtn.addEventListener('click', async () => {
-                const wordsToEnrich = localWordList.filter(w => !w.isEnriched);
-                if (wordsToEnrich.length === 0) return showAlert("Tất cả các từ đã được làm giàu.");
-                const button = DOM.enrichAiBtn;
-                const originalHTML = button.innerHTML;
-                button.disabled = true;
-                button.innerHTML = `<div class="loader"></div><span class="ml-2">Đang xử lý...</span>`;
-                try {
-                    const BATCH_SIZE = 50;
-                    for (let i = 0; i < wordsToEnrich.length; i += BATCH_SIZE) {
-                        const batch = wordsToEnrich.slice(i, i + BATCH_SIZE);
-                        const prompt = getPromptForBatch(batch);
-                        const model = DOM.aiModelSelect.value;
-                        const results = await callGeminiAPI(prompt, model);
-                        processAiResults(results);
-                    }
-                    showAlert("Làm giàu dữ liệu bằng AI thành công!");
-                } catch (error) {
-                    showAlert(`Lỗi khi làm giàu dữ liệu: ${error.message}`);
-                } finally {
-                    button.disabled = false;
-                    button.innerHTML = originalHTML;
-                }
-            });
-
-            DOM.manualEnrichBtn.addEventListener('click', () => {
-                const wordsToEnrich = localWordList.filter(w => !w.isEnriched);
-                if (wordsToEnrich.length === 0) return showAlert("Tất cả các từ đã được làm giàu.");
-                DOM.manualPromptOutput.value = getPromptForBatch(wordsToEnrich);
-                DOM.manualPromptInput.value = '';
-                DOM.manualPromptModal.classList.add('is-open');
-            });
-            DOM.closeManualModalBtn.addEventListener('click', () => DOM.manualPromptModal.classList.remove('is-open'));
-            DOM.copyPromptBtn.addEventListener('click', () => {
-                DOM.manualPromptOutput.select();
-                document.execCommand('copy');
-                showAlert("Đã sao chép Prompt!");
-            });
-            DOM.processManualResultBtn.addEventListener('click', () => {
-                try {
-                    const jsonText = DOM.manualPromptInput.value.trim().replace(/^```json\s*|```\s*$/g, '');
-                    const results = JSON.parse(jsonText);
-                    processAiResults(results);
-                    DOM.manualPromptModal.classList.remove('is-open');
-                    showAlert("Cập nhật thủ công thành công!");
-                } catch (error) {
-                    showAlert(`Lỗi xử lý JSON: ${error.message}`);
-                }
-            });
-            
-            DOM.dataTableBody.addEventListener('blur', (e) => {
-                const target = e.target;
-                if (target.hasAttribute('contenteditable')) {
-                    const wordIndex = parseInt(target.dataset.wordIndex, 10);
-                    const field = target.dataset.field;
-                    const newText = target.textContent;
-                    if (isNaN(wordIndex) || !localWordList[wordIndex]) return;
-                    
-                    const wordData = localWordList[wordIndex];
-                    if (field) {
-                        wordData[field] = newText;
-                    } else if (target.dataset.structureIndex !== undefined) {
-                        const sIdx = parseInt(target.dataset.structureIndex, 10);
-                        const eIdx = parseInt(target.dataset.exampleIndex, 10);
-                        if (!isNaN(sIdx) && !isNaN(eIdx)) wordData.structures[sIdx].applicationExamples[eIdx] = newText;
-                    } else if (target.dataset.distractorIndex !== undefined) {
-                        const dIdx = parseInt(target.dataset.distractorIndex, 10);
-                        const dField = target.closest('ul').dataset.field;
-                        if (!isNaN(dIdx) && dField) wordData[dField][dIdx] = newText;
-                    }
-                }
-            }, true);
+        // --- FIREBASE & AUTHENTICATION ---
+        async function uploadToFirebase() {
+            const testId = DOM.testIdInput.value.trim();
+            const title = DOM.testTitleInput.value.trim();
+            if (!testId || !title || localWordList.length === 0) {
+                return showAlert("Vui lòng nhập ID, Tiêu đề và xử lý dữ liệu.", 'error');
+            }
+            DOM.uploadBtn.disabled = true;
+            DOM.uploadLog.textContent = 'Đang lưu...';
+            try {
+                await setDoc(doc(db, "vocab_sets", testId), { 
+                    title, 
+                    wordList: localWordList, 
+                    updatedAt: serverTimestamp() 
+                }, { merge: true });
+                DOM.uploadLog.textContent = 'Lưu THÀNH CÔNG!';
+                setTimeout(() => { DOM.uploadLog.textContent = ''; }, 3000);
+            } catch (error) {
+                DOM.uploadLog.textContent = `LỖI: ${error.message}`;
+            } finally {
+                DOM.uploadBtn.disabled = false;
+            }
         }
-        
-        // *** THÊM MỚI: Hàm tải và điền dữ liệu có sẵn
+
         async function loadAndPopulateTestData(testId) {
             showAlert("Đang tải dữ liệu đề thi...");
             const docRef = doc(db, "vocab_sets", testId);
@@ -510,52 +705,200 @@ CHỈ trả về mảng JSON, không giải thích gì thêm.`;
                 if (docSnap.exists()) {
                     const testData = docSnap.data();
                     
-                    // Điền thông tin chung
                     DOM.pageTitle.textContent = "Chỉnh sửa Bộ từ vựng";
                     DOM.testIdInput.value = testId;
-                    DOM.testIdInput.disabled = true; // Không cho sửa ID khi đang edit
+                    DOM.testIdInput.disabled = true;
                     DOM.testTitleInput.value = testData.title || "";
                     
-                    // Điền dữ liệu vào bảng
                     localWordList = testData.wordList || [];
+                    
+                    // Ensure generated_tasks and structures are not undefined
+                    localWordList.forEach(word => {
+                        if (!word.generated_tasks) word.generated_tasks = null;
+                        if (!word.structures) word.structures = [];
+                    });
+
                     renderTable();
                     DOM.dataReviewSection.classList.remove('hidden');
                     
-                    // Cập nhật nút Lưu
                     DOM.uploadBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Cập nhật Bộ Từ Vựng';
                     
-                    // Ẩn modal loading
+                    // Disable CSV upload when editing
+                    const uploadSection = DOM.processFilesBtn.closest('.glass-panel');
+                    uploadSection.style.opacity = '0.5';
+                    uploadSection.style.pointerEvents = 'none';
+                    uploadSection.title = 'Không thể nhập file CSV khi đang chỉnh sửa.';
+
                     DOM.alertModal.classList.remove('is-open');
 
                 } else {
-                    showAlert(`Lỗi: Không tìm thấy bộ từ vựng với ID: ${testId}`);
+                    showAlert(`Lỗi: Không tìm thấy bộ từ vựng với ID: ${testId}`, 'error');
                 }
             } catch (error) {
-                showAlert(`Lỗi khi tải dữ liệu: ${error.message}`);
+                showAlert(`Lỗi khi tải dữ liệu: ${error.message}`, 'error');
                 console.error("Error loading test data:", error);
             }
         }
 
-        // *** THÊM MỚI: Hàm khởi tạo trang, quyết định tải dữ liệu hay tạo mới
+        // --- EVENT LISTENERS ---
+        function setupEventListeners() {
+            onAuthStateChanged(auth, user => {
+                if (user) {
+                    DOM.loginScreen.classList.remove('is-open');
+                    DOM.mainContent.style.display = 'block';
+                    initializePage();
+                } else {
+                    DOM.loginScreen.classList.add('is-open');
+                    DOM.mainContent.style.display = 'none';
+                }
+            });
+
+            DOM.loginBtn.addEventListener('click', async () => {
+                DOM.loginError.textContent = '';
+                try { 
+                    await signInWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value); 
+                } catch (e) { 
+                    DOM.loginError.textContent = 'Email hoặc mật khẩu không đúng.'; 
+                }
+            });
+
+            DOM.logoutBtn.addEventListener('click', () => signOut(auth));
+            DOM.uploadBtn.addEventListener('click', uploadToFirebase);
+
+            const handleFileUpload = (event, type) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    if (type === 'vocab') { 
+                        vocabCsvText = e.target.result; 
+                        DOM.vocabFileNameDisplay.textContent = file.name; 
+                    } else { 
+                        structuresCsvText = e.target.result; 
+                        DOM.structuresFileNameDisplay.textContent = file.name; 
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            DOM.vocabCsvUploadInput.addEventListener('change', (e) => handleFileUpload(e, 'vocab'));
+            DOM.structuresCsvUploadInput.addEventListener('change', (e) => handleFileUpload(e, 'structures'));
+            
+            DOM.processFilesBtn.addEventListener('click', () => {
+                if (!vocabCsvText) return showAlert("Vui lòng tải lên file CSV từ vựng.", 'error');
+                parseAndStructureCSV(vocabCsvText, structuresCsvText || '');
+                renderTable();
+                DOM.dataReviewSection.classList.remove('hidden');
+            });
+
+            DOM.darkModeToggle.addEventListener('change', () => {
+                document.body.classList.toggle('dark');
+                const dot = DOM.darkModeToggle.nextElementSibling.nextElementSibling;
+                dot.style.transform = DOM.darkModeToggle.checked ? 'translateX(100%)' : 'translateX(0)';
+            });
+            
+            DOM.cefrSlider.addEventListener('input', () => DOM.cefrDisplay.textContent = getCefrLevelDescription());
+            
+            DOM.fetchAudioBtn.addEventListener('click', async () => {
+                if (localWordList.length === 0) return showAlert("Chưa có dữ liệu.", 'error');
+                const button = DOM.fetchAudioBtn;
+                const originalHTML = button.innerHTML;
+                button.disabled = true;
+                for (let i = 0; i < localWordList.length; i++) {
+                    const wordData = localWordList[i];
+                    updateButtonState(button, true, '', `Đang tìm... (${i + 1}/${localWordList.length})`);
+                    if (wordData.audioUrl || !wordData.word) continue;
+                    try {
+                        const response = await fetch(`${CLOUD_FUNCTION_URL}?word=${encodeURIComponent(wordData.word)}`);
+                        if (!response.ok) throw new Error(`Server error`);
+                        const result = await response.json();
+                        if (result.success) wordData.audioUrl = result.audioUrl;
+                    } catch (error) { console.error(`Lỗi với từ '${wordData.word}':`, error); }
+                    await new Promise(resolve => setTimeout(resolve, 50)); // Rate limiting
+                }
+                renderTable();
+                updateButtonState(button, false, originalHTML);
+            });
+
+            DOM.enrichAiBtn.addEventListener('click', async () => {
+                const wordsToEnrich = localWordList.filter(w => !w.isEnriched);
+                if (wordsToEnrich.length === 0) return showAlert("Tất cả các từ đã được làm giàu.", 'success');
+                const button = DOM.enrichAiBtn;
+                const originalHTML = button.innerHTML;
+                updateButtonState(button, true, originalHTML);
+                try {
+                    for (let i = 0; i < wordsToEnrich.length; i += AI_BATCH_SIZE) {
+                        const batch = wordsToEnrich.slice(i, i + AI_BATCH_SIZE);
+                        updateButtonState(button, true, '', `Đang xử lý... (${i + batch.length}/${wordsToEnrich.length})`);
+                        const prompt = getPromptForBatch(batch);
+                        const model = DOM.aiModelSelect.value;
+                        const results = await callGeminiAPI(prompt, model);
+                        processAiResults(results);
+                    }
+                    showAlert("Làm giàu dữ liệu bằng AI thành công!", 'success');
+                } catch (error) {
+                    showAlert(`Lỗi khi làm giàu dữ liệu: ${error.message}`, 'error');
+                } finally {
+                    updateButtonState(button, false, originalHTML);
+                }
+            });
+
+            // Manual Enrichment Modal Listeners
+            DOM.manualEnrichBtn.addEventListener('click', () => {
+                const wordsToEnrich = localWordList.filter(w => !w.isEnriched);
+                if (wordsToEnrich.length === 0) return showAlert("Tất cả các từ đã được làm giàu.", 'success');
+                DOM.manualPromptOutput.value = getPromptForBatch(wordsToEnrich);
+                DOM.manualPromptInput.value = '';
+                DOM.manualPromptModal.classList.add('is-open');
+            });
+            DOM.closeManualModalBtn.addEventListener('click', () => DOM.manualPromptModal.classList.remove('is-open'));
+            DOM.copyPromptBtn.addEventListener('click', () => {
+                DOM.manualPromptOutput.select();
+                document.execCommand('copy');
+                showAlert("Đã sao chép Prompt!", 'success');
+            });
+            DOM.processManualResultBtn.addEventListener('click', () => {
+                try {
+                    const jsonText = DOM.manualPromptInput.value.trim().replace(/^```json\s*|```\s*$/g, '');
+                    if (!jsonText) throw new Error("Vui lòng dán kết quả JSON.");
+                    const results = JSON.parse(jsonText);
+                    processAiResults(results);
+                    DOM.manualPromptModal.classList.remove('is-open');
+                    showAlert("Cập nhật thủ công thành công!", 'success');
+                } catch (error) {
+                    showAlert(`Lỗi xử lý JSON: ${error.message}`, 'error');
+                }
+            });
+            
+            // Content Editable Listener
+            DOM.dataTableBody.addEventListener('blur', (e) => {
+                const target = e.target;
+                if (target.hasAttribute('contenteditable')) {
+                    const wordIndex = parseInt(target.dataset.wordIndex, 10);
+                    const path = target.dataset.path;
+                    const newText = target.textContent;
+
+                    if (isNaN(wordIndex) || !localWordList[wordIndex] || !path) return;
+                    
+                    updateNestedObject(localWordList[wordIndex], path, newText);
+                }
+            }, true); // Use event capturing
+        }
+        
+        // --- PAGE INITIALIZATION ---
         async function initializePage() {
             const urlParams = new URLSearchParams(window.location.search);
             const testIdToEdit = urlParams.get('edit');
 
             if (testIdToEdit) {
-                // Chế độ chỉnh sửa
                 await loadAndPopulateTestData(testIdToEdit);
-                // Vô hiệu hóa phần tải file lên khi đang chỉnh sửa
-                const uploadSection = DOM.processFilesBtn.closest('.glass-panel');
-                uploadSection.style.opacity = '0.5';
-                uploadSection.style.pointerEvents = 'none';
-                uploadSection.title = 'Không thể nhập file CSV khi đang chỉnh sửa.';
             } else {
-                // Chế độ tạo mới (giữ nguyên)
                 DOM.pageTitle.textContent = "Trình Soạn Thảo Bộ Từ Vựng";
                 DOM.uploadBtn.innerHTML = '<i class="fas fa-cloud-upload-alt mr-2"></i>Lưu Bộ Từ Vựng';
             }
         }
 
+        // Start the application
         DOM.cefrDisplay.textContent = getCefrLevelDescription();
         setupEventListeners();
 
