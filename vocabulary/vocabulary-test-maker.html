@@ -327,32 +327,75 @@
         }
 
         function getPromptForBatch(batch) {
-            const cefrLevel = getCefrLevelDescription();
-            const batchInput = batch.map(wordData => ({
-                id: wordData.id, word: wordData.word, type: wordData.type, meaning: wordData.meaning,
-                structures: wordData.structures.map(s => ({ phrase: s.phrase, meaning: s.meaning }))
-            }));
-            return `Bạn là một người thật sự chuyên gia ngôn ngữ Anh, từ ngữ học, giáo viên giảng dạy 10 năm kinh nghiệm luyện thi chuyên anh và tiếng anh nâng cao. Hãy xử lý mảng JSON sau. Với MỖI object, hãy tạo ra một object mới trong mảng kết quả.
+    const cefrLevel = getCefrLevelDescription();
+    const batchInput = batch.map(wordData => ({
+        id: wordData.id,
+        word: wordData.word,
+        type: wordData.type,
+        meaning: wordData.meaning,
+        // Chỉ gửi những thông tin cần thiết nhất
+        // Cung cấp một câu ví dụ mẫu nếu có để AI có ngữ cảnh
+        context_sentence: `She made a real ______ to finish the project on time.` // Đây là ví dụ, thực tế bạn nên tạo câu ví dụ liên quan đến từ
+    }));
+
+    return `
+Bạn là một chuyên gia khảo thí ngôn ngữ (Language Assessment Expert) với 10 năm kinh nghiệm ra đề thi tiếng Anh.
+Nhiệm vụ của bạn là tạo ra các phương án gây nhiễu (distractors) chất lượng cao cho các câu hỏi trắc nghiệm từ vựng dựa trên dữ liệu đầu vào.
+
 Đầu vào: ${JSON.stringify(batchInput)}
-YÊU CẦU:
-Trả về một mảng JSON. Mỗi object phải có cấu trúc:
-{ "id": id_gốc, "ex": "Một câu ví dụ cho từ chính", "d_en": ["Từ gây nhiễu 1", "Từ 2", "Từ 3"], "d_vi": ["Nghĩa gây nhiễu 1", "Nghĩa 2", "Nghĩa 3"], "s": [ { "p": "Cấu trúc gốc 1", "exs": ["Ví dụ ứng dụng 1"] } ] }
-YÊU CẦU CHI TIẾT:
-1. "ex": Tạo MỘT câu ví dụ tiếng Anh tự nhiên.
-2. "d_en": Tạo 3 từ tiếng Anh gây nhiễu, cùng loại từ, KHÔNG đồng nghĩa, nhưng liên quan về chủ đề. Các từ đồng nghĩa này có thể giúp tôi tạo thành một bài tập trắc nghiệm nhiều lựa chọn. Ví dụ: 
-You should make a(n) _____________ to overcome this problem.
-Từ gốc: effort
-Tư nhiễu: impression, trial, apology
-Ví dụ này chỉ minh họa về mặt cách thực hiện, không minh họa về level của từ.
-3. "d_vi": Tạo 3 định nghĩa tiếng Việt gây nhiễu, KHÔNG dịch thẳng từ "d_en".
-Ví dụ:
-Từ gốc: nỗ lực
- từ nhiễu: sự thúc đẩy, sự tiến bộ, sự chịu đựng
-4. "s": Với mỗi cấu trúc, tạo MỘT ví dụ ứng dụng trong mảng "exs".
-5. QUAN TRỌNG: Toàn bộ nội dung phải phù hợp và ở trình độ ${cefrLevel}.
-CHỈ trả về mảng JSON, không giải thích gì thêm.
+
+## YÊU CẦU CHUNG
+Với MỖI object trong mảng đầu vào, hãy tạo một object mới trong mảng JSON kết quả.
+Mỗi object kết quả phải có cấu trúc:
+{ 
+  "id": id_gốc, 
+  "ex": "Một câu ví dụ chất lượng, tự nhiên cho từ chính, thể hiện rõ nét nghĩa của nó.",
+  "d_en": ["Từ gây nhiễu tiếng Anh 1", "Từ 2", "Từ 3"], 
+  "d_vi": ["Nghĩa gây nhiễu tiếng Việt 1", "Nghĩa 2", "Nghĩa 3"]
+}
+
+---
+
+## ## YÊU CẦU CHI TIẾT VỀ TỪ GÂY NHIỄU (DISTRACTORS)
+
+**Mục tiêu:** Tạo ra các lựa chọn sai nhưng **có vẻ hợp lý (plausible)**, có thể đánh lừa được học sinh nếu họ không nắm vững ngữ nghĩa hoặc cách dùng của từ trong ngữ cảnh.
+
+### 1. Về "d_en" (Distractors tiếng Anh):
+Tạo 3 từ tiếng Anh gây nhiễu. Các từ này phải:
+- **Cùng loại từ** với từ gốc (danh từ, động từ, tính từ...).
+- **KHÔNG ĐƯỢC ĐỒNG NGHĨA HOÀN TOÀN**.
+- Được lựa chọn theo thứ tự ưu tiên sau để đảm bảo chất lượng gây nhiễu tốt nhất:
+    1.  **Cùng trường nghĩa (Same Semantic Field):** Các từ có liên quan chặt chẽ về mặt ý nghĩa nhưng không thể thay thế cho nhau trong ngữ cảnh của câu ví dụ.
+    2.  **Gần nghĩa nhưng khác sắc thái (Different Nuance):** Các từ có vẻ giống nhau nhưng mang sắc thái ý nghĩa hoặc cách dùng khác biệt.
+    3.  **Trông/Nghe giống nhau (Similar Sound/Spelling):** Các từ dễ gây nhầm lẫn về mặt chính tả hoặc phát âm (ví dụ: affect/effect, principle/principal).
+
+**Ví dụ về tư duy tạo "d_en":**
+- **Từ gốc:** "effort" (n) - sự nỗ lực, sự cố gắng
+- **Câu ví dụ ngữ cảnh:** "You should make a(n) ______ to overcome this problem."
+- **Tư duy sai (kết quả tệ):** ["work", "job", "task"] -> Quá khác biệt, không gây nhiễu.
+- **Tư duy ĐÚNG (kết quả tốt):** ["attempt", "trial", "impression"] -> Rất hợp lý. "attempt" (sự cố gắng/thử) rất gần nghĩa. "trial" (sự thử nghiệm) cũng có nét tương đồng. "impression" (sự gây ấn tượng) là một lựa chọn sai nhưng vẫn có thể làm học sinh phân vân.
+
+### 2. Về "d_vi" (Distractors tiếng Việt):
+Tạo 3 nghĩa tiếng Việt gây nhiễu. Các nghĩa này phải:
+- **KHÔNG phải là nghĩa đúng** của từ gốc.
+- **Là những lựa chọn hợp lý** khi dùng để hỏi trong câu trắc nghiệm nối từ Anh-Việt.
+- Được tạo ra bằng các cách sau:
+    1.  Lấy **nghĩa tiếng Việt của các từ "d_en"** mà bạn vừa tạo. Đây là cách tốt nhất.
+    2.  Cung cấp một nghĩa **hẹp hơn hoặc rộng hơn** nghĩa gốc.
+    3.  Cung cấp một nghĩa liên quan đến một **khía cạnh/ngữ cảnh khác** của từ gốc.
+
+**Ví dụ về tư duy tạo "d_vi":**
+- **Từ gốc:** "effort" - sự nỗ lực
+- **Các từ "d_en" đã tạo:** ["attempt", "trial", "impression"]
+- **Tư duy ĐÚNG (kết quả tốt):** ["sự thử", "sự thử nghiệm", "sự gây ấn tượng"] -> Trực tiếp dịch từ "d_en", rất hiệu quả.
+- **Tư duy khác (cũng tốt):** ["sự tiến bộ", "sự chịu đựng", "sự thúc đẩy"] -> Các khái niệm liên quan trong chủ đề "phát triển bản thân" nhưng không phải là "nỗ lực".
+
+---
+
+**QUAN TRỌNG:** Toàn bộ nội dung ("ex", "d_en", "d_vi") phải phù hợp với trình độ ${cefrLevel}.
+**CHỈ trả về một mảng JSON hợp lệ, không có bất kỳ giải thích nào khác.**
 `;
-        }
+}
 
         function processAiResults(aiDataArray) {
             if (!Array.isArray(aiDataArray)) throw new Error("Kết quả AI không phải là một mảng.");
