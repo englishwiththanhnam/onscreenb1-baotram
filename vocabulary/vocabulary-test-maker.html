@@ -434,46 +434,44 @@
 
         // NÂNG CẤP: Prompt hoàn toàn mới, bao gồm cả xử lý structures
         function getPromptForBatch(batch) {
-            const cefrLevel = getCefrLevelDescription();
-            const batchInput = batch.map(wordData => ({
-                id: wordData.id,
-                word: wordData.word,
-                type: wordData.type,
-                meaning: wordData.meaning,
-                // Gửi kèm các cấu trúc liên quan để AI xử lý
-                structures: wordData.structures.map(s => ({ phrase: s.phrase, meaning: s.meaning }))
-            }));
+    const cefrLevel = getCefrLevelDescription();
+    const batchInput = batch.map(wordData => ({
+        id: wordData.id,
+        word: wordData.word,
+        type: wordData.type,
+        meaning: wordData.meaning,
+        structures: wordData.structures.map(s => ({ phrase: s.phrase, meaning: s.meaning }))
+    }));
 
-            return `
-Bạn là một chuyên gia khảo thí ngôn ngữ (Language Assessment Expert) với 10 năm kinh nghiệm ra đề thi tiếng Anh.
-Nhiệm vụ của bạn là làm giàu dữ liệu từ vựng để tạo ra hai loại câu hỏi trắc nghiệm: (1) điền từ vào ngữ cảnh (đục lỗ) và (2) hỏi nghĩa của từ.
+    return `
+Bạn là một chuyên gia khảo thí ngôn ngữ (Language Assessment Expert) và nhà ngôn ngữ học tính toán (Computational Linguist). Nhiệm vụ của bạn là làm giàu dữ liệu từ vựng để tạo ra các bài tập đục lỗ chất lượng cao.
 
 Đầu vào: ${JSON.stringify(batchInput)}
 
-## YÊU CẦU CHUNG
-Với MỖI object trong mảng đầu vào, hãy tạo một object mới trong mảng JSON kết quả.
-Toàn bộ nội dung phải phù hợp với trình độ ${cefrLevel}.
-Mỗi object kết quả phải có cấu trúc JSON lồng nhau như sau:
-
+## CẤU TRÚC JSON KẾT QUẢ
+Với MỖI object đầu vào, trả về một object có cấu trúc JSON lồng nhau chính xác như sau:
 {
   "id": id_gốc,
   "general_distractors": {
-    "en": ["Từ gây nhiễu chung 1", "Từ 2", "Từ 3"],
-    "vi": ["Nghĩa gây nhiễu chung 1", "Nghĩa 2", "Nghĩa 3"]
+    "en": ["..."],
+    "vi": ["..."]
   },
   "contextual_examples": [
     {
-      "sentence_template": "Câu ví dụ cho TỪ GỐC, với các từ có thể đục lỗ được đánh dấu bằng {{từ_đó}}.",
-      "blanks": [ { "target_word": "từ_đó", "distractors": ["Nhiễu 1", "Nhiễu 2", "Nhiễu 3"] } ]
+      "sentence_template": "Câu ví dụ cho TỪ GỐC, với từ được đục lỗ {{inflected_word}}.",
+      "blanks": [
+        {
+          "inflected_word": "dạng biến thể của từ trong câu",
+          "base_word": "dạng nguyên mẫu của từ",
+          "distractors": ["Nhiễu 1", "Nhiễu 2", "Nhiễu 3"]
+        }
+      ]
     }
   ],
   "structure_examples": [
       {
-          "phrase": "Cấu trúc gốc 1 được cung cấp",
-          "contextual_example": {
-              "sentence_template": "Câu ví dụ cho CẤU TRÚC, với từ được đục lỗ {{từ_trong_cấu_trúc}}.",
-              "blanks": [ { "target_word": "từ_trong_cấu_trúc", "distractors": ["Nhiễu 1", "Nhiễu 2", "Nhiễu 3"] } ]
-          }
+          "phrase": "Cấu trúc gốc 1",
+          "contextual_example": { /* cấu trúc tương tự contextual_examples */ }
       }
   ]
 }
@@ -482,55 +480,66 @@ Mỗi object kết quả phải có cấu trúc JSON lồng nhau như sau:
 
 ## YÊU CẦU CHI TIẾT
 
-### 1. Về "contextual_examples" (Dữ liệu cho TỪ GỐC):
-- Tạo ra **1 đến 2** câu ví dụ tiếng Anh tự nhiên, phong phú cho TỪ GỐC.
-- Trong mỗi câu, xác định **1 đến 2** từ "đắt giá" nhất để làm bài tập điền từ và **đánh dấu** chúng bằng \`{{word}}\`.
-- Với **MỖI** từ được đánh dấu, tạo một object "blanks" tương ứng với \`target_word\` và 3 \`distractors\` chất lượng cao.
+### 1. Về "contextual_examples" và "structure_examples":
 
-### 2. Về "structure_examples" (Dữ liệu cho CẤU TRÚC LIÊN QUAN):
-- Với **MỖI** object trong mảng "structures" được cung cấp ở đầu vào, hãy tạo một object tương ứng trong mảng "structure_examples" ở kết quả.
-- \`phrase\`: Giữ nguyên cụm từ gốc.
-- \`contextual_example\`: Tạo **MỘT** ví dụ ngữ cảnh cho cấu trúc đó.
-    - \`sentence_template\`: Câu ví dụ phải chứa cấu trúc, và cũng phải **đánh dấu** \`{{word}}\` cho một từ phù hợp để làm bài tập đục lỗ.
-    - \`blanks\`: Tạo một mảng chứa 1 object cho từ được đánh dấu đó, bao gồm \`target_word\` và 3 \`distractors\`.
+#### ✅ YÊU CẦU VỀ ĐỤC LỖ: XỬ LÝ BIẾN THỂ TỪ (Inflection)
+Khi bạn xác định một từ để đục lỗ trong câu:
+- **`sentence_template`**: Đánh dấu từ trong câu bằng cách bọc nó trong \`{{...}}\`. Ví dụ: "Exercising regularly has many health {{benefits}}."
+- **`blanks.inflected_word`**: Phải là dạng từ chính xác xuất hiện trong câu (ví dụ: "benefits", "acted", "studying").
+- **`blanks.base_word`**: Phải là dạng nguyên mẫu tương ứng của từ đó (ví dụ: "benefit", "act", "study").
 
-### 3. Về "general_distractors" (Dữ liệu cho bài Hỏi nghĩa):
-- Tạo một bộ gây nhiễu **chung**, không phụ thuộc vào ngữ cảnh.
-- \`en\`: 3 từ tiếng Anh gây nhiễu, cùng loại từ, cùng trường nghĩa.
-- \`vi\`: 3 nghĩa tiếng Việt gây nhiễu, có thể là nghĩa của các từ "en" bạn vừa tạo.
+#### ✅ YÊU CẦU CỐT LÕI: TẠO DISTRACTOR CHẶT CHẼ (Contextual Distractors)
+Đây là quy tắc quan trọng nhất. Các từ gây nhiễu ("distractors") PHẢI:
+- **Sai rõ ràng trong ngữ cảnh:** Một người bản xứ hoặc người học nâng cao phải thấy ngay đó là lựa chọn sai.
+- **Tập trung vào Collocation và Nuance:** Ưu tiên tạo nhiễu dựa trên các từ không tạo thành kết hợp từ (collocation) tự nhiên, hoặc mang sắc thái nghĩa sai trong ngữ cảnh hẹp của câu.
+- **TRÁNH các từ đồng nghĩa gần:** KHÔNG được tạo ra các distractor là từ đồng nghĩa quá gần, có thể chấp nhận được trong câu.
+
+**VÍ DỤ VỀ LỖI CẦN TRÁNH:**
+- **Câu:** "Exercising regularly has many health {{benefits}}."
+- **Distractor TỆ:** ["advantages"] -> Tệ vì "health advantages" dù ít phổ biến hơn nhưng vẫn có thể chấp nhận được.
+- **Distractor TỐT:** ["profits", "outcomes", "results"] -> Tốt vì "health profits" sai về ngữ cảnh (profit dùng cho tài chính), "health outcomes/results" có nghĩa khác (kết quả/hậu quả của việc điều trị, không phải lợi ích nói chung).
+
+### 2. Về "general_distractors":
+- Tạo một bộ gây nhiễu chung, không phụ thuộc vào ngữ cảnh.
+- \`en\`: 3 từ tiếng Anh gây nhiễu, cùng loại từ.
+- \`vi\`: 3 nghĩa tiếng Việt gây nhiễu.
 
 ---
-
-**QUAN TRỌNG:** CHỈ trả về một mảng JSON hợp lệ, không có bất kỳ giải thích nào khác.
+**QUAN TRỌNG:** Tuân thủ nghiêm ngặt cấu trúc JSON và các quy tắc trên. Toàn bộ nội dung phải phù hợp với trình độ ${cefrLevel}. CHỈ trả về một mảng JSON hợp lệ.
 `;
-        }
+}
 
-        // NÂNG CẤP: Xử lý kết quả AI với cấu trúc mới, bao gồm cả structures
-        function processAiResults(aiDataArray) {
-            if (!Array.isArray(aiDataArray)) throw new Error("Kết quả AI không phải là một mảng.");
+       function processAiResults(aiDataArray) {
+    if (!Array.isArray(aiDataArray)) {
+        throw new Error("Kết quả AI không phải là một mảng.");
+    }
+    
+    aiDataArray.forEach(enrichedData => {
+        const wordToUpdate = localWordList.find(w => w.id === enrichedData.id);
+        if (wordToUpdate) {
+            // Gán các giá trị mặc định nếu không có để tránh lỗi
+            wordToUpdate.general_distractors = enrichedData.general_distractors || { en: [], vi: [] };
+            wordToUpdate.contextual_examples = enrichedData.contextual_examples || [];
             
-            aiDataArray.forEach(enrichedData => {
-                const wordToUpdate = localWordList.find(w => w.id === enrichedData.id);
-                if (wordToUpdate) {
-                    wordToUpdate.general_distractors = enrichedData.general_distractors || { en: [], vi: [] };
-                    wordToUpdate.contextual_examples = enrichedData.contextual_examples || [];
-                    
-                    // Ánh xạ dữ liệu ví dụ cho các cấu trúc
-                    if (enrichedData.structure_examples && Array.isArray(enrichedData.structure_examples)) {
-                        enrichedData.structure_examples.forEach(enrichedStruct => {
-                            const originalStruct = wordToUpdate.structures.find(s => s.phrase === enrichedStruct.phrase);
-                            if (originalStruct && enrichedStruct.contextual_example) {
-                                // Gán vào mảng để đồng nhất cấu trúc
-                                originalStruct.contextual_examples = [enrichedStruct.contextual_example];
-                            }
-                        });
+            // Xử lý ví dụ cho cấu trúc
+            if (enrichedData.structure_examples && Array.isArray(enrichedData.structure_examples)) {
+                enrichedData.structure_examples.forEach(enrichedStruct => {
+                    const originalStruct = wordToUpdate.structures.find(s => s.phrase === enrichedStruct.phrase);
+                    if (originalStruct && enrichedStruct.contextual_example) {
+                        // Đảm bảo trường contextual_examples là một mảng
+                        if (!originalStruct.contextual_examples) {
+                            originalStruct.contextual_examples = [];
+                        }
+                        originalStruct.contextual_examples[0] = enrichedStruct.contextual_example;
                     }
+                });
+            }
 
-                    wordToUpdate.isEnriched = true;
-                }
-            });
-            renderTable();
+            wordToUpdate.isEnriched = true;
         }
+    });
+    renderTable(); // Gọi render để cập nhật giao diện
+}
 
         function setupEventListeners() {
             onAuthStateChanged(auth, user => {
