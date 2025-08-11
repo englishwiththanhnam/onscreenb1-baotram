@@ -9,11 +9,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <script type="module">
+        // Import thư viện OGL để tạo hiệu ứng nền
         import { Renderer, Camera, Transform, Program, Geometry, Mesh } from 'https://cdn.skypack.dev/ogl';
         window.OGL = { Renderer, Camera, Transform, Program, Geometry, Mesh };
     </script>
     
     <style>
+        /* Các biến màu và style cơ bản */
         :root {
             --bg-dark: #111827;
             --text-light: #f0f6fc;
@@ -23,16 +25,9 @@
             --primary-accent: #8b5cf6;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        html, body {
-            height: 100%;
-            width: 100%;
-        }
+        html, body { height: 100%; width: 100%; }
 
         body {
             font-family: 'Be Vietnam Pro', sans-serif;
@@ -41,14 +36,11 @@
             overflow-x: hidden;
         }
 
+        /* Lớp chứa các hiệu ứng nền */
         .background-layer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 0;
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none; z-index: -1;
         }
         .shape {
             position: absolute; border-radius: 50%;
@@ -66,73 +58,24 @@
         }
         @keyframes float { from { transform: translateY(20px); } to { transform: translateY(-20px); } }
 
-        .main-container {
-            position: relative;
-            z-index: 2;
-        }
+        .main-container { position: relative; z-index: 2; }
         
-        /* === NÂNG CẤP HEADER MỚI === */
+        /* === NÂNG CẤP HEADER === */
         .header-sticky {
-            position: sticky;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 50;
-            padding: 1rem 2rem;
+            position: sticky; top: 0; z-index: 10;
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            
-            /* Hiệu ứng mờ dần ở cạnh dưới */
-            mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
-            -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
-        /* Hiệu ứng vignette tối ở cạnh trên */
         .header-sticky::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
+            content: ''; position: absolute; top: 0; left: 0; right: 0;
             height: 100px;
             background: radial-gradient(ellipse at top, rgba(0,0,0,0.2) 0%, transparent 80%);
-            z-index: -1;
-            pointer-events: none;
-        }
-
-        .header-content {
-            max-width: 1280px; /* max-w-screen-xl */
-            margin-left: auto;
-            margin-right: auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .class-filter-style {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: white;
-            border-radius: 8px;
-            padding: 0.5rem 1rem;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        .class-filter-style:focus {
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.6);
-        }
-        .logout-btn-style {
-             background-color: #dc2626; /* red-600 */
-             color: white;
-             font-weight: bold;
-             padding: 0.5rem 1rem;
-             border-radius: 8px;
-             transition: background-color 0.2s;
-        }
-        .logout-btn-style:hover {
-            background-color: #b91c1c; /* red-700 */
+            z-index: -1; pointer-events: none;
         }
         /* === KẾT THÚC NÂNG CẤP HEADER === */
 
+        /* Hiệu ứng viền phát sáng cho thẻ bài tập */
         @property --glow-opacity {
           syntax: '<number>';
           initial-value: 0;
@@ -152,10 +95,8 @@
             --glow-opacity: 1;
             box-shadow: 0 15px 30px -10px rgba(0,0,0,0.4);
         }
-        .assignment-card::before { /* Lớp viền glow */
-            content: '';
-            position: absolute;
-            inset: -1px;
+        .assignment-card::before {
+            content: ''; position: absolute; inset: -1px;
             border-radius: inherit;
             background: conic-gradient(from 180deg at 50% 50%, #22d3ee 0%, #a855f7 50%, #22d3ee 100%);
             opacity: var(--glow-opacity);
@@ -163,6 +104,7 @@
             z-index: -1;
         }
         
+        /* Thanh tiến trình */
         .progress-bar { background-color: rgba(0,0,0,0.3); border-radius: 9999px; height: 6px; overflow: hidden; }
         .progress-bar-fill { background-color: var(--primary-accent); height: 100%; transition: width 0.4s ease; }
 
@@ -170,35 +112,43 @@
 </head>
 <body class="p-0">
 
+    <!-- Các lớp nền cho hiệu ứng -->
     <div class="background-shapes background-layer">
         <div class="shape shape1"></div>
         <div class="shape shape2"></div>
     </div>
     <div id="ogl-canvas-back" class="background-layer"></div>
 
+    <!-- Màn hình loading -->
     <div id="loader-overlay" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm flex items-center justify-center z-50">
         <div class="w-16 h-16 border-4 border-t-violet-500 border-gray-600 rounded-full animate-spin"></div>
     </div>
     
-    <header id="app-header" class="header-sticky">
-        <div class="header-content">
+    <!-- === HEADER ĐÃ TỐI ƯU RESPONSIVE === -->
+    <header id="app-header" class="header-sticky p-4">
+        <div class="max-w-screen-xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <!-- Phần tiêu đề -->
             <div>
-                <h1 class="text-3xl font-bold text-white">Bài tập của bạn</h1>
+                <h1 class="text-2xl sm:text-3xl font-bold text-white">Bài tập của bạn</h1>
                 <p id="student-name-display" class="text-lg text-gray-300"></p>
             </div>
-            <div class="flex items-center gap-4">
-                <select id="class-filter" class="class-filter-style">
+            <!-- Phần điều khiển -->
+            <div class="flex items-center gap-4 w-full md:w-auto">
+                <select id="class-filter" class="flex-grow md:flex-grow-0 bg-white/10 text-white border border-white/20 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500/60">
                     <option value="all">Tất cả các lớp</option>
-                    </select>
-                <button id="logout-btn" class="logout-btn-style">
-                    <i class="fas fa-sign-out-alt mr-2"></i>Đăng xuất
+                </select>
+                <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Đăng xuất</span>
                 </button>
             </div>
         </div>
     </header>
 
-    <div id="main-content" class="main-container max-w-screen-xl mx-auto" style="display: none; padding-top: 2rem;">
-        <main class="space-y-12 px-4 sm:px-0">
+    <!-- === MAIN CONTENT ĐÃ TỐI ƯU PADDING VÀ CLASS === -->
+    <div id="main-content" class="main-container max-w-screen-xl mx-auto p-4 lg:p-8 hidden">
+        <main class="space-y-12">
+            <!-- Phần bài tập cần làm -->
             <section id="todo-section">
                 <h2 class="text-2xl font-bold mb-4"><i class="fas fa-pencil-alt text-yellow-500 mr-3"></i>Bài tập cần làm</h2>
                 <div id="todo-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -206,22 +156,24 @@
                 </div>
             </section>
             
+            <!-- Phần bài tập quá hạn -->
             <section id="overdue-section">
                 <div class="section-header cursor-pointer flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-bold"><i class="fas fa-exclamation-triangle text-red-500 mr-3"></i>Bài tập quá hạn</h2>
-                    <i class="fas fa-chevron-down section-toggle-icon text-gray-400"></i>
+                    <i class="fas fa-chevron-down section-toggle-icon text-gray-400 transition-transform"></i>
                 </div>
-                <div id="overdue-list" class="section-content grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" style="display: none;">
+                <div id="overdue-list" class="section-content grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden">
                      <p class="placeholder-text text-gray-400 col-span-full">Không có bài tập nào bị quá hạn.</p>
                 </div>
             </section>
 
+            <!-- Phần bài tập đã hoàn thành -->
             <section id="completed-section">
                 <div class="section-header cursor-pointer flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-bold"><i class="fas fa-check-circle text-green-500 mr-3"></i>Bài tập đã hoàn thành</h2>
-                    <i class="fas fa-chevron-down section-toggle-icon text-gray-400"></i>
+                    <i class="fas fa-chevron-down section-toggle-icon text-gray-400 transition-transform"></i>
                 </div>
-                <div id="completed-list" class="section-content grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" style="display: none;">
+                <div id="completed-list" class="section-content grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden">
                      <p class="placeholder-text text-gray-400 col-span-full">Bạn chưa hoàn thành bài tập nào.</p>
                 </div>
             </section>
@@ -229,10 +181,12 @@
     </div>
 
     <script type="module">
+        // Import các hàm cần thiết từ Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, collection, doc, getDoc, query, where, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
         
+        // --- PHẦN KHỞI TẠO HIỆU ỨNG NỀN OGL (GIỮ NGUYÊN) ---
         const { Renderer, Camera, Transform, Program, Geometry, Mesh } = window.OGL;
         const container = document.getElementById('ogl-canvas-back');
         if (container) {
@@ -278,7 +232,9 @@
                 renderer.render({ scene, camera });
             }
         }
+        // --- KẾT THÚC PHẦN HIỆU ỨNG NỀN ---
 
+        // Cấu hình Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
@@ -289,13 +245,16 @@
             measurementId: "G-33NHT07JHE"
         };
         
+        // Khởi tạo Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
         
+        // Biến toàn cục để lưu trữ dữ liệu
         let allSubmissions = [];
         let allClassDocs = [];
         
+        // DOM Elements
         const DOM = {
             loader: document.getElementById('loader-overlay'),
             mainContent: document.getElementById('main-content'),
@@ -307,18 +266,21 @@
             classFilter: document.getElementById('class-filter'),
         };
 
+        // Lắng nghe thay đổi trạng thái đăng nhập
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 loadDashboard(user);
             } else {
-                window.location.href = 'index.html';
+                window.location.href = 'index.html'; // Chuyển hướng nếu chưa đăng nhập
             }
         });
         
+        // Xử lý sự kiện đăng xuất
         DOM.logoutBtn.addEventListener('click', () => {
-            signOut(auth).catch(err => alert("Lỗi khi đăng xuất."));
+            signOut(auth).catch(err => alert("Lỗi khi đăng xuất: " + err.message));
         });
         
+        // Tải danh sách lớp học của người dùng
         async function loadUserClasses(user) {
             const q = query(collection(db, "classes"), where("studentUids", "array-contains", user.uid));
             const querySnapshot = await getDocs(q);
@@ -333,6 +295,7 @@
             });
         }
         
+        // Tải toàn bộ dữ liệu cho trang dashboard
         async function loadDashboard(user) {
             const userDoc = await getDoc(doc(db, "users", user.uid));
             if (userDoc.exists()) {
@@ -345,17 +308,19 @@
             onSnapshot(q, (snapshot) => {
                 allSubmissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderAssignments();
-                DOM.loader.style.display = 'none';
-                DOM.mainContent.style.display = 'block';
+                DOM.loader.classList.add('hidden');
+                DOM.mainContent.classList.remove('hidden');
             });
         }
 
+        // Hàm render danh sách bài tập ra giao diện
         function renderAssignments() {
             const selectedClassId = DOM.classFilter.value;
             const submissionsToRender = selectedClassId === 'all'
                 ? allSubmissions
                 : allSubmissions.filter(sub => sub.classId === selectedClassId);
 
+            // Xóa nội dung cũ
             DOM.todoList.innerHTML = '';
             DOM.overdueList.innerHTML = '';
             DOM.completedList.innerHTML = '';
@@ -384,14 +349,15 @@
                     ? `<span class="text-xs font-bold uppercase px-2 py-1 bg-red-200 text-red-800 rounded-full">Đề thi</span>`
                     : `<span class="text-xs font-bold uppercase px-2 py-1 bg-blue-200 text-blue-800 rounded-full">Bài tập</span>`;
 
+                // Bắt đầu tạo HTML cho thẻ bài tập
                 let cardHTML = `<a href="${url}" class="assignment-card p-6 flex flex-col justify-between">
-                                        <div>
-                                            <div class="flex justify-between items-center mb-2">
-                                                <p class="text-sm font-bold text-violet-400">${test.testType.toUpperCase()}</p>
-                                                ${typeBadge}
-                                            </div>
-                                            <h3 class="text-lg font-bold mb-2 text-white">${test.title}</h3>
-                                        </div>`;
+                                    <div>
+                                        <div class="flex justify-between items-center mb-2">
+                                            <p class="text-sm font-bold text-violet-400">${test.testType.toUpperCase()}</p>
+                                            ${typeBadge}
+                                        </div>
+                                        <h3 class="text-lg font-bold mb-2 text-white">${test.title}</h3>
+                                    </div>`;
 
                 if (isSubmitted) {
                     completedCount++;
@@ -420,15 +386,15 @@
                     }
                     cardHTML += `</a>`;
                     DOM.completedList.innerHTML += cardHTML;
-                } else { // Not submitted
+                } else { // Chưa nộp bài
                     const buttonText = isVocab ? 'Bắt đầu học' : (isOverdue ? 'Làm bài (Quá hạn)' : 'Vào làm bài');
                     cardHTML += `<div class="mt-4">
-                                        <p class="text-sm text-gray-400">Hạn nộp: <span class="font-semibold text-gray-200">${dueDate ? dueDate.toLocaleString('vi-VN') : 'Không có'}</span></p>
-                                        <div class="block w-full text-center bg-violet-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-violet-800 transition-colors mt-4">
-                                            ${buttonText}
-                                        </div>
+                                    <p class="text-sm text-gray-400">Hạn nộp: <span class="font-semibold text-gray-200">${dueDate ? dueDate.toLocaleString('vi-VN') : 'Không có'}</span></p>
+                                    <div class="block w-full text-center bg-violet-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-violet-800 transition-colors mt-4">
+                                        ${buttonText}
                                     </div>
-                                    </a>`;
+                                </div>
+                            </a>`;
                     if (isOverdue) {
                         overdueCount++;
                         DOM.overdueList.innerHTML += cardHTML;
@@ -439,10 +405,12 @@
                 }
             });
             
+            // Hiển thị thông báo nếu không có bài tập
             if (todoCount === 0) DOM.todoList.innerHTML = `<p class="placeholder-text text-gray-400 col-span-full">Tuyệt vời! Bạn đã hoàn thành hết bài tập.</p>`;
             if (overdueCount === 0) DOM.overdueList.innerHTML = `<p class="placeholder-text text-gray-400 col-span-full">Không có bài tập nào bị quá hạn.</p>`;
             if (completedCount === 0) DOM.completedList.innerHTML = `<p class="placeholder-text text-gray-400 col-span-full">Bạn chưa hoàn thành bài tập nào.</p>`;
             
+            // Gắn lại hiệu ứng 3D cho các thẻ bài tập mới được render
             document.querySelectorAll('.assignment-card').forEach(card => {
                 card.addEventListener('mousemove', (e) => {
                     const rect = card.getBoundingClientRect();
@@ -458,27 +426,29 @@
             });
         }
         
+        // Lắng nghe sự kiện thay đổi bộ lọc lớp học
         DOM.classFilter.addEventListener('change', renderAssignments);
 
+        // Thiết lập chức năng accordion (đóng/mở các mục)
         function setupAccordion() {
             document.querySelectorAll('.section-header').forEach(header => {
                 header.addEventListener('click', () => {
                     const content = header.nextElementSibling;
                     const icon = header.querySelector('.section-toggle-icon');
                     
-                    if (content.style.display === 'none') {
-                        content.style.display = 'grid';
-                        icon.classList.remove('fa-chevron-down');
-                        icon.classList.add('fa-chevron-up');
+                    const isHidden = content.classList.contains('hidden');
+                    if (isHidden) {
+                        content.classList.remove('hidden');
+                        icon.classList.add('rotate-180');
                     } else {
-                        content.style.display = 'none';
-                        icon.classList.remove('fa-chevron-up');
-                        icon.classList.add('fa-chevron-down');
+                        content.classList.add('hidden');
+                        icon.classList.remove('rotate-180');
                     }
                 });
             });
         }
         
+        // Chạy hàm setupAccordion khi DOM đã tải xong
         document.addEventListener('DOMContentLoaded', setupAccordion);
 
     </script>
