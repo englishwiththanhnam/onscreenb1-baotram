@@ -295,10 +295,9 @@
                 camera.position.set(0, 0, 25);
                 const scene = new Transform();
                 const program = new Program(gl, {
-                    // CẬP NHẬT SHADER VỚI BIẾN `uSpread`
                     vertex: `attribute vec3 position;attribute vec4 random;attribute vec3 color;uniform mat4 modelMatrix;uniform mat4 viewMatrix;uniform mat4 projectionMatrix;uniform float uTime;uniform float uSpread;uniform float uBaseSize;varying vec4 vRandom;varying vec3 vColor;void main(){vRandom=random;vColor=color;vec3 pos=position*uSpread;vec4 mPos=modelMatrix*vec4(pos,1.);float t=uTime*.1;mPos.x+=sin(t*random.z+6.28*random.w)*mix(.1,1.5,random.x);mPos.y+=sin(t*random.y+6.28*random.x)*mix(.1,1.5,random.w);mPos.z+=cos(t*random.w+6.28*random.y)*mix(.1,1.5,random.z);vec4 mvPos=viewMatrix*mPos;gl_PointSize=uBaseSize/-mvPos.z;gl_Position=projectionMatrix*mvPos;}`,
                     fragment: `precision highp float;varying vec3 vColor;void main(){vec2 uv=gl_PointCoord.xy;float d=length(uv-vec2(.5));float glow=smoothstep(.5,0.,d)*.3;float core=smoothstep(.2,.18,d);float alpha=max(core,glow);if(alpha<.01)discard;vec3 finalColor=vColor+vColor*pow(glow,2.)*2.;gl_FragColor=vec4(finalColor,alpha);}`,
-                    uniforms: { uTime: { value: 0 }, uSpread: { value: 1.0 }, uBaseSize: { value: 350 } }, // Thêm uSpread với giá trị ban đầu là 1
+                    uniforms: { uTime: { value: 0 }, uSpread: { value: 1.0 }, uBaseSize: { value: 350 } },
                     transparent: true, depthTest: false
                 });
                 const count = 500;
@@ -329,7 +328,6 @@
                 mouse.x = (e.clientX / window.innerWidth) - 0.5;
                 mouse.y = (e.clientY / window.innerHeight) - 0.5;
 
-                // Chỉ áp dụng hiệu ứng khi không đang chuyển trang
                 if (!document.body.classList.contains('is-navigating-out')) {
                     const rotateX = -mouse.y * 10;
                     const rotateY = mouse.x * 10;
@@ -381,43 +379,43 @@
 
             // --- LOGIC CHUYỂN CẢNH KHI CLICK LINK VÀ FORM ---
             
-            // Hàm co các hạt lại
-            function animateParticlesOut(duration, onComplete) {
+            // ** CẬP NHẬT: Hàm co các hạt lại và chuyển trang **
+            function animateParticlesOutAndNavigate(duration, url) {
+                let navigationTriggered = false; // Cờ để đảm bảo chỉ chuyển trang một lần
                 const startTime = performance.now();
+
                 function animate(currentTime) {
                     const elapsedTime = currentTime - startTime;
                     const progress = Math.min(elapsedTime / duration, 1);
-                    // Dùng easing function để hiệu ứng mượt hơn
                     const easedProgress = 0.5 - 0.5 * Math.cos(progress * Math.PI);
-                    const newSpread = 1.0 - easedProgress; // Animate giá trị spread từ 1 về 0
+                    const newSpread = 1.0 - easedProgress;
 
                     if (backParticles) backParticles.program.uniforms.uSpread.value = newSpread;
                     if (frontParticles) frontParticles.program.uniforms.uSpread.value = newSpread;
                     
+                    // **ĐIỀU KIỆN MỚI**: Nếu hiệu ứng chạy được 50% và chưa chuyển trang, thì chuyển ngay
+                    if (progress >= 0.7 && !navigationTriggered) {
+                        navigationTriggered = true; // Đánh dấu đã chuyển trang
+                        window.location.href = url; // Chuyển hướng
+                    }
+                    
+                    // Vẫn tiếp tục vòng lặp animation để hiệu ứng chạy mượt mà cho đến hết
+                    // (mặc dù người dùng có thể đã ở trang mới)
                     if (progress < 1) {
                         requestAnimationFrame(animate);
-                    } else {
-                        if (onComplete) onComplete();
                     }
                 }
                 requestAnimationFrame(animate);
             }
 
-            // Bắt sự kiện click trên tất cả các link không phải là link nội bộ (#)
+            // ** CẬP NHẬT: Bắt sự kiện click vào link **
             document.querySelectorAll('a[href]:not([href^="#"])').forEach(link => {
                 link.addEventListener('click', (e) => {
-                    // Ngăn chặn hành vi mặc định của link
                     e.preventDefault();
                     const url = link.href;
-
-                    // Thêm class để kích hoạt hiệu ứng biến mất cho UI
                     document.body.classList.add('is-navigating-out');
-
-                    // Gọi hàm co các hạt lại trong 5 giây (5000ms)
-                    animateParticlesOut(5000, () => {
-                        // Sau khi hiệu ứng hoàn tất, chuyển đến trang mới
-                        window.location.href = url;
-                    });
+                    // Gọi hàm mới, truyền vào thời gian và URL
+                    animateParticlesOutAndNavigate(5000, url);
                 });
             });
 
@@ -429,8 +427,7 @@
 
             learnMoreBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                // Logic cũ của nút này, không có hiệu ứng co hạt
-                document.body.classList.add('is-navigating-out'); // Tận dụng hiệu ứng UI đã có
+                document.body.classList.add('is-navigating-out');
                 setTimeout(() => {
                     document.querySelector('.ui-container').style.display = 'none';
                     formSection.classList.add('is-visible');
