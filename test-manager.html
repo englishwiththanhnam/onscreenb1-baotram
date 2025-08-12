@@ -79,8 +79,6 @@
         .anim-fade-in { animation: fadeIn 0.3s ease-in forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-10px); } }
-        
-        /* Toast Notifications */
         #toast-container {
             position: fixed;
             bottom: 2rem;
@@ -156,9 +154,14 @@
                     <div data-location-id="gradebook" class="special-location p-3 rounded-lg cursor-pointer hover:bg-violet-100 transition-colors">
                        <i class="fas fa-book-reader w-6 text-center mr-2 text-violet-600"></i><span class="font-semibold">Sổ điểm</span>
                    </div>
-                   <div data-location-id="contactLeads" class="special-location p-3 rounded-lg cursor-pointer hover:bg-violet-100 transition-colors">
+                   <div data-location-id="issueReports" class="special-location p-3 rounded-lg cursor-pointer hover:bg-violet-100 transition-colors relative">
+                        <i class="fas fa-flag w-6 text-center mr-2 text-violet-600"></i>
+                        <span class="font-semibold">Báo cáo & Hỗ trợ</span>
+                        <span id="new-report-badge" class="absolute top-1 right-1 h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center hidden"></span>
+                    </div>
+                    <div data-location-id="contactLeads" class="special-location p-3 rounded-lg cursor-pointer hover:bg-violet-100 transition-colors">
                       <i class="fas fa-address-book w-6 text-center mr-2 text-violet-600"></i><span class="font-semibold">Đăng ký tư vấn</span>
-                   </div>
+                    </div>
                 </div>
                 <hr class="my-2 border-white/50">
                 <div id="folder-tree-container" class="space-y-1 max-h-[65vh] overflow-y-auto"></div>
@@ -219,12 +222,14 @@
             localClassesCache: [],
             localStudentsCache: [],
             localSubmissionsCache: [],
-            localContactLeadsCache: [], 
+            localContactLeadsCache: [],
+            localIssueCache: [],
             assigningTest: null,
             locationHistory: ['root'],
             get currentLocationId() { return this.locationHistory[this.locationHistory.length - 1]; },
             selectedTestId: null,
             selectedClassForGradebook: null,
+            selectedTestForIssues: null,
             mainPanelViewMode: 'folder',
             searchQuery: '',
             unsubscribers: [],
@@ -364,11 +369,11 @@
                         renderFolderTree();
                     } else {
                          snapshot.docs.forEach(doc => {
-                            const testData = { id: doc.id, testType: type, ...doc.data() };
-                            const index = appState.localTestsCache.findIndex(t => t.id === doc.id);
-                            if (index > -1) appState.localTestsCache[index] = testData;
-                            else appState.localTestsCache.push(testData);
-                        });
+                             const testData = { id: doc.id, testType: type, ...doc.data() };
+                             const index = appState.localTestsCache.findIndex(t => t.id === doc.id);
+                             if (index > -1) appState.localTestsCache[index] = testData;
+                             else appState.localTestsCache.push(testData);
+                         });
                     }
                     if(appState.mainPanelViewMode !== 'details') renderMainPanel();
                 });
@@ -417,6 +422,25 @@
                 isInitialLoad = false;
             });
             appState.unsubscribers.push(unsubLeads);
+
+            const qIssues = query(collection(db, "test_issues"));
+            const unsubIssues = onSnapshot(qIssues, (snapshot) => {
+                appState.localIssueCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                const openIssuesCount = appState.localIssueCache.filter(i => i.status === 'open').length;
+                const badge = document.getElementById('new-report-badge');
+                if (openIssuesCount > 0) {
+                    badge.textContent = openIssuesCount;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+
+                if (appState.mainPanelViewMode === 'issueReports') {
+                    renderMainPanel();
+                }
+            });
+            appState.unsubscribers.push(unsubIssues);
         }
 
         function renderMainPanel(isNavigating = false) {
@@ -429,6 +453,8 @@
                     renderGradebookView();
                 } else if (appState.mainPanelViewMode === 'contactLeads') {
                     renderContactLeadsView();
+                } else if (appState.mainPanelViewMode === 'issueReports') {
+                    renderIssueReportsView();
                 } else {
                     renderFolderView();
                 }
@@ -446,7 +472,137 @@
             }
         }
 
-        function renderGradebookView() {
+        function renderIssueReportsView() {
+            const container = DOM.mainPanelView;
+            
+            if (appState.selectedTestForIssues) {
+                renderIssueDetailsForTestView(appState.selectedTestForIssues);
+                return;
+            }
+
+            const issuesByTest = appState.localIssueCache.reduce((acc, issue) => {
+                if (!acc[issue.testId]) {
+                    acc[issue.testId] = { testTitle: issue.testTitle, openIssues: 0, totalIssues: 0 };
+                }
+                acc[issue.testId].totalIssues++;
+                if (issue.status === 'open') {
+                    acc[issue.testId].openIssues++;
+                }
+                return acc;
+            }, {});
+
+            let contentHTML = `<div class="flex items-center p-2 mb-4 border-b border-white/30"><h2 class="text-2xl font-bold">Bài tập có Báo cáo</h2></div>`;
+            if (Object.keys(issuesByTest).length === 0) {
+                contentHTML += `<p class="p-4 text-center text-gray-500">Chưa có báo cáo nào.</p>`;
+            } else {
+                contentHTML += `<div class="p-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">`;
+                for (const testId in issuesByTest) {
+                    const data = issuesByTest[testId];
+                    contentHTML += `
+                        <div class="main-view-item p-4 rounded-xl cursor-pointer bg-white/30" data-testid="${testId}">
+                            <p class="font-bold text-lg">${data.testTitle}</p>
+                            <p class="text-sm text-gray-600">${data.totalIssues} vấn đề</p>
+                            ${data.openIssues > 0 ? `<span class="mt-2 inline-block text-sm font-semibold bg-red-200 text-red-800 px-3 py-1 rounded-full">${data.openIssues} vấn đề mới</span>` : `<span class="mt-2 inline-block text-sm font-semibold bg-green-200 text-green-800 px-3 py-1 rounded-full">Đã xử lý hết</span>`}
+                        </div>`;
+                }
+                contentHTML += `</div>`;
+            }
+            container.innerHTML = contentHTML;
+        }
+        
+        function renderIssueDetailsForTestView(testId) {
+            const container = DOM.mainPanelView;
+            const test = appState.localTestsCache.find(t => t.id === testId);
+            const issuesForTest = appState.localIssueCache.filter(i => i.testId === testId).sort((a,b) => b.lastReportedAt.toMillis() - a.lastReportedAt.toMillis());
+
+            let contentHTML = `
+                <div class="flex items-center p-2 mb-4 border-b border-white/30">
+                    <button id="back-to-issues-list" class="btn btn-secondary !p-3 !rounded-full mr-4"><i class="fas fa-arrow-left"></i></button>
+                    <div>
+                        <h2 class="text-2xl font-bold">Các vấn đề trong: ${test ? test.title : 'Bài tập không xác định'}</h2>
+                    </div>
+                </div>
+                <div class="space-y-4 p-2">`;
+            
+            if(issuesForTest.length === 0) {
+                 contentHTML += `<p class="p-4 text-center text-gray-500">Không có vấn đề nào cho bài tập này.</p>`;
+            } else {
+                issuesForTest.forEach(issue => {
+                    contentHTML += `
+                        <div class="p-4 rounded-xl bg-white/40 border border-white/60 flex justify-between items-center">
+                            <div>
+                                <p class="font-semibold">${issue.questionData.word || issue.questionData.phrase} <span class="text-sm text-gray-500">(${issue.questionData.itemType})</span></p>
+                                <div class="flex gap-4 mt-1 text-sm">
+                                    <span class="font-semibold text-red-600">${issue.errorReportsCount} Báo lỗi</span>
+                                    <span class="font-semibold text-blue-600">${issue.explanationRequestsCount} Cần giải thích</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="font-bold text-sm ${issue.status === 'open' ? 'text-red-600' : 'text-green-600'}">${issue.status === 'open' ? 'Mới' : 'Đã giải quyết'}</span>
+                                <button class="btn btn-primary !py-2 !px-4 view-issue-details" data-issue-id="${issue.id}">Xem chi tiết</button>
+                            </div>
+                        </div>`;
+                });
+            }
+            contentHTML += `</div>`;
+            container.innerHTML = contentHTML;
+        }
+
+        async function showIssueDetailsModal(issueId) {
+            const issue = appState.localIssueCache.find(i => i.id === issueId);
+            if (!issue) return;
+
+            let detailsHTML = `<h4 class="font-bold text-lg mb-2">Câu hỏi:</h4><div class="p-3 bg-indigo-100 rounded-lg text-gray-800">${issue.questionData.word || issue.questionData.phrase} (${issue.questionData.meaning})</div>`;
+
+            if (issue.errorReporters && issue.errorReporters.length > 0) {
+                detailsHTML += `<h4 class="font-bold text-lg mt-4 mb-2">Danh sách báo lỗi (${issue.errorReportsCount}):</h4><div class="space-y-2 max-h-40 overflow-y-auto p-2 bg-red-50 rounded-lg">`;
+                issue.errorReporters.forEach(r => {
+                    detailsHTML += `<div class="text-sm"><strong class="text-red-800">${r.studentName}:</strong> ${r.category} <em class="text-gray-600">(${r.comment || 'không có ghi chú'})</em></div>`;
+                });
+                detailsHTML += `</div>`;
+            }
+
+            if (issue.explanationRequesters && issue.explanationRequesters.length > 0) {
+                 detailsHTML += `<h4 class="font-bold text-lg mt-4 mb-2">Danh sách cần giải thích (${issue.explanationRequestsCount}):</h4><div class="space-y-2 max-h-40 overflow-y-auto p-2 bg-blue-50 rounded-lg">`;
+                issue.explanationRequesters.forEach(r => {
+                    detailsHTML += `<div class="text-sm"><strong class="text-blue-800">${r.studentName}</strong> <em class="text-gray-600">(${r.comment || 'không có ghi chú'})</em></div>`;
+                });
+                detailsHTML += `</div>`;
+            }
+
+            const modalHTML = `
+                <div class="modal is-open">
+                    <div class="modal-content glass-panel p-8 w-full max-w-3xl">
+                        <h3 class="text-2xl font-bold mb-4">Chi tiết Vấn đề</h3>
+                        <div class="space-y-4 text-left mb-6">${detailsHTML}</div>
+                        <div class="flex gap-4 mt-6 justify-end">
+                            <button class="btn btn-secondary" data-action="close">Đóng</button>
+                            ${issue.status === 'open' ? `<button class="btn btn-primary bg-green-600 hover:bg-green-700" data-action="resolve">Đánh dấu đã giải quyết</button>` : ''}
+                            <button class="btn btn-primary" data-action="edit-test">Sửa đề thi</button>
+                        </div>
+                    </div>
+                </div>`;
+            
+            DOM.modalContainer.innerHTML = modalHTML;
+
+            DOM.modalContainer.querySelector('.modal').addEventListener('click', async (e) => {
+                const action = e.target.dataset.action;
+                if (action === 'close') {
+                    DOM.modalContainer.innerHTML = '';
+                } else if (action === 'edit-test') {
+                    const pageMap = { vocabulary: 'vocabulary/vocabulary-test-maker.html' }; 
+                    const url = `${pageMap.vocabulary}?edit=${issue.testId}&itemId=${issue.itemId}`;
+                    window.open(url, '_blank');
+                    DOM.modalContainer.innerHTML = '';
+                } else if (action === 'resolve') {
+                    await updateDoc(doc(db, "test_issues", issue.id), { status: 'resolved' });
+                    showToast("Đã cập nhật trạng thái.");
+                    DOM.modalContainer.innerHTML = '';
+                }
+            });
+        }
+
+                function renderGradebookView() {
             const container = DOM.mainPanelView;
             let headerHTML = `<div class="flex items-center p-2 mb-4 border-b border-white/30"><h2 class="text-2xl font-bold">Sổ điểm</h2></div>`;
 
@@ -815,6 +971,7 @@
             }
         }
 
+        // --- Main Event Listeners ---
         DOM.loginBtn.addEventListener('click', () => { signInWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value).catch(e => DOM.loginError.textContent = 'Đăng nhập thất bại.'); });
         DOM.logoutBtn.addEventListener('click', () => signOut(auth));
 
@@ -834,8 +991,13 @@
                 const locationId = specialLocation.dataset.locationId;
                 document.querySelectorAll('.special-location, .folder-tree-item').forEach(el => el.classList.remove('active'));
                 specialLocation.classList.add('active');
+                
+                appState.selectedTestForIssues = null;
 
-                if (locationId === 'contactLeads') {
+                if (locationId === 'issueReports') {
+                    appState.mainPanelViewMode = 'issueReports';
+                    renderMainPanel(true);
+                } else if (locationId === 'contactLeads') {
                     appState.mainPanelViewMode = 'contactLeads';
                     renderMainPanel(true);
                 } else if (locationId === 'gradebook') {
@@ -849,6 +1011,26 @@
                 return;
             }
             
+            if (appState.mainPanelViewMode === 'issueReports') {
+                const testItem = e.target.closest('.main-view-item[data-testid]');
+                if (testItem) {
+                    appState.selectedTestForIssues = testItem.dataset.testid;
+                    renderMainPanel(true);
+                    return;
+                }
+                const backBtn = e.target.closest('#back-to-issues-list');
+                if (backBtn) {
+                    appState.selectedTestForIssues = null;
+                    renderMainPanel(true);
+                    return;
+                }
+                const viewDetailsBtn = e.target.closest('.view-issue-details');
+                if (viewDetailsBtn) {
+                    showIssueDetailsModal(viewDetailsBtn.dataset.issueId);
+                    return;
+                }
+            }
+
             if (appState.mainPanelViewMode === 'gradebook' && !appState.selectedClassForGradebook) {
                 const classItem = e.target.closest('.main-view-item[data-class-id]');
                 if (classItem) {
@@ -982,8 +1164,8 @@
                 const newName = await showPromptModal("Đổi tên thư mục", "Nhập tên mới:", currentFolder.name);
                 if (newName && newName.trim()) { await updateDoc(doc(db, 'folders', itemId), { name: newName.trim() }); }
             } else if (action === 'edit-test') {
-                 const pageMap = { standard: 'standard/standard-test-maker.html', reading: 'reading/reading-test-maker.html', listening: 'listening/listening-test-maker.html', vocabulary: 'vocabulary/vocabulary-test-maker.html' };
-                 window.open(`${pageMap[itemType]}?edit=${itemId}`, '_blank');
+                const pageMap = { standard: 'standard/standard-test-maker.html', reading: 'reading/reading-test-maker.html', listening: 'listening/listening-test-maker.html', vocabulary: 'vocabulary/vocabulary-test-maker.html' };
+                window.open(`${pageMap[itemType]}?edit=${itemId}`, '_blank');
             } else if (action === 'open-test') {
                 appState.selectedTestId = itemId;
                 appState.mainPanelViewMode = 'details';
@@ -1015,7 +1197,6 @@
                 }
             }
         });
-
     </script>
 </body>
 </html>
