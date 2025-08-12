@@ -38,8 +38,6 @@
             background-color: var(--bg-dark);
             color: var(--text-light);
             overflow-x: hidden;
-            /* [MỚI] Bố cục chính với Sidebar */
-            display: flex;
         }
         
         /* === MỚI: Bố cục Sidebar và Content Area === */
@@ -234,7 +232,7 @@
         </div>
     </div>
 
-    <script type="module">
+    <script type="module" defer>
         // [GIỮ NGUYÊN] Import các hàm cần thiết từ Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, collection, doc, getDoc, query, where, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
