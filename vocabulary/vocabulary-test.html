@@ -394,7 +394,8 @@
                             studentName: this.state.studentName,
                             comment: result.comment,
                             category: result.category,
-                            timestamp: serverTimestamp()
+                            // **FIX**: Use a simple JS Date for the array object
+                            reportedAt: new Date() 
                         };
 
                         if (!issueDoc.exists()) {
