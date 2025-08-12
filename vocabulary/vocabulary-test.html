@@ -92,6 +92,7 @@
             border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
         }
         .flashcard-back {
+            /* This pre-rotates the back face. When the parent .flashcard is flipped, this face becomes visible and correctly oriented. */
             transform: rotateY(180deg);
         }
         .flashcard-word { font-family: 'Poppins', sans-serif; font-size: clamp(2rem, 8vw, 4rem); font-weight: 700; }
@@ -210,7 +211,7 @@
                     learnedItems: new Set(),
                     incorrectCounts: {},
                     usedExercises: {},
-                    finalTestNotifShown: false, // Add new flag
+                    finalTestNotifShown: false,
                 },
                 isSubmitting: false,
                 audioPlayer: null,
@@ -277,7 +278,6 @@
                     
                     this.processData();
 
-                    // ** NEW: Load progress directly from Firestore **
                     if (submissionData.liveProgress) {
                         this.state.progress = {
                             learnedItems: new Set(submissionData.liveProgress.learnedItems || []),
@@ -323,13 +323,11 @@
                 this.state.wordFamilies = families;
             },
 
-            // ** NEW: Function to update progress to Firestore **
             async updateFirestoreProgress() {
                 if (!this.state.submissionId) return;
 
-                // Create a payload from the current state
                 const progressPayload = {
-                    learnedItems: [...this.state.progress.learnedItems], // Convert Set to Array
+                    learnedItems: [...this.state.progress.learnedItems],
                     incorrectCounts: this.state.progress.incorrectCounts,
                     usedExercises: this.state.progress.usedExercises,
                     finalTestNotifShown: this.state.progress.finalTestNotifShown,
@@ -337,17 +335,13 @@
 
                 try {
                     const submissionRef = doc(this.state.db, 'submissions', this.state.submissionId);
-                    // Update the 'liveProgress' field in the document
                     await updateDoc(submissionRef, {
                         liveProgress: progressPayload
                     });
                 } catch (error) {
                     console.error("Lỗi khi đồng bộ tiến trình:", error);
-                    // Optional: show a non-intrusive error to the user
                 }
             },
-
-            // ** REMOVED loadProgress() and saveProgress() functions **
 
             renderHeader() {
                 const isCompleted = this.state.session.isCompleted;
@@ -387,12 +381,11 @@
                 const requiredProgress = 85; 
                 const isEligibleForFinalTest = overallProgress >= requiredProgress;
 
-                // ** NEW: Check notification status from Firestore-backed state **
                 if (isEligibleForFinalTest && !this.state.progress.finalTestNotifShown && !this.state.session.finalTestTaken) {
                     setTimeout(() => {
                         this.showModal("Chúc mừng!", `Bạn đã học được ${requiredProgress}% kiến thức và mở khóa Bài kiểm tra cuối kỳ!`);
                         this.state.progress.finalTestNotifShown = true;
-                        this.updateFirestoreProgress(); // Save this change to Firestore
+                        this.updateFirestoreProgress();
                     }, 1000);
                 }
 
@@ -476,58 +469,6 @@
                     practiceButtons.querySelector('[data-practice-mode="weakness"]').disabled = true;
                 }
             },
-            
-            // ... (The rest of the functions like renderPracticeGuide, updateFlashcardView, getPossibleExerciseTypes, etc., remain the same)
-            
-            checkAnswer(userAnswer, item, container) {
-                if (!item) item = this.state.currentSessionItems[this.state.currentIndex];
-                const correctAnswer = this.state.currentCorrectAnswer;
-                const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
-
-                (container || this.DOM.main).querySelectorAll('button, input').forEach(el => el.disabled = true);
-                
-                const itemId = item.id;
-                const wasLearned = this.state.progress.learnedItems.has(itemId);
-
-                if (isCorrect) {
-                    this.state.currentScore++;
-                    this.state.sessionCorrectItems.push(item);
-                    this.state.progress.learnedItems.add(itemId);
-                    delete this.state.progress.incorrectCounts[itemId];
-                } else {
-                    this.state.sessionIncorrectItems.push(item);
-                    this.state.progress.incorrectCounts[itemId] = (this.state.progress.incorrectCounts[itemId] || 0) + 1;
-                    if (wasLearned) {
-                        this.state.progress.learnedItems.delete(itemId);
-                    }
-                }
-
-                const usedTypes = this.state.progress.usedExercises[itemId] || [];
-                if (!usedTypes.includes(item.exerciseType)) {
-                    usedTypes.push(item.exerciseType);
-                }
-                this.state.progress.usedExercises[itemId] = usedTypes;
-                
-                // ** NEW: Call the Firestore update function instead of saveProgress **
-                this.updateFirestoreProgress();
-
-                this.showFeedback(isCorrect, correctAnswer);
-            },
-
-            // ... (The rest of the code remains the same as the last correct version)
-
-            // Make sure to include all other functions like:
-            // renderPracticeGuide, renderGuideModal, updateFlashcardView, getPossibleExerciseTypes,
-            // all get...HTML functions, submitToFirebase, startFlashcardSession, etc.
-            // checkGuideAnswer, showFeedback, playAudio, shuffleArray, findRoot, showModal,
-            // all practice, mindmap, and final test functions.
-        };
-
-        // This is a placeholder. The full code from the previous correct step should be included here.
-        // I will re-add the missing functions for completeness.
-        
-        // --- All other functions from previous step are assumed to be here ---
-        // I'll add them back now to make the code block complete.
             
             renderPracticeGuide() {
                 const guideContainer = document.getElementById('practice-guide-buttons');
@@ -799,7 +740,6 @@
                 const submissionPayload = {
                     score: score,
                     totalPoints: 100,
-                    // The main answers object now stores the final snapshot
                     answers: { 
                         learnedCount, 
                         totalItems,
@@ -1256,6 +1196,40 @@
                 }
             },
 
+            checkAnswer(userAnswer, item, container) {
+                if (!item) item = this.state.currentSessionItems[this.state.currentIndex];
+                const correctAnswer = this.state.currentCorrectAnswer;
+                const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
+
+                (container || this.DOM.main).querySelectorAll('button, input').forEach(el => el.disabled = true);
+                
+                const itemId = item.id;
+                const wasLearned = this.state.progress.learnedItems.has(itemId);
+
+                if (isCorrect) {
+                    this.state.currentScore++;
+                    this.state.sessionCorrectItems.push(item);
+                    this.state.progress.learnedItems.add(itemId);
+                    delete this.state.progress.incorrectCounts[itemId];
+                } else {
+                    this.state.sessionIncorrectItems.push(item);
+                    this.state.progress.incorrectCounts[itemId] = (this.state.progress.incorrectCounts[itemId] || 0) + 1;
+                    if (wasLearned) {
+                        this.state.progress.learnedItems.delete(itemId);
+                    }
+                }
+
+                const usedTypes = this.state.progress.usedExercises[itemId] || [];
+                if (!usedTypes.includes(item.exerciseType)) {
+                    usedTypes.push(item.exerciseType);
+                }
+                this.state.progress.usedExercises[itemId] = usedTypes;
+                
+                this.updateFirestoreProgress();
+
+                this.showFeedback(isCorrect, correctAnswer);
+            },
+
             checkGuideAnswer(userAnswer, item, container) {
                 const correctAnswer = this.state.currentCorrectAnswer;
                 const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
@@ -1362,7 +1336,7 @@
                 if(cancelBtn) {
                     cancelBtn.onclick = closeModal;
                 }
-            },
+            }
         };
 
         document.addEventListener('DOMContentLoaded', () => App.init());
