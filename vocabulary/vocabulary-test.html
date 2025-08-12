@@ -10,7 +10,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
     
-    <!-- OGL Library for 3D Particles -->
     <script type="module">
         import { Renderer, Camera, Transform, Program, Geometry, Mesh } from 'https://cdn.skypack.dev/ogl';
         window.OGL = { Renderer, Camera, Transform, Program, Geometry, Mesh };
@@ -96,11 +95,13 @@
         .flashcard { width: 100%; height: 80%; max-height: 400px; cursor: pointer; position: relative; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(0.25, 1, 0.5, 1); }
         .flashcard.is-flipped { transform: rotateY(180deg); }
         .flashcard-face {
-            position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; /* Added for better browser compatibility */
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
             padding: 2rem; text-align: center;
             background: var(--glass-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
         }
+        /* */
         .flashcard-back { transform: rotateY(180deg); }
         .flashcard-word { font-family: 'Poppins', sans-serif; font-size: clamp(2rem, 8vw, 4rem); font-weight: 700; }
         .flashcard-pronunciation { font-family: 'Inter', sans-serif; color: var(--text-secondary); margin-top: 0.5rem; }
@@ -394,7 +395,7 @@
                     }, 1000);
                 }
 
-                this.DOM.main.innerHTML = `
+                // this.DOM.main.innerHTML = `
                     <div class="space-y-8 fade-in">
                         <div class="glass-panel p-6">
                              <h2 class="text-xl font-bold font-poppins mb-4">Tổng quan Tiến độ</h2>
@@ -407,7 +408,13 @@
                             <h2 class="text-xl font-bold font-poppins mb-4">Chế độ Học 📚</h2>
                             <div id="study-buttons" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <button data-study-mode="vocab-flashcard" class="cta-btn secondary !p-4 !items-start !text-left !rounded-2xl"><div class="text-lg"><i class="fas fa-clone w-6 text-primary-accent"></i></div><div><p class="font-bold">Flashcard Từ vựng</p><p class="text-xs font-normal">Học từ mới qua flashcard.</p></div></button>
-                                <button data-study-mode="mindmap" class="cta-btn secondary !p-4 !items-start !text-left !rounded-2xl"><div class="text-lg"><i class="fas fa-project-diagram w-6 text-sky-400"></i></div><div><p class="font-bold">Sơ đồ Từ loại</p><p class="text-xs font-normal">Khám phá mối liên hệ.</p></div></button>
+                                <button data-study-mode="mindmap" class="cta-btn secondary !p-4 !items-start !text-left !rounded-2xl" disabled>
+                                    <div class="text-lg"><i class="fas fa-project-diagram w-6 text-sky-400"></i></div>
+                                    <div>
+                                        <p class="font-bold">Sơ đồ Từ loại <span class="text-xs font-normal bg-yellow-500 text-black rounded-full px-2 py-0.5 ml-1">Sắp ra mắt</span></p>
+                                        <p class="text-xs font-normal">Khám phá mối liên hệ.</p>
+                                    </div>
+                                </button>
                                 <button data-study-mode="struct-flashcard" class="cta-btn secondary !p-4 !items-start !text-left !rounded-2xl"><div class="text-lg"><i class="fas fa-sitemap w-6 text-emerald-400"></i></div><div><p class="font-bold">Flashcard Cấu trúc</p><p class="text-xs font-normal">Học các cấu trúc câu.</p></div></button>
                             </div>
                         </div>
@@ -441,7 +448,10 @@
                     const mode = button.dataset.studyMode;
                     if (mode === 'vocab-flashcard') this.startFlashcardSession('word');
                     if (mode === 'struct-flashcard') this.startFlashcardSession('structure');
-                    if (mode === 'mindmap') this.renderMindmapFamilySelection();
+                    // if (mode === 'mindmap') {
+                        this.showModal("Sắp ra mắt", "Chức năng 'Sơ đồ Từ loại' hiện đang được phát triển và sẽ sớm có mặt. Vui lòng quay lại sau!");
+                        // this.renderMindmapFamilySelection(); // Original call disabled
+                    }
                 });
 
                 const practiceButtons = document.getElementById('practice-buttons');
@@ -469,13 +479,13 @@
             
             renderPracticeGuide() {
                 const guideContainer = document.getElementById('practice-guide-buttons');
-                const exerciseTypes = [
+                // const exerciseTypes = [
                     { type: 'MeaningMCQ', name: 'Trắc nghiệm Nghĩa', icon: 'fa-list-check', color: 'text-violet-400' },
                     { type: 'WordFamilyMCQ', name: 'Họ từ', icon: 'fa-users', color: 'text-blue-400' },
                     { type: 'SentenceUnscramble', name: 'Sắp xếp câu', icon: 'fa-sort-alpha-down', color: 'text-indigo-400' },
                     { type: 'ErrorCorrection', name: 'Sửa lỗi', icon: 'fa-check-double', color: 'text-rose-400' },
                     { type: 'IPAFill', name: 'Điền phiên âm', icon: 'fa-language', color: 'text-orange-400' },
-                    { type: 'CollocationOddOneOut', name: 'Collocation', icon: 'fa-puzzle-piece', color: 'text-amber-400' },
+                    // { type: 'CollocationOddOneOut', name: 'Collocation', icon: 'fa-puzzle-piece', color: 'text-amber-400' }, // REMOVED
                     { type: 'BestFitReplacement', name: 'Thay thế', icon: 'fa-sync-alt', color: 'text-sky-400' },
                     { type: 'InferenceFromScenario', name: 'Suy luận', icon: 'fa-brain', color: 'text-emerald-400' },
                     { type: 'BestParaphrase', name: 'Diễn giải', icon: 'fa-retweet', color: 'text-pink-400' },
@@ -543,22 +553,26 @@
                 if (!item || !card) return;
 
                 card.classList.remove('is-flipped');
-                const isStructure = item.itemType === 'structure';
-                const audioBtnHTML = item.audioUrl ? `<button class="audio-btn" data-audio-url="${item.audioUrl}"><i class="fas fa-volume-up"></i></button>` : '';
-
-                const frontHTML = `${audioBtnHTML}<div class="flashcard-word">${isStructure ? item.phrase : item.word}</div>`;
-                const backHTML = isStructure
-                    ? `<div class="flashcard-meaning">${item.meaning}</div><p class="flashcard-example">"${item.generated_tasks?.basic_example || ''}"</p>`
-                    : `${audioBtnHTML}<div class="flashcard-meaning">${item.meaning}</div><p class="flashcard-pronunciation">${item.pronunciation} <span class="mx-2">&bull;</span> ${item.type}</p><p class="flashcard-example">"${item.generated_tasks?.basic_example || ''}"</p>`;
                 
-                card.innerHTML = `<div class="flashcard-face flashcard-front">${frontHTML}</div><div class="flashcard-face flashcard-back">${backHTML}</div>`;
-                
-                card.querySelectorAll('.audio-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        this.playAudio(e.currentTarget.dataset.audioUrl);
+                // Use setTimeout to allow the card to flip back before changing content
+                setTimeout(() => {
+                    const isStructure = item.itemType === 'structure';
+                    const audioBtnHTML = item.audioUrl ? `<button class="audio-btn" data-audio-url="${item.audioUrl}"><i class="fas fa-volume-up"></i></button>` : '';
+                    
+                    const frontHTML = `${audioBtnHTML}<div class="flashcard-word">${isStructure ? item.phrase : item.word}</div>`;
+                    const backHTML = isStructure
+                        ? `<div class="flashcard-meaning">${item.meaning}</div><p class="flashcard-example">"${item.generated_tasks?.basic_example || ''}"</p>`
+                        : `${audioBtnHTML}<div class="flashcard-meaning">${item.meaning}</div><p class="flashcard-pronunciation">${item.pronunciation} <span class="mx-2">&bull;</span> ${item.type}</p><p class="flashcard-example">"${item.generated_tasks?.basic_example || ''}"</p>`;
+                    
+                    card.innerHTML = `<div class="flashcard-face flashcard-front">${frontHTML}</div><div class="flashcard-face flashcard-back">${backHTML}</div>`;
+                    
+                    card.querySelectorAll('.audio-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            this.playAudio(e.currentTarget.dataset.audioUrl);
+                        });
                     });
-                });
+                }, 150); // A small delay, less than the transition time
                 
                 document.getElementById('card-counter').textContent = `${this.state.currentIndex + 1} / ${this.state.currentSessionItems.length}`;
             },
@@ -573,7 +587,7 @@
                 if (tasks.sentence_unscramble?.correct_sentence) types.push('SentenceUnscramble');
                 if (tasks.error_correction?.incorrect_sentence) types.push('ErrorCorrection');
                 if (tasks.ipa_fill?.distractors?.length >= 3) types.push('IPAFill');
-                if (tasks.collocation_odd_one_out?.options?.length > 1) types.push('CollocationOddOneOut');
+                // // if (tasks.collocation_odd_one_out?.options?.length > 1) types.push('CollocationOddOneOut'); // REMOVED
                 if (tasks.best_fit_replacement?.distractors?.length >= 3) types.push('BestFitReplacement');
                 if (tasks.inference_from_scenario?.distractors?.length >= 3) types.push('InferenceFromScenario');
                 if (tasks.best_paraphrase?.options?.length > 1) types.push('BestParaphrase');
@@ -858,9 +872,9 @@
                        <h2 class="text-xl font-bold font-poppins">Họ từ: ${familyRoot}</h2>
                    </div>
                    <div class="relative w-full h-[60vh] flex items-center justify-center overflow-hidden">
-                       <div id="mindmap" class="relative w-[150px] h-[150px]"></div>
+                        <div id="mindmap" class="relative w-[150px] h-[150px]"></div>
                    </div>
-               </div>`;
+                </div>`;
                 document.getElementById('back-to-selection-btn').addEventListener('click', () => this.renderMindmapFamilySelection());
 
                 const container = document.getElementById('mindmap');
