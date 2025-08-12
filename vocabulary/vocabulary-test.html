@@ -95,14 +95,16 @@
         .flashcard { width: 100%; height: 80%; max-height: 400px; cursor: pointer; position: relative; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(0.25, 1, 0.5, 1); }
         .flashcard.is-flipped { transform: rotateY(180deg); }
         .flashcard-face {
-            position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; /* Added for better browser compatibility */
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             padding: 2rem; text-align: center;
             background: var(--glass-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
         }
-        /* */
-        .flashcard-back { transform: rotateY(180deg); }
+        .flashcard-back {
+            /* This rule pre-rotates the back face. It is then revealed when the parent card flips. */
+            transform: rotateY(180deg);
+        }
         .flashcard-word { font-family: 'Poppins', sans-serif; font-size: clamp(2rem, 8vw, 4rem); font-weight: 700; }
         .flashcard-pronunciation { font-family: 'Inter', sans-serif; color: var(--text-secondary); margin-top: 0.5rem; }
         .flashcard-meaning { font-family: 'Poppins', sans-serif; font-size: clamp(1.5rem, 6vw, 2.5rem); font-weight: 600; }
@@ -164,7 +166,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
-        // --- PARTICLE BACKGROUND SCRIPT (Giữ nguyên) ---
+        // --- PARTICLE BACKGROUND SCRIPT (No changes) ---
         if (window.OGL) {
             const { Renderer, Camera, Program, Geometry, Mesh, Transform } = window.OGL;
             const container = document.getElementById('ogl-canvas-back');
@@ -204,7 +206,7 @@
             }
         }
 
-        // --- APPLICATION LOGIC ---
+        // --- APPLICATION LOGIC (No changes from previous correct version) ---
         const App = {
             state: {
                 db: null,
@@ -384,7 +386,7 @@
                 const structProgress = structureList.length > 0 ? (structLearned / structureList.length * 100) : 0;
 
                 const overallProgress = totalItems > 0 ? (learnedCount / totalItems * 100) : 0;
-                const requiredProgress = 85; // Ngưỡng để mở khóa KT cuối kỳ
+                const requiredProgress = 85; 
                 const isEligibleForFinalTest = overallProgress >= requiredProgress;
 
                 const notifKey = `finalTestNotif_${this.state.submissionId}`;
@@ -395,7 +397,7 @@
                     }, 1000);
                 }
 
-                // this.DOM.main.innerHTML = `
+                this.DOM.main.innerHTML = `
                     <div class="space-y-8 fade-in">
                         <div class="glass-panel p-6">
                              <h2 class="text-xl font-bold font-poppins mb-4">Tổng quan Tiến độ</h2>
@@ -444,13 +446,12 @@
                 this.renderPracticeGuide();
                 document.getElementById('study-buttons').addEventListener('click', e => {
                     const button = e.target.closest('button');
-                    if (!button || !button.dataset.studyMode) return;
+                    if (!button || !button.dataset.studyMode || button.disabled) return;
                     const mode = button.dataset.studyMode;
                     if (mode === 'vocab-flashcard') this.startFlashcardSession('word');
                     if (mode === 'struct-flashcard') this.startFlashcardSession('structure');
-                    // if (mode === 'mindmap') {
-                        this.showModal("Sắp ra mắt", "Chức năng 'Sơ đồ Từ loại' hiện đang được phát triển và sẽ sớm có mặt. Vui lòng quay lại sau!");
-                        // this.renderMindmapFamilySelection(); // Original call disabled
+                    if (mode === 'mindmap') {
+                         this.showModal("Sắp ra mắt", "Chức năng 'Sơ đồ Từ loại' hiện đang được phát triển và sẽ sớm có mặt. Vui lòng quay lại sau!");
                     }
                 });
 
@@ -479,13 +480,12 @@
             
             renderPracticeGuide() {
                 const guideContainer = document.getElementById('practice-guide-buttons');
-                // const exerciseTypes = [
+                const exerciseTypes = [
                     { type: 'MeaningMCQ', name: 'Trắc nghiệm Nghĩa', icon: 'fa-list-check', color: 'text-violet-400' },
                     { type: 'WordFamilyMCQ', name: 'Họ từ', icon: 'fa-users', color: 'text-blue-400' },
                     { type: 'SentenceUnscramble', name: 'Sắp xếp câu', icon: 'fa-sort-alpha-down', color: 'text-indigo-400' },
                     { type: 'ErrorCorrection', name: 'Sửa lỗi', icon: 'fa-check-double', color: 'text-rose-400' },
                     { type: 'IPAFill', name: 'Điền phiên âm', icon: 'fa-language', color: 'text-orange-400' },
-                    // { type: 'CollocationOddOneOut', name: 'Collocation', icon: 'fa-puzzle-piece', color: 'text-amber-400' }, // REMOVED
                     { type: 'BestFitReplacement', name: 'Thay thế', icon: 'fa-sync-alt', color: 'text-sky-400' },
                     { type: 'InferenceFromScenario', name: 'Suy luận', icon: 'fa-brain', color: 'text-emerald-400' },
                     { type: 'BestParaphrase', name: 'Diễn giải', icon: 'fa-retweet', color: 'text-pink-400' },
@@ -554,7 +554,6 @@
 
                 card.classList.remove('is-flipped');
                 
-                // Use setTimeout to allow the card to flip back before changing content
                 setTimeout(() => {
                     const isStructure = item.itemType === 'structure';
                     const audioBtnHTML = item.audioUrl ? `<button class="audio-btn" data-audio-url="${item.audioUrl}"><i class="fas fa-volume-up"></i></button>` : '';
@@ -572,7 +571,7 @@
                             this.playAudio(e.currentTarget.dataset.audioUrl);
                         });
                     });
-                }, 150); // A small delay, less than the transition time
+                }, 150); 
                 
                 document.getElementById('card-counter').textContent = `${this.state.currentIndex + 1} / ${this.state.currentSessionItems.length}`;
             },
@@ -580,14 +579,13 @@
             getPossibleExerciseTypes(item) {
                 const types = [];
                 const tasks = item.generated_tasks;
-                if (!tasks) return ['MeaningMCQ']; // Fallback
+                if (!tasks) return ['MeaningMCQ']; 
 
                 if (tasks.meaning_mcq?.distractors_vi?.length >= 3) types.push('MeaningMCQ');
                 if (tasks.word_family_mcq?.distractors?.length >= 3) types.push('WordFamilyMCQ');
                 if (tasks.sentence_unscramble?.correct_sentence) types.push('SentenceUnscramble');
                 if (tasks.error_correction?.incorrect_sentence) types.push('ErrorCorrection');
                 if (tasks.ipa_fill?.distractors?.length >= 3) types.push('IPAFill');
-                // // if (tasks.collocation_odd_one_out?.options?.length > 1) types.push('CollocationOddOneOut'); // REMOVED
                 if (tasks.best_fit_replacement?.distractors?.length >= 3) types.push('BestFitReplacement');
                 if (tasks.inference_from_scenario?.distractors?.length >= 3) types.push('InferenceFromScenario');
                 if (tasks.best_paraphrase?.options?.length > 1) types.push('BestParaphrase');
@@ -596,12 +594,8 @@
                 return types.length > 0 ? types : ['MeaningMCQ'];
             },
             
-            // --- CÁC HÀM RENDER BÀI TẬP ---
-            
-            // *** FIXED FUNCTION ***
             getMeaningMCQHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.meaning_mcq;
-                // Fallback if meaning_mcq data is missing. This is a data issue, but we can handle it gracefully.
                 if (!tasks || !tasks.distractors_vi || !tasks.distractors_en) {
                     console.warn("MeaningMCQ data is incomplete for item:", item);
                     return '<div>Không có đủ dữ liệu cho dạng bài tập này.</div>';
@@ -613,18 +607,15 @@
                 let question, correctAnswer, distractors;
 
                 if (isEngToViet) {
-                    // Question is in English, options are in Vietnamese
                     question = `<span class="font-poppins font-bold text-3xl">${isStructure ? item.phrase : item.word}</span> ${!isStructure ? `<span class="text-base font-normal text-text-secondary">(${item.type})</span>` : ''}`;
                     correctAnswer = item.meaning;
                     distractors = this.shuffleArray([...tasks.distractors_vi]).slice(0, 3);
                 } else {
-                    // Question is in Vietnamese, options are in English
                     question = `<span class="font-poppins font-bold text-3xl">${item.meaning}</span>`;
                     correctAnswer = isStructure ? item.phrase : item.word;
                     distractors = this.shuffleArray([...tasks.distractors_en]).slice(0, 3);
                 }
 
-                // A crucial check to prevent the error. If for some reason the correct answer is still undefined, we can't proceed.
                 if (correctAnswer === undefined || correctAnswer === null) {
                     console.error("Could not determine correct answer for item:", item);
                     return `<div>Lỗi: Không thể xác định đáp án đúng cho mục này.</div>`;
@@ -907,7 +898,7 @@
                     const weakItemIds = Object.keys(this.state.progress.incorrectCounts)
                         .sort((a,b) => this.state.progress.incorrectCounts[b] - this.state.progress.incorrectCounts[a]);
                     itemsToPractice = weakItemIds.map(id => allItems.find(item => item.id === id)).filter(Boolean);
-                } else { // 'normal' mode
+                } else { 
                     const unlearnedItems = allItems.filter(item => !this.state.progress.learnedItems.has(item.id));
                     const learnedItems = allItems.filter(item => this.state.progress.learnedItems.has(item.id));
                     
