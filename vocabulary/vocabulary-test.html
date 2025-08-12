@@ -222,7 +222,6 @@
                 progress: {
                     learnedItems: new Set(),
                     incorrectCounts: {},
-                    // FIX: Thêm state để theo dõi các bài tập đã sử dụng cho mỗi item
                     usedExercises: {}, 
                 },
                 isSubmitting: false,
@@ -237,7 +236,6 @@
                     violations: 0,
                     timerId: null,
                     timeRemaining: 0,
-                    // FIX: Tách riêng event handlers để xử lý logic chống gian lận chính xác hơn
                     eventHandler: null,
                     keyHandler: null,
                 }
@@ -277,7 +275,6 @@
                     
                     this.state.session.isCompleted = submissionData.status === 'submitted';
 
-                    // FIX: Đảm bảo tải đúng trạng thái và điểm của bài kiểm tra cuối kỳ
                     if (submissionData.finalTest && submissionData.finalTest.status === 'completed') {
                         this.state.session.finalTestTaken = true;
                         this.state.session.finalTestScore = submissionData.finalTest.score;
@@ -303,7 +300,6 @@
                 }
             },
             
-            // Giữ nguyên
             processData() {
                 const structures = [];
                 const families = {};
@@ -332,7 +328,6 @@
                 this.state.wordFamilies = families;
             },
 
-            // Cập nhật để tải cả usedExercises
             loadProgress() {
                 const progressKey = `vocabProgress_${this.state.submissionId}`;
                 const savedProgress = localStorage.getItem(progressKey);
@@ -340,23 +335,19 @@
                     const parsed = JSON.parse(savedProgress);
                     this.state.progress.learnedItems = new Set(parsed.learnedItems || []);
                     this.state.progress.incorrectCounts = parsed.incorrectCounts || {};
-                    // FIX: Tải tiến trình các bài tập đã làm
                     this.state.progress.usedExercises = parsed.usedExercises || {};
                 }
             },
 
-            // Cập nhật để lưu cả usedExercises
             saveProgress() {
                 const progressKey = `vocabProgress_${this.state.submissionId}`;
                 localStorage.setItem(progressKey, JSON.stringify({
                     learnedItems: [...this.state.progress.learnedItems],
                     incorrectCounts: this.state.progress.incorrectCounts,
-                    // FIX: Lưu tiến trình các bài tập đã làm
                     usedExercises: this.state.progress.usedExercises,
                 }));
             },
 
-            // Giữ nguyên
             renderHeader() {
                 const isCompleted = this.state.session.isCompleted;
                 const buttonText = isCompleted ? "Cập nhật tiến độ" : "Hoàn thành & Lưu";
@@ -380,7 +371,6 @@
                 });
             },
 
-            // Cập nhật để hiển thị thông báo và điểm KT cuối kỳ
             renderDashboard() {
                 const { wordList, structureList, progress } = this.state;
                 const allItems = [...wordList, ...structureList];
@@ -477,7 +467,6 @@
                 }
             },
             
-            // Giữ nguyên
             renderPracticeGuide() {
                 const guideContainer = document.getElementById('practice-guide-buttons');
                 const exerciseTypes = [
@@ -507,7 +496,6 @@
                 });
             },
 
-            // Giữ nguyên
             renderGuideModal(exerciseType) {
                 const exerciseInfo = {
                     'MeaningMCQ': { name: 'Trắc nghiệm Nghĩa', desc: 'Chọn nghĩa tiếng Việt đúng cho từ tiếng Anh, hoặc ngược lại.' },
@@ -549,7 +537,6 @@
                 this.attachPracticeEventListeners(suitableItem, guideContainer, true);
             },
             
-            // Giữ nguyên
             updateFlashcardView() {
                 const item = this.state.currentSessionItems[this.state.currentIndex];
                 const card = document.getElementById('flashcard');
@@ -576,7 +563,6 @@
                 document.getElementById('card-counter').textContent = `${this.state.currentIndex + 1} / ${this.state.currentSessionItems.length}`;
             },
 
-            // Giữ nguyên
             getPossibleExerciseTypes(item) {
                 const types = [];
                 const tasks = item.generated_tasks;
@@ -596,18 +582,50 @@
                 return types.length > 0 ? types : ['MeaningMCQ'];
             },
             
-            // --- CÁC HÀM RENDER BÀI TẬP (GIỮ NGUYÊN) ---
+            // --- CÁC HÀM RENDER BÀI TẬP ---
+            
+            // *** FIXED FUNCTION ***
             getMeaningMCQHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.meaning_mcq;
-                if (!tasks) return '<div>Không có dữ liệu cho bài tập này.</div>';
-                const isEngToViet = Math.random() > 0.5;
-                const question = isEngToViet ? `<span class="font-poppins font-bold text-3xl">${item.word}</span> <span class="text-base font-normal text-text-secondary">(${item.type})</span>` : `<span class="font-poppins font-bold text-3xl">${item.meaning}</span>`;
-                this.state.currentCorrectAnswer = isEngToViet ? item.meaning : item.word;
-                
-                const distractors = this.shuffleArray(isEngToViet ? [...tasks.distractors_vi] : [...tasks.distractors_en]).slice(0, 3);
-                const options = this.shuffleArray([this.state.currentCorrectAnswer, ...distractors]);
+                // Fallback if meaning_mcq data is missing. This is a data issue, but we can handle it gracefully.
+                if (!tasks || !tasks.distractors_vi || !tasks.distractors_en) {
+                    console.warn("MeaningMCQ data is incomplete for item:", item);
+                    return '<div>Không có đủ dữ liệu cho dạng bài tập này.</div>';
+                }
 
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Trắc nghiệm: Chọn đáp án đúng</h2><div class="min-h-[60px] mb-8">${question}</div><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                const isStructure = item.itemType === 'structure';
+                const isEngToViet = Math.random() > 0.5;
+
+                let question, correctAnswer, distractors;
+
+                if (isEngToViet) {
+                    // Question is in English, options are in Vietnamese
+                    question = `<span class="font-poppins font-bold text-3xl">${isStructure ? item.phrase : item.word}</span> ${!isStructure ? `<span class="text-base font-normal text-text-secondary">(${item.type})</span>` : ''}`;
+                    correctAnswer = item.meaning;
+                    distractors = this.shuffleArray([...tasks.distractors_vi]).slice(0, 3);
+                } else {
+                    // Question is in Vietnamese, options are in English
+                    question = `<span class="font-poppins font-bold text-3xl">${item.meaning}</span>`;
+                    correctAnswer = isStructure ? item.phrase : item.word;
+                    distractors = this.shuffleArray([...tasks.distractors_en]).slice(0, 3);
+                }
+
+                // A crucial check to prevent the error. If for some reason the correct answer is still undefined, we can't proceed.
+                if (correctAnswer === undefined || correctAnswer === null) {
+                    console.error("Could not determine correct answer for item:", item);
+                    return `<div>Lỗi: Không thể xác định đáp án đúng cho mục này.</div>`;
+                }
+
+                this.state.currentCorrectAnswer = correctAnswer;
+                const options = this.shuffleArray([correctAnswer, ...distractors]);
+
+                return `<div class="question-block">
+                            <h2 class="text-sm font-semibold text-primary-accent mb-2">Trắc nghiệm: Chọn đáp án đúng</h2>
+                            <div class="min-h-[60px] mb-8">${question}</div>
+                            <div id="answer-options" class="space-y-3">
+                                ${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}
+                            </div>
+                        </div>`;
             },
             
             getWordFamilyMCQHTML(item, isExample = false) {
@@ -710,7 +728,6 @@
                 </div>`;
             },
 
-            // Giữ nguyên
             async submitToFirebase(isFinal = false) {
                 if (this.state.isSubmitting) return;
                 this.state.isSubmitting = true;
@@ -760,7 +777,6 @@
                 }
             },
             
-            // Giữ nguyên
             startFlashcardSession(type) {
                 this.state.currentSessionItems = type === 'word' ? this.state.wordList : this.state.structureList;
                 if(this.state.currentSessionItems.length === 0) {
@@ -771,7 +787,6 @@
                 this.renderFlashcardViewer();
             },
             
-            // Giữ nguyên
             renderFlashcardViewer() {
                 this.DOM.main.innerHTML = `
                 <div class="glass-panel p-6 fade-in">
@@ -799,7 +814,6 @@
                 document.getElementById('next-card-btn').addEventListener('click', () => this.navigateCard(1));
             },
 
-            // Giữ nguyên
             navigateCard(direction) {
                 const card = document.getElementById('flashcard');
                 if (!card) return;
@@ -809,7 +823,6 @@
                 this.updateFlashcardView();
             },
 
-            // Giữ nguyên
             renderMindmapFamilySelection() {
                 const familiesWithMultipleMembers = Object.entries(this.state.wordFamilies).filter(([root, members]) => members.length > 1);
                 if (familiesWithMultipleMembers.length === 0) {
@@ -835,7 +848,6 @@
                 });
             },
 
-            // Giữ nguyên
             renderMindmap(familyRoot) {
                 const family = this.state.wordFamilies[familyRoot];
                 const centerWord = family[0];
@@ -869,7 +881,6 @@
                 container.innerHTML = html;
             },
 
-            // Cập nhật để áp dụng logic 30% cho kiến thức đã học
             startPractice(mode, count = 10) {
                 this.state.currentIndex = 0;
                 this.state.currentScore = 0;
@@ -883,11 +894,9 @@
                         .sort((a,b) => this.state.progress.incorrectCounts[b] - this.state.progress.incorrectCounts[a]);
                     itemsToPractice = weakItemIds.map(id => allItems.find(item => item.id === id)).filter(Boolean);
                 } else { // 'normal' mode
-                    // FIX: Áp dụng logic 30% cho các item đã học
                     const unlearnedItems = allItems.filter(item => !this.state.progress.learnedItems.has(item.id));
                     const learnedItems = allItems.filter(item => this.state.progress.learnedItems.has(item.id));
                     
-                    // Lấy ngẫu nhiên 30% từ danh sách đã học
                     const learnedItemsForReview = learnedItems.filter(() => Math.random() < 0.3);
 
                     itemsToPractice = [...unlearnedItems, ...learnedItemsForReview];
@@ -902,7 +911,6 @@
                 this.renderPracticeView();
             },
 
-            // Giữ nguyên
             renderPracticeView() {
                 const total = this.state.currentSessionItems.length;
                 const progressPercent = total > 0 ? ((this.state.currentIndex) / total * 100) : 0;
@@ -923,10 +931,8 @@
                 this.renderNextQuestion();
             },
 
-            // Cập nhật để chọn câu hỏi không bị lặp
             renderNextQuestion() {
                 if (this.state.currentIndex >= this.state.currentSessionItems.length) {
-                    // Nếu đang trong bài KT cuối kỳ, nộp bài. Nếu không, hiển thị tóm tắt.
                     if (document.getElementById('progress-bar-final-test')) {
                         this.submitFinalTest();
                     } else {
@@ -938,26 +944,23 @@
                 const qContainer = document.getElementById('question-container');
                 if (!qContainer) return;
                 
-                // FIX: Logic chọn dạng bài tập không lặp lại
                 const possibleTypes = this.getPossibleExerciseTypes(item);
                 const usedTypes = this.state.progress.usedExercises[item.id] || [];
                 let availableTypes = possibleTypes.filter(type => !usedTypes.includes(type));
 
-                // Nếu đã hỏi hết các dạng, reset và hỏi lại từ đầu
                 if (availableTypes.length === 0) {
                     delete this.state.progress.usedExercises[item.id];
                     availableTypes = possibleTypes;
                 }
 
                 const exerciseType = this.shuffleArray(availableTypes)[0];
-                item.exerciseType = exerciseType; // Lưu dạng bài tập được chọn vào item
+                item.exerciseType = exerciseType;
 
                 const renderFunction = this[`get${exerciseType}HTML`];
                 qContainer.innerHTML = renderFunction.call(this, item);
                 this.attachPracticeEventListeners(item, qContainer);
             },
 
-            // Giữ nguyên
             renderSummary() {
                 const score = this.state.currentScore;
                 const total = this.state.currentSessionItems.length;
@@ -984,12 +987,10 @@
                 document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.renderDashboard());
             },
 
-            // Giữ nguyên
             startFinalTest() {
                 const allItems = [...this.state.wordList, ...this.state.structureList];
                 let numQuestions = Math.min(Math.floor(allItems.length * 0.5), 50);
 
-                // Ưu tiên các câu yếu
                 const weakItemIds = Object.keys(this.state.progress.incorrectCounts)
                     .sort((a,b) => this.state.progress.incorrectCounts[b] - this.state.progress.incorrectCounts[a]);
                 
@@ -997,7 +998,6 @@
                     .map(id => allItems.find(item => item.id === id))
                     .filter(Boolean);
 
-                // Nếu không đủ câu yếu, lấy thêm từ các câu đã học
                 if (itemsToPractice.length < numQuestions) {
                     const learnedButNotWeak = [...this.state.progress.learnedItems]
                         .filter(id => !this.state.progress.incorrectCounts[id])
@@ -1017,13 +1017,12 @@
                 this.state.sessionCorrectItems = [];
                 this.state.sessionIncorrectItems = [];
                 this.state.proctoring.violations = 0;
-                this.state.proctoring.timeRemaining = this.state.currentSessionItems.length * 75; // 75 giây mỗi câu
+                this.state.proctoring.timeRemaining = this.state.currentSessionItems.length * 75;
 
                 this.renderFinalTestView();
                 this.startProctoring();
             },
 
-            // Giữ nguyên
             renderFinalTestView() {
                 const total = this.state.currentSessionItems.length;
                 const progressPercent = total > 0 ? (this.state.currentIndex / total * 100) : 0;
@@ -1045,7 +1044,7 @@
                         <div id="feedback-container" class="mt-4"></div>
                     </div>`;
                 
-                clearInterval(this.state.proctoring.timerId); // Xóa timer cũ
+                clearInterval(this.state.proctoring.timerId);
                 this.state.proctoring.timerId = setInterval(() => {
                     this.state.proctoring.timeRemaining--;
                     const mins = Math.floor(this.state.proctoring.timeRemaining / 60);
@@ -1062,7 +1061,6 @@
                 this.renderNextQuestion();
             },
 
-            // Cập nhật để không phát hiện gian lận sai
             startProctoring() {
                 const logViolation = (type) => {
                     this.state.proctoring.violations++;
@@ -1074,16 +1072,14 @@
                     setTimeout(() => warning.remove(), 3000);
                 };
 
-                // FIX: Xử lý các sự kiện rời khỏi trang
                 this.state.proctoring.eventHandler = (e) => {
                     logViolation(e.type);
                 };
 
-                // FIX: Chỉ xử lý các phím tắt đáng ngờ, bỏ qua việc gõ phím thông thường
                 this.state.proctoring.keyHandler = (e) => {
-                    const isSuspicious = e.key.startsWith('F') || // F1-F12
-                                         (e.ctrlKey && e.shiftKey) || // Ctrl+Shift+...
-                                         (e.metaKey && e.altKey) || // Cmd+Option (Mac)
+                    const isSuspicious = e.key.startsWith('F') ||
+                                         (e.ctrlKey && e.shiftKey) ||
+                                         (e.metaKey && e.altKey) ||
                                          e.key === 'ContextMenu';
                     
                     if (isSuspicious) {
@@ -1092,18 +1088,15 @@
                     }
                 };
                 
-                // Các hành vi chắc chắn là gian lận
                 window.addEventListener('blur', this.state.proctoring.eventHandler);
                 document.addEventListener('visibilitychange', this.state.proctoring.eventHandler);
                 document.addEventListener('contextmenu', this.state.proctoring.eventHandler);
                 document.addEventListener('copy', this.state.proctoring.eventHandler);
                 document.addEventListener('paste', this.state.proctoring.eventHandler);
                 
-                // Các phím tắt đáng ngờ
                 document.addEventListener('keydown', this.state.proctoring.keyHandler);
             },
 
-            // Cập nhật để gỡ bỏ đúng các event listeners
             stopProctoring() {
                 clearInterval(this.state.proctoring.timerId);
                 if (this.state.proctoring.eventHandler) {
@@ -1118,7 +1111,6 @@
                 }
             },
 
-            // Cập nhật để lưu cả điểm chính và chi tiết bài test
             async submitFinalTest() {
                 this.stopProctoring();
                 if (this.state.isSubmitting) return;
@@ -1128,9 +1120,8 @@
                 
                 this.DOM.main.innerHTML = `<div class="text-center p-8"><div class="w-12 h-12 border-4 border-t-violet-500 border-gray-200 rounded-full animate-spin mx-auto"></div><p class="mt-4 font-semibold">Đang nộp điểm của bạn...</p></div>`;
 
-                // FIX: Cập nhật cả trường `score` chính và object `finalTest`
                 const payload = {
-                    score: score, // Cập nhật điểm chính để hiển thị trên dashboard
+                    score: score,
                     finalTest: {
                         status: 'completed',
                         score: score,
@@ -1158,7 +1149,6 @@
                 }
             },
 
-            // Giữ nguyên
             attachPracticeEventListeners(item, container, isGuide = false) {
                 if (!container) return;
                 const checkAnswerFunction = isGuide ? this.checkGuideAnswer.bind(this) : this.checkAnswer.bind(this);
@@ -1209,7 +1199,6 @@
                 }
             },
             
-            // Cập nhật để xử lý logic learned/unlearned và ghi nhớ câu hỏi
             checkAnswer(userAnswer, item, container) {
                 if (!item) item = this.state.currentSessionItems[this.state.currentIndex];
                 const correctAnswer = this.state.currentCorrectAnswer;
@@ -1228,13 +1217,11 @@
                 } else {
                     this.state.sessionIncorrectItems.push(item);
                     this.state.progress.incorrectCounts[itemId] = (this.state.progress.incorrectCounts[itemId] || 0) + 1;
-                    // FIX: Nếu trả lời sai một item đã học, nó sẽ trở thành chưa học
                     if (wasLearned) {
                         this.state.progress.learnedItems.delete(itemId);
                     }
                 }
 
-                // FIX: Ghi nhớ dạng bài tập vừa được hỏi
                 const usedTypes = this.state.progress.usedExercises[itemId] || [];
                 if (!usedTypes.includes(item.exerciseType)) {
                     usedTypes.push(item.exerciseType);
@@ -1245,7 +1232,6 @@
                 this.showFeedback(isCorrect, correctAnswer);
             },
 
-            // Giữ nguyên
             checkGuideAnswer(userAnswer, item, container) {
                 const correctAnswer = this.state.currentCorrectAnswer;
                 const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
@@ -1253,7 +1239,6 @@
                 this.showFeedback(isCorrect, correctAnswer, container.parentElement.querySelector('#guide-feedback-container'), true);
             },
 
-            // Giữ nguyên
             showFeedback(isCorrect, correctAnswer, container = null, isGuide = false) {
                 if (!container) container = document.getElementById('feedback-container');
                 if (!container) return;
@@ -1274,16 +1259,13 @@
                     nextBtn.focus();
                     nextBtn.addEventListener('click', () => {
                         this.state.currentIndex++;
-                        // Kiểm tra xem có phải đang trong bài KT cuối kỳ không
                         if (document.getElementById('progress-bar-final-test')) {
-                             // Nếu hết câu thì nộp bài, nếu không thì render câu tiếp
                             if (this.state.currentIndex >= this.state.currentSessionItems.length) {
                                 this.submitFinalTest();
                             } else {
                                 this.renderFinalTestView();
                             }
                         } else {
-                             // Nếu hết câu thì hiện summary, nếu không thì render câu tiếp
                             if (this.state.currentIndex >= this.state.currentSessionItems.length) {
                                 this.renderSummary();
                             } else {
@@ -1294,7 +1276,6 @@
                 }
             },
 
-            // Giữ nguyên
             playAudio(url) {
                 if (!url) {
                     console.warn("No audio URL provided.");
@@ -1305,7 +1286,6 @@
                 this.state.audioPlayer.play().catch(e => console.error("Audio play failed:", e));
             },
 
-            // Giữ nguyên
             shuffleArray(array) {
                 for (let i = array.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
@@ -1314,7 +1294,6 @@
                 return array;
             },
 
-            // Giữ nguyên
             findRoot(word) {
                 const endings = ['s', 'es', 'ing', 'ed', 'er', 'est', 'ly', 'tion', 'sion', 'ment', 'able', 'ible', 'al', 'ial', 'ive', 'ous', 'ness'];
                 for (const ending of endings) {
@@ -1325,7 +1304,6 @@
                 return word;
             },
 
-            // Giữ nguyên
             showModal(title, message, showCancel = false, onConfirm = null, isGuide = false) {
                 const modalId = isGuide ? 'guide-modal' : 'main-modal';
                 const existingModal = document.getElementById(modalId);
