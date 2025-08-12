@@ -90,6 +90,7 @@
             background: var(--glass-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
         }
+        /* FIX 1: Remove transform from back face to prevent mirroring bug on mobile */
         .flashcard-back { transform: rotateY(180deg); }
         .flashcard-word { font-family: 'Poppins', sans-serif; font-size: clamp(2rem, 8vw, 4rem); font-weight: 700; }
         .flashcard-pronunciation { font-family: 'Inter', sans-serif; color: var(--text-secondary); margin-top: 0.5rem; }
@@ -386,7 +387,6 @@
                 const issueId = `${this.state.testData.id}_${item.id}`;
                 const issueRef = doc(this.state.db, "test_issues", issueId);
                 
-                // **FIX**: Capture the rendered HTML of the question
                 const questionContainer = this.DOM.main.querySelector('#question-container');
                 const renderedQuestionHTML = questionContainer ? questionContainer.innerHTML : '<em>Không thể tải nội dung câu hỏi.</em>';
 
@@ -407,7 +407,7 @@
                                 testTitle: this.state.testData.title,
                                 itemId: item.id,
                                 questionData: item,
-                                renderedQuestionHTML: renderedQuestionHTML, // **NEW**
+                                renderedQuestionHTML: renderedQuestionHTML,
                                 status: 'open',
                                 lastReportedAt: serverTimestamp(),
                                 errorReportsCount: reportType === 'error' ? 1 : 0,
@@ -642,26 +642,25 @@
                 const card = document.getElementById('flashcard');
                 if (!item || !card) return;
 
+                // FIX 1: Remove setTimeout and update content directly
                 card.classList.remove('is-flipped');
                 
-                setTimeout(() => {
-                    const isStructure = item.itemType === 'structure';
-                    const audioBtnHTML = item.audioUrl ? `<button class="audio-btn" data-audio-url="${item.audioUrl}"><i class="fas fa-volume-up"></i></button>` : '';
-                    
-                    const frontHTML = `${audioBtnHTML}<div class="flashcard-word">${isStructure ? item.phrase : item.word}</div>`;
-                    const backHTML = isStructure
-                        ? `<div class="flashcard-meaning">${item.meaning}</div><p class="flashcard-example">"${item.generated_tasks?.basic_example || ''}"</p>`
-                        : `${audioBtnHTML}<div class="flashcard-meaning">${item.meaning}</div><p class="flashcard-pronunciation">${item.pronunciation} <span class="mx-2">&bull;</span> ${item.type}</p><p class="flashcard-example">"${item.generated_tasks?.basic_example || ''}"</p>`;
-                    
-                    card.innerHTML = `<div class="flashcard-face flashcard-front">${frontHTML}</div><div class="flashcard-face flashcard-back">${backHTML}</div>`;
-                    
-                    card.querySelectorAll('.audio-btn').forEach(btn => {
-                        btn.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            this.playAudio(e.currentTarget.dataset.audioUrl);
-                        });
+                const isStructure = item.itemType === 'structure';
+                const audioBtnHTML = item.audioUrl ? `<button class="audio-btn" data-audio-url="${item.audioUrl}"><i class="fas fa-volume-up"></i></button>` : '';
+                
+                const frontHTML = `${audioBtnHTML}<div class="flashcard-word">${isStructure ? item.phrase : item.word}</div>`;
+                const backHTML = isStructure
+                    ? `<div class="flashcard-meaning">${item.meaning}</div><p class="flashcard-example">"${item.generated_tasks?.basic_example || ''}"</p>`
+                    : `${audioBtnHTML}<div class="flashcard-meaning">${item.meaning}</div><p class="flashcard-pronunciation">${item.pronunciation} <span class="mx-2">&bull;</span> ${item.type}</p><p class="flashcard-example">"${item.generated_tasks?.basic_example || ''}"</p>`;
+                
+                card.innerHTML = `<div class="flashcard-face flashcard-front">${frontHTML}</div><div class="flashcard-face flashcard-back">${backHTML}</div>`;
+                
+                card.querySelectorAll('.audio-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.playAudio(e.currentTarget.dataset.audioUrl);
                     });
-                }, 150); 
+                });
                 
                 document.getElementById('card-counter').textContent = `${this.state.currentIndex + 1} / ${this.state.currentSessionItems.length}`;
             },
@@ -1049,7 +1048,12 @@
                 }
                 const item = this.state.currentSessionItems[this.state.currentIndex];
                 const qContainer = document.getElementById('question-container');
-                if (!qContainer) return;
+                const fContainer = document.getElementById('feedback-container');
+                if (!qContainer || !fContainer) return;
+
+                // FIX 2: Clear containers before rendering new content
+                qContainer.innerHTML = '';
+                fContainer.innerHTML = '';
                 
                 const possibleTypes = this.getPossibleExerciseTypes(item);
                 const usedTypes = this.state.progress.usedExercises[item.id] || [];
