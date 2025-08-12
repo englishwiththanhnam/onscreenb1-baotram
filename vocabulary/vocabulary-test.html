@@ -16,7 +16,6 @@
     </script>
     
     <script>
-        // NOTE: Firebase config should ideally be stored in environment variables, not hardcoded.
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
@@ -91,10 +90,7 @@
             background: var(--glass-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
         }
-        .flashcard-back {
-            /* This pre-rotates the back face. When the parent .flashcard is flipped, this face becomes visible and correctly oriented. */
-            transform: rotateY(180deg);
-        }
+        .flashcard-back { transform: rotateY(180deg); }
         .flashcard-word { font-family: 'Poppins', sans-serif; font-size: clamp(2rem, 8vw, 4rem); font-weight: 700; }
         .flashcard-pronunciation { font-family: 'Inter', sans-serif; color: var(--text-secondary); margin-top: 0.5rem; }
         .flashcard-meaning { font-family: 'Poppins', sans-serif; font-size: clamp(1.5rem, 6vw, 2.5rem); font-weight: 600; }
@@ -125,6 +121,53 @@
             padding: 0.75rem 1rem; color: var(--text-light); caret-color: var(--primary-accent);
         }
         .text-input-styled:focus { outline: none; border-color: var(--primary-accent); box-shadow: 0 0 0 3px var(--primary-accent-glow); }
+        .report-actions {
+            position: absolute;
+            bottom: 1rem;
+            left: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            z-index: 10;
+        }
+        .report-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .report-btn:hover {
+            background: var(--primary-accent);
+            color: white;
+        }
+        .report-category-group label {
+            display: block;
+            padding: 0.75rem;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            background: rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .report-category-group input:checked + label {
+            background: var(--primary-accent);
+            border-color: var(--primary-accent-glow);
+            color: white;
+        }
+        .report-category-group input { display: none; }
+        #report-comment-input {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            background: rgba(0,0,0,0.2);
+            color: var(--text-light);
+            margin-top: 1rem;
+            resize: vertical;
+        }
     </style>
 </head>
 <body>
@@ -149,9 +192,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, serverTimestamp, addDoc, collection, runTransaction, arrayUnion } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
-        // --- PARTICLE BACKGROUND SCRIPT (No changes) ---
         if (window.OGL) {
             const { Renderer, Camera, Program, Geometry, Mesh, Transform } = window.OGL;
             const container = document.getElementById('ogl-canvas-back');
@@ -191,11 +233,11 @@
             }
         }
 
-        // --- APPLICATION LOGIC ---
         const App = {
             state: {
                 db: null,
                 submissionId: null,
+                studentId: '',
                 studentName: '',
                 testData: {},
                 wordList: [],
@@ -261,6 +303,7 @@
                     if (!submissionSnap.exists()) throw new Error("Mã bài làm không hợp lệ.");
 
                     let submissionData = submissionSnap.data();
+                    this.state.studentId = submissionData.studentId;
                     
                     this.state.session.isCompleted = submissionData.status === 'submitted';
 
@@ -271,7 +314,7 @@
                     
                     this.state.testData = submissionData.testSnapshot;
                     
-                    const userDoc = await getDoc(doc(this.state.db, "users", submissionData.studentId));
+                    const userDoc = await getDoc(doc(this.state.db, "users", this.state.studentId));
                     this.state.studentName = userDoc.exists() ? userDoc.data().displayName : "Không rõ";
 
                     this.state.wordList = this.state.testData.wordList || [];
@@ -305,13 +348,7 @@
                     word.itemType = 'word';
                     if (word.structures && Array.isArray(word.structures)) {
                         word.structures.forEach((struct, s_idx) => {
-                            structures.push({
-                                ...struct,
-                                id: `structure_${word.id}_${s_idx}`,
-                                itemType: 'structure',
-                                rootWord: word.word,
-                                generated_tasks: word.generated_tasks 
-                            });
+                            structures.push({ ...struct, id: `structure_${word.id}_${s_idx}`, itemType: 'structure', rootWord: word.word, generated_tasks: word.generated_tasks });
                         });
                     }
                     const root = this.findRoot(word.word);
@@ -325,21 +362,77 @@
 
             async updateFirestoreProgress() {
                 if (!this.state.submissionId) return;
-
                 const progressPayload = {
                     learnedItems: [...this.state.progress.learnedItems],
                     incorrectCounts: this.state.progress.incorrectCounts,
                     usedExercises: this.state.progress.usedExercises,
                     finalTestNotifShown: this.state.progress.finalTestNotifShown,
                 };
-
                 try {
                     const submissionRef = doc(this.state.db, 'submissions', this.state.submissionId);
-                    await updateDoc(submissionRef, {
-                        liveProgress: progressPayload
-                    });
+                    await updateDoc(submissionRef, { liveProgress: progressPayload });
                 } catch (error) {
                     console.error("Lỗi khi đồng bộ tiến trình:", error);
+                }
+            },
+
+            async handleReportSubmission(reportType) {
+                const item = this.state.currentSessionItems[this.state.currentIndex];
+                if (!item) return;
+
+                const result = await this.showReportModal(reportType);
+                if (!result.confirmed) return;
+
+                const issueId = `${this.state.testData.id}_${item.id}`;
+                const issueRef = doc(this.state.db, "test_issues", issueId);
+
+                try {
+                    await runTransaction(this.state.db, async (transaction) => {
+                        const issueDoc = await transaction.get(issueRef);
+                        const reporterInfo = {
+                            studentId: this.state.studentId,
+                            studentName: this.state.studentName,
+                            comment: result.comment,
+                            category: result.category,
+                            timestamp: serverTimestamp()
+                        };
+
+                        if (!issueDoc.exists()) {
+                            const newIssueData = {
+                                testId: this.state.testData.id,
+                                testTitle: this.state.testData.title,
+                                itemId: item.id,
+                                questionData: item,
+                                status: 'open',
+                                lastReportedAt: serverTimestamp(),
+                                errorReportsCount: reportType === 'error' ? 1 : 0,
+                                explanationRequestsCount: reportType === 'explanation' ? 1 : 0,
+                                errorReporters: reportType === 'error' ? [reporterInfo] : [],
+                                explanationRequesters: reportType === 'explanation' ? [reporterInfo] : [],
+                            };
+                            transaction.set(issueRef, newIssueData);
+                        } else {
+                            if (reportType === 'error') {
+                                transaction.update(issueRef, {
+                                    errorReportsCount: (issueDoc.data().errorReportsCount || 0) + 1,
+                                    errorReporters: arrayUnion(reporterInfo),
+                                    lastReportedAt: serverTimestamp(),
+                                    status: 'open'
+                                });
+                            } else {
+                                transaction.update(issueRef, {
+                                    explanationRequestsCount: (issueDoc.data().explanationRequestsCount || 0) + 1,
+                                    explanationRequesters: arrayUnion(reporterInfo),
+                                    lastReportedAt: serverTimestamp(),
+                                    status: 'open'
+                                });
+                            }
+                        }
+                    });
+                    this.showModal("Thành công", "Báo cáo của bạn đã được gửi đến giáo viên.");
+                } catch (error) {
+                    console.error("Lỗi khi gửi báo cáo:", error);
+                    this.showModal("Lỗi", "Không thể gửi báo cáo. Vui lòng thử lại.");
                 }
             },
 
@@ -912,7 +1005,7 @@
                 const total = this.state.currentSessionItems.length;
                 const progressPercent = total > 0 ? ((this.state.currentIndex) / total * 100) : 0;
                 this.DOM.main.innerHTML = `
-                    <div class="glass-panel p-6 fade-in">
+                    <div class="glass-panel p-6 fade-in relative">
                         <div class="mb-6">
                             <div class="flex justify-between items-center mb-2">
                                 <p class="text-sm font-medium text-text-secondary">Câu hỏi ${this.state.currentIndex + 1} / ${total}</p>
@@ -922,9 +1015,21 @@
                         </div>
                         <div id="question-container" class="min-h-[300px]"></div>
                         <div id="feedback-container" class="mt-4"></div>
+                        <div class="report-actions">
+                            <button class="report-btn" data-report-type="error"><i class="fas fa-bug mr-2"></i>Báo lỗi đề</button>
+                            <button class="report-btn" data-report-type="explanation"><i class="fas fa-question-circle mr-2"></i>Cần giải thích</button>
+                        </div>
                     </div>`;
                 
                 document.getElementById('exit-practice-btn').addEventListener('click', () => this.renderDashboard());
+                
+                this.DOM.main.querySelector('.report-actions').addEventListener('click', e => {
+                    const button = e.target.closest('button');
+                    if (button && button.dataset.reportType) {
+                        this.handleReportSubmission(button.dataset.reportType);
+                    }
+                });
+
                 this.renderNextQuestion();
             },
 
