@@ -3,30 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | Bài tập của bạn</title>
-    <script src="https://unpkg.com/lucide-static@latest/umd/lucide.js"></script>
+    <title>Bảng điều khiển - Bài tập của bạn</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <script type="module">
+        // Import thư viện OGL để tạo hiệu ứng nền
         import { Renderer, Camera, Transform, Program, Geometry, Mesh } from 'https://cdn.skypack.dev/ogl';
         window.OGL = { Renderer, Camera, Transform, Program, Geometry, Mesh };
     </script>
     
     <style>
-        /* === NÂNG CẤP: Biến màu và Style cơ bản === */
+        /* Các biến màu và style cơ bản */
         :root {
-            --bg-dark: #0D1117; /* Tối hơn một chút để tạo chiều sâu */
-            --bg-content: #161B22;
+            --bg-dark: #111827;
             --text-light: #f0f6fc;
-            --text-muted: #8b949e;
-            --glass-bg: rgba(34, 41, 51, 0.4); /* Đồng bộ với màu nền mới */
+            --text-muted: #a2a6c3;
+            --glass-bg: rgba(31, 41, 55, 0.4);
             --glass-border: rgba(255, 255, 255, 0.1);
             --primary-accent: #8b5cf6;
-            --secondary-accent: #22d3ee;
-            --red-accent: #f87171;
-            --yellow-accent: #facc15;
-            --green-accent: #4ade80;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -39,215 +35,206 @@
             color: var(--text-light);
             overflow-x: hidden;
         }
-        
-        /* === MỚI: Bố cục Sidebar và Content Area === */
-        #sidebar {
-            width: 80px;
-            background-color: var(--bg-dark);
-            border-right: 1px solid var(--glass-border);
-            transition: width 0.3s ease;
-            position: fixed;
-            height: 100%;
-            z-index: 20;
-        }
-        
-        #main-app-container {
-            flex-grow: 1;
-            margin-left: 80px; /* Bằng chiều rộng sidebar */
-            transition: margin-left 0.3s ease;
-            position: relative;
-        }
 
-        /* === MỚI: Hiệu ứng nền "Aurora" === */
-        .aurora-background {
+        /* Lớp chứa các hiệu ứng nền */
+        .background-layer {
             position: fixed; top: 0; left: 0;
             width: 100%; height: 100%;
             pointer-events: none; z-index: -1;
-            overflow: hidden;
         }
-        .aurora { position: absolute; border-radius: 50%; filter: blur(150px); opacity: 0.3; }
-        .aurora1 { width: 45vw; height: 45vw; background: var(--primary-accent); top: -20%; left: -15%; animation: float 28s infinite alternate ease-in-out; }
-        .aurora2 { width: 40vw; height: 40vw; background: var(--secondary-accent); bottom: -20%; right: -15%; animation: float 32s infinite alternate ease-in-out; }
-        @keyframes float { from { transform: translateY(30px) rotate(0deg); } to { transform: translateY(-30px) rotate(20deg); } }
+        .shape {
+            position: absolute; border-radius: 50%;
+            filter: blur(120px); opacity: 0.5;
+        }
+        .shape1 {
+            width: 40vw; height: 40vw; max-width: 450px; max-height: 450px;
+            background: #a855f7; top: -15%; left: -10%;
+            animation: float 28s infinite alternate ease-in-out;
+        }
+        .shape2 {
+            width: 35vw; height: 35vw; max-width: 400px; max-height: 400px;
+            background: #22d3ee; bottom: -15%; right: -10%;
+            animation: float 32s infinite alternate ease-in-out;
+        }
+        @keyframes float { from { transform: translateY(20px); } to { transform: translateY(-20px); } }
 
-        /* [GIỮ NGUYÊN] Lớp chứa hiệu ứng hạt OGL */
-        #ogl-canvas-back { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: -2; }
-
-        /* [NÂNG CẤP] Thẻ bài tập với viền phát sáng động */
-        @property --glow-opacity { syntax: '<number>'; initial-value: 0; inherits: false; }
-        @property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
-        @keyframes rotate-glow { to { --angle: 360deg; } }
+        .main-container { position: relative; z-index: 2; }
         
+        /* === NÂNG CẤP HEADER === */
+        .header-sticky {
+            position: sticky; top: 0; z-index: 10;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .header-sticky::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0;
+            height: 100px;
+            background: radial-gradient(ellipse at top, rgba(0,0,0,0.2) 0%, transparent 80%);
+            z-index: -1; pointer-events: none;
+        }
+        /* === KẾT THÚC NÂNG CẤP HEADER === */
+
+        /* Hiệu ứng viền phát sáng cho thẻ bài tập */
+        @property --glow-opacity {
+          syntax: '<number>';
+          initial-value: 0;
+          inherits: false;
+        }
         .assignment-card {
             position: relative;
             background: var(--glass-bg);
-            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
             border: 1px solid var(--glass-border);
             border-radius: 16px;
             transition: transform 0.3s ease, box-shadow 0.3s ease, --glow-opacity 0.3s ease;
             transform-style: preserve-3d;
         }
         .assignment-card:hover {
-            --glow-opacity: 0.7;
-            transform: translateY(-5px) scale(1.02);
-            box-shadow: 0 20px 40px -15px rgba(0,0,0,0.5);
-            animation: rotate-glow 4s linear infinite;
+            --glow-opacity: 1;
+            box-shadow: 0 15px 30px -10px rgba(0,0,0,0.4);
         }
-        .assignment-card::before, .assignment-card::after {
+        .assignment-card::before {
             content: ''; position: absolute; inset: -1px;
-            border-radius: inherit; z-index: -1;
-            background: conic-gradient(from var(--angle), transparent 50%, var(--secondary-accent), var(--primary-accent));
+            border-radius: inherit;
+            background: conic-gradient(from 180deg at 50% 50%, #22d3ee 0%, #a855f7 50%, #22d3ee 100%);
             opacity: var(--glow-opacity);
             transition: opacity 0.3s ease;
+            z-index: -1;
         }
-        .assignment-card::after { filter: blur(10px); }
+        
+        /* Thanh tiến trình */
+        .progress-bar { background-color: rgba(0,0,0,0.3); border-radius: 9999px; height: 6px; overflow: hidden; }
+        .progress-bar-fill { background-color: var(--primary-accent); height: 100%; transition: width 0.4s ease; }
 
-        /* === MỚI: Thanh tiến trình dạng tròn (Donut Chart) === */
-        .donut-chart { transform: rotate(-90deg); }
-        .donut-chart-bg { stroke: rgba(255,255,255,0.1); }
-        .donut-chart-fill {
-            stroke: var(--green-accent);
-            transition: stroke-dashoffset 0.5s ease-out;
-            stroke-linecap: round;
-        }
-
-        /* === MỚI: Skeleton Loading === */
-        @keyframes shimmer {
-            0% { background-position: -1000px 0; }
-            100% { background-position: 1000px 0; }
-        }
-        .skeleton {
-            background: #2d3748;
-            background-image: linear-gradient(to right, #2d3748 0%, #4a5568 20%, #2d3748 40%, #2d3748 100%);
-            background-repeat: no-repeat;
-            background-size: 2000px 100%;
-            animation: shimmer 2s infinite linear;
-            border-radius: 8px;
-        }
-        .skeleton-card { height: 180px; }
-        .skeleton-text { height: 20px; width: 75%; }
-        .skeleton-title { height: 24px; width: 50%; margin-bottom: 0.75rem; }
-        .skeleton-tag { height: 16px; width: 30%; border-radius: 9999px; }
-
-        /* === MỚI: Animation xuất hiện cho thẻ === */
-        .card-enter {
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
-        }
-        .card-enter-active {
-            opacity: 1;
-            transform: translateY(0);
-        }
     </style>
 </head>
 <body class="p-0">
 
-    <div class="aurora-background">
-        <div class="aurora aurora1"></div>
-        <div class="aurora aurora2"></div>
+    <!-- Các lớp nền cho hiệu ứng -->
+    <div class="background-shapes background-layer">
+        <div class="shape shape1"></div>
+        <div class="shape shape2"></div>
     </div>
-    <div id="ogl-canvas-back"></div>
+    <div id="ogl-canvas-back" class="background-layer"></div>
 
-    <aside id="sidebar" class="p-4 flex flex-col items-center justify-between">
-        <div>
-            <a href="#" class="block mb-8">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5" stroke="var(--primary-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                    <path d="M2 12l10 5 10-5" stroke="var(--secondary-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                </svg>
-            </a>
-            <nav class="flex flex-col items-center gap-6">
-                <a href="#" class="text-violet-400"><i data-lucide="layout-dashboard"></i></a>
-                <a href="#" class="text-gray-400 hover:text-white"><i data-lucide="calendar-days"></i></a>
-                <a href="#" class="text-gray-400 hover:text-white"><i data-lucide="award"></i></a>
-                <a href="#" class="text-gray-400 hover:text-white"><i data-lucide="book-copy"></i></a>
-            </nav>
-        </div>
-        <div class="flex flex-col items-center gap-6">
-            <a href="#" class="text-gray-400 hover:text-white"><i data-lucide="settings"></i></a>
-             <button id="logout-btn" class="text-red-500 hover:text-red-400">
-                <i data-lucide="log-out"></i>
-            </button>
-        </div>
-    </aside>
-
-    <div id="main-app-container">
-        <header class="sticky top-0 z-10 p-4 backdrop-blur-md bg-transparent border-b border-white/10">
-            <div class="max-w-screen-2xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                    <h1 class="text-2xl sm:text-3xl font-bold text-white">Bảng điều khiển</h1>
-                    <p id="student-name-display" class="text-lg text-gray-300"></p>
-                </div>
-                <div class="flex items-center gap-4 w-full md:w-auto">
-                    <select id="class-filter" class="flex-grow md:flex-grow-0 bg-white/10 text-white border border-white/20 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500/60">
-                        <option value="all">Tất cả các lớp</option>
-                    </select>
-                </div>
+    <!-- Màn hình loading -->
+    <div id="loader-overlay" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="w-16 h-16 border-4 border-t-violet-500 border-gray-600 rounded-full animate-spin"></div>
+    </div>
+    
+    <!-- === HEADER ĐÃ TỐI ƯU RESPONSIVE === -->
+    <header id="app-header" class="header-sticky p-4">
+        <div class="max-w-screen-xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <!-- Phần tiêu đề -->
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-white">Bài tập của bạn</h1>
+                <p id="student-name-display" class="text-lg text-gray-300"></p>
             </div>
-        </header>
-
-        <div id="main-content" class="max-w-screen-2xl mx-auto p-4 lg:p-8 opacity-0 transition-opacity duration-500">
-            
-            <section id="summary-widgets" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-                </section>
-
-            <main class="space-y-12">
-                <section id="todo-section">
-                    <h2 class="text-2xl font-bold mb-4 flex items-center gap-3">
-                        <i data-lucide="pencil-ruler" class="text-yellow-400"></i>
-                        Bài tập cần làm
-                        <span id="todo-count" class="text-sm font-semibold bg-yellow-400/20 text-yellow-300 px-2 py-0.5 rounded-full">0</span>
-                    </h2>
-                    <div id="todo-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
-                        </div>
-                </section>
-                
-                <section id="overdue-section">
-                    <div class="section-header cursor-pointer flex justify-between items-center mb-4">
-                        <h2 class="text-2xl font-bold flex items-center gap-3">
-                            <i data-lucide="alarm-clock-off" class="text-red-500"></i>
-                            Bài tập quá hạn
-                            <span id="overdue-count" class="text-sm font-semibold bg-red-400/20 text-red-300 px-2 py-0.5 rounded-full">0</span>
-                        </h2>
-                        <i data-lucide="chevron-down" class="section-toggle-icon text-gray-400 transition-transform"></i>
-                    </div>
-                    <div id="overdue-list" class="section-content grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 hidden">
-                        </div>
-                </section>
-
-                <section id="completed-section">
-                    <div class="section-header cursor-pointer flex justify-between items-center mb-4">
-                        <h2 class="text-2xl font-bold flex items-center gap-3">
-                            <i data-lucide="check-circle-2" class="text-green-500"></i>
-                            Bài tập đã hoàn thành
-                            <span id="completed-count" class="text-sm font-semibold bg-green-400/20 text-green-300 px-2 py-0.5 rounded-full">0</span>
-                        </h2>
-                        <i data-lucide="chevron-down" class="section-toggle-icon text-gray-400 transition-transform"></i>
-                    </div>
-                    <div id="completed-list" class="section-content grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 hidden">
-                         </div>
-                </section>
-            </main>
+            <!-- Phần điều khiển -->
+            <div class="flex items-center gap-4 w-full md:w-auto">
+                <select id="class-filter" class="flex-grow md:flex-grow-0 bg-white/10 text-white border border-white/20 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500/60">
+                    <option value="all">Tất cả các lớp</option>
+                </select>
+                <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Đăng xuất</span>
+                </button>
+            </div>
         </div>
+    </header>
+
+    <!-- === MAIN CONTENT ĐÃ TỐI ƯU PADDING VÀ CLASS === -->
+    <div id="main-content" class="main-container max-w-screen-xl mx-auto p-4 lg:p-8 hidden">
+        <main class="space-y-12">
+            <!-- Phần bài tập cần làm -->
+            <section id="todo-section">
+                <h2 class="text-2xl font-bold mb-4"><i class="fas fa-pencil-alt text-yellow-500 mr-3"></i>Bài tập cần làm</h2>
+                <div id="todo-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <p class="placeholder-text text-gray-400 col-span-full">Tuyệt vời! Bạn đã hoàn thành hết bài tập.</p>
+                </div>
+            </section>
+            
+            <!-- Phần bài tập quá hạn -->
+            <section id="overdue-section">
+                <div class="section-header cursor-pointer flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold"><i class="fas fa-exclamation-triangle text-red-500 mr-3"></i>Bài tập quá hạn</h2>
+                    <i class="fas fa-chevron-down section-toggle-icon text-gray-400 transition-transform"></i>
+                </div>
+                <div id="overdue-list" class="section-content grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden">
+                     <p class="placeholder-text text-gray-400 col-span-full">Không có bài tập nào bị quá hạn.</p>
+                </div>
+            </section>
+
+            <!-- Phần bài tập đã hoàn thành -->
+            <section id="completed-section">
+                <div class="section-header cursor-pointer flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold"><i class="fas fa-check-circle text-green-500 mr-3"></i>Bài tập đã hoàn thành</h2>
+                    <i class="fas fa-chevron-down section-toggle-icon text-gray-400 transition-transform"></i>
+                </div>
+                <div id="completed-list" class="section-content grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden">
+                     <p class="placeholder-text text-gray-400 col-span-full">Bạn chưa hoàn thành bài tập nào.</p>
+                </div>
+            </section>
+        </main>
     </div>
 
-    <script type="module" defer>
-        // [GIỮ NGUYÊN] Import các hàm cần thiết từ Firebase SDK
+    <script type="module">
+        // Import các hàm cần thiết từ Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, collection, doc, getDoc, query, where, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
         
-        // --- [GIỮ NGUYÊN] PHẦN KHỞI TẠO HIỆU ỨNG NỀN OGL ---
-        // Phần code OGL không thay đổi, chỉ cần đảm bảo nó không xung đột với nền Aurora.
-        // ... (Toàn bộ code OGL giữ nguyên như cũ) ...
+        // --- PHẦN KHỞI TẠO HIỆU ỨNG NỀN OGL (GIỮ NGUYÊN) ---
         const { Renderer, Camera, Transform, Program, Geometry, Mesh } = window.OGL;
         const container = document.getElementById('ogl-canvas-back');
         if (container) {
-           // ... Code OGL được giữ nguyên
+            const renderer = new Renderer({ dpr: 2, alpha: true });
+            const gl = renderer.gl;
+            container.appendChild(gl.canvas);
+            const camera = new Camera(gl, { fov: 15, near: 1, far: 100 });
+            camera.position.set(0, 0, 25);
+            const scene = new Transform();
+            const program = new Program(gl, {
+                vertex: `attribute vec3 position;attribute vec4 random;attribute vec3 color;uniform mat4 modelMatrix;uniform mat4 viewMatrix;uniform mat4 projectionMatrix;uniform float uTime;uniform float uSpread;uniform float uBaseSize;varying vec4 vRandom;varying vec3 vColor;void main(){vRandom=random;vColor=color;vec3 pos=position*uSpread;vec4 mPos=modelMatrix*vec4(pos,1.);float t=uTime*.1;mPos.x+=sin(t*random.z+6.28*random.w)*mix(.1,1.5,random.x);mPos.y+=sin(t*random.y+6.28*random.x)*mix(.1,1.5,random.w);mPos.z+=cos(t*random.w+6.28*random.y)*mix(.1,1.5,random.z);vec4 mvPos=viewMatrix*mPos;gl_PointSize=uBaseSize/-mvPos.z;gl_Position=projectionMatrix*mvPos;}`,
+                fragment: `precision highp float;varying vec3 vColor;void main(){vec2 uv=gl_PointCoord.xy;float d=length(uv-vec2(.5));float glow=smoothstep(.5,0.,d)*.3;float core=smoothstep(.2,.18,d);float alpha=max(core,glow);if(alpha<.01)discard;vec3 finalColor=vColor+vColor*pow(glow,2.)*2.;gl_FragColor=vec4(finalColor,alpha);}`,
+                uniforms: { uTime: { value: 0 }, uSpread: { value: 10 }, uBaseSize: { value: 350 } },
+                transparent: true, depthTest: false
+            });
+            const count = 1000;
+            const positions = new Float32Array(count * 3);
+            const randoms = new Float32Array(count * 4);
+            const colors = new Float32Array(count * 3);
+            const palette = ['#a855f7', '#8b5cf6', '#22d3ee', '#f59e0b'];
+            const hexToRgb = (h) => { const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h); return r ? [parseInt(r[1], 16)/255, parseInt(r[2], 16)/255, parseInt(r[3], 16)/255] : [0,0,0]; };
+            for (let i = 0; i < count; i++) {
+                const z = (Math.random() - 0.5) * 30;
+                positions.set([(Math.random() - 0.5) * 30, (Math.random() - 0.5) * 30, z], i * 3);
+                randoms.set([Math.random(), Math.random(), Math.random(), Math.random()], i * 4);
+                colors.set(hexToRgb(palette[Math.floor(Math.random() * palette.length)]), i * 3);
+            }
+            const geometry = new Geometry(gl, { position: { size: 3, data: positions }, random: { size: 4, data: randoms }, color: { size: 3, data: colors } });
+            const particles = new Mesh(gl, { mode: gl.POINTS, geometry, program });
+            particles.setParent(scene);
+            
+            function resize() {
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                camera.perspective({ aspect: window.innerWidth / window.innerHeight });
+            }
+            window.addEventListener("resize", resize, false);
+            resize();
+            
+            requestAnimationFrame(update);
+            function update(t) {
+                requestAnimationFrame(update);
+                program.uniforms.uTime.value = t * 0.001;
+                renderer.render({ scene, camera });
+            }
         }
+        // --- KẾT THÚC PHẦN HIỆU ỨNG NỀN ---
 
-        // --- [GIỮ NGUYÊN] Cấu hình và khởi tạo Firebase ---
+        // Cấu hình Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
@@ -257,45 +244,43 @@
             appId: "1:948701163187:web:043f2d381d63e741114ac6",
             measurementId: "G-33NHT07JHE"
         };
+        
+        // Khởi tạo Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
         
-        // --- [NÂNG CẤP] Biến toàn cục và DOM Elements ---
+        // Biến toàn cục để lưu trữ dữ liệu
         let allSubmissions = [];
         let allClassDocs = [];
         
+        // DOM Elements
         const DOM = {
+            loader: document.getElementById('loader-overlay'),
             mainContent: document.getElementById('main-content'),
             studentNameDisplay: document.getElementById('student-name-display'),
             logoutBtn: document.getElementById('logout-btn'),
-            classFilter: document.getElementById('class-filter'),
-            // Widget
-            summaryWidgets: document.getElementById('summary-widgets'),
-            // Lists
             todoList: document.getElementById('todo-list'),
             overdueList: document.getElementById('overdue-list'),
             completedList: document.getElementById('completed-list'),
-            // Counts
-            todoCount: document.getElementById('todo-count'),
-            overdueCount: document.getElementById('overdue-count'),
-            completedCount: document.getElementById('completed-count'),
+            classFilter: document.getElementById('class-filter'),
         };
 
-        // --- [GIỮ NGUYÊN] Logic xử lý đăng nhập/đăng xuất ---
+        // Lắng nghe thay đổi trạng thái đăng nhập
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                DOM.mainContent.style.opacity = '0'; // Ẩn đi để chờ skeleton
                 loadDashboard(user);
             } else {
-                window.location.href = 'index.html';
+                window.location.href = 'index.html'; // Chuyển hướng nếu chưa đăng nhập
             }
         });
+        
+        // Xử lý sự kiện đăng xuất
         DOM.logoutBtn.addEventListener('click', () => {
             signOut(auth).catch(err => alert("Lỗi khi đăng xuất: " + err.message));
         });
-
-        // --- [GIỮ NGUYÊN] Logic tải lớp học của user ---
+        
+        // Tải danh sách lớp học của người dùng
         async function loadUserClasses(user) {
             const q = query(collection(db, "classes"), where("studentUids", "array-contains", user.uid));
             const querySnapshot = await getDocs(q);
@@ -310,7 +295,7 @@
             });
         }
         
-        // --- [NÂNG CẤP] Logic tải dashboard chính ---
+        // Tải toàn bộ dữ liệu cho trang dashboard
         async function loadDashboard(user) {
             const userDoc = await getDoc(doc(db, "users", user.uid));
             if (userDoc.exists()) {
@@ -322,56 +307,20 @@
             const q = query(collection(db, "submissions"), where("studentId", "==", user.uid));
             onSnapshot(q, (snapshot) => {
                 allSubmissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderUI(); // Gọi hàm render tổng
+                renderAssignments();
+                DOM.loader.classList.add('hidden');
+                DOM.mainContent.classList.remove('hidden');
             });
         }
 
-        // === MỚI: Hàm render Skeleton Loader ===
-        function renderSkeletonLoaders() {
-            const skeletonHTML = `
-                <div class="assignment-card p-6 skeleton-card skeleton">
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="skeleton skeleton-tag"></div>
-                    </div>
-                    <div class="skeleton skeleton-title"></div>
-                    <div class="skeleton skeleton-text"></div>
-                    <div class="mt-4 skeleton skeleton-text w-full h-10 rounded-lg"></div>
-                </div>`.repeat(3); // Tạo 3 card skeleton
-            
-            DOM.todoList.innerHTML = skeletonHTML;
-            DOM.overdueList.innerHTML = '';
-            DOM.completedList.innerHTML = '';
-            DOM.todoCount.textContent = '...';
-            DOM.overdueCount.textContent = '...';
-            DOM.completedCount.textContent = '...';
-
-            DOM.summaryWidgets.innerHTML = `
-                <div class="assignment-card p-4 text-center skeleton h-24"></div>
-                <div class="assignment-card p-4 text-center skeleton h-24"></div>
-                <div class="assignment-card p-4 text-center skeleton h-24"></div>
-                <div class="assignment-card p-4 text-center skeleton h-24"></div>
-            `;
-        }
-        
-        // === MỚI: Hàm render chính, bao gồm cả skeleton và nội dung thật ===
-        function renderUI() {
-            renderSkeletonLoaders();
-            DOM.mainContent.style.opacity = '1';
-
-            // Giả lập thời gian tải để thấy skeleton
-            setTimeout(() => {
-                renderAssignments();
-                applyStaggeredAnimation();
-            }, 1200);
-        }
-
-        // --- [NÂNG CẤP TOÀN DIỆN] Hàm render danh sách bài tập ---
+        // Hàm render danh sách bài tập ra giao diện
         function renderAssignments() {
             const selectedClassId = DOM.classFilter.value;
             const submissionsToRender = selectedClassId === 'all'
                 ? allSubmissions
                 : allSubmissions.filter(sub => sub.classId === selectedClassId);
 
+            // Xóa nội dung cũ
             DOM.todoList.innerHTML = '';
             DOM.overdueList.innerHTML = '';
             DOM.completedList.innerHTML = '';
@@ -386,72 +335,66 @@
                 const isSubmitted = sub.status === 'submitted';
                 const dueDate = sub.dueDate ? sub.dueDate.toDate() : null;
                 const isOverdue = dueDate && now > dueDate;
-                const className = allClassDocs.find(c => c.id === sub.classId)?.className || 'Không rõ lớp';
-                
-                const redirectUrlMap = { /* ... giữ nguyên ... */ };
-                const url = `...`; // Giữ nguyên logic URL
+                const isVocab = test.testType === 'vocabulary';
+
+                const redirectUrlMap = {
+                    'standard': 'standard/standard-test.html',
+                    'reading': 'reading/reading-test.html',
+                    'listening': 'listening/listening-test.html',
+                    'vocabulary': 'vocabulary/vocabulary-test.html'
+                };
+                const url = `${redirectUrlMap[test.testType]}?submission_id=${sub.id}`;
 
                 const typeBadge = test.type === 'test' 
-                    ? `<span class="text-xs font-semibold px-2 py-1 bg-red-500/20 text-red-300 rounded-full">Đề thi</span>`
-                    : `<span class="text-xs font-semibold px-2 py-1 bg-blue-500/20 text-blue-300 rounded-full">Bài tập</span>`;
+                    ? `<span class="text-xs font-bold uppercase px-2 py-1 bg-red-200 text-red-800 rounded-full">Đề thi</span>`
+                    : `<span class="text-xs font-bold uppercase px-2 py-1 bg-blue-200 text-blue-800 rounded-full">Bài tập</span>`;
 
-                let cardHTML = `<a href="#" class="assignment-card p-5 flex flex-col justify-between card-enter">`;
+                // Bắt đầu tạo HTML cho thẻ bài tập
+                let cardHTML = `<a href="${url}" class="assignment-card p-6 flex flex-col justify-between">
+                                    <div>
+                                        <div class="flex justify-between items-center mb-2">
+                                            <p class="text-sm font-bold text-violet-400">${test.testType.toUpperCase()}</p>
+                                            ${typeBadge}
+                                        </div>
+                                        <h3 class="text-lg font-bold mb-2 text-white">${test.title}</h3>
+                                    </div>`;
 
                 if (isSubmitted) {
                     completedCount++;
-                    const onTime = sub.submissionTime && dueDate ? sub.submissionTime.toDate() <= dueDate : true;
-                    const score = sub.score || 0;
-                    const totalPoints = sub.totalPoints || 10;
-                    const scorePercent = totalPoints > 0 ? (score / totalPoints) * 100 : 0;
-                    const circumference = 2 * Math.PI * 18; // 2 * pi * radius
-                    const offset = circumference - (scorePercent / 100) * circumference;
-
-                    cardHTML += `
-                        <div>
-                            <div class="flex justify-between items-start mb-3">
-                                <div>
-                                    <span class="text-xs font-bold px-2 py-1 bg-gray-700 text-gray-300 rounded-full">${className}</span>
-                                </div>
-                                <div class="w-12 h-12 relative">
-                                    <svg class="donut-chart" width="100%" height="100%" viewBox="0 0 40 40">
-                                        <circle class="donut-chart-bg" cx="20" cy="20" r="18" fill="transparent" stroke-width="3"></circle>
-                                        <circle class="donut-chart-fill" cx="20" cy="20" r="18" fill="transparent" stroke-width="3.5" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"></circle>
-                                    </svg>
-                                    <span class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-sm font-bold">${score}/${totalPoints}</span>
-                                </div>
-                            </div>
-                            <h3 class="text-base font-bold mb-1 text-white">${test.title}</h3>
-                            <p class="text-sm font-semibold text-violet-400 mb-2">${test.testType.toUpperCase()}</p>
-                            <p class="text-xs text-gray-400">Trạng thái: ${onTime ? 'Nộp đúng hạn' : '<span class="text-red-400 font-bold">Nộp muộn</span>'}</p>
-                        </div>
-                        <div class="block w-full text-center bg-white/10 text-white font-bold py-2 px-4 rounded-lg mt-4 hover:bg-white/20 transition-colors">
-                            Xem lại bài
-                        </div>
-                    </a>`;
+                    if (isVocab) {
+                        const progress = sub.answers || {};
+                        const finalTest = sub.finalTest || {};
+                        cardHTML += `<div class="mt-4 text-sm space-y-2 text-gray-300">
+                                        <div>
+                                            <p>Tiến độ học: <span class="font-bold text-white">${progress.learnedCount || 0}/${progress.totalItems || 'N/A'}</span></p>
+                                            <div class="progress-bar mt-1"><div class="progress-bar-fill" style="width: ${sub.score || 0}%;"></div></div>
+                                        </div>
+                                        <p>KT cuối kỳ: <span class="font-bold text-white">${finalTest.score !== undefined ? `${finalTest.score}%` : 'Chưa làm'}</span></p>
+                                        <div class="block w-full text-center bg-green-600 text-white font-bold py-2 px-4 rounded-lg mt-4">
+                                            Tiếp tục học
+                                        </div>
+                                    </div>`;
+                    } else {
+                        const onTime = sub.submissionTime && dueDate ? sub.submissionTime.toDate() <= dueDate : true;
+                        cardHTML += `<div class="mt-4">
+                                        <p class="font-semibold text-gray-300">Điểm số: <span class="text-xl font-bold text-green-400">${sub.score}/${sub.totalPoints}</span></p>
+                                        <p class="text-sm text-gray-400">Trạng thái: ${onTime ? 'Nộp đúng hạn' : '<span class="text-red-400 font-bold">Nộp muộn</span>'}</p>
+                                        <div class="block w-full text-center bg-gray-600 text-white font-bold py-2 px-4 rounded-lg mt-4">
+                                            Xem lại bài
+                                        </div>
+                                    </div>`;
+                    }
+                    cardHTML += `</a>`;
                     DOM.completedList.innerHTML += cardHTML;
                 } else { // Chưa nộp bài
-                    const deadlineText = dueDate ? dueDate.toLocaleString('vi-VN') : 'Không có';
-                    const deadlineColor = isOverdue ? 'text-red-400' : 'text-yellow-400';
-                    const deadlineIcon = isOverdue ? 'alarm-clock-off' : 'clock';
-
-                    cardHTML += `
-                        <div>
-                            <div class="flex justify-between items-center mb-3">
-                                <span class="text-xs font-bold px-2 py-1 bg-gray-700 text-gray-300 rounded-full">${className}</span>
-                                ${typeBadge}
-                            </div>
-                            <h3 class="text-base font-bold mb-1 text-white">${test.title}</h3>
-                            <p class="text-sm font-semibold text-violet-400 mb-2">${test.testType.toUpperCase()}</p>
-                            <div class="text-sm ${deadlineColor} flex items-center gap-2">
-                                <i data-lucide="${deadlineIcon}" class="w-4 h-4"></i>
-                                <span>${deadlineText}</span>
-                            </div>
-                        </div>
-                        <div class="block w-full text-center bg-violet-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-violet-700 transition-colors mt-4">
-                            ${isOverdue ? 'Làm bài (Quá hạn)' : 'Vào làm bài'}
-                        </div>
-                    </a>`;
-
+                    const buttonText = isVocab ? 'Bắt đầu học' : (isOverdue ? 'Làm bài (Quá hạn)' : 'Vào làm bài');
+                    cardHTML += `<div class="mt-4">
+                                    <p class="text-sm text-gray-400">Hạn nộp: <span class="font-semibold text-gray-200">${dueDate ? dueDate.toLocaleString('vi-VN') : 'Không có'}</span></p>
+                                    <div class="block w-full text-center bg-violet-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-violet-800 transition-colors mt-4">
+                                        ${buttonText}
+                                    </div>
+                                </div>
+                            </a>`;
                     if (isOverdue) {
                         overdueCount++;
                         DOM.overdueList.innerHTML += cardHTML;
@@ -462,76 +405,52 @@
                 }
             });
             
-            // Cập nhật các số đếm
-            DOM.todoCount.textContent = todoCount;
-            DOM.overdueCount.textContent = overdueCount;
-            DOM.completedCount.textContent = completedCount;
-            
-            // Cập nhật Widgets
-            const totalAssignments = todoCount + overdueCount + completedCount;
-            const completionRate = totalAssignments > 0 ? Math.round((completedCount / totalAssignments) * 100) : 100;
-
-            DOM.summaryWidgets.innerHTML = `
-                <div class="assignment-card p-4 text-center flex flex-col justify-center">
-                    <p class="text-sm text-gray-400 flex items-center justify-center gap-2"><i data-lucide="pencil-ruler" class="w-4 h-4"></i>Cần làm</p>
-                    <p class="text-4xl font-bold text-yellow-400">${todoCount}</p>
-                </div>
-                <div class="assignment-card p-4 text-center flex flex-col justify-center">
-                    <p class="text-sm text-gray-400 flex items-center justify-center gap-2"><i data-lucide="alarm-clock-off" class="w-4 h-4"></i>Quá hạn</p>
-                    <p class="text-4xl font-bold text-red-500">${overdueCount}</p>
-                </div>
-                <div class="assignment-card p-4 text-center flex flex-col justify-center">
-                    <p class="text-sm text-gray-400 flex items-center justify-center gap-2"><i data-lucide="pie-chart" class="w-4 h-4"></i>Hoàn thành</p>
-                    <p class="text-4xl font-bold text-green-400">${completionRate}<span class="text-2xl">%</span></p>
-                </div>
-                <div class="assignment-card p-4 text-center flex flex-col justify-center">
-                    <p class="text-sm text-gray-400 flex items-center justify-center gap-2"><i data-lucide="flame" class="w-4 h-4"></i>Chuỗi ngày</p>
-                    <p class="text-4xl font-bold">12</p> </div>
-            `;
-
-
             // Hiển thị thông báo nếu không có bài tập
             if (todoCount === 0) DOM.todoList.innerHTML = `<p class="placeholder-text text-gray-400 col-span-full">Tuyệt vời! Bạn đã hoàn thành hết bài tập.</p>`;
             if (overdueCount === 0) DOM.overdueList.innerHTML = `<p class="placeholder-text text-gray-400 col-span-full">Không có bài tập nào bị quá hạn.</p>`;
             if (completedCount === 0) DOM.completedList.innerHTML = `<p class="placeholder-text text-gray-400 col-span-full">Bạn chưa hoàn thành bài tập nào.</p>`;
             
-            // [GIỮ NGUYÊN] Gắn lại hiệu ứng 3D cho các thẻ bài tập
+            // Gắn lại hiệu ứng 3D cho các thẻ bài tập mới được render
             document.querySelectorAll('.assignment-card').forEach(card => {
-                // ... (code xử lý mousemove/mouseleave giữ nguyên)
-            });
-            
-            // [MỚI] Render lại icon Lucide
-            lucide.createIcons();
-        }
-
-        // === MỚI: Hàm áp dụng animation xuất hiện ===
-        function applyStaggeredAnimation() {
-            const cards = document.querySelectorAll('.card-enter');
-            cards.forEach((card, index) => {
-                setTimeout(() => {
-                    card.classList.add('card-enter-active');
-                }, index * 75); // Delay 75ms cho mỗi thẻ
+                card.addEventListener('mousemove', (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const rotateX = (y / rect.height - 0.5) * -15;
+                    const rotateY = (x / rect.width - 0.5) * 15;
+                    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0)';
+                });
             });
         }
+        
+        // Lắng nghe sự kiện thay đổi bộ lọc lớp học
+        DOM.classFilter.addEventListener('change', renderAssignments);
 
-        // --- [NÂNG CẤP] Chức năng Accordion mượt mà hơn ---
+        // Thiết lập chức năng accordion (đóng/mở các mục)
         function setupAccordion() {
             document.querySelectorAll('.section-header').forEach(header => {
                 header.addEventListener('click', () => {
                     const content = header.nextElementSibling;
                     const icon = header.querySelector('.section-toggle-icon');
-                    content.classList.toggle('hidden');
-                    icon.classList.toggle('rotate-180');
+                    
+                    const isHidden = content.classList.contains('hidden');
+                    if (isHidden) {
+                        content.classList.remove('hidden');
+                        icon.classList.add('rotate-180');
+                    } else {
+                        content.classList.add('hidden');
+                        icon.classList.remove('rotate-180');
+                    }
                 });
             });
         }
+        
+        // Chạy hàm setupAccordion khi DOM đã tải xong
+        document.addEventListener('DOMContentLoaded', setupAccordion);
 
-        // --- [GIỮ NGUYÊN] Lắng nghe sự kiện ---
-        DOM.classFilter.addEventListener('change', renderUI);
-        document.addEventListener('DOMContentLoaded', () => {
-            setupAccordion();
-            lucide.createIcons();
-        });
     </script>
 </body>
 </html>
