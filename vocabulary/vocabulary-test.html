@@ -122,11 +122,11 @@
         }
         .text-input-styled:focus { outline: none; border-color: var(--primary-accent); box-shadow: 0 0 0 3px var(--primary-accent-glow); }
         .report-actions {
-            position: absolute;
-            bottom: 1rem;
-            left: 1rem;
+            border-top: 1px solid var(--glass-border);
+            margin-top: 1.5rem;
+            padding-top: 1rem;
             display: flex;
-            gap: 0.5rem;
+            gap: 0.75rem;
             z-index: 10;
         }
         .report-btn {
@@ -192,7 +192,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc, serverTimestamp, addDoc, collection, runTransaction, arrayUnion } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, serverTimestamp, collection, runTransaction, arrayUnion } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
         if (window.OGL) {
             const { Renderer, Camera, Program, Geometry, Mesh, Transform } = window.OGL;
@@ -1005,16 +1005,16 @@
                 const total = this.state.currentSessionItems.length;
                 const progressPercent = total > 0 ? ((this.state.currentIndex) / total * 100) : 0;
                 this.DOM.main.innerHTML = `
-                    <div class="glass-panel p-6 fade-in relative">
-                        <div class="mb-6">
+                    <div class="glass-panel p-6 fade-in flex flex-col">
+                        <div>
                             <div class="flex justify-between items-center mb-2">
                                 <p class="text-sm font-medium text-text-secondary">Câu hỏi ${this.state.currentIndex + 1} / ${total}</p>
                                 <button id="exit-practice-btn" class="text-sm font-semibold text-text-secondary hover:text-incorrect-color"><i class="fas fa-times mr-1"></i> Thoát</button>
                             </div>
                             <div class="progress-track"><div class="progress-fill" style="width: ${progressPercent}%;"></div></div>
                         </div>
-                        <div id="question-container" class="min-h-[300px]"></div>
-                        <div id="feedback-container" class="mt-4"></div>
+                        <div id="question-container" class="flex-grow my-4"></div>
+                        <div id="feedback-container" class="mt-auto"></div>
                         <div class="report-actions">
                             <button class="report-btn" data-report-type="error"><i class="fas fa-bug mr-2"></i>Báo lỗi đề</button>
                             <button class="report-btn" data-report-type="explanation"><i class="fas fa-question-circle mr-2"></i>Cần giải thích</button>
