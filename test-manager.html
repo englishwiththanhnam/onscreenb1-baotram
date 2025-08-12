@@ -79,6 +79,7 @@
         .anim-fade-in { animation: fadeIn 0.3s ease-in forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-10px); } }
+        
         #toast-container {
             position: fixed;
             bottom: 2rem;
@@ -108,6 +109,13 @@
             opacity: 1;
             transform: translateX(0);
         }
+        /* Styles for question preview in modal */
+        .question-preview-container .question-block { color: #1f2937; }
+        .question-preview-container .text-primary-accent { color: #6d28d9; }
+        .question-preview-container .text-text-secondary { color: #4b5563; }
+        .question-preview-container .answer-option { background: #f3f4f6; border-color: #d1d5db; color: #374151; }
+        .question-preview-container .token-area { border-color: #9ca3af; }
+        .question-preview-container .word-token { background: #8b5cf6; color: white; }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -471,7 +479,7 @@
                 if (container.firstElementChild) container.firstElementChild.classList.add('anim-fade-in');
             }
         }
-
+        
         function renderIssueReportsView() {
             const container = DOM.mainPanelView;
             
@@ -552,12 +560,13 @@
             const issue = appState.localIssueCache.find(i => i.id === issueId);
             if (!issue) return;
 
-            let detailsHTML = `<h4 class="font-bold text-lg mb-2">Câu hỏi:</h4><div class="p-3 bg-indigo-100 rounded-lg text-gray-800">${issue.questionData.word || issue.questionData.phrase} (${issue.questionData.meaning})</div>`;
+            let detailsHTML = `<h4 class="font-bold text-lg mb-2">Câu hỏi học sinh đã thấy:</h4><div class="p-3 bg-indigo-100 rounded-lg text-gray-800 question-preview-container">${issue.renderedQuestionHTML}</div>`;
 
             if (issue.errorReporters && issue.errorReporters.length > 0) {
                 detailsHTML += `<h4 class="font-bold text-lg mt-4 mb-2">Danh sách báo lỗi (${issue.errorReportsCount}):</h4><div class="space-y-2 max-h-40 overflow-y-auto p-2 bg-red-50 rounded-lg">`;
                 issue.errorReporters.forEach(r => {
-                    detailsHTML += `<div class="text-sm"><strong class="text-red-800">${r.studentName}:</strong> ${r.category} <em class="text-gray-600">(${r.comment || 'không có ghi chú'})</em></div>`;
+                    const reportedDate = r.reportedAt ? new Date(r.reportedAt.seconds * 1000).toLocaleString('vi-VN') : '';
+                    detailsHTML += `<div class="text-sm"><strong class="text-red-800">${r.studentName}</strong> (${reportedDate}): ${r.category} <em class="text-gray-600">(${r.comment || 'không có ghi chú'})</em></div>`;
                 });
                 detailsHTML += `</div>`;
             }
@@ -565,7 +574,8 @@
             if (issue.explanationRequesters && issue.explanationRequesters.length > 0) {
                  detailsHTML += `<h4 class="font-bold text-lg mt-4 mb-2">Danh sách cần giải thích (${issue.explanationRequestsCount}):</h4><div class="space-y-2 max-h-40 overflow-y-auto p-2 bg-blue-50 rounded-lg">`;
                 issue.explanationRequesters.forEach(r => {
-                    detailsHTML += `<div class="text-sm"><strong class="text-blue-800">${r.studentName}</strong> <em class="text-gray-600">(${r.comment || 'không có ghi chú'})</em></div>`;
+                    const reportedDate = r.reportedAt ? new Date(r.reportedAt.seconds * 1000).toLocaleString('vi-VN') : '';
+                    detailsHTML += `<div class="text-sm"><strong class="text-blue-800">${r.studentName}</strong> (${reportedDate}) <em class="text-gray-600">(${r.comment || 'không có ghi chú'})</em></div>`;
                 });
                 detailsHTML += `</div>`;
             }
@@ -601,8 +611,8 @@
                 }
             });
         }
-
-                function renderGradebookView() {
+        
+        function renderGradebookView() {
             const container = DOM.mainPanelView;
             let headerHTML = `<div class="flex items-center p-2 mb-4 border-b border-white/30"><h2 class="text-2xl font-bold">Sổ điểm</h2></div>`;
 
@@ -644,7 +654,7 @@
                             if (submission.status === 'submitted') {
                                 const onTime = submission.submissionTime && submission.dueDate ? submission.submissionTime.toDate() <= submission.dueDate.toDate() : true;
                                 cellContent = `<span class="font-bold text-green-700">${submission.score !== undefined ? `${submission.score}/${submission.totalPoints}` : 'N/A'}</span>
-                                               ${!onTime ? '<span class="block text-xs text-red-500">Nộp muộn</span>' : ''}`;
+                                                ${!onTime ? '<span class="block text-xs text-red-500">Nộp muộn</span>' : ''}`;
                             } else if (submission.dueDate && new Date() > submission.dueDate.toDate()){
                                 cellContent = '<span class="font-semibold text-red-500">Quá hạn</span>';
                             } else {
@@ -726,7 +736,7 @@
             let currentId = appState.currentLocationId;
             if (currentId === 'unassigned') path.push({ name: 'Danh sách chờ', id: 'unassigned' });
             else {
-                 while (currentId !== 'root' && currentId) {
+                while (currentId !== 'root' && currentId) {
                     const folder = appState.localFoldersCache.find(f => f.id === currentId);
                     if (folder) { path.splice(1, 0, { name: folder.name, id: folder.id }); currentId = folder.parentId; } 
                     else { break; }
@@ -950,7 +960,7 @@
                     const submissionRef = doc(collection(db, "submissions"));
                     batch.set(submissionRef, {
                         studentId: studentId,
-                        classId: classId, // <-- Dòng quan trọng được thêm vào
+                        classId: classId,
                         testId: test.id,
                         testSnapshot: test,
                         status: 'not-started',
@@ -971,7 +981,6 @@
             }
         }
 
-        // --- Main Event Listeners ---
         DOM.loginBtn.addEventListener('click', () => { signInWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value).catch(e => DOM.loginError.textContent = 'Đăng nhập thất bại.'); });
         DOM.logoutBtn.addEventListener('click', () => signOut(auth));
 
