@@ -385,6 +385,10 @@
 
                 const issueId = `${this.state.testData.id}_${item.id}`;
                 const issueRef = doc(this.state.db, "test_issues", issueId);
+                
+                // **FIX**: Capture the rendered HTML of the question
+                const questionContainer = this.DOM.main.querySelector('#question-container');
+                const renderedQuestionHTML = questionContainer ? questionContainer.innerHTML : '<em>Không thể tải nội dung câu hỏi.</em>';
 
                 try {
                     await runTransaction(this.state.db, async (transaction) => {
@@ -394,7 +398,6 @@
                             studentName: this.state.studentName,
                             comment: result.comment,
                             category: result.category,
-                            // **FIX**: Use a simple JS Date for the array object
                             reportedAt: new Date() 
                         };
 
@@ -404,6 +407,7 @@
                                 testTitle: this.state.testData.title,
                                 itemId: item.id,
                                 questionData: item,
+                                renderedQuestionHTML: renderedQuestionHTML, // **NEW**
                                 status: 'open',
                                 lastReportedAt: serverTimestamp(),
                                 errorReportsCount: reportType === 'error' ? 1 : 0,
