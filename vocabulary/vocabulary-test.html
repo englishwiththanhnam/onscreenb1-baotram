@@ -240,7 +240,7 @@
                         finalTestTaken: false,
                         finalTestScore: null,
                     },
-                    currentPractice: { level: null, items: [], index: 0, isTest: false, correctAnswer: null, score: 0 },
+                    currentPractice: { level: null, items: [], index: 0, isTest: false, correctAnswer: null, score: 0, sessionCorrectUIDs: new Set(), sessionIncorrectUIDs: new Set() },
                     currentFlashcard: { items: [], index: 0 }
                 };
             },
@@ -363,7 +363,7 @@
                 const { totalCompletedTasks, totalTasksInTest } = this.state.userProgress;
                 const overallProgress = totalTasksInTest > 0 ? (totalCompletedTasks / totalTasksInTest * 100) : 0;
                 
-                const backButtonHTML = showBackButton ? `<button id="header-back-btn" class="cta-btn secondary !py-2 !px-4"><i class="fas fa-arrow-left mr-2"></i> Dashboard</button>` : '';
+                const backButtonHTML = showBackButton ? `<a href="student-dashboard.html" id="header-back-btn" class="cta-btn secondary !py-2 !px-4"><i class="fas fa-arrow-left mr-2"></i> Dashboard chính</a>` : '';
 
                 this.DOM.header.innerHTML = `
                     <div class="glass-panel p-4 flex flex-wrap justify-between items-center gap-4">
@@ -380,10 +380,10 @@
                         </div>
                     </div>`;
                 
-                document.getElementById('header-back-btn')?.addEventListener('click', async () => {
+                document.getElementById('header-back-btn')?.addEventListener('click', async (e) => {
+                    e.preventDefault();
                     await this.updateFirestoreProgress();
-                    this.renderDashboard();
-                    this.renderHeader(false);
+                    window.location.href = e.currentTarget.href;
                 });
             },
 
@@ -527,20 +527,21 @@
 
             startPractice(level) {
                 this.renderHeader(true);
-                const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
-                const completedTasks = this.state.userProgress.levels[level].completedTasks;
-                let practiceItems = [];
+                const levelProgress = this.state.userProgress.levels[level];
+                
+                let practicePool = [];
+                const allLevelTasks = this.getAllTasksForLevel(level);
 
-                this.state.wordList.forEach(word => {
-                    tasksForLevel.forEach(taskType => {
-                        const taskUID = `${word.id}::${taskType}`;
-                        if (this.isTaskAvailable(word, taskType) && !completedTasks.has(taskUID)) {
-                            practiceItems.push({ ...word, exerciseType: taskType, taskUID });
-                        }
-                    });
-                });
+                const uncompletedTasks = allLevelTasks.filter(task => !levelProgress.completedTasks.has(task.taskUID));
 
-                if (practiceItems.length === 0) {
+                if (uncompletedTasks.length > 0) {
+                    practicePool = uncompletedTasks;
+                } else if (allLevelTasks.length > 0) {
+                    // If all tasks are completed, allow reviewing them
+                    practicePool = allLevelTasks;
+                }
+
+                if (practicePool.length === 0) {
                     this.showModal("Hoàn thành!", "Bạn đã làm hết các bài tập cho level này. Hãy thử làm bài kiểm tra vượt cấp nếu có.", false, () => {
                         this.renderDashboard();
                         this.renderHeader(false);
@@ -550,11 +551,13 @@
 
                 this.state.currentPractice = {
                     level: level,
-                    items: this.shuffleArray(practiceItems).slice(0, 10),
+                    items: this.shuffleArray(practicePool).slice(0, 10),
                     index: 0,
                     isTest: false,
                     score: 0,
                     correctAnswer: null,
+                    sessionCorrectUIDs: new Set(),
+                    sessionIncorrectUIDs: new Set()
                 };
                 this.renderPracticeView();
             },
@@ -568,15 +571,7 @@
                     return;
                 }
                 
-                const tasksForLevel = this.CONFIG.LEVELS[levelToTest].tasks;
-                let allLevelTasks = [];
-                this.state.wordList.forEach(word => {
-                    tasksForLevel.forEach(taskType => {
-                        if (this.isTaskAvailable(word, taskType)) {
-                            allLevelTasks.push({ ...word, exerciseType: taskType, taskUID: `${word.id}::${taskType}` });
-                        }
-                    });
-                });
+                const allLevelTasks = this.getAllTasksForLevel(levelToTest);
 
                 if (allLevelTasks.length === 0) {
                     this.showModal("Lỗi", "Không có câu hỏi nào cho bài kiểm tra này.");
@@ -602,14 +597,7 @@
                 this.renderHeader(true);
                 let allTasks = [];
                 Object.keys(this.CONFIG.LEVELS).forEach(level => {
-                    const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
-                    this.state.wordList.forEach(word => {
-                        tasksForLevel.forEach(taskType => {
-                            if (this.isTaskAvailable(word, taskType)) {
-                                allTasks.push({ ...word, exerciseType: taskType, taskUID: `${word.id}::${taskType}` });
-                            }
-                        });
-                    });
+                    allTasks.push(...this.getAllTasksForLevel(level));
                 });
 
                 if (allTasks.length === 0) {
@@ -636,8 +624,7 @@
                     if (isTest) {
                         level === "Final" ? this.renderFinalTestSummary() : this.renderTestSummary();
                     } else {
-                        this.renderDashboard();
-                        this.renderHeader(false);
+                        this.renderSessionSummary();
                     }
                     return;
                 }
@@ -651,7 +638,10 @@
                     <div class="glass-panel p-4 sm:p-6 fade-in">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="font-bold text-primary-accent">${title}</h2>
-                            <p class="text-sm font-medium text-text-secondary">Câu ${index + 1} / ${total}</p>
+                            <div class="flex items-center gap-4">
+                                <p class="text-sm font-medium text-text-secondary">Câu ${index + 1} / ${total}</p>
+                                <button id="exit-practice-btn" class="text-sm font-semibold text-text-secondary hover:text-incorrect-color"><i class="fas fa-times mr-1"></i> Thoát</button>
+                            </div>
                         </div>
                         <div id="question-container" class="min-h-[300px]">
                             ${renderFunction ? renderFunction.call(this, currentItem) : 'Lỗi: Không thể render câu hỏi.'}
@@ -663,6 +653,11 @@
                         </div>
                     </div>
                 `;
+
+                document.getElementById('exit-practice-btn').addEventListener('click', () => {
+                    this.renderDashboard();
+                    this.renderHeader(false);
+                });
 
                 this.DOM.main.querySelector('.report-actions').addEventListener('click', e => {
                     const button = e.target.closest('button');
@@ -684,17 +679,11 @@
                 const levelProgress = this.state.userProgress.levels[level];
 
                 if (didPass) {
-                    message += `<br>Level ${level} đã được đánh dấu là hoàn thành. Level tiếp theo đã được mở khóa.`;
+                    message += `<br>Level ${level} đã được đánh dấu là hoàn thành. Toàn bộ kiến thức của level này được tính là đã học.`;
                     levelProgress.status = 'passed';
                     
-                    const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
-                    this.state.wordList.forEach(word => {
-                        tasksForLevel.forEach(taskType => {
-                            if (this.isTaskAvailable(word, taskType)) {
-                                levelProgress.completedTasks.add(`${word.id}::${taskType}`);
-                            }
-                        });
-                    });
+                    const tasksForLevel = this.getAllTasksForLevel(level);
+                    tasksForLevel.forEach(task => levelProgress.completedTasks.add(task.taskUID));
 
                     const nextLevel = level + 1;
                     if (this.CONFIG.LEVELS[nextLevel]) {
@@ -730,6 +719,29 @@
                 }, null, "Về Bảng điều khiển");
             },
 
+            renderSessionSummary() {
+                const { level, sessionCorrectUIDs, sessionIncorrectUIDs } = this.state.currentPractice;
+                const correctItems = [...sessionCorrectUIDs].map(uid => this.state.wordList.find(w => w.id === uid.split('::')[0]));
+                const incorrectItems = [...sessionIncorrectUIDs].map(uid => this.state.wordList.find(w => w.id === uid.split('::')[0]));
+
+                const message = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+                        <div class="bg-bg-dark p-4 rounded-lg border border-glass-border">
+                            <h3 class="font-bold text-green-400 mb-2">Đã trả lời đúng (${correctItems.length})</h3>
+                            <ul class="text-sm space-y-1 max-h-32 overflow-y-auto">${correctItems.map(item => `<li>${item.word}</li>`).join('') || '<li class="text-text-secondary">Không có</li>'}</ul>
+                        </div>
+                        <div class="bg-bg-dark p-4 rounded-lg border border-glass-border">
+                            <h3 class="font-bold text-red-400 mb-2">Cần xem lại (${incorrectItems.length})</h3>
+                            <ul class="text-sm space-y-1 max-h-32 overflow-y-auto">${incorrectItems.map(item => `<li>${item.word}</li>`).join('') || '<li class="text-text-secondary">Không có</li>'}</ul>
+                        </div>
+                    </div>
+                `;
+                this.showModal(`Tổng kết phiên học Level ${level}`, message, true, () => this.startPractice(level), () => {
+                    this.renderDashboard();
+                    this.renderHeader(false);
+                }, "Luyện tập tiếp", "Về Dashboard");
+            },
+
             getMeaningMCQHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.meaning_mcq;
                 if (!tasks || !tasks.distractors_vi || !tasks.distractors_en) { return '<div>Không có đủ dữ liệu cho dạng bài tập này.</div>'; }
@@ -737,7 +749,7 @@
                 const distractors = this.shuffleArray([...tasks.distractors_vi]).slice(0, 3);
                 this.state.currentPractice.correctAnswer = correctAnswer;
                 const options = this.shuffleArray([correctAnswer, ...distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Meaning MCQ</h2><div class="min-h-[60px] mb-8 font-poppins font-bold text-3xl">${item.word}</div><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">💡 Meaning MCQ</h2><div class="min-h-[60px] mb-8 font-poppins font-bold text-3xl">${item.word}</div><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             getWordFamilyMCQHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.word_family_mcq;
@@ -745,27 +757,27 @@
                 this.state.currentPractice.correctAnswer = tasks.correct_answer;
                 const sentence = tasks.sentence.replace(tasks.blank_placeholder, '<span class="font-bold text-primary-accent">[...]</span>');
                 const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Word Family</h2><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">👨‍👩‍👧‍👦 Word Family</h2><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             getSentenceUnscrambleHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.sentence_unscramble;
                 if (!tasks || !tasks.correct_sentence) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_sentence;
                 const words = this.shuffleArray(tasks.correct_sentence.split(' '));
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Sentence Unscramble</h2><p class="text-text-secondary mb-4">Click on the words in the correct order.</p><div id="unscramble-answer-area" class="min-h-[60px] p-4 border-2 border-dashed border-gray-600 rounded-lg mb-4 flex flex-wrap gap-2"></div><div id="unscramble-source-area" class="flex flex-wrap gap-2">${words.map(word => `<button class="px-4 py-2 bg-purple-600 rounded-lg">${word}</button>`).join('')}</div><div class="mt-6 text-right"><button id="check-btn" class="cta-btn">Check</button></div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">🔄 Sentence Unscramble</h2><p class="text-text-secondary mb-4">Click on the words in the correct order.</p><div id="unscramble-answer-area" class="min-h-[60px] p-4 border-2 border-dashed border-gray-600 rounded-lg mb-4 flex flex-wrap gap-2"></div><div id="unscramble-source-area" class="flex flex-wrap gap-2">${words.map(word => `<button class="px-4 py-2 bg-purple-600 rounded-lg">${word}</button>`).join('')}</div><div class="mt-6 text-right"><button id="check-btn" class="cta-btn">Check</button></div></div>`;
             },
             getErrorCorrectionHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.error_correction;
                 if (!tasks || !tasks.incorrect_sentence) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_sentence;
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Error Correction</h2><p class="text-text-secondary mb-4">Correct the following sentence.</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${tasks.incorrect_sentence}"</p><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type the correct sentence..."><button id="check-btn" class="cta-btn !py-3">Check</button></div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">✍️ Error Correction</h2><p class="text-text-secondary mb-4">Correct the following sentence.</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${tasks.incorrect_sentence}"</p><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type the correct sentence..."><button id="check-btn" class="cta-btn !py-3">Check</button></div></div>`;
             },
             getIPAFillHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.ipa_fill;
                 if (!tasks || !tasks.gapped_ipa) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_vowel;
                 const options = this.shuffleArray([tasks.correct_vowel, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">IPA Fill</h2><p class="text-text-secondary mb-4">Choose the correct sound for <strong class="text-primary-accent">"${item.word}"</strong></p><p class="text-3xl font-mono text-center min-h-[60px] mb-8">/${tasks.gapped_ipa}/</p><div id="answer-options" class="grid grid-cols-2 gap-3">${options.map(opt => `<button class="answer-option font-mono text-center !text-2xl" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">🗣️ IPA Fill</h2><p class="text-text-secondary mb-4">Choose the correct sound for <strong class="text-primary-accent">"${item.word}"</strong></p><p class="text-3xl font-mono text-center min-h-[60px] mb-8">/${tasks.gapped_ipa}/</p><div id="answer-options" class="grid grid-cols-2 gap-3">${options.map(opt => `<button class="answer-option font-mono text-center !text-2xl" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             getBestFitReplacementHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.best_fit_replacement;
@@ -773,14 +785,14 @@
                 this.state.currentPractice.correctAnswer = tasks.correct_answer;
                 const sentence = tasks.sentence.replace(tasks.word_to_replace, `<span class="font-bold text-primary-accent"><u>${tasks.word_to_replace}</u></span>`);
                 const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Best-fit Replacement</h2><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">🎯 Best-fit Replacement</h2><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             getInferenceFromScenarioHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.inference_from_scenario;
                 if (!tasks || !tasks.scenario) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_answer;
                 const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Inference from Scenario</h2><p class="text-md font-serif italic text-text-secondary mb-4">"${tasks.scenario}"</p><p class="text-lg font-semibold text-text-light mb-6">${tasks.question}</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">🧠 Inference from Scenario</h2><p class="text-md font-serif italic text-text-secondary mb-4">"${tasks.scenario}"</p><p class="text-lg font-semibold text-text-light mb-6">${tasks.question}</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             getBestParaphraseHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.best_paraphrase;
@@ -788,18 +800,18 @@
                 const correctOption = tasks.options.find(opt => opt.is_correct);
                 this.state.currentPractice.correctAnswer = correctOption.text;
                 const options = this.shuffleArray(tasks.options.map(opt => opt.text));
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Best Paraphrase</h2><p class="text-text-secondary mb-4">Original sentence:</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${tasks.original_sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">📑 Best Paraphrase</h2><p class="text-text-secondary mb-4">Original sentence:</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${tasks.original_sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             getAudioListeningHTML(item, isExample = false) {
                 this.state.currentPractice.correctAnswer = item.word;
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Listening</h2><div class="text-center mb-6"><button id="play-audio-btn" data-audio-url="${item.audioUrl}" class="text-6xl text-primary-accent hover:text-violet-400 transition-colors"><i class="fas fa-play-circle"></i></button></div><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type what you hear..."><button id="check-btn" class="cta-btn !py-3">Check</button></div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">🎧 Listening</h2><div class="text-center mb-6"><button id="play-audio-btn" data-audio-url="${item.audioUrl}" class="text-6xl text-primary-accent hover:text-violet-400 transition-colors"><i class="fas fa-play-circle"></i></button></div><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type what you hear..."><button id="check-btn" class="cta-btn !py-3">Check</button></div></div>`;
             },
             getTripledSentenceHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.tripled_sentence;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.keyword;
                 const sentencesHTML = tasks.examples.map(sentence => `<p class="text-lg font-serif italic text-text-secondary mb-2">"${sentence.replace(new RegExp(`\\b${tasks.keyword}\\b`, 'gi'), '[...]')}"</p>`).join('');
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Tripled Sentence</h2><p class="text-text-secondary mb-4">The same word is missing from all three sentences.</p><div class="space-y-3 mb-6">${sentencesHTML}</div><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type the missing word..."><button id="check-btn" class="cta-btn !py-3">Check</button></div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">🧩 Tripled Sentence</h2><p class="text-text-secondary mb-4">The same word is missing from all three sentences.</p><div class="space-y-3 mb-6">${sentencesHTML}</div><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type the missing word..."><button id="check-btn" class="cta-btn !py-3">Check</button></div></div>`;
             },
             getAntonymMCQHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.antonym_mcq;
@@ -807,42 +819,42 @@
                 this.state.currentPractice.correctAnswer = tasks.correct_antonym;
                 const options = this.shuffleArray([tasks.correct_antonym, ...tasks.distractors]);
                 const sentence = tasks.sentence_context.replace(tasks.keyword, `<strong class="text-primary-accent">${tasks.keyword}</strong>`);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Antonym Challenge</h2><p class="text-text-secondary mb-4">Which is an antonym for the word in bold?</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">↔️ Antonym Challenge</h2><p class="text-text-secondary mb-4">Which is an antonym for the word in bold?</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             getMainIdeaHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.main_idea;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_answer;
                 const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Find the Main Idea</h2><p class="text-text-secondary mb-4">Read the passage and select the main point.</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">🎯 Find the Main Idea</h2><p class="text-text-secondary mb-4">Read the passage and select the main point.</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             getParagraphCompletionHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.paragraph_completion;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_conclusion;
                 const options = this.shuffleArray([tasks.correct_conclusion, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Find the Conclusion</h2><p class="text-text-secondary mb-4">Which sentence best concludes the passage?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph_body}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">🏁 Find the Conclusion</h2><p class="text-text-secondary mb-4">Which sentence best concludes the passage?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph_body}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             getArgumentStrengtheningHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.argument_strengthening;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_evidence;
                 const options = this.shuffleArray([tasks.correct_evidence, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Strengthen the Argument</h2><p class="text-text-secondary mb-4">Which statement best supports the argument?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.argument_text}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">👍 Strengthen the Argument</h2><p class="text-text-secondary mb-4">Which statement best supports the argument?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.argument_text}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             getArgumentWeakeningHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.argument_weakening;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_weakener;
                 const options = this.shuffleArray([tasks.correct_weakener, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Weaken the Argument</h2><p class="text-text-secondary mb-4">Which statement most weakens the argument?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.argument_text}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">👎 Weaken the Argument</h2><p class="text-text-secondary mb-4">Which statement most weakens the argument?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.argument_text}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             getTonePurposeAnalysisHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.tone_purpose_analysis;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_answer;
                 const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Tone & Purpose</h2><p class="text-text-secondary mb-4">${tasks.question}</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">🎭 Tone & Purpose</h2><p class="text-text-secondary mb-4">${tasks.question}</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             getSentenceRoleAnalysisHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.sentence_role_analysis;
@@ -850,7 +862,7 @@
                 this.state.currentPractice.correctAnswer = tasks.correct_role;
                 const options = this.shuffleArray([tasks.correct_role, ...tasks.distractors]);
                 const paragraphHTML = tasks.paragraph.replace(`[${tasks.highlighted_sentence_index + 1}]`, `<strong class="text-primary-accent">[${tasks.highlighted_sentence_index + 1}]</strong>`);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Sentence Role Analysis</h2><p class="text-text-secondary mb-4">What is the function of the sentence in bold?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${paragraphHTML}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">🔍 Sentence Role Analysis</h2><p class="text-text-secondary mb-4">What is the function of the sentence in bold?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${paragraphHTML}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
 
             attachPracticeEventListeners(item, container, isGuide = false) {
@@ -883,6 +895,7 @@
                 const levelProgress = this.state.currentPractice.level !== "Final" && this.state.userProgress.levels[this.state.currentPractice.level];
                 
                 if (isCorrect) {
+                    this.state.currentPractice.sessionCorrectUIDs.add(item.taskUID);
                     if(this.state.currentPractice.isTest) {
                         this.state.currentPractice.score++;
                     } else {
@@ -890,6 +903,8 @@
                             levelProgress.completedTasks.add(item.taskUID);
                         }
                     }
+                } else {
+                    this.state.currentPractice.sessionIncorrectUIDs.add(item.taskUID);
                 }
                 
                 this.showFeedback(isCorrect, correctAnswer, container);
@@ -897,8 +912,6 @@
                 if (isCorrect && !this.state.currentPractice.isTest) {
                     this.checkLevelUp(this.state.currentPractice.level);
                 }
-                this.updateFirestoreProgress();
-                this.renderHeader(true);
             },
 
             checkGuideAnswer(userAnswer, item, container) {
@@ -1078,7 +1091,7 @@
                         const reporterInfo = {
                             studentId: this.state.studentId, studentName: this.state.studentName,
                             comment: result.comment, category: result.category, 
-                            reportedAt: new Date() // FIX: Use client-side timestamp
+                            reportedAt: new Date()
                         };
 
                         if (!issueDoc.exists()) {
@@ -1236,6 +1249,19 @@
                 
                 const guideContainer = document.getElementById('guide-question-container');
                 this.attachPracticeEventListeners(suitableItem, guideContainer, true);
+            },
+            
+             getAllTasksForLevel(level) {
+                const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
+                const allLevelTasks = [];
+                this.state.wordList.forEach(word => {
+                    tasksForLevel.forEach(taskType => {
+                        if (this.isTaskAvailable(word, taskType)) {
+                            allLevelTasks.push({ ...word, exerciseType: taskType, taskUID: `${word.id}::${taskType}` });
+                        }
+                    });
+                });
+                return allLevelTasks;
             }
         };
 
