@@ -313,6 +313,37 @@
             });
         }
 
+        // *** HÀM MỚI: Tính toán tiến độ cho bài tập thích ứng ***
+        function calculateAdaptiveProgress(progressData) {
+            if (!progressData || !progressData.levels) {
+                return { completed: 0, total: 0, percentage: 0, finalScore: null };
+            }
+
+            let totalCompleted = 0;
+            let totalTasks = 0;
+
+            Object.values(progressData.levels).forEach(level => {
+                const levelTotal = level.totalTasks || 0;
+                totalTasks += levelTotal;
+
+                if (level.status === 'passed') {
+                    totalCompleted += levelTotal;
+                } else if (level.completedTasks) {
+                    // Dữ liệu từ Firestore là một mảng
+                    totalCompleted += level.completedTasks.length;
+                }
+            });
+
+            const percentage = totalTasks > 0 ? (totalCompleted / totalTasks) * 100 : 0;
+            
+            return {
+                completed: totalCompleted,
+                total: totalTasks,
+                percentage: percentage,
+                finalScore: progressData.finalTestScore !== undefined ? progressData.finalTestScore : null,
+            };
+        }
+
         // Hàm render danh sách bài tập ra giao diện
         function renderAssignments() {
             const selectedClassId = DOM.classFilter.value;
@@ -334,7 +365,7 @@
 
                 const isSubmitted = sub.status === 'submitted';
                 const dueDate = sub.dueDate ? sub.dueDate.toDate() : null;
-                const isOverdue = dueDate && now > dueDate;
+                const isOverdue = dueDate && now > dueDate && !isSubmitted;
                 const isVocab = test.testType === 'vocabulary';
 
                 const redirectUrlMap = {
@@ -351,47 +382,52 @@
 
                 // Bắt đầu tạo HTML cho thẻ bài tập
                 let cardHTML = `<a href="${url}" class="assignment-card p-6 flex flex-col justify-between">
-                                    <div>
-                                        <div class="flex justify-between items-center mb-2">
-                                            <p class="text-sm font-bold text-violet-400">${test.testType.toUpperCase()}</p>
-                                            ${typeBadge}
-                                        </div>
-                                        <h3 class="text-lg font-bold mb-2 text-white">${test.title}</h3>
-                                    </div>`;
-
-                if (isSubmitted) {
-                    completedCount++;
-                    if (isVocab) {
-                        const progress = sub.answers || {};
-                        const finalTest = sub.finalTest || {};
-                        cardHTML += `<div class="mt-4 text-sm space-y-2 text-gray-300">
                                         <div>
-                                            <p>Tiến độ học: <span class="font-bold text-white">${progress.learnedCount || 0}/${progress.totalItems || 'N/A'}</span></p>
-                                            <div class="progress-bar mt-1"><div class="progress-bar-fill" style="width: ${sub.score || 0}%;"></div></div>
-                                        </div>
-                                        <p>KT cuối kỳ: <span class="font-bold text-white">${finalTest.score !== undefined ? `${finalTest.score}%` : 'Chưa làm'}</span></p>
-                                        <div class="block w-full text-center bg-green-600 text-white font-bold py-2 px-4 rounded-lg mt-4">
-                                            Tiếp tục học
-                                        </div>
-                                    </div>`;
-                    } else {
-                        const onTime = sub.submissionTime && dueDate ? sub.submissionTime.toDate() <= dueDate : true;
-                        cardHTML += `<div class="mt-4">
-                                        <p class="font-semibold text-gray-300">Điểm số: <span class="text-xl font-bold text-green-400">${sub.score}/${sub.totalPoints}</span></p>
-                                        <p class="text-sm text-gray-400">Trạng thái: ${onTime ? 'Nộp đúng hạn' : '<span class="text-red-400 font-bold">Nộp muộn</span>'}</p>
-                                        <div class="block w-full text-center bg-gray-600 text-white font-bold py-2 px-4 rounded-lg mt-4">
-                                            Xem lại bài
-                                        </div>
-                                    </div>`;
-                    }
+                                            <div class="flex justify-between items-center mb-2">
+                                                <p class="text-sm font-bold text-violet-400">${test.testType.toUpperCase()}</p>
+                                                ${typeBadge}
+                                            </div>
+                                            <h3 class="text-lg font-bold mb-2 text-white">${test.title}</h3>
+                                        </div>`;
+
+                // *** LOGIC HIỂN THỊ ĐƯỢC CẬP NHẬT ***
+                if (isVocab) { // Logic riêng cho bài tập Vocabulary
+                    const adaptiveProgress = calculateAdaptiveProgress(sub.adaptiveProgressV2);
+                    const buttonText = adaptiveProgress.total > 0 ? 'Tiếp tục học' : 'Bắt đầu học';
+                    
+                    cardHTML += `<div class="mt-4 text-sm space-y-2 text-gray-300">
+                                    <div>
+                                        <p>Tiến độ học: <span class="font-bold text-white">${adaptiveProgress.completed}/${adaptiveProgress.total}</span></p>
+                                        <div class="progress-bar mt-1"><div class="progress-bar-fill" style="width: ${adaptiveProgress.percentage.toFixed(1)}%;"></div></div>
+                                    </div>
+                                    <p>KT cuối kỳ: <span class="font-bold text-white">${adaptiveProgress.finalScore !== null ? `${adaptiveProgress.finalScore}%` : 'Chưa làm'}</span></p>
+                                    <div class="block w-full text-center bg-violet-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-violet-800 transition-colors mt-4">
+                                       ${buttonText}
+                                    </div>
+                                </div>`;
+                    
+                    // Bài vocab luôn ở mục "Cần làm" để có thể học lại
+                    todoCount++;
+                    DOM.todoList.innerHTML += cardHTML + `</a>`;
+
+                } else if (isSubmitted) { // Logic cho các bài tập khác ĐÃ NỘP
+                    completedCount++;
+                    const onTime = sub.submissionTime && dueDate ? sub.submissionTime.toDate() <= dueDate : true;
+                    cardHTML += `<div class="mt-4">
+                                    <p class="font-semibold text-gray-300">Điểm số: <span class="text-xl font-bold text-green-400">${sub.score}/${sub.totalPoints}</span></p>
+                                    <p class="text-sm text-gray-400">Trạng thái: ${onTime ? 'Nộp đúng hạn' : '<span class="text-red-400 font-bold">Nộp muộn</span>'}</p>
+                                    <div class="block w-full text-center bg-gray-600 text-white font-bold py-2 px-4 rounded-lg mt-4">
+                                        Xem lại bài
+                                    </div>
+                                </div>`;
                     cardHTML += `</a>`;
                     DOM.completedList.innerHTML += cardHTML;
-                } else { // Chưa nộp bài
-                    const buttonText = isVocab ? 'Bắt đầu học' : (isOverdue ? 'Làm bài (Quá hạn)' : 'Vào làm bài');
+
+                } else { // Logic cho các bài tập khác CHƯA NỘP
                     cardHTML += `<div class="mt-4">
                                     <p class="text-sm text-gray-400">Hạn nộp: <span class="font-semibold text-gray-200">${dueDate ? dueDate.toLocaleString('vi-VN') : 'Không có'}</span></p>
                                     <div class="block w-full text-center bg-violet-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-violet-800 transition-colors mt-4">
-                                        ${buttonText}
+                                        ${isOverdue ? 'Làm bài (Quá hạn)' : 'Vào làm bài'}
                                     </div>
                                 </div>
                             </a>`;
