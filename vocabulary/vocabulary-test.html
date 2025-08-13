@@ -127,10 +127,10 @@
                     4: { name: "Tư duy Phản biện", tasks: ['InferenceFromScenario', 'MainIdea', 'ParagraphCompletion', 'ArgumentStrengthening', 'ArgumentWeakening', 'TonePurposeAnalysis', 'SentenceRoleAnalysis'] }
                 },
                 RULES: {
-                    UNLOCK_THRESHOLD: 0.9, // Rule 7: 90% to unlock next level
+                    UNLOCK_THRESHOLD: 0.9, // Rule 7
                     SKIP_TRIGGERS: { // Rule 7
-                        2: { accuracy: 0.80, questions: 20, skips: 2 }, // Hoàn thành 80% L2 -> test L2
-                        3: { accuracy: 0.90, questions: 20, skips: 3 }, // Hoàn thành 90% L3 -> test L3
+                        2: { accuracy: 0.80, questions: 20, skips: 2 },
+                        3: { accuracy: 0.90, questions: 20, skips: 3 },
                     },
                     PROFICIENCY_TESTS: { // Rule 2 & 5
                         1: { passMark: 0.9, maxAttempts: 3 },
