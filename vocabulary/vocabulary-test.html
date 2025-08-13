@@ -10,7 +10,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
     
-    <!-- OGL Library for background effects -->
     <script type="module">
         import { Renderer, Camera, Transform, Program, Geometry, Mesh } from 'https://cdn.skypack.dev/ogl';
         window.OGL = { Renderer, Camera, Transform, Program, Geometry, Mesh };
@@ -18,18 +17,31 @@
 
     <style>
         :root {
-            --bg-dark: #111827; --text-light: #f0f6fc; --text-secondary: #a2a6c3;
-            --glass-bg: radial-gradient(ellipse at center, rgba(31, 41, 55, 0.65) 0%, rgba(31, 41, 55, 0.4) 100%);
-            --glass-border: rgba(255, 255, 255, 0.1); --primary-accent: #8b5cf6; --primary-accent-glow: rgba(139, 92, 246, 0.5);
-            --correct-color: #22c55e; --incorrect-color: #ef4444;
+            --bg-dark: #0f172a; /* Darker blue */
+            --text-light: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --glass-bg: rgba(30, 41, 59, 0.5); /* Slate color */
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --primary-accent: #8b5cf6;
+            --primary-accent-glow: rgba(139, 92, 246, 0.5);
+            --correct-color: #22c55e;
+            --incorrect-color: #ef4444;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { height: 100%; width: 100%; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-dark); color: var(--text-light); overflow-x: hidden; }
-        .background-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-dark); color: var(--text-light); overflow: hidden; }
+        
+        /* New Background Style */
+        .background-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: hidden; }
+        .shape { position: absolute; border-radius: 50%; filter: blur(150px); opacity: 0.3; }
+        .shape1 { width: 40vw; height: 40vw; max-width: 500px; max-height: 500px; background: #a855f7; top: -15%; left: -10%; animation: float 28s infinite alternate ease-in-out; }
+        .shape2 { width: 35vw; height: 35vw; max-width: 450px; max-height: 450px; background: #22d3ee; bottom: -15%; right: -10%; animation: float 32s infinite alternate ease-in-out; }
+        @keyframes float { from { transform: translateY(20px) rotate(0deg); } to { transform: translateY(-20px) rotate(15deg); } }
+
+        .main-container { position: relative; z-index: 2; }
         .fade-in { animation: fadeIn 0.5s ease-in-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .glass-panel { background: var(--glass-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); }
+        .glass-panel { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); }
         .cta-btn {
             position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 12px;
             background: linear-gradient(90deg, #8b5cf6, #6d28d9); font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 16px;
@@ -53,50 +65,18 @@
         .level-card.passed { border-color: var(--correct-color); background: rgba(34, 197, 94, 0.1); }
         .level-card.active { border-color: var(--primary-accent); box-shadow: 0 0 20px var(--primary-accent-glow); transform: translateY(-5px); }
         .level-card.unlocked:not(.active):hover { border-color: var(--primary-accent); transform: translateY(-5px); }
-        .flashcard-viewer { display: flex; flex-direction: column; height: 70vh; max-width: 800px; margin: 0 auto; }
-        .flashcard-main { flex-grow: 1; display: flex; align-items: center; justify-content: center; perspective: 1500px; }
-        .flashcard { width: 100%; height: 80%; max-height: 400px; cursor: pointer; position: relative; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(0.25, 1, 0.5, 1); }
-        .flashcard.is-flipped { transform: rotateY(180deg); }
-        .flashcard-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; text-align: center; background: var(--glass-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); }
-        .flashcard-back { transform: rotateY(180deg); }
-        .flashcard-word { font-family: 'Poppins', sans-serif; font-size: clamp(2rem, 8vw, 4rem); font-weight: 700; }
-        .flashcard-pronunciation { font-family: 'Inter', sans-serif; color: var(--text-secondary); margin-top: 0.5rem; }
-        .flashcard-meaning { font-family: 'Poppins', sans-serif; font-size: clamp(1.5rem, 6vw, 2.5rem); font-weight: 600; }
-        .flashcard-example { font-style: italic; color: var(--text-secondary); margin-top: 1.5rem; }
-        .audio-btn { position: absolute; top: 1.5rem; right: 1.5rem; width: 44px; height: 44px; border-radius: 50%; background-color: rgba(255, 255, 255, 0.1); color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; z-index: 10; }
         .report-actions { border-top: 1px solid var(--glass-border); margin-top: 1.5rem; padding-top: 1rem; display: flex; gap: 0.75rem; z-index: 10; }
         .report-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-secondary); padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s ease; }
         .report-category-group label { display: block; padding: 0.75rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); cursor: pointer; transition: all 0.2s ease; }
         .report-category-group input:checked + label { background: var(--primary-accent); border-color: var(--primary-accent-glow); color: white; }
         .report-category-group input { display: none; }
         #report-comment-input { width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: var(--text-light); margin-top: 1rem; resize: vertical; }
-        
-        /* NEW STYLES FOR GUIDE VIEW */
-        .guide-section h3 {
-            font-family: 'Poppins', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary-accent);
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid var(--primary-accent);
-        }
-        .guide-rule {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 1rem;
-            border-radius: 12px;
-            border-left: 4px solid var(--primary-accent);
-        }
-        .task-example-card {
-            background: rgba(0,0,0,0.2);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            padding: 1.5rem;
-        }
     </style>
 </head>
 <body>
     <div class="background-layer">
+        <div class="shape shape1"></div>
+        <div class="shape shape2"></div>
         <div id="ogl-canvas-back"></div>
     </div>
     
@@ -117,59 +97,43 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc, runTransaction, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
-        // OGL Background Effect
+        // OGL Particle Effect
         if (window.OGL) {
-            const { Renderer, Camera, Transform, Program, Geometry, Mesh } = window.OGL;
-            const renderer = new Renderer({ dpr: 2, alpha: true });
-            const gl = renderer.gl;
-            const backCanvas = document.getElementById('ogl-canvas-back');
-            if (backCanvas) backCanvas.appendChild(gl.canvas);
-            gl.clearColor(0, 0, 0, 0);
-            const camera = new Camera(gl, { fov: 45 });
-            camera.position.set(0, 0, 7);
-            const scene = new Transform();
-            let raf;
-            function resize() {
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                camera.perspective({ aspect: gl.canvas.width / gl.canvas.height });
-            }
-            window.addEventListener('resize', resize, false);
-            resize();
-            const program = new Program(gl, {
-                vertex: `
-                    attribute vec3 position;
-                    uniform mat4 modelViewMatrix;
-                    uniform mat4 projectionMatrix;
-                    void main() {
-                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                    }
-                `,
-                fragment: `
-                    precision highp float;
-                    uniform float uTime;
-                    uniform vec3 uColor;
-                    void main() {
-                        vec2 uv = gl_FragCoord.xy / vec2(1024.0, 1024.0);
-                        float noise = fract(sin(dot(uv + uTime * 0.01, vec2(12.9898, 78.233))) * 43758.5453);
-                        gl_FragColor.rgb = uColor * (0.5 + 0.5 * noise);
-                        gl_FragColor.a = 1.0;
-                    }
-                `,
-                uniforms: {
-                    uTime: { value: 0 },
-                    uColor: { value: [0.4, 0.2, 0.6] },
-                },
-            });
-            const geometry = new Geometry(gl, {
-                position: { size: 3, data: new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]) },
-            });
-            const mesh = new Mesh(gl, { geometry, program });
-            mesh.setParent(scene);
-            raf = requestAnimationFrame(update);
-            function update(t) {
-                raf = requestAnimationFrame(update);
-                program.uniforms.uTime.value = t * 0.001;
-                renderer.render({ scene, camera });
+            const { Renderer, Camera, Program, Geometry, Mesh, Transform } = window.OGL;
+            const container = document.getElementById('ogl-canvas-back');
+            if (container) {
+                const renderer = new Renderer({ dpr: 2, alpha: true });
+                const gl = renderer.gl;
+                container.appendChild(gl.canvas);
+                const camera = new Camera(gl, { fov: 15, near: 1, far: 100 });
+                camera.position.set(0, 0, 25);
+                const scene = new Transform();
+                const program = new Program(gl, {
+                    vertex: `attribute vec3 position;attribute vec4 random;attribute vec3 color;uniform mat4 modelMatrix;uniform mat4 viewMatrix;uniform mat4 projectionMatrix;uniform float uTime;uniform float uSpread;uniform float uBaseSize;varying vec4 vRandom;varying vec3 vColor;void main(){vRandom=random;vColor=color;vec3 pos=position*uSpread;vec4 mPos=modelMatrix*vec4(pos,1.);float t=uTime*.1;mPos.x+=sin(t*random.z+6.28*random.w)*mix(.1,1.5,random.x);mPos.y+=sin(t*random.y+6.28*random.x)*mix(.1,1.5,random.w);mPos.z+=cos(t*random.w+6.28*random.y)*mix(.1,1.5,random.z);vec4 mvPos=viewMatrix*mPos;gl_PointSize=uBaseSize/-mvPos.z;gl_Position=projectionMatrix*mvPos;}`,
+                    fragment: `precision highp float;varying vec3 vColor;void main(){vec2 uv=gl_PointCoord.xy;float d=length(uv-vec2(.5));float glow=smoothstep(.5,0.,d)*.3;float core=smoothstep(.2,.18,d);float alpha=max(core,glow);if(alpha<.01)discard;vec3 finalColor=vColor+vColor*pow(glow,2.)*2.;gl_FragColor=vec4(finalColor,alpha);}`,
+                    uniforms: { uTime: { value: 0 }, uSpread: { value: 10 }, uBaseSize: { value: 350 } },
+                    transparent: true, depthTest: false
+                });
+                const count = 200; // Reduced particle count
+                const positions = new Float32Array(count * 3);
+                const randoms = new Float32Array(count * 4);
+                const colors = new Float32Array(count * 3);
+                const palette = ['#a855f7', '#8b5cf6', '#22d3ee', '#f59e0b'];
+                const hexToRgb = (h) => { const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h); return r ? [parseInt(r[1], 16)/255, parseInt(r[2], 16)/255, parseInt(r[3], 16)/255] : [0,0,0]; };
+                for (let i = 0; i < count; i++) {
+                    const z = (Math.random() - 0.5) * 30;
+                    positions.set([(Math.random() - 0.5) * 30, (Math.random() - 0.5) * 30, z], i * 3);
+                    randoms.set([Math.random(), Math.random(), Math.random(), Math.random()], i * 4);
+                    colors.set(hexToRgb(palette[Math.floor(Math.random() * palette.length)]), i * 3);
+                }
+                const geometry = new Geometry(gl, { position: { size: 3, data: positions }, random: { size: 4, data: randoms }, color: { size: 3, data: colors } });
+                const particles = new Mesh(gl, { mode: gl.POINTS, geometry, program });
+                particles.setParent(scene);
+                function resize() { renderer.setSize(window.innerWidth, window.innerHeight); camera.perspective({ aspect: window.innerWidth / window.innerHeight }); }
+                window.addEventListener("resize", resize, false);
+                resize();
+                requestAnimationFrame(update);
+                function update(t) { requestAnimationFrame(update); program.uniforms.uTime.value = t * 0.001; renderer.render({ scene, camera }); }
             }
         }
 
@@ -178,7 +142,6 @@
             DOM: {},
             db: null,
 
-            // --- CONFIGURATION ---
             CONFIG: {
                 LEVELS: {
                     1: { name: "Nền tảng", tasks: ['MeaningMCQ', 'IPAFill', 'AudioListening'] },
@@ -187,21 +150,17 @@
                     4: { name: "Tư duy Phản biện", tasks: ['InferenceFromScenario', 'MainIdea', 'ParagraphCompletion', 'ArgumentStrengthening', 'ArgumentWeakening', 'TonePurposeAnalysis', 'SentenceRoleAnalysis'] }
                 },
                 RULES: {
-                    UNLOCK_THRESHOLD: 0.9, // Hoàn thành 90% để mở khóa level tiếp theo
-                    PROFICIENCY_TEST_UNLOCK: { // Điều kiện để nút "Kiểm tra vượt cấp" xuất hiện
-                        2: 0.8, // Hoàn thành 80% Level 2
-                        3: 0.9, // Hoàn thành 90% Level 3
-                    },
-                    PROFICIENCY_TESTS: { // Cấu hình cho bài kiểm tra vượt cấp
+                    UNLOCK_THRESHOLD: 0.9,
+                    PROFICIENCY_TEST_UNLOCK: { 2: 0.8, 3: 0.9 },
+                    PROFICIENCY_TESTS: {
                         1: { passMark: 0.9, maxAttempts: 3 },
                         2: { passMark: 0.9, maxAttempts: 3 },
                         3: { passMark: 0.9, maxAttempts: 3 },
                     },
-                    FINAL_TEST_UNLOCK_THRESHOLD: 0.8 // Hoàn thành 80% tổng quát để mở khóa bài cuối kỳ
+                    FINAL_TEST_UNLOCK_THRESHOLD: 0.8
                 }
             },
 
-            // --- INITIALIZATION ---
             async init() {
                 const firebaseConfig = {
                     apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
@@ -237,6 +196,13 @@
                 
                 this.state.submissionId = submissionId;
                 await this.loadData(submissionId);
+
+                // Auto-save on exit
+                window.addEventListener('beforeunload', () => {
+                    if (this.state.submissionId) {
+                        this.updateFirestoreProgress();
+                    }
+                });
             },
             
             resetState() {
@@ -248,7 +214,7 @@
                             1: { status: 'locked', completedTasks: new Set(), totalTasks: 0, testAttempts: 0 },
                             2: { status: 'locked', completedTasks: new Set(), totalTasks: 0, testAttempts: 0 },
                             3: { status: 'locked', completedTasks: new Set(), totalTasks: 0, testAttempts: 0 },
-                            4: { status: 'locked', completedTasks: new Set(), totalTasks: 0, testAttempts: 0 }, // Added attempts for consistency
+                            4: { status: 'locked', completedTasks: new Set(), totalTasks: 0, testAttempts: 0 },
                         },
                         totalCompletedTasks: 0,
                         totalTasksInTest: 0,
@@ -260,7 +226,6 @@
                 };
             },
 
-            // --- DATA HANDLING ---
             async loadData(submissionId) {
                 try {
                     const submissionRef = doc(this.db, 'submissions', submissionId);
@@ -275,7 +240,7 @@
                     const userDoc = await getDoc(doc(this.db, "users", this.state.studentId));
                     this.state.studentName = userDoc.exists() ? userDoc.data().displayName : "Không rõ";
 
-                    // Recalculate total tasks every time to ensure consistency
+                    // Recalculate total tasks every time
                     let totalTasks = 0;
                     Object.keys(this.CONFIG.LEVELS).forEach(level => {
                         const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
@@ -292,7 +257,7 @@
                     });
                     this.state.userProgress.totalTasksInTest = totalTasks;
 
-                    // Load saved progress or initialize
+                    // Load saved progress
                     if (submissionData.adaptiveProgressV2) {
                         const progress = submissionData.adaptiveProgressV2;
                         if (!progress.levels) progress.levels = this.state.userProgress.levels;
@@ -302,13 +267,15 @@
                                progress.levels[level] = this.state.userProgress.levels[level];
                            }
                            progress.levels[level].completedTasks = new Set(progress.levels[level].completedTasks || []);
-                           progress.levels[level].totalTasks = this.state.userProgress.levels[level].totalTasks; // Ensure totalTasks is up-to-date
+                           progress.levels[level].totalTasks = this.state.userProgress.levels[level].totalTasks;
                         });
                         this.state.userProgress = { ...this.state.userProgress, ...progress };
                     } else {
                         this.state.userProgress.levels[1].status = 'unlocked';
                     }
                     
+                    this.state.userProgress.totalCompletedTasks = this.calculateTotalCompletedTasks();
+
                     this.DOM.loader.classList.add('hidden');
                     this.DOM.container.classList.remove('hidden');
                     
@@ -348,13 +315,13 @@
 
             async updateFirestoreProgress() {
                 if (!this.state.submissionId) return;
+                const progressToSave = JSON.parse(JSON.stringify(this.state.userProgress));
+                Object.keys(progressToSave.levels).forEach(level => {
+                    if (progressToSave.levels[level]?.completedTasks) {
+                       progressToSave.levels[level].completedTasks = Array.from(this.state.userProgress.levels[level].completedTasks);
+                    }
+                });
                 try {
-                    const progressToSave = JSON.parse(JSON.stringify(this.state.userProgress));
-                    Object.keys(progressToSave.levels).forEach(level => {
-                        if (progressToSave.levels[level]?.completedTasks) {
-                           progressToSave.levels[level].completedTasks = Array.from(this.state.userProgress.levels[level].completedTasks);
-                        }
-                    });
                     const submissionRef = doc(this.db, 'submissions', this.state.submissionId);
                     await updateDoc(submissionRef, { adaptiveProgressV2: progressToSave });
                 } catch (error) {
@@ -362,10 +329,25 @@
                 }
             },
 
+            calculateTotalCompletedTasks() {
+                let count = 0;
+                Object.values(this.state.userProgress.levels).forEach(levelData => {
+                    if (levelData.status === 'passed') {
+                        count += levelData.totalTasks;
+                    } else {
+                        count += levelData.completedTasks.size;
+                    }
+                });
+                return count;
+            },
+
             // --- UI RENDERING ---
-            renderHeader() {
+            renderHeader(showBackButton = false) {
+                this.state.userProgress.totalCompletedTasks = this.calculateTotalCompletedTasks();
                 const { totalCompletedTasks, totalTasksInTest } = this.state.userProgress;
                 const overallProgress = totalTasksInTest > 0 ? (totalCompletedTasks / totalTasksInTest * 100) : 0;
+                
+                const backButtonHTML = showBackButton ? `<button id="header-back-btn" class="cta-btn secondary !py-2 !px-4"><i class="fas fa-arrow-left mr-2"></i> Dashboard</button>` : '';
 
                 this.DOM.header.innerHTML = `
                     <div class="glass-panel p-4 flex flex-wrap justify-between items-center gap-4">
@@ -373,11 +355,20 @@
                             <h1 class="text-2xl font-bold font-poppins">${this.state.testData.title || 'Lộ trình học tập'}</h1>
                             <p class="text-sm text-text-secondary">Học sinh: <span class="font-medium text-text-light">${this.state.studentName}</span></p>
                         </div>
-                        <div class="w-full sm:w-auto flex-grow sm:flex-grow-0 max-w-xs">
-                            <p class="text-sm text-center font-medium mb-1">Tiến độ tổng quát: ${overallProgress.toFixed(1)}%</p>
-                            <div class="progress-track"><div class="progress-fill" style="width: ${overallProgress.toFixed(1)}%;"></div></div>
+                        <div class="flex items-center gap-4">
+                            ${backButtonHTML}
+                            <div class="w-full sm:w-auto flex-grow sm:flex-grow-0 max-w-xs">
+                                <p class="text-sm text-center font-medium mb-1">Tiến độ tổng quát: ${overallProgress.toFixed(1)}%</p>
+                                <div class="progress-track"><div class="progress-fill" style="width: ${overallProgress.toFixed(1)}%;"></div></div>
+                            </div>
                         </div>
                     </div>`;
+                
+                document.getElementById('header-back-btn')?.addEventListener('click', async () => {
+                    await this.updateFirestoreProgress();
+                    this.renderDashboard();
+                    this.renderHeader(false); // Re-render header without back button
+                });
             },
 
             renderDashboard() {
@@ -385,11 +376,14 @@
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 fade-in">
                         <aside class="lg:col-span-1 space-y-6">
                             <div class="glass-panel p-6">
-                                <h2 class="text-xl font-bold font-poppins mb-4">📚 Bắt đầu</h2>
+                                <h2 class="text-xl font-bold font-poppins mb-4">📚 Chế độ Học</h2>
                                 <div class="space-y-3">
-                                    <button id="show-guide-btn" class="cta-btn secondary w-full !rounded-lg"><i class="fas fa-book-open mr-2"></i>Xem Hướng Dẫn & Các Dạng Bài</button>
                                     <button id="start-flashcard-btn" class="cta-btn secondary w-full !rounded-lg"><i class="fas fa-clone mr-2"></i>Học bằng Flashcard</button>
                                 </div>
+                            </div>
+                            <div class="glass-panel p-6">
+                                <h2 class="text-xl font-bold font-poppins mb-4">📖 Hướng dẫn Dạng bài</h2>
+                                <div id="practice-guide-buttons" class="flex flex-wrap gap-3"></div>
                             </div>
                         </aside>
                         <main class="lg:col-span-2 space-y-6">
@@ -403,8 +397,8 @@
                 `;
                 this.renderLevelCards();
                 this.renderFinalTestSection();
+                this.renderPracticeGuide();
 
-                document.getElementById('show-guide-btn').addEventListener('click', () => this.renderGuideView());
                 document.getElementById('start-flashcard-btn').addEventListener('click', () => this.startFlashcardSession());
             },
             
@@ -437,9 +431,9 @@
                         const testUnlockThreshold = this.CONFIG.RULES.PROFICIENCY_TEST_UNLOCK[levelNum];
 
                         let canTakeTest = false;
-                        if (levelNum === 1) { // Level 1 test is always available
+                        if (levelNum === 1) {
                             canTakeTest = true;
-                        } else if (testUnlockThreshold && percent >= testUnlockThreshold) { // Check threshold for other levels
+                        } else if (testUnlockThreshold && percent >= testUnlockThreshold) {
                             canTakeTest = true;
                         }
 
@@ -477,8 +471,9 @@
             renderFinalTestSection() {
                 const container = document.getElementById('final-test-container');
                 if (!container) return;
-                const { totalCompletedTasks, totalTasksInTest, finalTestTaken, finalTestScore } = this.state.userProgress;
-                const overallProgress = totalTasksInTest > 0 ? (totalCompletedTasks / totalTasksInTest) : 0;
+                const totalCompleted = this.calculateTotalCompletedTasks();
+                const { totalTasksInTest, finalTestTaken, finalTestScore } = this.state.userProgress;
+                const overallProgress = totalTasksInTest > 0 ? (totalCompleted / totalTasksInTest) : 0;
                 const isEligible = overallProgress >= this.CONFIG.RULES.FINAL_TEST_UNLOCK_THRESHOLD;
 
                 if (isEligible) {
@@ -492,7 +487,7 @@
                     `;
                     container.querySelector('#start-final-test-btn')?.addEventListener('click', () => this.startFinalTest());
                 } else {
-                    container.innerHTML = `<p class="text-text-secondary"><i class="fas fa-lock mr-2"></i>Hoàn thành ${this.CONFIG.RULES.FINAL_TEST_UNLOCK_THRESHOLD * 100}% tiến độ tổng quát để mở khóa.</p>`;
+                    container.innerHTML = `<p class="text-text-secondary"><i class="fas fa-lock mr-2"></i>Hoàn thành ${(this.CONFIG.RULES.FINAL_TEST_UNLOCK_THRESHOLD * 100)}% tiến độ tổng quát để mở khóa.</p>`;
                 }
             },
             
@@ -516,6 +511,7 @@
             },
 
             startPractice(level) {
+                this.renderHeader(true); // Show back button
                 const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
                 const completedTasks = this.state.userProgress.levels[level].completedTasks;
                 let practiceItems = [];
@@ -530,7 +526,7 @@
                 });
 
                 if (practiceItems.length === 0) {
-                    this.showModal("Hoàn thành!", "Bạn đã làm hết các bài tập cho level này. Hãy thử làm bài kiểm tra vượt cấp nếu có.");
+                    this.showModal("Hoàn thành!", "Bạn đã làm hết các bài tập cho level này. Hãy thử làm bài kiểm tra vượt cấp nếu có.", false, () => this.renderHeader(false));
                     return;
                 }
 
@@ -546,6 +542,7 @@
             },
 
             async runProficiencyTest(levelToTest) {
+                this.renderHeader(true); // Show back button
                 const progress = this.state.userProgress.levels[levelToTest];
                 const testConfig = this.CONFIG.RULES.PROFICIENCY_TESTS[levelToTest];
                 if (progress.testAttempts >= testConfig.maxAttempts) {
@@ -584,6 +581,7 @@
             },
 
             startFinalTest() {
+                this.renderHeader(true); // Show back button
                 let allTasks = [];
                 Object.keys(this.CONFIG.LEVELS).forEach(level => {
                     const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
@@ -621,6 +619,7 @@
                         level === "Final" ? this.renderFinalTestSummary() : this.renderTestSummary();
                     } else {
                         this.renderDashboard();
+                        this.renderHeader(false);
                     }
                     return;
                 }
@@ -640,18 +639,12 @@
                             ${renderFunction ? renderFunction.call(this, currentItem) : 'Lỗi: Không thể render câu hỏi.'}
                         </div>
                         <div id="feedback-container" class="mt-4"></div>
-                        <div class="flex justify-between items-center mt-6">
-                            <div class="report-actions">
-                                <button class="report-btn" data-report-type="error"><i class="fas fa-bug mr-2"></i>Báo lỗi</button>
-                                <button class="report-btn" data-report-type="explanation"><i class="fas fa-question-circle mr-2"></i>Cần giải thích</button>
-                            </div>
-                            <button id="exit-practice-btn" class="cta-btn secondary !py-2 !px-4"><i class="fas fa-times mr-2"></i> Thoát</button>
+                        <div class="report-actions">
+                            <button class="report-btn" data-report-type="error"><i class="fas fa-bug mr-2"></i>Báo lỗi</button>
+                            <button class="report-btn" data-report-type="explanation"><i class="fas fa-question-circle mr-2"></i>Cần giải thích</button>
                         </div>
                     </div>
                 `;
-                document.getElementById('exit-practice-btn').addEventListener('click', () => {
-                    this.showModal("Xác nhận thoát?", "Tiến trình trong phiên làm bài này sẽ không được lưu. Bạn có chắc muốn thoát?", true, () => this.renderDashboard());
-                });
 
                 this.DOM.main.querySelector('.report-actions').addEventListener('click', e => {
                     const button = e.target.closest('button');
@@ -670,23 +663,35 @@
                 const didPass = accuracy >= testConfig.passMark;
                 let title = didPass ? "🎉 Chúc mừng, bạn đã qua!" : "Cần cố gắng hơn!";
                 let message = `Bạn đã trả lời đúng ${score} / ${total} câu, đạt <strong>${(accuracy * 100).toFixed(1)}%</strong>. Tỉ lệ yêu cầu là ${(testConfig.passMark * 100)}%.`;
+                const levelProgress = this.state.userProgress.levels[level];
 
                 if (didPass) {
                     message += `<br>Level ${level} đã được đánh dấu là hoàn thành. Level tiếp theo đã được mở khóa.`;
-                    this.state.userProgress.levels[level].status = 'passed';
+                    levelProgress.status = 'passed';
+                    
+                    // Add all tasks from this level to completedTasks
+                    const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
+                    this.state.wordList.forEach(word => {
+                        tasksForLevel.forEach(taskType => {
+                            if (this.isTaskAvailable(word, taskType)) {
+                                levelProgress.completedTasks.add(`${word.id}::${taskType}`);
+                            }
+                        });
+                    });
+
                     const nextLevel = level + 1;
                     if (this.CONFIG.LEVELS[nextLevel]) {
                         this.state.userProgress.levels[nextLevel].status = 'unlocked';
                     }
                 } else {
-                    const attemptsLeft = testConfig.maxAttempts - this.state.userProgress.levels[level].testAttempts;
+                    const attemptsLeft = testConfig.maxAttempts - levelProgress.testAttempts;
                     message += `<br>Bạn còn <strong>${attemptsLeft}</strong> lần thử lại. Hãy luyện tập thêm nhé.`;
                 }
 
                 await this.updateFirestoreProgress();
                 this.showModal(title, message, false, () => {
                     this.renderDashboard();
-                    this.renderHeader();
+                    this.renderHeader(false);
                 }, null, "Về Bảng điều khiển");
             },
 
@@ -704,12 +709,12 @@
                 await this.updateFirestoreProgress();
                 this.showModal(title, message, false, () => {
                     this.renderDashboard();
-                    this.renderHeader();
+                    this.renderHeader(false);
                 }, null, "Về Bảng điều khiển");
             },
 
-            // --- QUESTION HTML GETTERS ---
-            getMeaningMCQHTML(item) {
+            // --- QUESTION HTML GETTERS (Unchanged) ---
+            getMeaningMCQHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.meaning_mcq;
                 if (!tasks || !tasks.distractors_vi || !tasks.distractors_en) { return '<div>Không có đủ dữ liệu cho dạng bài tập này.</div>'; }
                 const correctAnswer = item.meaning;
@@ -718,7 +723,7 @@
                 const options = this.shuffleArray([correctAnswer, ...distractors]);
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Meaning MCQ</h2><div class="min-h-[60px] mb-8 font-poppins font-bold text-3xl">${item.word}</div><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getWordFamilyMCQHTML(item) {
+            getWordFamilyMCQHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.word_family_mcq;
                 if (!tasks || !tasks.sentence) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_answer;
@@ -726,27 +731,27 @@
                 const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Word Family</h2><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getSentenceUnscrambleHTML(item) {
+            getSentenceUnscrambleHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.sentence_unscramble;
                 if (!tasks || !tasks.correct_sentence) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_sentence;
                 const words = this.shuffleArray(tasks.correct_sentence.split(' '));
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Sentence Unscramble</h2><p class="text-text-secondary mb-4">Click on the words in the correct order.</p><div id="unscramble-answer-area" class="min-h-[60px] p-4 border-2 border-dashed border-gray-600 rounded-lg mb-4 flex flex-wrap gap-2"></div><div id="unscramble-source-area" class="flex flex-wrap gap-2">${words.map(word => `<button class="px-4 py-2 bg-purple-600 rounded-lg">${word}</button>`).join('')}</div><div class="mt-6 text-right"><button id="check-btn" class="cta-btn">Check</button></div></div>`;
             },
-            getErrorCorrectionHTML(item) {
+            getErrorCorrectionHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.error_correction;
                 if (!tasks || !tasks.incorrect_sentence) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_sentence;
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Error Correction</h2><p class="text-text-secondary mb-4">Correct the following sentence.</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${tasks.incorrect_sentence}"</p><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type the correct sentence..."><button id="check-btn" class="cta-btn !py-3">Check</button></div></div>`;
             },
-            getIPAFillHTML(item) {
+            getIPAFillHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.ipa_fill;
                 if (!tasks || !tasks.gapped_ipa) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_vowel;
                 const options = this.shuffleArray([tasks.correct_vowel, ...tasks.distractors]);
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">IPA Fill</h2><p class="text-text-secondary mb-4">Choose the correct sound for <strong class="text-primary-accent">"${item.word}"</strong></p><p class="text-3xl font-mono text-center min-h-[60px] mb-8">/${tasks.gapped_ipa}/</p><div id="answer-options" class="grid grid-cols-2 gap-3">${options.map(opt => `<button class="answer-option font-mono text-center !text-2xl" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getBestFitReplacementHTML(item) {
+            getBestFitReplacementHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.best_fit_replacement;
                 if (!tasks || !tasks.sentence) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_answer;
@@ -754,14 +759,14 @@
                 const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Best-fit Replacement</h2><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getInferenceFromScenarioHTML(item) {
+            getInferenceFromScenarioHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.inference_from_scenario;
                 if (!tasks || !tasks.scenario) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_answer;
                 const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Inference from Scenario</h2><p class="text-md font-serif italic text-text-secondary mb-4">"${tasks.scenario}"</p><p class="text-lg font-semibold text-text-light mb-6">${tasks.question}</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getBestParaphraseHTML(item) {
+            getBestParaphraseHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.best_paraphrase;
                 if (!tasks || !tasks.options) return this.getMeaningMCQHTML(item);
                 const correctOption = tasks.options.find(opt => opt.is_correct);
@@ -769,18 +774,18 @@
                 const options = this.shuffleArray(tasks.options.map(opt => opt.text));
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Best Paraphrase</h2><p class="text-text-secondary mb-4">Original sentence:</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${tasks.original_sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getAudioListeningHTML(item) {
+            getAudioListeningHTML(item, isExample = false) {
                 this.state.currentPractice.correctAnswer = item.word;
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Listening</h2><div class="text-center mb-6"><button id="play-audio-btn" data-audio-url="${item.audioUrl}" class="text-6xl text-primary-accent hover:text-violet-400 transition-colors"><i class="fas fa-play-circle"></i></button></div><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type what you hear..."><button id="check-btn" class="cta-btn !py-3">Check</button></div></div>`;
             },
-            getTripledSentenceHTML(item) {
+            getTripledSentenceHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.tripled_sentence;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.keyword;
                 const sentencesHTML = tasks.examples.map(sentence => `<p class="text-lg font-serif italic text-text-secondary mb-2">"${sentence.replace(new RegExp(`\\b${tasks.keyword}\\b`, 'gi'), '[...]')}"</p>`).join('');
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Tripled Sentence</h2><p class="text-text-secondary mb-4">The same word is missing from all three sentences.</p><div class="space-y-3 mb-6">${sentencesHTML}</div><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type the missing word..."><button id="check-btn" class="cta-btn !py-3">Check</button></div></div>`;
             },
-            getAntonymMCQHTML(item) {
+            getAntonymMCQHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.antonym_mcq;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_antonym;
@@ -788,42 +793,42 @@
                 const sentence = tasks.sentence_context.replace(tasks.keyword, `<strong class="text-primary-accent">${tasks.keyword}</strong>`);
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Antonym Challenge</h2><p class="text-text-secondary mb-4">Which is an antonym for the word in bold?</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getMainIdeaHTML(item) {
+            getMainIdeaHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.main_idea;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_answer;
                 const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Find the Main Idea</h2><p class="text-text-secondary mb-4">Read the passage and select the main point.</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getParagraphCompletionHTML(item) {
+            getParagraphCompletionHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.paragraph_completion;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_conclusion;
                 const options = this.shuffleArray([tasks.correct_conclusion, ...tasks.distractors]);
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Find the Conclusion</h2><p class="text-text-secondary mb-4">Which sentence best concludes the passage?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph_body}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getArgumentStrengtheningHTML(item) {
+            getArgumentStrengtheningHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.argument_strengthening;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_evidence;
                 const options = this.shuffleArray([tasks.correct_evidence, ...tasks.distractors]);
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Strengthen the Argument</h2><p class="text-text-secondary mb-4">Which statement best supports the argument?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.argument_text}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getArgumentWeakeningHTML(item) {
+            getArgumentWeakeningHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.argument_weakening;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_weakener;
                 const options = this.shuffleArray([tasks.correct_weakener, ...tasks.distractors]);
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Weaken the Argument</h2><p class="text-text-secondary mb-4">Which statement most weakens the argument?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.argument_text}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getTonePurposeAnalysisHTML(item) {
+            getTonePurposeAnalysisHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.tone_purpose_analysis;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_answer;
                 const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
                 return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Tone & Purpose</h2><p class="text-text-secondary mb-4">${tasks.question}</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getSentenceRoleAnalysisHTML(item) {
+            getSentenceRoleAnalysisHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.sentence_role_analysis;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_role;
@@ -833,9 +838,9 @@
             },
 
             // --- EVENT HANDLING & CORE LOGIC ---
-            attachPracticeEventListeners(item, container) {
+            attachPracticeEventListeners(item, container, isGuide = false) {
                 if (!container) return;
-                const checkAnswerFunction = this.checkAnswer.bind(this);
+                const checkAnswerFunction = isGuide ? this.checkGuideAnswer.bind(this) : this.checkAnswer.bind(this);
                 switch(item.exerciseType) {
                     case 'MeaningMCQ': case 'WordFamilyMCQ': case 'IPAFill': case 'BestFitReplacement': case 'InferenceFromScenario': case 'BestParaphrase': case 'AntonymMCQ': case 'MainIdea': case 'ParagraphCompletion': case 'ArgumentStrengthening': case 'ArgumentWeakening': case 'TonePurposeAnalysis': case 'SentenceRoleAnalysis':
                         container.querySelectorAll('.answer-option').forEach(option => { option.addEventListener('click', (e) => checkAnswerFunction(e.currentTarget.dataset.answer, item, container)); }); break;
@@ -879,25 +884,37 @@
                     this.checkLevelUp(this.state.currentPractice.level);
                 }
                 this.updateFirestoreProgress();
-                this.renderHeader();
+                this.renderHeader(true);
             },
 
-            showFeedback(isCorrect, correctAnswer, container) {
-                const feedbackContainer = container.querySelector('#feedback-container') || container.appendChild(document.createElement('div'));
+            checkGuideAnswer(userAnswer, item, container) {
+                const correctAnswer = this.state.currentPractice.correctAnswer;
+                const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
+                container.querySelectorAll('button, input').forEach(el => el.disabled = true);
+                this.showFeedback(isCorrect, correctAnswer, container.parentElement.querySelector('#guide-feedback-container'), true);
+            },
+
+            showFeedback(isCorrect, correctAnswer, container = null, isGuide = false) {
+                if (!container) container = document.getElementById('feedback-container');
+                if (!container) return;
                 const bgColor = isCorrect ? 'bg-green-500/20' : 'bg-red-500/20';
                 const textColor = isCorrect ? 'text-green-300' : 'text-red-300';
                 let message = isCorrect ? 'Chính xác!' : `Sai rồi! Đáp án đúng là: <strong class="font-bold text-white">${correctAnswer}</strong>`;
                 
-                feedbackContainer.innerHTML = `
+                const nextButtonHTML = isGuide ? '' : `<button id="next-question-btn" class="cta-btn secondary !py-2 !px-4">Tiếp tục <i class="fas fa-arrow-right ml-2"></i></button>`;
+
+                container.innerHTML = `
                     <div class="${bgColor} ${textColor} p-4 rounded-lg flex justify-between items-center fade-in">
                         <p class="font-semibold">${message}</p>
-                        <button id="next-question-btn" class="cta-btn secondary !py-2 !px-4">Tiếp tục <i class="fas fa-arrow-right ml-2"></i></button>
+                        ${nextButtonHTML}
                     </div>`;
                 
-                document.getElementById('next-question-btn').addEventListener('click', () => {
-                    this.state.currentPractice.index++;
-                    this.renderPracticeView();
-                });
+                if (!isGuide) {
+                    document.getElementById('next-question-btn').addEventListener('click', () => {
+                        this.state.currentPractice.index++;
+                        this.renderPracticeView();
+                    });
+                }
             },
             
             // --- UTILITIES & HELPERS ---
@@ -948,6 +965,7 @@
 
             // --- FLASHCARD METHODS ---
             startFlashcardSession() {
+                this.renderHeader(true); // Show back button
                 this.state.currentFlashcard.items = this.shuffleArray([...this.state.wordList]);
                 if (this.state.currentFlashcard.items.length === 0) {
                     this.showModal("Thông báo", "Không có từ vựng để học bằng flashcard.");
@@ -961,8 +979,7 @@
                 this.DOM.main.innerHTML = `
                     <div class="glass-panel p-4 sm:p-6 fade-in">
                         <div class="flashcard-viewer">
-                            <div class="flex justify-between items-center mb-4">
-                                <button id="back-to-dashboard-btn" class="cta-btn secondary !py-2 !px-4"><i class="fas fa-arrow-left mr-2"></i> Bảng điều khiển</button>
+                            <div class="flex justify-end items-center mb-4">
                                 <div id="card-counter" class="font-semibold text-text-secondary"></div>
                             </div>
                             <div class="flashcard-main">
@@ -976,8 +993,6 @@
                         </div>
                     </div>`;
                 this.updateFlashcardView();
-                document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.renderDashboard());
-                document.getElementById('flashcard').addEventListener('click', e => { if (e.target.closest('.audio-btn')) return; e.currentTarget.classList.toggle('is-flipped'); });
                 document.getElementById('prev-card-btn').addEventListener('click', () => this.navigateCard(-1));
                 document.getElementById('next-card-btn').addEventListener('click', () => this.navigateCard(1));
             },
@@ -1081,8 +1096,9 @@
                         contentHTML, 
                         true, 
                         () => {
-                            const selectedCategory = isError ? (document.querySelector('input[name="error-category"]:checked')?.value || 'Khác') : 'Yêu cầu giải thích';
-                            const comment = document.getElementById('report-comment-input').value;
+                            const modal = document.getElementById('main-modal');
+                            const selectedCategory = isError ? (modal.querySelector('input[name="error-category"]:checked')?.value || 'Khác') : 'Yêu cầu giải thích';
+                            const comment = modal.querySelector('#report-comment-input').value;
                             resolve({ confirmed: true, category: selectedCategory, comment: comment });
                         },
                         () => resolve({ confirmed: false }),
@@ -1092,126 +1108,91 @@
                 });
             },
             
-            // --- NEW GUIDE VIEW ---
-            renderGuideView() {
-                const rules = this.CONFIG.RULES;
-                this.DOM.main.innerHTML = `
-                <div class="fade-in">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-3xl font-bold font-poppins">Hướng Dẫn Lộ Trình Học</h2>
-                        <button id="back-to-dashboard-btn" class="cta-btn secondary"><i class="fas fa-arrow-left mr-2"></i> Quay về Dashboard</button>
-                    </div>
-
-                    <div class="space-y-8">
-                        <div class="guide-section">
-                            <h3><i class="fas fa-scroll mr-3"></i>Quy Tắc Chung</h3>
-                            <div class="space-y-4">
-                                <div class="guide-rule">
-                                    <h4 class="font-bold text-lg text-light">Mở Khóa Level</h4>
-                                    <p class="text-text-secondary">Hoàn thành <strong class="text-white">${rules.UNLOCK_THRESHOLD * 100}%</strong> số bài tập của một level để tự động mở khóa level tiếp theo.</p>
-                                </div>
-                                <div class="guide-rule">
-                                    <h4 class="font-bold text-lg text-light">Kiểm Tra Vượt Cấp (Proficiency Test)</h4>
-                                    <p class="text-text-secondary">Đây là bài kiểm tra tùy chọn để bỏ qua một level. Yêu cầu để qua là <strong class="text-white">${rules.PROFICIENCY_TESTS[1].passMark * 100}%</strong>. Bạn có tối đa <strong class="text-white">${rules.PROFICIENCY_TESTS[1].maxAttempts}</strong> lần thử cho mỗi level.</p>
-                                    <ul class="list-disc list-inside text-text-secondary mt-2 space-y-1">
-                                        <li><strong class="text-white">Level 1:</strong> Nút kiểm tra có sẵn ngay từ đầu.</li>
-                                        <li><strong class="text-white">Level 2:</strong> Nút kiểm tra xuất hiện khi bạn hoàn thành <strong class="text-white">${rules.PROFICIENCY_TEST_UNLOCK[2] * 100}%</strong> bài tập của Level 2.</li>
-                                        <li><strong class="text-white">Level 3:</strong> Nút kiểm tra xuất hiện khi bạn hoàn thành <strong class="text-white">${rules.PROFICIENCY_TEST_UNLOCK[3] * 100}%</strong> bài tập của Level 3.</li>
-                                    </ul>
-                                </div>
-                                <div class="guide-rule">
-                                    <h4 class="font-bold text-lg text-light">Bài Kiểm Tra Cuối Kỳ</h4>
-                                    <p class="text-text-secondary">Khi tiến độ tổng quát của bạn đạt <strong class="text-white">${rules.FINAL_TEST_UNLOCK_THRESHOLD * 100}%</strong>, bài kiểm tra cuối cùng sẽ được mở khóa trên dashboard.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        ${Object.keys(this.CONFIG.LEVELS).map(levelKey => this.getGuideLevelSectionHTML(levelKey)).join('')}
-                    </div>
-                </div>
-                `;
-                document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.renderDashboard());
+            // --- GUIDE VIEW METHODS ---
+            renderPracticeGuide() {
+                const guideContainer = document.getElementById('practice-guide-buttons');
+                const exerciseTypes = [
+                    { type: 'MeaningMCQ', name: 'Meaning MCQ', icon: 'fa-list-check', color: 'text-violet-400' },
+                    { type: 'WordFamilyMCQ', name: 'Word Family', icon: 'fa-users', color: 'text-blue-400' },
+                    { type: 'AntonymMCQ', name: 'Antonym', icon: 'fa-exchange-alt', color: 'text-amber-400' },
+                    { type: 'IPAFill', name: 'IPA Fill', icon: 'fa-microphone-alt', color: 'text-orange-400' },
+                    { type: 'AudioListening', name: 'Listening', icon: 'fa-volume-up', color: 'text-teal-400' },
+                    { type: 'SentenceUnscramble', name: 'Unscramble', icon: 'fa-sort-alpha-down', color: 'text-indigo-400' },
+                    { type: 'ErrorCorrection', name: 'Error Correction', icon: 'fa-check-double', color: 'text-rose-400' },
+                    { type: 'BestFitReplacement', name: 'Replacement', icon: 'fa-sync-alt', color: 'text-sky-400' },
+                    { type: 'BestParaphrase', name: 'Paraphrase', icon: 'fa-retweet', color: 'text-pink-400' },
+                    { type: 'TripledSentence', name: 'Tripled Sentence', icon: 'fa-clone', color: 'text-purple-400' },
+                    { type: 'InferenceFromScenario', name: 'Inference', icon: 'fa-brain', color: 'text-emerald-400' },
+                    { type: 'MainIdea', name: 'Main Idea', icon: 'fa-lightbulb', color: 'text-yellow-400' },
+                    { type: 'ParagraphCompletion', name: 'Conclusion', icon: 'fa-flag-checkered', color: 'text-lime-400' },
+                    { type: 'ArgumentStrengthening', name: 'Strengthen Arg.', icon: 'fa-angle-double-up', color: 'text-green-400' },
+                    { type: 'ArgumentWeakening', name: 'Weaken Arg.', icon: 'fa-angle-double-down', color: 'text-red-400' },
+                    { type: 'TonePurposeAnalysis', name: 'Tone/Purpose', icon: 'fa-theater-masks', color: 'text-cyan-400' },
+                    { type: 'SentenceRoleAnalysis', name: 'Sentence Role', icon: 'fa-puzzle-piece', color: 'text-orange-400' },
+                ];
+                guideContainer.innerHTML = exerciseTypes.map(ex => `
+                    <button data-guide-type="${ex.type}" class="cta-btn secondary !p-2 !justify-start !text-left !rounded-lg !text-sm flex-grow">
+                        <i class="fas ${ex.icon} ${ex.color} w-8 text-center text-base"></i>
+                        <span class="font-semibold">${ex.name}</span>
+                    </button>
+                `).join('');
+                
+                guideContainer.addEventListener('click', e => {
+                    const button = e.target.closest('button');
+                    if (button && button.dataset.guideType) {
+                        this.renderGuideModal(button.dataset.guideType);
+                    }
+                });
             },
 
-            getGuideLevelSectionHTML(levelKey) {
-                const levelNum = parseInt(levelKey);
-                const levelConfig = this.CONFIG.LEVELS[levelNum];
-                return `
-                <div class="guide-section">
-                    <h3><i class="fas fa-layer-group mr-3"></i>Level ${levelNum}: ${levelConfig.name}</h3>
-                    <p class="text-text-secondary mb-6">Level này tập trung vào các kỹ năng sau. Dưới đây là các ví dụ về dạng bài bạn sẽ gặp.</p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        ${levelConfig.tasks.map(taskType => this.getTaskExampleHTML(taskType)).join('')}
-                    </div>
-                </div>
-                `;
-            },
+            renderGuideModal(exerciseType) {
+                const exerciseInfo = {
+                    'MeaningMCQ': { name: 'Meaning MCQ', desc: 'Chọn đúng nghĩa tiếng Việt của từ đã cho.' },
+                    'WordFamilyMCQ': { name: 'Word Family', desc: 'Chọn dạng từ đúng (danh từ, động từ, tính từ...) để hoàn thành câu.' },
+                    'SentenceUnscramble': { name: 'Sentence Unscramble', desc: 'Sắp xếp các từ bị xáo trộn thành một câu hoàn chỉnh.' },
+                    'ErrorCorrection': { name: 'Error Correction', desc: 'Đọc và sửa lại lỗi sai trong câu.' },
+                    'IPAFill': { name: 'IPA Fill', desc: 'Chọn đúng nguyên âm để hoàn thành phiên âm IPA của từ.' },
+                    'BestFitReplacement': { name: 'Best-fit Replacement', desc: 'Chọn từ đồng nghĩa phù hợp nhất để thay thế từ được gạch chân.' },
+                    'InferenceFromScenario': { name: 'Inference from Scenario', desc: 'Đọc một tình huống ngắn và trả lời câu hỏi suy luận về nó.' },
+                    'BestParaphrase': { name: 'Best Paraphrase', desc: 'Chọn câu diễn giải lại đúng nhất ý của câu gốc.' },
+                    'AudioListening': { name: 'Listening & Typing', desc: 'Nghe và gõ lại chính xác từ bạn nghe được.' },
+                    'AntonymMCQ': { name: 'Antonym Challenge', desc: 'Chọn từ có nghĩa trái ngược với từ cho trước.' },
+                    'TripledSentence': { name: 'Tripled Sentence', desc: 'Một từ bị thiếu trong cả ba câu. Hãy tìm ra từ đó.' },
+                    'MainIdea': { name: 'Find the Main Idea', desc: 'Đọc một đoạn văn ngắn và chọn câu diễn đạt đúng nhất ý chính.' },
+                    'ParagraphCompletion': { name: 'Find the Conclusion', desc: 'Chọn câu phù hợp nhất để kết thúc đoạn văn.' },
+                    'ArgumentStrengthening': { name: 'Strengthen the Argument', desc: 'Chọn luận điểm củng cố mạnh nhất cho lập luận của tác giả.' },
+                    'ArgumentWeakening': { name: 'Weaken the Argument', desc: 'Chọn luận điểm làm suy yếu nhất lập luận của tác giả.' },
+                    'TonePurposeAnalysis': { name: 'Tone/Purpose Identification', desc: 'Xác định giọng văn (thái độ) hoặc mục đích viết của tác giả.' },
+                    'SentenceRoleAnalysis': { name: 'Sentence Role Analysis', desc: 'Phân tích và xác định vai trò của một câu được đánh dấu trong lập luận.' },
+                };
+                
+                const info = exerciseInfo[exerciseType];
+                const suitableItem = this.state.wordList.find(item => this.isTaskAvailable(item, exerciseType));
 
-            getTaskExampleHTML(taskType) {
-                let title = '', description = '', exampleHTML = '';
-                switch(taskType) {
-                    case 'MeaningMCQ':
-                        title = 'Meaning MCQ';
-                        description = 'Chọn đúng nghĩa tiếng Việt của từ đã cho.';
-                        exampleHTML = `<div class="font-poppins font-bold text-2xl text-center mb-4">eloquent</div>
-                                       <div class="space-y-2">
-                                           <div class="answer-option">lưu loát, hùng hồn</div>
-                                           <div class="answer-option">xinh đẹp</div>
-                                           <div class="answer-option">thông minh</div>
-                                           <div class="answer-option">dũng cảm</div>
-                                       </div>`;
-                        break;
-                    case 'IPAFill':
-                        title = 'IPA Fill';
-                        description = 'Điền đúng nguyên âm hoặc phụ âm còn thiếu vào phiên âm IPA.';
-                        exampleHTML = `<p class="text-center text-2xl font-mono mb-4">/ˈeləkw...nt/</p>
-                                       <div class="grid grid-cols-4 gap-2 text-center">
-                                           <button class="answer-option !text-center">ə</button>
-                                           <button class="answer-option !text-center">æ</button>
-                                           <button class="answer-option !text-center">i</button>
-                                           <button class="answer-option !text-center">ɔ</button>
-                                       </div>`;
-                        break;
-                    case 'AudioListening':
-                        title = 'Listening';
-                        description = 'Nghe và gõ lại chính xác từ bạn nghe được.';
-                        exampleHTML = `<div class="text-center mb-4"><i class="fas fa-play-circle text-5xl text-primary-accent"></i></div>
-                                       <input type="text" class="text-input-styled w-full" placeholder="Gõ từ bạn nghe được...">`;
-                        break;
-                    case 'WordFamilyMCQ':
-                        title = 'Word Family';
-                        description = 'Chọn dạng từ đúng (danh từ, động từ, tính từ...) để hoàn thành câu.';
-                        exampleHTML = `<p class="mb-4 text-text-secondary italic">"Her speech was remarkably [...]."<p>
-                                       <div class="space-y-2">
-                                           <div class="answer-option">eloquence</div>
-                                           <div class="answer-option">eloquent</div>
-                                           <div class="answer-option">eloquently</div>
-                                       </div>`;
-                        break;
-                    case 'SentenceUnscramble':
-                        title = 'Sentence Unscramble';
-                        description = 'Sắp xếp các từ bị xáo trộn thành một câu hoàn chỉnh.';
-                        exampleHTML = `<div class="min-h-[40px] p-2 border-2 border-dashed border-gray-600 rounded-lg mb-4"></div>
-                                       <div class="flex flex-wrap gap-2">
-                                           <button class="px-3 py-1 bg-purple-600 rounded-lg">speech</button>
-                                           <button class="px-3 py-1 bg-purple-600 rounded-lg">was</button>
-                                           <button class="px-3 py-1 bg-purple-600 rounded-lg">eloquent</button>
-                                           <button class="px-3 py-1 bg-purple-600 rounded-lg">Her</button>
-                                       </div>`;
-                        break;
-                    // Add more examples as needed...
-                    default:
-                        title = taskType;
-                        description = 'Mô tả cho dạng bài này sẽ được cập nhật sớm.';
-                        exampleHTML = `<p class="text-text-secondary text-center">Ví dụ chưa có sẵn.</p>`;
+                if (!suitableItem) {
+                    this.showModal("Không có dữ liệu", `Hiện tại chưa có dữ liệu phù hợp để tạo ví dụ cho dạng bài: "${info.name}".`);
+                    return;
                 }
-                return `
-                <div class="task-example-card">
-                    <h5 class="font-bold text-lg text-light mb-1">${title}</h5>
-                    <p class="text-sm text-text-secondary mb-4">${description}</p>
-                    <div>${exampleHTML}</div>
-                </div>
-                `;
+                
+                suitableItem.exerciseType = exerciseType;
+                const renderFunction = this[`get${exerciseType}HTML`];
+                if (typeof renderFunction !== 'function') return;
+                
+                const exampleHTML = renderFunction.call(this, suitableItem, true);
+
+                this.showModal(
+                    `Hướng dẫn: ${info.name}`,
+                    `<p class="text-text-secondary mb-6 text-left">${info.desc}</p>
+                    <div class="bg-bg-dark p-4 rounded-lg border border-glass-border">
+                        <h4 class="font-bold mb-3 text-left">Ví dụ tương tác:</h4>
+                        <div id="guide-question-container">${exampleHTML}</div>
+                        <div id="guide-feedback-container" class="mt-4"></div>
+                    </div>`,
+                    false, null, null, 'Đóng'
+                );
+                
+                const guideContainer = document.getElementById('guide-question-container');
+                this.attachPracticeEventListeners(suitableItem, guideContainer, true);
             }
         };
 
