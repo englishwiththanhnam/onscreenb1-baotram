@@ -93,975 +93,999 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc, runTransaction, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import { getFirestore, doc, getDoc, updateDoc, runTransaction, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
-        if (window.OGL) {
-            const { Renderer, Camera, Transform, Program, Geometry, Mesh } = window.OGL;
-            const renderer = new Renderer({ dpr: 2, alpha: true });
-            const gl = renderer.gl;
-            const backCanvas = document.getElementById('ogl-canvas-back');
-            if (backCanvas) backCanvas.appendChild(gl.canvas);
-            gl.clearColor(0, 0, 0, 0);
-            const camera = new Camera(gl, { fov: 45 });
-            camera.position.set(0, 0, 7);
-            const scene = new Transform();
-            let raf;
-            function resize() {
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                camera.perspective({ aspect: gl.canvas.width / gl.canvas.height });
-            }
-            window.addEventListener('resize', resize, false);
-            resize();
-            const program = new Program(gl, {
-                vertex: `
-                    attribute vec3 position;
-                    uniform mat4 modelViewMatrix;
-                    uniform mat4 projectionMatrix;
-                    void main() {
-                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                    }
-                `,
-                fragment: `
-                    precision highp float;
-                    uniform float uTime;
-                    uniform vec3 uColor;
-                    void main() {
-                        gl_FragColor.rgb = uColor;
-                        gl_FragColor.a = 1.0;
-                    }
-                `,
-                uniforms: {
-                    uTime: { value: 0 },
-                    uColor: { value: [0.8, 0.2, 0.5] },
-                },
-            });
-            const mesh = new Mesh(gl, { geometry: new Geometry(gl), program });
-            mesh.setParent(scene);
-            raf = requestAnimationFrame(update);
-            function update(t) {
-                raf = requestAnimationFrame(update);
-                program.uniforms.uTime.value = t * 0.001;
-                renderer.render({ scene, camera });
-            }
+    if (window.OGL) {
+        const { Renderer, Camera, Transform, Program, Geometry, Mesh } = window.OGL;
+        const renderer = new Renderer({ dpr: 2, alpha: true });
+        const gl = renderer.gl;
+        const backCanvas = document.getElementById('ogl-canvas-back');
+        if (backCanvas) backCanvas.appendChild(gl.canvas);
+        gl.clearColor(0, 0, 0, 0);
+        const camera = new Camera(gl, { fov: 45 });
+        camera.position.set(0, 0, 7);
+        const scene = new Transform();
+        let raf;
+        function resize() {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.perspective({ aspect: gl.canvas.width / gl.canvas.height });
         }
+        window.addEventListener('resize', resize, false);
+        resize();
+        const program = new Program(gl, {
+            vertex: `
+                attribute vec3 position;
+                uniform mat4 modelViewMatrix;
+                uniform mat4 projectionMatrix;
+                void main() {
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragment: `
+                precision highp float;
+                uniform float uTime;
+                uniform vec3 uColor;
+                void main() {
+                    // A simple fractal noise for the background
+                    vec2 uv = gl_FragCoord.xy / vec2(1024.0, 1024.0);
+                    float noise = fract(sin(dot(uv + uTime * 0.01, vec2(12.9898, 78.233))) * 43758.5453);
+                    gl_FragColor.rgb = uColor * (0.5 + 0.5 * noise);
+                    gl_FragColor.a = 1.0;
+                }
+            `,
+            uniforms: {
+                uTime: { value: 0 },
+                uColor: { value: [0.4, 0.2, 0.6] }, // Changed color for better visuals
+            },
+        });
 
-        const App = {
-            state: {},
-            DOM: {},
-            db: null,
+        // FIX: Create a geometry with actual vertex data instead of an empty one.
+        // This large triangle will cover the entire screen.
+        const geometry = new Geometry(gl, {
+            position: {
+                size: 3, // (x, y, z)
+                data: new Float32Array([
+                    -1, -1, 0,  // Bottom-left
+                     3, -1, 0,  // Far-right
+                    -1,  3, 0,  // Far-top
+                ])
+            },
+        });
 
-            CONFIG: {
-                LEVELS: {
-                    1: { name: "Nền tảng", tasks: ['MeaningMCQ', 'IPAFill', 'AudioListening'] },
-                    2: { name: "Ngữ pháp & Cấu trúc", tasks: ['WordFamilyMCQ', 'SentenceUnscramble', 'ErrorCorrection', 'TripledSentence'] },
-                    3: { name: "Ngữ nghĩa & Ngữ dụng", tasks: ['BestFitReplacement', 'BestParaphrase', 'AntonymMCQ'] },
-                    4: { name: "Tư duy Phản biện", tasks: ['InferenceFromScenario', 'MainIdea', 'ParagraphCompletion', 'ArgumentStrengthening', 'ArgumentWeakening', 'TonePurposeAnalysis', 'SentenceRoleAnalysis'] }
+        const mesh = new Mesh(gl, { geometry, program });
+        mesh.setParent(scene);
+
+        raf = requestAnimationFrame(update);
+        function update(t) {
+            raf = requestAnimationFrame(update);
+            program.uniforms.uTime.value = t * 0.001;
+            renderer.render({ scene, camera });
+        }
+    }
+
+    const App = {
+        state: {},
+        DOM: {},
+        db: null,
+
+        CONFIG: {
+            LEVELS: {
+                1: { name: "Nền tảng", tasks: ['MeaningMCQ', 'IPAFill', 'AudioListening'] },
+                2: { name: "Ngữ pháp & Cấu trúc", tasks: ['WordFamilyMCQ', 'SentenceUnscramble', 'ErrorCorrection', 'TripledSentence'] },
+                3: { name: "Ngữ nghĩa & Ngữ dụng", tasks: ['BestFitReplacement', 'BestParaphrase', 'AntonymMCQ'] },
+                4: { name: "Tư duy Phản biện", tasks: ['InferenceFromScenario', 'MainIdea', 'ParagraphCompletion', 'ArgumentStrengthening', 'ArgumentWeakening', 'TonePurposeAnalysis', 'SentenceRoleAnalysis'] }
+            },
+            RULES: {
+                UNLOCK_THRESHOLD: 0.9,
+                PROFICIENCY_TESTS: {
+                    1: { passMark: 0.9, maxAttempts: 3 },
+                    2: { passMark: 0.9, maxAttempts: 3 },
+                    3: { passMark: 0.9, maxAttempts: 3 },
                 },
-                RULES: {
-                    UNLOCK_THRESHOLD: 0.9,
-                    PROFICIENCY_TESTS: {
-                        1: { passMark: 0.9, maxAttempts: 3 },
-                        2: { passMark: 0.9, maxAttempts: 3 },
-                        3: { passMark: 0.9, maxAttempts: 3 },
-                    },
-                    FINAL_TEST_UNLOCK_THRESHOLD: 0.8
-                }
-            },
+                FINAL_TEST_UNLOCK_THRESHOLD: 0.8
+            }
+        },
 
-            async init() {
-                const firebaseConfig = {
-                    apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
-                    authDomain: "b1-baotram.firebaseapp.com",
-                    projectId: "b1-baotram",
-                    storageBucket: "b1-baotram.appspot.com",
-                    messagingSenderId: "948701163187",
-                    appId: "1:948701163187:web:043f2d381d63e741114ac6",
-                    measurementId: "G-33NHT07JHE"
-                };
-                
-                const firebaseApp = initializeApp(firebaseConfig);
-                this.db = getFirestore(firebaseApp);
-
-                this.DOM = {
-                    loader: document.getElementById('loader-overlay'),
-                    loaderText: document.getElementById('loader-text'),
-                    container: document.getElementById('app-container'),
-                    header: document.getElementById('app-header'),
-                    main: document.getElementById('app-main'),
-                    modal: document.getElementById('modal-container'),
-                };
-                
-                this.resetState();
-                
-                const params = new URLSearchParams(window.location.search);
-                const submissionId = params.get('submission_id');
-
-                if (!submissionId) {
-                    this.showModal("Lỗi", "Không tìm thấy mã bài làm (Submission ID).");
-                    return;
-                }
-                
-                this.state.submissionId = submissionId;
-                await this.loadData(submissionId);
-            },
+        async init() {
+            const firebaseConfig = {
+                apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
+                authDomain: "b1-baotram.firebaseapp.com",
+                projectId: "b1-baotram",
+                storageBucket: "b1-baotram.appspot.com",
+                messagingSenderId: "948701163187",
+                appId: "1:948701163187:web:043f2d381d63e741114ac6",
+                measurementId: "G-33NHT07JHE"
+            };
             
-            resetState() {
-                this.state = {
-                    submissionId: null, studentId: '', studentName: '', testData: {}, wordList: [],
-                    isSubmitting: false,
-                    userProgress: {
-                        levels: {
-                            1: { status: 'locked', completedTasks: new Set(), totalTasks: 0, testAttempts: 0 },
-                            2: { status: 'locked', completedTasks: new Set(), totalTasks: 0, testAttempts: 0 },
-                            3: { status: 'locked', completedTasks: new Set(), totalTasks: 0, testAttempts: 0 },
-                            4: { status: 'locked', completedTasks: new Set(), totalTasks: 0 },
-                        },
-                        totalCompletedTasks: 0,
-                        totalTasksInTest: 0,
-                        finalTestTaken: false,
-                        finalTestScore: null,
-                    },
-                    currentPractice: { level: null, items: [], index: 0, isTest: false, correctAnswer: null, score: 0 },
-                    currentFlashcard: { items: [], index: 0 }
-                };
-            },
+            const firebaseApp = initializeApp(firebaseConfig);
+            this.db = getFirestore(firebaseApp);
 
-            async loadData(submissionId) {
-                try {
-                    const submissionRef = doc(this.db, 'submissions', submissionId);
-                    const submissionSnap = await getDoc(submissionRef);
-                    if (!submissionSnap.exists()) throw new Error("Mã bài làm không hợp lệ.");
-
-                    let submissionData = submissionSnap.data();
-                    this.state.studentId = submissionData.studentId;
-                    this.state.testData = submissionData.testSnapshot;
-                    this.state.wordList = this.state.testData.wordList || [];
-
-                    const userDoc = await getDoc(doc(this.db, "users", this.state.studentId));
-                    this.state.studentName = userDoc.exists() ? userDoc.data().displayName : "Không rõ";
-
-                    if (submissionData.adaptiveProgressV2) {
-                        const progress = submissionData.adaptiveProgressV2;
-                        Object.keys(progress.levels).forEach(level => {
-                            progress.levels[level].completedTasks = new Set(progress.levels[level].completedTasks || []);
-                        });
-                        this.state.userProgress = progress;
-                    } else {
-                        let totalTasks = 0;
-                        Object.keys(this.CONFIG.LEVELS).forEach(level => {
-                            const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
-                            let count = 0;
-                            this.state.wordList.forEach(word => {
-                                if (word.generated_tasks) {
-                                    tasksForLevel.forEach(taskType => {
-                                        if (this.isTaskAvailable(word, taskType)) count++;
-                                    });
-                                }
-                            });
-                            this.state.userProgress.levels[level].totalTasks = count;
-                            totalTasks += count;
-                        });
-                        this.state.userProgress.totalTasksInTest = totalTasks;
-                        this.state.userProgress.levels[1].status = 'unlocked';
-                    }
-                    
-                    this.DOM.loader.classList.add('hidden');
-                    this.DOM.container.classList.remove('hidden');
-                    
-                    this.renderHeader();
-                    this.renderDashboard();
-
-                } catch (error) {
-                    console.error("Load data error:", error);
-                    this.showModal("Lỗi", "Không thể tải phiên làm bài: " + error.message);
-                }
-            },
+            this.DOM = {
+                loader: document.getElementById('loader-overlay'),
+                loaderText: document.getElementById('loader-text'),
+                container: document.getElementById('app-container'),
+                header: document.getElementById('app-header'),
+                main: document.getElementById('app-main'),
+                modal: document.getElementById('modal-container'),
+            };
             
-            isTaskAvailable(word, taskType) {
-                const tasks = word.generated_tasks;
-                if (!tasks) return false;
-                switch (taskType) {
-                    case 'MeaningMCQ': return tasks.meaning_mcq?.distractors_vi?.length >= 3;
-                    case 'WordFamilyMCQ': return tasks.word_family_mcq?.distractors?.length >= 3;
-                    case 'SentenceUnscramble': return !!tasks.sentence_unscramble?.correct_sentence;
-                    case 'ErrorCorrection': return !!tasks.error_correction?.incorrect_sentence;
-                    case 'IPAFill': return tasks.ipa_fill?.distractors?.length >= 3;
-                    case 'BestFitReplacement': return tasks.best_fit_replacement?.distractors?.length >= 3;
-                    case 'InferenceFromScenario': return tasks.inference_from_scenario?.distractors?.length >= 3;
-                    case 'BestParaphrase': return tasks.best_paraphrase?.options?.length > 1;
-                    case 'AudioListening': return !!word.audioUrl;
-                    case 'AntonymMCQ': return tasks.antonym_mcq?.distractors?.length >= 3;
-                    case 'TripledSentence': return tasks.tripled_sentence?.examples?.length >= 1;
-                    case 'MainIdea': return tasks.main_idea?.distractors?.length >= 3;
-                    case 'ParagraphCompletion': return tasks.paragraph_completion?.distractors?.length >= 3;
-                    case 'ArgumentStrengthening': return tasks.argument_strengthening?.distractors?.length >= 3;
-                    case 'ArgumentWeakening': return tasks.argument_weakening?.distractors?.length >= 3;
-                    case 'TonePurposeAnalysis': return tasks.tone_purpose_analysis?.distractors?.length >= 3;
-                    case 'SentenceRoleAnalysis': return tasks.sentence_role_analysis?.distractors?.length >= 3;
-                    default: return false;
-                }
-            },
+            this.resetState();
+            
+            const params = new URLSearchParams(window.location.search);
+            const submissionId = params.get('submission_id');
 
-            async updateFirestoreProgress() {
-                if (!this.state.submissionId) return;
-                try {
-                    const progressToSave = JSON.parse(JSON.stringify(this.state.userProgress));
-                    Object.keys(progressToSave.levels).forEach(level => {
-                        progressToSave.levels[level].completedTasks = Array.from(this.state.userProgress.levels[level].completedTasks);
+            if (!submissionId) {
+                this.showModal("Lỗi", "Không tìm thấy mã bài làm (Submission ID).");
+                return;
+            }
+            
+            this.state.submissionId = submissionId;
+            await this.loadData(submissionId);
+        },
+        
+        resetState() {
+            this.state = {
+                submissionId: null, studentId: '', studentName: '', testData: {}, wordList: [],
+                isSubmitting: false,
+                userProgress: {
+                    levels: {
+                        1: { status: 'locked', completedTasks: new Set(), totalTasks: 0, testAttempts: 0 },
+                        2: { status: 'locked', completedTasks: new Set(), totalTasks: 0, testAttempts: 0 },
+                        3: { status: 'locked', completedTasks: new Set(), totalTasks: 0, testAttempts: 0 },
+                        4: { status: 'locked', completedTasks: new Set(), totalTasks: 0 },
+                    },
+                    totalCompletedTasks: 0,
+                    totalTasksInTest: 0,
+                    finalTestTaken: false,
+                    finalTestScore: null,
+                },
+                currentPractice: { level: null, items: [], index: 0, isTest: false, correctAnswer: null, score: 0 },
+                currentFlashcard: { items: [], index: 0 }
+            };
+        },
+
+        async loadData(submissionId) {
+            try {
+                const submissionRef = doc(this.db, 'submissions', submissionId);
+                const submissionSnap = await getDoc(submissionRef);
+                if (!submissionSnap.exists()) throw new Error("Mã bài làm không hợp lệ.");
+
+                let submissionData = submissionSnap.data();
+                this.state.studentId = submissionData.studentId;
+                this.state.testData = submissionData.testSnapshot;
+                this.state.wordList = this.state.testData.wordList || [];
+
+                const userDoc = await getDoc(doc(this.db, "users", this.state.studentId));
+                this.state.studentName = userDoc.exists() ? userDoc.data().displayName : "Không rõ";
+
+                if (submissionData.adaptiveProgressV2) {
+                    const progress = submissionData.adaptiveProgressV2;
+                    if (!progress.levels) progress.levels = {}; // Safeguard
+                    Object.keys(this.CONFIG.LEVELS).forEach(level => {
+                        if (!progress.levels[level]) { // Ensure all level structures exist
+                           progress.levels[level] = { status: 'locked', completedTasks: [], totalTasks: 0, testAttempts: 0 };
+                        }
+                        progress.levels[level].completedTasks = new Set(progress.levels[level].completedTasks || []);
                     });
-                    const submissionRef = doc(this.db, 'submissions', this.state.submissionId);
-                    await updateDoc(submissionRef, { adaptiveProgressV2: progressToSave });
-                } catch (error) {
-                    console.error("Lỗi khi đồng bộ tiến trình:", error);
+                    this.state.userProgress = progress;
+                } else {
+                    let totalTasks = 0;
+                    Object.keys(this.CONFIG.LEVELS).forEach(level => {
+                        const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
+                        let count = 0;
+                        this.state.wordList.forEach(word => {
+                            if (word.generated_tasks) {
+                                tasksForLevel.forEach(taskType => {
+                                    if (this.isTaskAvailable(word, taskType)) count++;
+                                });
+                            }
+                        });
+                        this.state.userProgress.levels[level].totalTasks = count;
+                        totalTasks += count;
+                    });
+                    this.state.userProgress.totalTasksInTest = totalTasks;
+                    this.state.userProgress.levels[1].status = 'unlocked';
                 }
-            },
+                
+                this.DOM.loader.classList.add('hidden');
+                this.DOM.container.classList.remove('hidden');
+                
+                this.renderHeader();
+                this.renderDashboard();
 
-            renderHeader() {
-                const { totalCompletedTasks, totalTasksInTest } = this.state.userProgress;
-                const overallProgress = totalTasksInTest > 0 ? (totalCompletedTasks / totalTasksInTest * 100) : 0;
+            } catch (error) {
+                console.error("Load data error:", error);
+                this.showModal("Lỗi", "Không thể tải phiên làm bài: " + error.message);
+            }
+        },
+        
+        isTaskAvailable(word, taskType) {
+            const tasks = word.generated_tasks;
+            if (!tasks) return false;
+            switch (taskType) {
+                case 'MeaningMCQ': return tasks.meaning_mcq?.distractors_vi?.length >= 3;
+                case 'WordFamilyMCQ': return tasks.word_family_mcq?.distractors?.length >= 3;
+                case 'SentenceUnscramble': return !!tasks.sentence_unscramble?.correct_sentence;
+                case 'ErrorCorrection': return !!tasks.error_correction?.incorrect_sentence;
+                case 'IPAFill': return tasks.ipa_fill?.distractors?.length >= 3;
+                case 'BestFitReplacement': return tasks.best_fit_replacement?.distractors?.length >= 3;
+                case 'InferenceFromScenario': return tasks.inference_from_scenario?.distractors?.length >= 3;
+                case 'BestParaphrase': return tasks.best_paraphrase?.options?.length > 1;
+                case 'AudioListening': return !!word.audioUrl;
+                case 'AntonymMCQ': return tasks.antonym_mcq?.distractors?.length >= 3;
+                case 'TripledSentence': return tasks.tripled_sentence?.examples?.length >= 1;
+                case 'MainIdea': return tasks.main_idea?.distractors?.length >= 3;
+                case 'ParagraphCompletion': return tasks.paragraph_completion?.distractors?.length >= 3;
+                case 'ArgumentStrengthening': return tasks.argument_strengthening?.distractors?.length >= 3;
+                case 'ArgumentWeakening': return tasks.argument_weakening?.distractors?.length >= 3;
+                case 'TonePurposeAnalysis': return tasks.tone_purpose_analysis?.distractors?.length >= 3;
+                case 'SentenceRoleAnalysis': return tasks.sentence_role_analysis?.distractors?.length >= 3;
+                default: return false;
+            }
+        },
 
-                this.DOM.header.innerHTML = `
-                    <div class="glass-panel p-4 flex flex-wrap justify-between items-center gap-4">
-                        <div>
-                            <h1 class="text-2xl font-bold font-poppins">${this.state.testData.title || 'Lộ trình học tập'}</h1>
-                            <p class="text-sm text-text-secondary">Học sinh: <span class="font-medium text-text-light">${this.state.studentName}</span></p>
+        async updateFirestoreProgress() {
+            if (!this.state.submissionId) return;
+            try {
+                const progressToSave = JSON.parse(JSON.stringify(this.state.userProgress));
+                Object.keys(progressToSave.levels).forEach(level => {
+                    if (progressToSave.levels[level]?.completedTasks) {
+                       progressToSave.levels[level].completedTasks = Array.from(this.state.userProgress.levels[level].completedTasks);
+                    }
+                });
+                const submissionRef = doc(this.db, 'submissions', this.state.submissionId);
+                await updateDoc(submissionRef, { adaptiveProgressV2: progressToSave });
+            } catch (error) {
+                console.error("Lỗi khi đồng bộ tiến trình:", error);
+            }
+        },
+
+        renderHeader() {
+            const { totalCompletedTasks, totalTasksInTest } = this.state.userProgress;
+            const overallProgress = totalTasksInTest > 0 ? (totalCompletedTasks / totalTasksInTest * 100) : 0;
+
+            this.DOM.header.innerHTML = `
+                <div class="glass-panel p-4 flex flex-wrap justify-between items-center gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold font-poppins">${this.state.testData.title || 'Lộ trình học tập'}</h1>
+                        <p class="text-sm text-text-secondary">Học sinh: <span class="font-medium text-text-light">${this.state.studentName}</span></p>
+                    </div>
+                    <div class="w-full sm:w-auto flex-grow sm:flex-grow-0 max-w-xs">
+                        <p class="text-sm text-center font-medium mb-1">Tiến độ tổng quát: ${overallProgress.toFixed(1)}%</p>
+                        <div class="progress-track"><div class="progress-fill" style="width: ${overallProgress.toFixed(1)}%;"></div></div>
+                    </div>
+                </div>`;
+        },
+
+        renderDashboard() {
+            this.DOM.main.innerHTML = `
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 fade-in">
+                    <aside class="lg:col-span-1 space-y-6">
+                        <div class="glass-panel p-6">
+                            <h2 class="text-xl font-bold font-poppins mb-4">📚 Chế độ Học</h2>
+                            <div class="space-y-3">
+                                <button id="start-flashcard-btn" class="cta-btn secondary w-full !rounded-lg"><i class="fas fa-clone mr-2"></i>Học bằng Flashcard</button>
+                            </div>
                         </div>
-                        <div class="w-full sm:w-auto flex-grow sm:flex-grow-0 max-w-xs">
-                            <p class="text-sm text-center font-medium mb-1">Tiến độ tổng quát: ${overallProgress.toFixed(1)}%</p>
-                            <div class="progress-track"><div class="progress-fill" style="width: ${overallProgress.toFixed(1)}%;"></div></div>
+                        <div class="glass-panel p-6">
+                            <h2 class="text-xl font-bold font-poppins mb-4">📜 Bảng Quy Tắc</h2>
+                            <div class="space-y-1 text-sm max-h-96 overflow-y-auto pr-2">
+                                <details><summary class="rule-summary">Quy tắc 0: Kiểm tra đầu vào</summary><div class="rule-details"><p>Bạn có thể làm bài test để bỏ qua Level 1. Số câu hỏi là 25% tổng số câu của level. Yêu cầu pass >= 90%. Tối đa 3 lần làm.</p></div></details>
+                                <details><summary class="rule-summary">Quy tắc 1: Mở khóa Level</summary><div class="rule-details"><p>Hoàn thành <strong>90%</strong> bài tập ở level hiện tại sẽ mở khóa level tiếp theo.</p></div></details>
+                                <details><summary class="rule-summary">Quy tắc 2: Vượt cấp</summary><div class="rule-details"><p>Bạn có thể làm bài test để bỏ qua các level nếu đã mở khóa. Yêu cầu pass >= 90%. Tối đa 3 lần làm mỗi bài test.</p></div></details>
+                                <details><summary class="rule-summary">Quy tắc 3: Hoàn thành</summary><div class="rule-details"><p>Vượt qua cả 4 Level để mở khóa <strong>Bài kiểm tra Cuối kỳ</strong>. Yêu cầu tiến độ tổng quát >= 80%.</p></div></details>
+                            </div>
                         </div>
-                    </div>`;
-            },
+                    </aside>
+                    <main class="lg:col-span-2 space-y-6">
+                        <div class="glass-panel p-6 sm:p-8">
+                            <h2 class="text-2xl font-bold font-poppins mb-6">🏋️‍♀️ Lộ Trình Luyện Tập</h2>
+                            <div id="guide-container" class="mb-6"></div>
+                            <div id="levels-container" class="grid grid-cols-1 sm:grid-cols-2 gap-6"></div>
+                        </div>
+                        <div id="final-test-container" class="glass-panel p-8 text-center"></div>
+                    </main>
+                </div>
+            `;
+            this.renderGuidePanel();
+            this.renderLevelCards();
+            this.renderFinalTestSection();
 
-            renderDashboard() {
-                this.DOM.main.innerHTML = `
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 fade-in">
-                        <aside class="lg:col-span-1 space-y-6">
-                            <div class="glass-panel p-6">
-                                <h2 class="text-xl font-bold font-poppins mb-4">📚 Chế độ Học</h2>
-                                <div class="space-y-3">
-                                    <button id="start-flashcard-btn" class="cta-btn secondary w-full !rounded-lg"><i class="fas fa-clone mr-2"></i>Học bằng Flashcard</button>
-                                </div>
-                            </div>
-                            <div class="glass-panel p-6">
-                                <h2 class="text-xl font-bold font-poppins mb-4">📜 Bảng Quy Tắc</h2>
-                                <div class="space-y-1 text-sm max-h-96 overflow-y-auto pr-2">
-                                    <details><summary class="rule-summary">Quy tắc 0: Kiểm tra đầu vào</summary><div class="rule-details"><p>Bạn có thể làm bài test để bỏ qua Level 1. Số câu hỏi là 25% tổng số câu của level. Yêu cầu pass >= 90%. Tối đa 3 lần làm.</p></div></details>
-                                    <details><summary class="rule-summary">Quy tắc 1: Mở khóa Level</summary><div class="rule-details"><p>Hoàn thành <strong>90%</strong> bài tập ở level hiện tại sẽ mở khóa level tiếp theo.</p></div></details>
-                                    <details><summary class="rule-summary">Quy tắc 2: Vượt cấp</summary><div class="rule-details"><p>Bạn có thể làm bài test để bỏ qua các level nếu đã mở khóa. Yêu cầu pass >= 90%. Tối đa 3 lần làm mỗi bài test.</p></div></details>
-                                    <details><summary class="rule-summary">Quy tắc 3: Hoàn thành</summary><div class="rule-details"><p>Vượt qua cả 4 Level để mở khóa <strong>Bài kiểm tra Cuối kỳ</strong>. Yêu cầu tiến độ tổng quát >= 80%.</p></div></details>
-                                </div>
-                            </div>
-                        </aside>
-                        <main class="lg:col-span-2 space-y-6">
-                            <div class="glass-panel p-6 sm:p-8">
-                                <h2 class="text-2xl font-bold font-poppins mb-6">🏋️‍♀️ Lộ Trình Luyện Tập</h2>
-                                <div id="guide-container" class="mb-6"></div>
-                                <div id="levels-container" class="grid grid-cols-1 sm:grid-cols-2 gap-6"></div>
-                            </div>
-                            <div id="final-test-container" class="glass-panel p-8 text-center"></div>
-                        </main>
+            document.getElementById('start-flashcard-btn').addEventListener('click', () => this.startFlashcardSession());
+        },
+
+        renderGuidePanel() {
+            const container = document.getElementById('guide-container');
+            if (!container) return;
+            const activeLevelEntry = Object.entries(this.state.userProgress.levels).find(([, data]) => data.status === 'unlocked');
+            let message = '';
+            if (activeLevelEntry) {
+                const [levelNum, ] = activeLevelEntry;
+                const levelConfig = this.CONFIG.LEVELS[levelNum];
+                message = `Bạn đang ở <strong>Level ${levelNum}: ${levelConfig.name}</strong>. Hãy bắt đầu luyện tập để mở khóa level tiếp theo!`;
+            } else {
+                const isAllPassed = Object.values(this.state.userProgress.levels).every(l => l.status === 'passed');
+                if (isAllPassed) {
+                    message = '🎉 Chúc mừng! Bạn đã hoàn thành tất cả các level. Hãy sẵn sàng cho bài kiểm tra cuối kỳ.';
+                } else {
+                    message = 'Chào mừng! Lộ trình của bạn chưa bắt đầu. Hãy liên hệ giáo viên nếu có sự nhầm lẫn.';
+                }
+            }
+            container.innerHTML = `<div class="p-4 bg-primary-accent/10 border border-primary-accent/20 rounded-xl text-center text-text-secondary">${message}</div>`;
+        },
+
+        renderLevelCards() {
+            const container = document.getElementById('levels-container');
+            if (!container) return;
+            container.innerHTML = Object.keys(this.CONFIG.LEVELS).map(levelKey => {
+                const levelNum = parseInt(levelKey);
+                const levelConfig = this.CONFIG.LEVELS[levelNum];
+                const progress = this.state.userProgress.levels[levelNum];
+                
+                let statusClass = progress.status;
+                let buttonText = 'Luyện tập';
+                let buttonDisabled = true;
+                let icon = 'fa-lock';
+                let placementTestHTML = '';
+                const testConfig = this.CONFIG.RULES.PROFICIENCY_TESTS[levelNum];
+
+                if (progress.status === 'passed') {
+                    buttonText = 'Đã qua';
+                    icon = 'fa-check-circle text-correct-color';
+                    buttonDisabled = true;
+                } else if (progress.status === 'unlocked') {
+                    statusClass = 'unlocked';
+                    buttonDisabled = false;
+                    icon = 'fa-play-circle';
+                    if (testConfig && progress.testAttempts < testConfig.maxAttempts) {
+                        placementTestHTML = `<button data-test-level="${levelNum}" class="cta-btn w-full !rounded-lg mt-3 !text-sm !py-2">Kiểm tra vượt cấp (${progress.testAttempts}/${testConfig.maxAttempts})</button>`;
+                    }
+                }
+                
+                const percent = progress.totalTasks > 0 ? (progress.completedTasks.size / progress.totalTasks * 100) : 0;
+
+                return `
+                    <div id="level-card-${levelNum}" class="level-card p-6 rounded-2xl ${statusClass}">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="font-bold text-2xl font-poppins">Level ${levelNum}</h3>
+                            <i class="fas ${icon} text-2xl"></i>
+                        </div>
+                        <p class="text-sm text-text-secondary mb-4 text-left">${levelConfig.name}</p>
+                        <div class="progress-track mb-4"><div class="progress-fill" style="width: ${percent.toFixed(0)}%;"></div></div>
+                        <button data-level="${levelNum}" class="cta-btn secondary w-full !rounded-lg" ${buttonDisabled}>${buttonText}</button>
+                        ${placementTestHTML}
                     </div>
                 `;
-                this.renderGuidePanel();
-                this.renderLevelCards();
-                this.renderFinalTestSection();
+            }).join('');
 
-                document.getElementById('start-flashcard-btn').addEventListener('click', () => this.startFlashcardSession());
-            },
-
-            renderGuidePanel() {
-                const container = document.getElementById('guide-container');
-                if (!container) return;
-                const activeLevelEntry = Object.entries(this.state.userProgress.levels).find(([, data]) => data.status === 'unlocked');
-                let message = '';
-                if (activeLevelEntry) {
-                    const [levelNum, ] = activeLevelEntry;
-                    const levelConfig = this.CONFIG.LEVELS[levelNum];
-                    message = `Bạn đang ở <strong>Level ${levelNum}: ${levelConfig.name}</strong>. Hãy bắt đầu luyện tập để mở khóa level tiếp theo!`;
-                } else {
-                    const isAllPassed = Object.values(this.state.userProgress.levels).every(l => l.status === 'passed');
-                    if (isAllPassed) {
-                        message = '🎉 Chúc mừng! Bạn đã hoàn thành tất cả các level. Hãy sẵn sàng cho bài kiểm tra cuối kỳ.';
-                    } else {
-                        message = 'Chào mừng! Lộ trình của bạn chưa bắt đầu. Hãy liên hệ giáo viên nếu có sự nhầm lẫn.';
-                    }
+            container.addEventListener('click', e => {
+                const practiceButton = e.target.closest('button[data-level]');
+                const testButton = e.target.closest('button[data-test-level]');
+                if (practiceButton && !practiceButton.disabled) {
+                    this.startPractice(parseInt(practiceButton.dataset.level));
                 }
-                container.innerHTML = `<div class="p-4 bg-primary-accent/10 border border-primary-accent/20 rounded-xl text-center text-text-secondary">${message}</div>`;
-            },
+                if (testButton && !testButton.disabled) {
+                    this.runProficiencyTest(parseInt(testButton.dataset.testLevel));
+                }
+            });
+        },
 
-            renderLevelCards() {
-                const container = document.getElementById('levels-container');
-                if (!container) return;
-                container.innerHTML = Object.keys(this.CONFIG.LEVELS).map(levelKey => {
-                    const levelNum = parseInt(levelKey);
-                    const levelConfig = this.CONFIG.LEVELS[levelNum];
-                    const progress = this.state.userProgress.levels[levelNum];
-                    
-                    let statusClass = progress.status;
-                    let buttonText = 'Luyện tập';
-                    let buttonDisabled = true;
-                    let icon = 'fa-lock';
-                    let placementTestHTML = '';
-                    const testConfig = this.CONFIG.RULES.PROFICIENCY_TESTS[levelNum];
+        renderFinalTestSection() {
+            const container = document.getElementById('final-test-container');
+            if (!container) return;
+            const { totalCompletedTasks, totalTasksInTest, finalTestTaken, finalTestScore } = this.state.userProgress;
+            const overallProgress = totalTasksInTest > 0 ? (totalCompletedTasks / totalTasksInTest) : 0;
+            const isEligible = overallProgress >= this.CONFIG.RULES.FINAL_TEST_UNLOCK_THRESHOLD;
 
-                    if (progress.status === 'passed') {
-                        buttonText = 'Đã qua';
-                        icon = 'fa-check-circle text-correct-color';
-                        buttonDisabled = true;
-                    } else if (progress.status === 'unlocked') {
-                        statusClass = 'unlocked';
-                        buttonDisabled = false;
-                        icon = 'fa-play-circle';
-                        if (testConfig && progress.testAttempts < testConfig.maxAttempts) {
-                            placementTestHTML = `<button data-test-level="${levelNum}" class="cta-btn w-full !rounded-lg mt-3 !text-sm !py-2">Kiểm tra vượt cấp (${progress.testAttempts}/${testConfig.maxAttempts})</button>`;
-                        }
-                    }
-                    
-                    const percent = progress.totalTasks > 0 ? (progress.completedTasks.size / progress.totalTasks * 100) : 0;
+            if (isEligible) {
+                container.innerHTML = `
+                    <h3 class="text-xl font-bold font-poppins mb-4">Bài Kiểm Tra Cuối Kỳ</h3>
+                    <p class="text-text-secondary mb-6">Bạn đã đủ điều kiện. Hãy bắt đầu bài kiểm tra cuối cùng để hoàn tất!</p>
+                    <button id="start-final-test-btn" class="cta-btn danger w-full max-w-xs mx-auto" ${finalTestTaken ? 'disabled' : ''}>
+                        <i class="fas fa-graduation-cap mr-2"></i>
+                        ${finalTestTaken ? `Đã làm (Điểm: ${finalTestScore}%)` : 'Bắt đầu KT Cuối Kỳ'}
+                    </button>
+                `;
+                container.querySelector('#start-final-test-btn')?.addEventListener('click', () => this.startFinalTest());
+            } else {
+                container.innerHTML = `<p class="text-text-secondary"><i class="fas fa-lock mr-2"></i>Hoàn thành ${this.CONFIG.RULES.FINAL_TEST_UNLOCK_THRESHOLD * 100}% tiến độ tổng quát để mở khóa.</p>`;
+            }
+        },
 
-                    return `
-                        <div id="level-card-${levelNum}" class="level-card p-6 rounded-2xl ${statusClass}">
-                            <div class="flex justify-between items-start mb-4">
-                                <h3 class="font-bold text-2xl font-poppins">Level ${levelNum}</h3>
-                                <i class="fas ${icon} text-2xl"></i>
-                            </div>
-                            <p class="text-sm text-text-secondary mb-4 text-left">${levelConfig.name}</p>
-                            <div class="progress-track mb-4"><div class="progress-fill" style="width: ${percent.toFixed(0)}%;"></div></div>
-                            <button data-level="${levelNum}" class="cta-btn secondary w-full !rounded-lg" ${buttonDisabled}>${buttonText}</button>
-                            ${placementTestHTML}
-                        </div>
-                    `;
-                }).join('');
+        async checkLevelUp(level) {
+            const progress = this.state.userProgress.levels[level];
+            const nextLevelKey = level + 1;
+            const nextLevelProgress = this.state.userProgress.levels[nextLevelKey];
 
-                container.addEventListener('click', e => {
-                    const practiceButton = e.target.closest('button[data-level]');
-                    const testButton = e.target.closest('button[data-test-level]');
-                    if (practiceButton && !practiceButton.disabled) {
-                        this.startPractice(parseInt(practiceButton.dataset.level));
-                    }
-                    if (testButton && !testButton.disabled) {
-                        this.runProficiencyTest(parseInt(testButton.dataset.testLevel));
+            if (!nextLevelProgress || nextLevelProgress.status !== 'locked') return;
+
+            const percent = progress.totalTasks > 0 ? (progress.completedTasks.size / progress.totalTasks) : 0;
+
+            if (percent >= this.CONFIG.RULES.UNLOCK_THRESHOLD) {
+                nextLevelProgress.status = 'unlocked';
+                await this.updateFirestoreProgress();
+                this.showModal(`🎉 Mở khóa Level ${nextLevelKey}!`, `Chúc mừng! Bạn đã hoàn thành đủ bài tập để mở khóa level tiếp theo.`, false, () => {
+                    this.renderLevelCards();
+                    this.renderGuidePanel();
+                }, null, 'Tuyệt vời!');
+            }
+        },
+
+        startPractice(level) {
+            const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
+            const completedTasks = this.state.userProgress.levels[level].completedTasks;
+            let practiceItems = [];
+
+            this.state.wordList.forEach(word => {
+                tasksForLevel.forEach(taskType => {
+                    const taskUID = `${word.id}::${taskType}`;
+                    if (this.isTaskAvailable(word, taskType) && !completedTasks.has(taskUID)) {
+                        practiceItems.push({ ...word, exerciseType: taskType, taskUID });
                     }
                 });
-            },
+            });
 
-            renderFinalTestSection() {
-                const container = document.getElementById('final-test-container');
-                if (!container) return;
-                const { totalCompletedTasks, totalTasksInTest, finalTestTaken, finalTestScore } = this.state.userProgress;
-                const overallProgress = totalTasksInTest > 0 ? (totalCompletedTasks / totalTasksInTest) : 0;
-                const isEligible = overallProgress >= this.CONFIG.RULES.FINAL_TEST_UNLOCK_THRESHOLD;
+            if (practiceItems.length === 0) {
+                this.showModal("Hoàn thành!", "Bạn đã làm hết các bài tập cho level này. Hãy thử làm bài kiểm tra vượt cấp nếu có.");
+                return;
+            }
 
-                if (isEligible) {
-                    container.innerHTML = `
-                        <h3 class="text-xl font-bold font-poppins mb-4">Bài Kiểm Tra Cuối Kỳ</h3>
-                        <p class="text-text-secondary mb-6">Bạn đã đủ điều kiện. Hãy bắt đầu bài kiểm tra cuối cùng để hoàn tất!</p>
-                        <button id="start-final-test-btn" class="cta-btn danger w-full max-w-xs mx-auto" ${finalTestTaken ? 'disabled' : ''}>
-                            <i class="fas fa-graduation-cap mr-2"></i>
-                            ${finalTestTaken ? `Đã làm (Điểm: ${finalTestScore}%)` : 'Bắt đầu KT Cuối Kỳ'}
-                        </button>
-                    `;
-                    container.querySelector('#start-final-test-btn')?.addEventListener('click', () => this.startFinalTest());
-                } else {
-                    container.innerHTML = `<p class="text-text-secondary"><i class="fas fa-lock mr-2"></i>Hoàn thành ${this.CONFIG.RULES.FINAL_TEST_UNLOCK_THRESHOLD * 100}% tiến độ tổng quát để mở khóa.</p>`;
-                }
-            },
+            this.state.currentPractice = {
+                level: level,
+                items: this.shuffleArray(practiceItems).slice(0, 10),
+                index: 0,
+                isTest: false,
+                score: 0,
+                correctAnswer: null,
+            };
+            this.renderPracticeView();
+        },
 
-            async checkLevelUp(level) {
-                const progress = this.state.userProgress.levels[level];
-                const nextLevelKey = level + 1;
-                const nextLevelProgress = this.state.userProgress.levels[nextLevelKey];
+        async runProficiencyTest(levelToTest) {
+            const progress = this.state.userProgress.levels[levelToTest];
+            const testConfig = this.CONFIG.RULES.PROFICIENCY_TESTS[levelToTest];
+            if (progress.testAttempts >= testConfig.maxAttempts) {
+                this.showModal("Thông báo", "Bạn đã hết số lần làm bài kiểm tra cho level này.");
+                return;
+            }
+            
+            const tasksForLevel = this.CONFIG.LEVELS[levelToTest].tasks;
+            let allLevelTasks = [];
+            this.state.wordList.forEach(word => {
+                tasksForLevel.forEach(taskType => {
+                    if (this.isTaskAvailable(word, taskType)) {
+                        allLevelTasks.push({ ...word, exerciseType: taskType, taskUID: `${word.id}::${taskType}` });
+                    }
+                });
+            });
 
-                if (!nextLevelProgress || nextLevelProgress.status !== 'locked') return;
+            if (allLevelTasks.length === 0) {
+                this.showModal("Lỗi", "Không có câu hỏi nào cho bài kiểm tra này.");
+                return;
+            }
 
-                const percent = progress.totalTasks > 0 ? (progress.completedTasks.size / progress.totalTasks) : 0;
+            const numQuestions = Math.min(allLevelTasks.length, Math.ceil(allLevelTasks.length * 0.25));
+            this.state.currentPractice = {
+                items: this.shuffleArray(allLevelTasks).slice(0, numQuestions),
+                level: levelToTest,
+                index: 0,
+                isTest: true,
+                score: 0,
+                correctAnswer: null
+            };
+            
+            progress.testAttempts++;
+            await this.updateFirestoreProgress();
+            this.renderPracticeView();
+        },
 
-                if (percent >= this.CONFIG.RULES.UNLOCK_THRESHOLD) {
-                    nextLevelProgress.status = 'unlocked';
-                    await this.updateFirestoreProgress();
-                    this.showModal(`🎉 Mở khóa Level ${nextLevelKey}!`, `Chúc mừng! Bạn đã hoàn thành đủ bài tập để mở khóa level tiếp theo.`, false, () => {
-                        this.renderLevelCards();
-                        this.renderGuidePanel();
-                    }, null, 'Tuyệt vời!');
-                }
-            },
-
-            startPractice(level) {
+        startFinalTest() {
+            let allTasks = [];
+            Object.keys(this.CONFIG.LEVELS).forEach(level => {
                 const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
-                const completedTasks = this.state.userProgress.levels[level].completedTasks;
-                let practiceItems = [];
-
-                this.state.wordList.forEach(word => {
-                    tasksForLevel.forEach(taskType => {
-                        const taskUID = `${word.id}::${taskType}`;
-                        if (this.isTaskAvailable(word, taskType) && !completedTasks.has(taskUID)) {
-                            practiceItems.push({ ...word, exerciseType: taskType, taskUID });
-                        }
-                    });
-                });
-
-                if (practiceItems.length === 0) {
-                    this.showModal("Hoàn thành!", "Bạn đã làm hết các bài tập cho level này. Hãy thử làm bài kiểm tra vượt cấp nếu có.");
-                    return;
-                }
-
-                this.state.currentPractice = {
-                    level: level,
-                    items: this.shuffleArray(practiceItems).slice(0, 10),
-                    index: 0,
-                    isTest: false,
-                    score: 0,
-                    correctAnswer: null,
-                };
-                this.renderPracticeView();
-            },
-
-            async runProficiencyTest(levelToTest) {
-                const progress = this.state.userProgress.levels[levelToTest];
-                const testConfig = this.CONFIG.RULES.PROFICIENCY_TESTS[levelToTest];
-                if (progress.testAttempts >= testConfig.maxAttempts) {
-                    this.showModal("Thông báo", "Bạn đã hết số lần làm bài kiểm tra cho level này.");
-                    return;
-                }
-                
-                const tasksForLevel = this.CONFIG.LEVELS[levelToTest].tasks;
-                let allLevelTasks = [];
                 this.state.wordList.forEach(word => {
                     tasksForLevel.forEach(taskType => {
                         if (this.isTaskAvailable(word, taskType)) {
-                            allLevelTasks.push({ ...word, exerciseType: taskType, taskUID: `${word.id}::${taskType}` });
+                            allTasks.push({ ...word, exerciseType: taskType, taskUID: `${word.id}::${taskType}` });
                         }
                     });
                 });
+            });
 
-                if (allLevelTasks.length === 0) {
-                    this.showModal("Lỗi", "Không có câu hỏi nào cho bài kiểm tra này.");
-                    return;
+            if (allTasks.length === 0) {
+                this.showModal("Lỗi", "Không có câu hỏi nào cho bài kiểm tra cuối kỳ.");
+                return;
+            }
+
+            this.state.currentPractice = {
+                level: "Final",
+                items: this.shuffleArray(allTasks),
+                index: 0,
+                isTest: true,
+                score: 0,
+                correctAnswer: null
+            };
+            this.renderPracticeView();
+        },
+
+        renderPracticeView() {
+            const { items, index, level, isTest } = this.state.currentPractice;
+            const total = items.length;
+            
+            if (index >= total) {
+                if (isTest) {
+                    level === "Final" ? this.renderFinalTestSummary() : this.renderTestSummary();
+                } else {
+                    this.renderDashboard();
                 }
+                return;
+            }
+            
+            const currentItem = items[index];
+            const renderFunction = this[`get${currentItem.exerciseType}HTML`];
+            
+            const title = isTest ? `Kiểm tra ${level === "Final" ? "Cuối kỳ" : `Level ${level}`}` : `Level ${level} - Luyện tập`;
 
-                const numQuestions = Math.min(allLevelTasks.length, Math.ceil(allLevelTasks.length * 0.25));
-                this.state.currentPractice = {
-                    items: this.shuffleArray(allLevelTasks).slice(0, numQuestions),
-                    level: levelToTest,
-                    index: 0,
-                    isTest: true,
-                    score: 0,
-                    correctAnswer: null
-                };
-                
-                progress.testAttempts++;
-                await this.updateFirestoreProgress();
-                this.renderPracticeView();
-            },
+            this.DOM.main.innerHTML = `
+                <div class="glass-panel p-4 sm:p-6 fade-in">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="font-bold text-primary-accent">${title}</h2>
+                        <p class="text-sm font-medium text-text-secondary">Câu ${index + 1} / ${total}</p>
+                    </div>
+                    <div id="question-container" class="min-h-[300px]">
+                        ${renderFunction ? renderFunction.call(this, currentItem) : 'Lỗi: Không thể render câu hỏi.'}
+                    </div>
+                    <div id="feedback-container" class="mt-4"></div>
+                    <div class="flex justify-between items-center mt-6">
+                        <div class="report-actions">
+                            <button class="report-btn" data-report-type="error"><i class="fas fa-bug mr-2"></i>Báo lỗi</button>
+                            <button class="report-btn" data-report-type="explanation"><i class="fas fa-question-circle mr-2"></i>Cần giải thích</button>
+                        </div>
+                        <button id="exit-practice-btn" class="cta-btn secondary !py-2 !px-4"><i class="fas fa-times mr-2"></i> Thoát</button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('exit-practice-btn').addEventListener('click', () => {
+                this.showModal("Xác nhận thoát?", "Tiến trình trong phiên làm bài này sẽ không được lưu. Bạn có chắc muốn thoát?", true, () => this.renderDashboard());
+            });
 
-            startFinalTest() {
-                let allTasks = [];
-                Object.keys(this.CONFIG.LEVELS).forEach(level => {
-                    const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
-                    this.state.wordList.forEach(word => {
-                        tasksForLevel.forEach(taskType => {
-                            if (this.isTaskAvailable(word, taskType)) {
-                                allTasks.push({ ...word, exerciseType: taskType, taskUID: `${word.id}::${taskType}` });
-                            }
-                        });
-                    });
-                });
-
-                if (allTasks.length === 0) {
-                    this.showModal("Lỗi", "Không có câu hỏi nào cho bài kiểm tra cuối kỳ.");
-                    return;
+            this.DOM.main.querySelector('.report-actions').addEventListener('click', e => {
+                const button = e.target.closest('button');
+                if (button && button.dataset.reportType) {
+                    this.handleReportSubmission(button.dataset.reportType);
                 }
+            });
+            this.attachPracticeEventListeners(currentItem, document.getElementById('question-container'));
+        },
 
-                this.state.currentPractice = {
-                    level: "Final",
-                    items: this.shuffleArray(allTasks),
-                    index: 0,
-                    isTest: true,
-                    score: 0,
-                    correctAnswer: null
-                };
-                this.renderPracticeView();
-            },
+        async renderTestSummary() {
+            const { level, score, items } = this.state.currentPractice;
+            const total = items.length;
+            const accuracy = total > 0 ? (score / total) : 0;
+            const testConfig = this.CONFIG.RULES.PROFICIENCY_TESTS[level];
+            const didPass = accuracy >= testConfig.passMark;
+            let title = didPass ? "🎉 Chúc mừng, bạn đã qua!" : "Cần cố gắng hơn!";
+            let message = `Bạn đã trả lời đúng ${score} / ${total} câu, đạt <strong>${(accuracy * 100).toFixed(1)}%</strong>. Tỉ lệ yêu cầu là ${(testConfig.passMark * 100)}%.`;
 
-            renderPracticeView() {
-                const { items, index, level, isTest } = this.state.currentPractice;
-                const total = items.length;
-                
-                if (index >= total) {
-                    if (isTest) {
-                        level === "Final" ? this.renderFinalTestSummary() : this.renderTestSummary();
-                    } else {
-                        this.renderDashboard();
+            if (didPass) {
+                message += `<br>Level ${level} đã được đánh dấu là hoàn thành. Level tiếp theo đã được mở khóa.`;
+                this.state.userProgress.levels[level].status = 'passed';
+                const nextLevel = level + 1;
+                if (this.CONFIG.LEVELS[nextLevel]) {
+                    this.state.userProgress.levels[nextLevel].status = 'unlocked';
+                }
+            } else {
+                const attemptsLeft = testConfig.maxAttempts - this.state.userProgress.levels[level].testAttempts;
+                message += `<br>Bạn còn <strong>${attemptsLeft}</strong> lần thử lại. Hãy luyện tập thêm nhé.`;
+            }
+
+            await this.updateFirestoreProgress();
+            this.showModal(title, message, false, () => {
+                this.renderDashboard();
+                this.renderHeader();
+            }, null, "Về Bảng điều khiển");
+        },
+
+        async renderFinalTestSummary() {
+            const { score, items } = this.state.currentPractice;
+            const total = items.length;
+            const accuracy = total > 0 ? (score / total * 100) : 0;
+
+            let title = "Hoàn thành bài kiểm tra cuối kỳ!";
+            let message = `Chúc mừng bạn đã hoàn thành bài kiểm tra cuối cùng! <br>Kết quả của bạn là: <strong>${score} / ${total} câu đúng (${accuracy.toFixed(1)}%)</strong>.`;
+
+            this.state.userProgress.finalTestTaken = true;
+            this.state.userProgress.finalTestScore = accuracy.toFixed(1);
+
+            await this.updateFirestoreProgress();
+            this.showModal(title, message, false, () => {
+                this.renderDashboard();
+                this.renderHeader();
+            }, null, "Về Bảng điều khiển");
+        },
+
+        getMeaningMCQHTML(item) {
+            const tasks = item.generated_tasks.meaning_mcq;
+            if (!tasks || !tasks.distractors_vi || !tasks.distractors_en) { return '<div>Không có đủ dữ liệu cho dạng bài tập này.</div>'; }
+            const correctAnswer = item.meaning;
+            const distractors = this.shuffleArray([...tasks.distractors_vi]).slice(0, 3);
+            this.state.currentPractice.correctAnswer = correctAnswer;
+            const options = this.shuffleArray([correctAnswer, ...distractors]);
+            return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Meaning MCQ</h2><div class="min-h-[60px] mb-8 font-poppins font-bold text-3xl">${item.word}</div><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+        },
+        getWordFamilyMCQHTML(item) {
+            const tasks = item.generated_tasks.word_family_mcq;
+            if (!tasks || !tasks.sentence) return this.getMeaningMCQHTML(item);
+            this.state.currentPractice.correctAnswer = tasks.correct_answer;
+            const sentence = tasks.sentence.replace(tasks.blank_placeholder, '<span class="font-bold text-primary-accent">[...]</span>');
+            const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
+            return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Word Family</h2><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+        },
+        getSentenceUnscrambleHTML(item) {
+            const tasks = item.generated_tasks.sentence_unscramble;
+            if (!tasks || !tasks.correct_sentence) return this.getMeaningMCQHTML(item);
+            this.state.currentPractice.correctAnswer = tasks.correct_sentence;
+            const words = this.shuffleArray(tasks.correct_sentence.split(' '));
+            return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Sentence Unscramble</h2><p class="text-text-secondary mb-4">Click on the words in the correct order.</p><div id="unscramble-answer-area" class="min-h-[60px] p-4 border-2 border-dashed border-gray-600 rounded-lg mb-4 flex flex-wrap gap-2"></div><div id="unscramble-source-area" class="flex flex-wrap gap-2">${words.map(word => `<button class="px-4 py-2 bg-purple-600 rounded-lg">${word}</button>`).join('')}</div><div class="mt-6 text-right"><button id="check-btn" class="cta-btn">Check</button></div></div>`;
+        },
+        getErrorCorrectionHTML(item) {
+            const tasks = item.generated_tasks.error_correction;
+            if (!tasks || !tasks.incorrect_sentence) return this.getMeaningMCQHTML(item);
+            this.state.currentPractice.correctAnswer = tasks.correct_sentence;
+            return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Error Correction</h2><p class="text-text-secondary mb-4">Correct the following sentence.</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${tasks.incorrect_sentence}"</p><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type the correct sentence..."><button id="check-btn" class="cta-btn !py-3">Check</button></div></div>`;
+        },
+        getIPAFillHTML(item) {
+            const tasks = item.generated_tasks.ipa_fill;
+            if (!tasks || !tasks.gapped_ipa) return this.getMeaningMCQHTML(item);
+            this.state.currentPractice.correctAnswer = tasks.correct_vowel;
+            const options = this.shuffleArray([tasks.correct_vowel, ...tasks.distractors]);
+            return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">IPA Fill</h2><p class="text-text-secondary mb-4">Choose the correct sound for <strong class="text-primary-accent">"${item.word}"</strong></p><p class="text-3xl font-mono text-center min-h-[60px] mb-8">/${tasks.gapped_ipa}/</p><div id="answer-options" class="grid grid-cols-2 gap-3">${options.map(opt => `<button class="answer-option font-mono text-center !text-2xl" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+        },
+        getBestFitReplacementHTML(item) {
+            const tasks = item.generated_tasks.best_fit_replacement;
+            if (!tasks || !tasks.sentence) return this.getMeaningMCQHTML(item);
+            this.state.currentPractice.correctAnswer = tasks.correct_answer;
+            const sentence = tasks.sentence.replace(tasks.word_to_replace, `<span class="font-bold text-primary-accent"><u>${tasks.word_to_replace}</u></span>`);
+            const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
+            return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Best-fit Replacement</h2><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+        },
+        getInferenceFromScenarioHTML(item) {
+            const tasks = item.generated_tasks.inference_from_scenario;
+            if (!tasks || !tasks.scenario) return this.getMeaningMCQHTML(item);
+            this.state.currentPractice.correctAnswer = tasks.correct_answer;
+            const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
+            return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Inference from Scenario</h2><p class="text-md font-serif italic text-text-secondary mb-4">"${tasks.scenario}"</p><p class="text-lg font-semibold text-text-light mb-6">${tasks.question}</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+        },
+        getBestParaphraseHTML(item) {
+            const tasks = item.generated_tasks.best_paraphrase;
+            if (!tasks || !tasks.options) return this.getMeaningMCQHTML(item);
+            const correctOption = tasks.options.find(opt => opt.is_correct);
+            this.state.currentPractice.correctAnswer = correctOption.text;
+            const options = this.shuffleArray(tasks.options.map(opt => opt.text));
+            return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Best Paraphrase</h2><p class="text-text-secondary mb-4">Original sentence:</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${tasks.original_sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+        },
+        getAudioListeningHTML(item) {
+            this.state.currentPractice.correctAnswer = item.word;
+            return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Listening</h2><div class="text-center mb-6"><button id="play-audio-btn" data-audio-url="${item.audioUrl}" class="text-6xl text-primary-accent hover:text-violet-400 transition-colors"><i class="fas fa-play-circle"></i></button></div><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type what you hear..."><button id="check-btn" class="cta-btn !py-3">Check</button></div></div>`;
+        },
+        getTripledSentenceHTML(item) {
+            const tasks = item.generated_tasks.tripled_sentence;
+            if (!tasks) return this.getMeaningMCQHTML(item);
+            this.state.currentPractice.correctAnswer = tasks.keyword;
+            const sentencesHTML = tasks.examples.map(sentence => `<p class="text-lg font-serif italic text-text-secondary mb-2">"${sentence.replace(new RegExp(`\\b${tasks.keyword}\\b`, 'gi'), '[...]')}"</p>`).join('');
+            return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Tripled Sentence</h2><p class="text-text-secondary mb-4">The same word is missing from all three sentences.</p><div class="space-y-3 mb-6">${sentencesHTML}</div><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type the missing word..."><button id="check-btn" class="cta-btn !py-3">Check</button></div></div>`;
+        },
+        getAntonymMCQHTML(item) {
+            const tasks = item.generated_tasks.antonym_mcq;
+            if (!tasks) return this.getMeaningMCQHTML(item);
+            this.state.currentPractice.correctAnswer = tasks.correct_antonym;
+            const options = this.shuffleArray([tasks.correct_antonym, ...tasks.distractors]);
+            const sentence = tasks.sentence_context.replace(tasks.keyword, `<strong class="text-primary-accent">${tasks.keyword}</strong>`);
+            return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Antonym Challenge</h2><p class="text-text-secondary mb-4">Which is an antonym for the word in bold?</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+        },
+        getMainIdeaHTML(item) {
+            const tasks = item.generated_tasks.main_idea;
+            if (!tasks) return this.getMeaningMCQHTML(item);
+            this.state.currentPractice.correctAnswer = tasks.correct_answer;
+            const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
+            return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Find the Main Idea</h2><p class="text-text-secondary mb-4">Read the passage and select the main point.</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+        },
+        getParagraphCompletionHTML(item) {
+            const tasks = item.generated_tasks.paragraph_completion;
+            if (!tasks) return this.getMeaningMCQHTML(item);
+            this.state.currentPractice.correctAnswer = tasks.correct_conclusion;
+            const options = this.shuffleArray([tasks.correct_conclusion, ...tasks.distractors]);
+            return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Find the Conclusion</h2><p class="text-text-secondary mb-4">Which sentence best concludes the passage?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph_body}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+        },
+        getArgumentStrengtheningHTML(item) {
+            const tasks = item.generated_tasks.argument_strengthening;
+            if (!tasks) return this.getMeaningMCQHTML(item);
+            this.state.currentPractice.correctAnswer = tasks.correct_evidence;
+            const options = this.shuffleArray([tasks.correct_evidence, ...tasks.distractors]);
+            return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Strengthen the Argument</h2><p class="text-text-secondary mb-4">Which statement best supports the argument?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.argument_text}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+        },
+        getArgumentWeakeningHTML(item) {
+            const tasks = item.generated_tasks.argument_weakening;
+            if (!tasks) return this.getMeaningMCQHTML(item);
+            this.state.currentPractice.correctAnswer = tasks.correct_weakener;
+            const options = this.shuffleArray([tasks.correct_weakener, ...tasks.distractors]);
+            return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Weaken the Argument</h2><p class="text-text-secondary mb-4">Which statement most weakens the argument?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.argument_text}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+        },
+        getTonePurposeAnalysisHTML(item) {
+            const tasks = item.generated_tasks.tone_purpose_analysis;
+            if (!tasks) return this.getMeaningMCQHTML(item);
+            this.state.currentPractice.correctAnswer = tasks.correct_answer;
+            const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
+            return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Tone & Purpose</h2><p class="text-text-secondary mb-4">${tasks.question}</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+        },
+        getSentenceRoleAnalysisHTML(item) {
+            const tasks = item.generated_tasks.sentence_role_analysis;
+            if (!tasks) return this.getMeaningMCQHTML(item);
+            this.state.currentPractice.correctAnswer = tasks.correct_role;
+            const options = this.shuffleArray([tasks.correct_role, ...tasks.distractors]);
+            const paragraphHTML = tasks.paragraph.replace(`[${tasks.highlighted_sentence_index + 1}]`, `<strong class="text-primary-accent">[${tasks.highlighted_sentence_index + 1}]</strong>`);
+            return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Sentence Role Analysis</h2><p class="text-text-secondary mb-4">What is the function of the sentence in bold?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${paragraphHTML}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+        },
+
+        attachPracticeEventListeners(item, container) {
+            if (!container) return;
+            const checkAnswerFunction = this.checkAnswer.bind(this);
+            switch(item.exerciseType) {
+                case 'MeaningMCQ': case 'WordFamilyMCQ': case 'IPAFill': case 'BestFitReplacement': case 'InferenceFromScenario': case 'BestParaphrase': case 'AntonymMCQ': case 'MainIdea': case 'ParagraphCompletion': case 'ArgumentStrengthening': case 'ArgumentWeakening': case 'TonePurposeAnalysis': case 'SentenceRoleAnalysis':
+                    container.querySelectorAll('.answer-option').forEach(option => { option.addEventListener('click', (e) => checkAnswerFunction(e.currentTarget.dataset.answer, item, container)); }); break;
+                case 'AudioListening': case 'ErrorCorrection': case 'TripledSentence':
+                    const input = container.querySelector('#text-input'); const checkBtn = container.querySelector('#check-btn');
+                    container.querySelector('#play-audio-btn')?.addEventListener('click', (e) => { this.playAudio(e.currentTarget.dataset.audioUrl); });
+                    if (input && checkBtn) { const doCheck = () => checkAnswerFunction(input.value, item, container); checkBtn.addEventListener('click', doCheck); input.addEventListener('keypress', (e) => { if (e.key === 'Enter') doCheck(); }); }
+                    break;
+                case 'SentenceUnscramble': {
+                    const answerArea = container.querySelector('#unscramble-answer-area'); const sourceArea = container.querySelector('#unscramble-source-area');
+                    const moveToken = (e) => { if (e.target.tagName === 'BUTTON') { const isFromSource = e.currentTarget.id === 'unscramble-source-area'; (isFromSource ? answerArea : sourceArea).appendChild(e.target); } };
+                    sourceArea.addEventListener('click', moveToken); answerArea.addEventListener('click', moveToken);
+                    container.querySelector('#check-btn')?.addEventListener('click', () => { const answer = Array.from(answerArea.querySelectorAll('button')).map(t => t.textContent).join(' '); checkAnswerFunction(answer, item, container); });
+                    break;
+                }
+            }
+        },
+
+        checkAnswer(userAnswer, item, container) {
+            const correctAnswer = this.state.currentPractice.correctAnswer;
+            const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
+            
+            container.querySelectorAll('button, input').forEach(el => el.disabled = true);
+            
+            const levelProgress = this.state.currentPractice.level !== "Final" && this.state.userProgress.levels[this.state.currentPractice.level];
+            
+            if (isCorrect) {
+                if(this.state.currentPractice.isTest) {
+                    this.state.currentPractice.score++;
+                } else {
+                    if (levelProgress && !levelProgress.completedTasks.has(item.taskUID)) {
+                        levelProgress.completedTasks.add(item.taskUID);
+                        this.state.userProgress.totalCompletedTasks++;
                     }
-                    return;
                 }
-                
-                const currentItem = items[index];
-                const renderFunction = this[`get${currentItem.exerciseType}HTML`];
-                
-                const title = isTest ? `Kiểm tra ${level === "Final" ? "Cuối kỳ" : `Level ${level}`}` : `Level ${level} - Luyện tập`;
+            }
+            
+            this.showFeedback(isCorrect, correctAnswer, container);
+            
+            if (isCorrect && !this.state.currentPractice.isTest) {
+                this.checkLevelUp(this.state.currentPractice.level);
+            }
+            this.updateFirestoreProgress();
+            this.renderHeader();
+        },
 
-                this.DOM.main.innerHTML = `
-                    <div class="glass-panel p-4 sm:p-6 fade-in">
+        showFeedback(isCorrect, correctAnswer, container) {
+            const feedbackContainer = container.querySelector('#feedback-container') || container.appendChild(document.createElement('div'));
+            const bgColor = isCorrect ? 'bg-green-500/20' : 'bg-red-500/20';
+            const textColor = isCorrect ? 'text-green-300' : 'text-red-300';
+            let message = isCorrect ? 'Chính xác!' : `Sai rồi! Đáp án đúng là: <strong class="font-bold text-white">${correctAnswer}</strong>`;
+            
+            feedbackContainer.innerHTML = `
+                <div class="${bgColor} ${textColor} p-4 rounded-lg flex justify-between items-center fade-in">
+                    <p class="font-semibold">${message}</p>
+                    <button id="next-question-btn" class="cta-btn secondary !py-2 !px-4">Tiếp tục <i class="fas fa-arrow-right ml-2"></i></button>
+                </div>`;
+            
+            document.getElementById('next-question-btn').addEventListener('click', () => {
+                this.state.currentPractice.index++;
+                this.renderPracticeView();
+            });
+        },
+        
+        shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [array[i], array[j]] = [array[j], array[i]]; }
+            return array;
+        },
+
+        showModal(title, message, showCancel = false, onConfirm = null, onCancel = null, confirmText = 'Xác nhận', cancelText = 'Hủy') {
+            const modalId = 'main-modal';
+            const existingModal = document.getElementById(modalId);
+            if (existingModal) existingModal.remove();
+            
+            const modalContainer = document.createElement('div');
+            modalContainer.id = modalId;
+            modalContainer.className = "fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4";
+            
+            const buttonsHTML = showCancel 
+                ? `<button id="modal-cancel-btn" class="cta-btn secondary">${cancelText}</button><button id="modal-confirm-btn" class="cta-btn">${confirmText}</button>` 
+                : `<button id="modal-confirm-btn" class="cta-btn w-full">${confirmText}</button>`;
+            
+            modalContainer.innerHTML = `
+                <div class="glass-panel p-6 sm:p-8 w-full max-w-md fade-in max-h-[90vh] overflow-y-auto">
+                    <h3 class="text-xl font-bold font-poppins mb-4 text-left">${title}</h3>
+                    <div class="text-text-secondary mb-6">${message}</div>
+                    <div class="flex gap-4 justify-end mt-8">${buttonsHTML}</div>
+                </div>`;
+            
+            this.DOM.modal.appendChild(modalContainer);
+            
+            const confirmBtn = modalContainer.querySelector('#modal-confirm-btn');
+            const cancelBtn = modalContainer.querySelector('#modal-cancel-btn');
+            
+            const closeModal = () => modalContainer.remove();
+            
+            confirmBtn.onclick = () => {
+                closeModal();
+                if (onConfirm) onConfirm();
+            };
+            
+            if (cancelBtn) {
+                cancelBtn.onclick = () => {
+                    closeModal();
+                    if (onCancel) onCancel();
+                };
+            }
+        },
+
+        startFlashcardSession() {
+            this.state.currentFlashcard.items = this.shuffleArray([...this.state.wordList]);
+            if (this.state.currentFlashcard.items.length === 0) {
+                this.showModal("Thông báo", "Không có từ vựng để học bằng flashcard.");
+                return;
+            }
+            this.state.currentFlashcard.index = 0;
+            this.renderFlashcardViewer();
+        },
+
+        renderFlashcardViewer() {
+            this.DOM.main.innerHTML = `
+                <div class="glass-panel p-4 sm:p-6 fade-in">
+                    <div class="flashcard-viewer">
                         <div class="flex justify-between items-center mb-4">
-                            <h2 class="font-bold text-primary-accent">${title}</h2>
-                            <p class="text-sm font-medium text-text-secondary">Câu ${index + 1} / ${total}</p>
+                            <button id="back-to-dashboard-btn" class="cta-btn secondary !py-2 !px-4"><i class="fas fa-arrow-left mr-2"></i> Bảng điều khiển</button>
+                            <div id="card-counter" class="font-semibold text-text-secondary"></div>
                         </div>
-                        <div id="question-container" class="min-h-[300px]">
-                            ${renderFunction ? renderFunction.call(this, currentItem) : 'Lỗi: Không thể render câu hỏi.'}
+                        <div class="flashcard-main">
+                            <div class="flashcard" id="flashcard"></div>
                         </div>
-                        <div id="feedback-container" class="mt-4"></div>
-                        <div class="flex justify-between items-center mt-6">
-                            <div class="report-actions">
-                                <button class="report-btn" data-report-type="error"><i class="fas fa-bug mr-2"></i>Báo lỗi</button>
-                                <button class="report-btn" data-report-type="explanation"><i class="fas fa-question-circle mr-2"></i>Cần giải thích</button>
-                            </div>
-                            <button id="exit-practice-btn" class="cta-btn secondary !py-2 !px-4"><i class="fas fa-times mr-2"></i> Thoát</button>
+                        <div class="flashcard-nav flex justify-between items-center p-4">
+                            <button id="prev-card-btn" class="cta-btn secondary !rounded-full !w-14 !h-14 text-xl"><i class="fas fa-arrow-left"></i></button>
+                            <p class="text-sm text-text-secondary hidden sm:block">Bấm vào thẻ để lật</p>
+                            <button id="next-card-btn" class="cta-btn secondary !rounded-full !w-14 !h-14 text-xl"><i class="fas fa-arrow-right"></i></button>
                         </div>
                     </div>
-                `;
-                document.getElementById('exit-practice-btn').addEventListener('click', () => {
-                    this.showModal("Xác nhận thoát?", "Tiến trình trong phiên làm bài này sẽ không được lưu. Bạn có chắc muốn thoát?", true, () => this.renderDashboard());
-                });
+                </div>`;
+            this.updateFlashcardView();
+            document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.renderDashboard());
+            document.getElementById('flashcard').addEventListener('click', e => { if (e.target.closest('.audio-btn')) return; e.currentTarget.classList.toggle('is-flipped'); });
+            document.getElementById('prev-card-btn').addEventListener('click', () => this.navigateCard(-1));
+            document.getElementById('next-card-btn').addEventListener('click', () => this.navigateCard(1));
+        },
 
-                this.DOM.main.querySelector('.report-actions').addEventListener('click', e => {
-                    const button = e.target.closest('button');
-                    if (button && button.dataset.reportType) {
-                        this.handleReportSubmission(button.dataset.reportType);
-                    }
-                });
-                this.attachPracticeEventListeners(currentItem, document.getElementById('question-container'));
-            },
+        updateFlashcardView() {
+            const { items, index } = this.state.currentFlashcard;
+            const item = items[index];
+            const card = document.getElementById('flashcard');
+            if (!item || !card) return;
 
-            async renderTestSummary() {
-                const { level, score, items } = this.state.currentPractice;
-                const total = items.length;
-                const accuracy = total > 0 ? (score / total) : 0;
-                const testConfig = this.CONFIG.RULES.PROFICIENCY_TESTS[level];
-                const didPass = accuracy >= testConfig.passMark;
-                let title = didPass ? "🎉 Chúc mừng, bạn đã qua!" : "Cần cố gắng hơn!";
-                let message = `Bạn đã trả lời đúng ${score} / ${total} câu, đạt <strong>${(accuracy * 100).toFixed(1)}%</strong>. Tỉ lệ yêu cầu là ${(testConfig.passMark * 100)}%.`;
-
-                if (didPass) {
-                    message += `<br>Level ${level} đã được đánh dấu là hoàn thành. Level tiếp theo đã được mở khóa.`;
-                    this.state.userProgress.levels[level].status = 'passed';
-                    const nextLevel = level + 1;
-                    if (this.CONFIG.LEVELS[nextLevel]) {
-                        this.state.userProgress.levels[nextLevel].status = 'unlocked';
-                    }
-                } else {
-                    const attemptsLeft = testConfig.maxAttempts - this.state.userProgress.levels[level].testAttempts;
-                    message += `<br>Bạn còn <strong>${attemptsLeft}</strong> lần thử lại. Hãy luyện tập thêm nhé.`;
-                }
-
-                await this.updateFirestoreProgress();
-                this.showModal(title, message, false, () => {
-                    this.renderDashboard();
-                    this.renderHeader();
-                }, null, "Về Bảng điều khiển");
-            },
-
-            async renderFinalTestSummary() {
-                const { score, items } = this.state.currentPractice;
-                const total = items.length;
-                const accuracy = total > 0 ? (score / total * 100) : 0;
-
-                let title = "Hoàn thành bài kiểm tra cuối kỳ!";
-                let message = `Chúc mừng bạn đã hoàn thành bài kiểm tra cuối cùng! <br>Kết quả của bạn là: <strong>${score} / ${total} câu đúng (${accuracy.toFixed(1)}%)</strong>.`;
-
-                this.state.userProgress.finalTestTaken = true;
-                this.state.userProgress.finalTestScore = accuracy.toFixed(1);
-
-                await this.updateFirestoreProgress();
-                this.showModal(title, message, false, () => {
-                    this.renderDashboard();
-                    this.renderHeader();
-                }, null, "Về Bảng điều khiển");
-            },
-
-            getMeaningMCQHTML(item) {
-                const tasks = item.generated_tasks.meaning_mcq;
-                if (!tasks || !tasks.distractors_vi || !tasks.distractors_en) { return '<div>Không có đủ dữ liệu cho dạng bài tập này.</div>'; }
-                const correctAnswer = item.meaning;
-                const distractors = this.shuffleArray([...tasks.distractors_vi]).slice(0, 3);
-                this.state.currentPractice.correctAnswer = correctAnswer;
-                const options = this.shuffleArray([correctAnswer, ...distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Meaning MCQ</h2><div class="min-h-[60px] mb-8 font-poppins font-bold text-3xl">${item.word}</div><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
-            },
-            getWordFamilyMCQHTML(item) {
-                const tasks = item.generated_tasks.word_family_mcq;
-                if (!tasks || !tasks.sentence) return this.getMeaningMCQHTML(item);
-                this.state.currentPractice.correctAnswer = tasks.correct_answer;
-                const sentence = tasks.sentence.replace(tasks.blank_placeholder, '<span class="font-bold text-primary-accent">[...]</span>');
-                const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Word Family</h2><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
-            },
-            getSentenceUnscrambleHTML(item) {
-                const tasks = item.generated_tasks.sentence_unscramble;
-                if (!tasks || !tasks.correct_sentence) return this.getMeaningMCQHTML(item);
-                this.state.currentPractice.correctAnswer = tasks.correct_sentence;
-                const words = this.shuffleArray(tasks.correct_sentence.split(' '));
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Sentence Unscramble</h2><p class="text-text-secondary mb-4">Click on the words in the correct order.</p><div id="unscramble-answer-area" class="min-h-[60px] p-4 border-2 border-dashed border-gray-600 rounded-lg mb-4 flex flex-wrap gap-2"></div><div id="unscramble-source-area" class="flex flex-wrap gap-2">${words.map(word => `<button class="px-4 py-2 bg-purple-600 rounded-lg">${word}</button>`).join('')}</div><div class="mt-6 text-right"><button id="check-btn" class="cta-btn">Check</button></div></div>`;
-            },
-            getErrorCorrectionHTML(item) {
-                const tasks = item.generated_tasks.error_correction;
-                if (!tasks || !tasks.incorrect_sentence) return this.getMeaningMCQHTML(item);
-                this.state.currentPractice.correctAnswer = tasks.correct_sentence;
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Error Correction</h2><p class="text-text-secondary mb-4">Correct the following sentence.</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${tasks.incorrect_sentence}"</p><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type the correct sentence..."><button id="check-btn" class="cta-btn !py-3">Check</button></div></div>`;
-            },
-            getIPAFillHTML(item) {
-                const tasks = item.generated_tasks.ipa_fill;
-                if (!tasks || !tasks.gapped_ipa) return this.getMeaningMCQHTML(item);
-                this.state.currentPractice.correctAnswer = tasks.correct_vowel;
-                const options = this.shuffleArray([tasks.correct_vowel, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">IPA Fill</h2><p class="text-text-secondary mb-4">Choose the correct sound for <strong class="text-primary-accent">"${item.word}"</strong></p><p class="text-3xl font-mono text-center min-h-[60px] mb-8">/${tasks.gapped_ipa}/</p><div id="answer-options" class="grid grid-cols-2 gap-3">${options.map(opt => `<button class="answer-option font-mono text-center !text-2xl" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
-            },
-            getBestFitReplacementHTML(item) {
-                const tasks = item.generated_tasks.best_fit_replacement;
-                if (!tasks || !tasks.sentence) return this.getMeaningMCQHTML(item);
-                this.state.currentPractice.correctAnswer = tasks.correct_answer;
-                const sentence = tasks.sentence.replace(tasks.word_to_replace, `<span class="font-bold text-primary-accent"><u>${tasks.word_to_replace}</u></span>`);
-                const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Best-fit Replacement</h2><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
-            },
-            getInferenceFromScenarioHTML(item) {
-                const tasks = item.generated_tasks.inference_from_scenario;
-                if (!tasks || !tasks.scenario) return this.getMeaningMCQHTML(item);
-                this.state.currentPractice.correctAnswer = tasks.correct_answer;
-                const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Inference from Scenario</h2><p class="text-md font-serif italic text-text-secondary mb-4">"${tasks.scenario}"</p><p class="text-lg font-semibold text-text-light mb-6">${tasks.question}</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
-            },
-            getBestParaphraseHTML(item) {
-                const tasks = item.generated_tasks.best_paraphrase;
-                if (!tasks || !tasks.options) return this.getMeaningMCQHTML(item);
-                const correctOption = tasks.options.find(opt => opt.is_correct);
-                this.state.currentPractice.correctAnswer = correctOption.text;
-                const options = this.shuffleArray(tasks.options.map(opt => opt.text));
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Best Paraphrase</h2><p class="text-text-secondary mb-4">Original sentence:</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${tasks.original_sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
-            },
-            getAudioListeningHTML(item) {
-                this.state.currentPractice.correctAnswer = item.word;
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Listening</h2><div class="text-center mb-6"><button id="play-audio-btn" data-audio-url="${item.audioUrl}" class="text-6xl text-primary-accent hover:text-violet-400 transition-colors"><i class="fas fa-play-circle"></i></button></div><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type what you hear..."><button id="check-btn" class="cta-btn !py-3">Check</button></div></div>`;
-            },
-            getTripledSentenceHTML(item) {
-                const tasks = item.generated_tasks.tripled_sentence;
-                if (!tasks) return this.getMeaningMCQHTML(item);
-                this.state.currentPractice.correctAnswer = tasks.keyword;
-                const sentencesHTML = tasks.examples.map(sentence => `<p class="text-lg font-serif italic text-text-secondary mb-2">"${sentence.replace(new RegExp(`\\b${tasks.keyword}\\b`, 'gi'), '[...]')}"</p>`).join('');
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Tripled Sentence</h2><p class="text-text-secondary mb-4">The same word is missing from all three sentences.</p><div class="space-y-3 mb-6">${sentencesHTML}</div><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type the missing word..."><button id="check-btn" class="cta-btn !py-3">Check</button></div></div>`;
-            },
-            getAntonymMCQHTML(item) {
-                const tasks = item.generated_tasks.antonym_mcq;
-                if (!tasks) return this.getMeaningMCQHTML(item);
-                this.state.currentPractice.correctAnswer = tasks.correct_antonym;
-                const options = this.shuffleArray([tasks.correct_antonym, ...tasks.distractors]);
-                const sentence = tasks.sentence_context.replace(tasks.keyword, `<strong class="text-primary-accent">${tasks.keyword}</strong>`);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Antonym Challenge</h2><p class="text-text-secondary mb-4">Which is an antonym for the word in bold?</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
-            },
-            getMainIdeaHTML(item) {
-                const tasks = item.generated_tasks.main_idea;
-                if (!tasks) return this.getMeaningMCQHTML(item);
-                this.state.currentPractice.correctAnswer = tasks.correct_answer;
-                const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Find the Main Idea</h2><p class="text-text-secondary mb-4">Read the passage and select the main point.</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
-            },
-            getParagraphCompletionHTML(item) {
-                const tasks = item.generated_tasks.paragraph_completion;
-                if (!tasks) return this.getMeaningMCQHTML(item);
-                this.state.currentPractice.correctAnswer = tasks.correct_conclusion;
-                const options = this.shuffleArray([tasks.correct_conclusion, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Find the Conclusion</h2><p class="text-text-secondary mb-4">Which sentence best concludes the passage?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph_body}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
-            },
-            getArgumentStrengtheningHTML(item) {
-                const tasks = item.generated_tasks.argument_strengthening;
-                if (!tasks) return this.getMeaningMCQHTML(item);
-                this.state.currentPractice.correctAnswer = tasks.correct_evidence;
-                const options = this.shuffleArray([tasks.correct_evidence, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Strengthen the Argument</h2><p class="text-text-secondary mb-4">Which statement best supports the argument?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.argument_text}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
-            },
-            getArgumentWeakeningHTML(item) {
-                const tasks = item.generated_tasks.argument_weakening;
-                if (!tasks) return this.getMeaningMCQHTML(item);
-                this.state.currentPractice.correctAnswer = tasks.correct_weakener;
-                const options = this.shuffleArray([tasks.correct_weakener, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Weaken the Argument</h2><p class="text-text-secondary mb-4">Which statement most weakens the argument?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.argument_text}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
-            },
-            getTonePurposeAnalysisHTML(item) {
-                const tasks = item.generated_tasks.tone_purpose_analysis;
-                if (!tasks) return this.getMeaningMCQHTML(item);
-                this.state.currentPractice.correctAnswer = tasks.correct_answer;
-                const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Tone & Purpose</h2><p class="text-text-secondary mb-4">${tasks.question}</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
-            },
-            getSentenceRoleAnalysisHTML(item) {
-                const tasks = item.generated_tasks.sentence_role_analysis;
-                if (!tasks) return this.getMeaningMCQHTML(item);
-                this.state.currentPractice.correctAnswer = tasks.correct_role;
-                const options = this.shuffleArray([tasks.correct_role, ...tasks.distractors]);
-                const paragraphHTML = tasks.paragraph.replace(`[${tasks.highlighted_sentence_index + 1}]`, `<strong class="text-primary-accent">[${tasks.highlighted_sentence_index + 1}]</strong>`);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Sentence Role Analysis</h2><p class="text-text-secondary mb-4">What is the function of the sentence in bold?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${paragraphHTML}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
-            },
-
-            attachPracticeEventListeners(item, container) {
-                if (!container) return;
-                const checkAnswerFunction = this.checkAnswer.bind(this);
-                switch(item.exerciseType) {
-                    case 'MeaningMCQ': case 'WordFamilyMCQ': case 'IPAFill': case 'BestFitReplacement': case 'InferenceFromScenario': case 'BestParaphrase': case 'AntonymMCQ': case 'MainIdea': case 'ParagraphCompletion': case 'ArgumentStrengthening': case 'ArgumentWeakening': case 'TonePurposeAnalysis': case 'SentenceRoleAnalysis':
-                        container.querySelectorAll('.answer-option').forEach(option => { option.addEventListener('click', (e) => checkAnswerFunction(e.currentTarget.dataset.answer, item, container)); }); break;
-                    case 'AudioListening': case 'ErrorCorrection': case 'TripledSentence':
-                        const input = container.querySelector('#text-input'); const checkBtn = container.querySelector('#check-btn');
-                        container.querySelector('#play-audio-btn')?.addEventListener('click', (e) => { this.playAudio(e.currentTarget.dataset.audioUrl); });
-                        if (input && checkBtn) { const doCheck = () => checkAnswerFunction(input.value, item, container); checkBtn.addEventListener('click', doCheck); input.addEventListener('keypress', (e) => { if (e.key === 'Enter') doCheck(); }); }
-                        break;
-                    case 'SentenceUnscramble': {
-                        const answerArea = container.querySelector('#unscramble-answer-area'); const sourceArea = container.querySelector('#unscramble-source-area');
-                        const moveToken = (e) => { if (e.target.tagName === 'BUTTON') { const isFromSource = e.currentTarget.id === 'unscramble-source-area'; (isFromSource ? answerArea : sourceArea).appendChild(e.target); } };
-                        sourceArea.addEventListener('click', moveToken); answerArea.addEventListener('click', moveToken);
-                        container.querySelector('#check-btn')?.addEventListener('click', () => { const answer = Array.from(answerArea.querySelectorAll('button')).map(t => t.textContent).join(' '); checkAnswerFunction(answer, item, container); });
-                        break;
-                    }
-                }
-            },
-
-            checkAnswer(userAnswer, item, container) {
-                const correctAnswer = this.state.currentPractice.correctAnswer;
-                const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
-                
-                container.querySelectorAll('button, input').forEach(el => el.disabled = true);
-                
-                const levelProgress = this.state.userProgress.levels[this.state.currentPractice.level];
-                
-                if (isCorrect) {
-                    if(this.state.currentPractice.isTest) {
-                        this.state.currentPractice.score++;
-                    } else {
-                        if (levelProgress && !levelProgress.completedTasks.has(item.taskUID)) {
-                            levelProgress.completedTasks.add(item.taskUID);
-                            this.state.userProgress.totalCompletedTasks++;
-                        }
-                    }
-                }
-                
-                this.showFeedback(isCorrect, correctAnswer, container);
-                
-                if (isCorrect && !this.state.currentPractice.isTest) {
-                    this.checkLevelUp(this.state.currentPractice.level);
-                }
-                this.updateFirestoreProgress();
-                this.renderHeader();
-            },
-
-            showFeedback(isCorrect, correctAnswer, container) {
-                const feedbackContainer = container.querySelector('#feedback-container') || container.appendChild(document.createElement('div'));
-                const bgColor = isCorrect ? 'bg-green-500/20' : 'bg-red-500/20';
-                const textColor = isCorrect ? 'text-green-300' : 'text-red-300';
-                let message = isCorrect ? 'Chính xác!' : `Sai rồi! Đáp án đúng là: <strong class="font-bold text-white">${correctAnswer}</strong>`;
-                
-                feedbackContainer.innerHTML = `
-                    <div class="${bgColor} ${textColor} p-4 rounded-lg flex justify-between items-center fade-in">
-                        <p class="font-semibold">${message}</p>
-                        <button id="next-question-btn" class="cta-btn secondary !py-2 !px-4">Tiếp tục <i class="fas fa-arrow-right ml-2"></i></button>
-                    </div>`;
-                
-                document.getElementById('next-question-btn').addEventListener('click', () => {
-                    this.state.currentPractice.index++;
-                    this.renderPracticeView();
-                });
-            },
+            card.classList.remove('is-flipped');
             
-            shuffleArray(array) {
-                for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [array[i], array[j]] = [array[j], array[i]]; }
-                return array;
-            },
-
-            showModal(title, message, showCancel = false, onConfirm = null, onCancel = null, confirmText = 'Xác nhận', cancelText = 'Hủy') {
-                const modalId = 'main-modal';
-                const existingModal = document.getElementById(modalId);
-                if (existingModal) existingModal.remove();
+            setTimeout(() => {
+                const audioBtnHTML = item.audioUrl ? `<button class="audio-btn" data-audio-url="${item.audioUrl}"><i class="fas fa-volume-up"></i></button>` : '';
+                const frontHTML = `${audioBtnHTML}<div class="flashcard-word">${item.word}</div>`;
+                const backHTML = `${audioBtnHTML}<div class="flashcard-meaning">${item.meaning}</div><p class="flashcard-pronunciation">${item.pronunciation || ''} <span class="mx-2">&bull;</span> ${item.type || ''}</p><p class="flashcard-example">"${item.generated_tasks?.basic_example || ''}"</p>`;
                 
-                const modalContainer = document.createElement('div');
-                modalContainer.id = modalId;
-                modalContainer.className = "fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4";
+                card.innerHTML = `<div class="flashcard-face flashcard-front">${frontHTML}</div><div class="flashcard-face flashcard-back">${backHTML}</div>`;
                 
-                const buttonsHTML = showCancel 
-                    ? `<button id="modal-cancel-btn" class="cta-btn secondary">${cancelText}</button><button id="modal-confirm-btn" class="cta-btn">${confirmText}</button>` 
-                    : `<button id="modal-confirm-btn" class="cta-btn w-full">${confirmText}</button>`;
-                
-                modalContainer.innerHTML = `
-                    <div class="glass-panel p-6 sm:p-8 w-full max-w-md fade-in max-h-[90vh] overflow-y-auto">
-                        <h3 class="text-xl font-bold font-poppins mb-4 text-left">${title}</h3>
-                        <div class="text-text-secondary mb-6">${message}</div>
-                        <div class="flex gap-4 justify-end mt-8">${buttonsHTML}</div>
-                    </div>`;
-                
-                this.DOM.modal.appendChild(modalContainer);
-                
-                const confirmBtn = modalContainer.querySelector('#modal-confirm-btn');
-                const cancelBtn = modalContainer.querySelector('#modal-cancel-btn');
-                
-                const closeModal = () => modalContainer.remove();
-                
-                confirmBtn.onclick = () => {
-                    closeModal();
-                    if (onConfirm) onConfirm();
-                };
-                
-                if (cancelBtn) {
-                    cancelBtn.onclick = () => {
-                        closeModal();
-                        if (onCancel) onCancel();
-                    };
-                }
-            },
-
-            startFlashcardSession() {
-                this.state.currentFlashcard.items = this.shuffleArray([...this.state.wordList]);
-                if (this.state.currentFlashcard.items.length === 0) {
-                    this.showModal("Thông báo", "Không có từ vựng để học bằng flashcard.");
-                    return;
-                }
-                this.state.currentFlashcard.index = 0;
-                this.renderFlashcardViewer();
-            },
-
-            renderFlashcardViewer() {
-                this.DOM.main.innerHTML = `
-                    <div class="glass-panel p-4 sm:p-6 fade-in">
-                        <div class="flashcard-viewer">
-                            <div class="flex justify-between items-center mb-4">
-                                <button id="back-to-dashboard-btn" class="cta-btn secondary !py-2 !px-4"><i class="fas fa-arrow-left mr-2"></i> Bảng điều khiển</button>
-                                <div id="card-counter" class="font-semibold text-text-secondary"></div>
-                            </div>
-                            <div class="flashcard-main">
-                                <div class="flashcard" id="flashcard"></div>
-                            </div>
-                            <div class="flashcard-nav flex justify-between items-center p-4">
-                                <button id="prev-card-btn" class="cta-btn secondary !rounded-full !w-14 !h-14 text-xl"><i class="fas fa-arrow-left"></i></button>
-                                <p class="text-sm text-text-secondary hidden sm:block">Bấm vào thẻ để lật</p>
-                                <button id="next-card-btn" class="cta-btn secondary !rounded-full !w-14 !h-14 text-xl"><i class="fas fa-arrow-right"></i></button>
-                            </div>
-                        </div>
-                    </div>`;
-                this.updateFlashcardView();
-                document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.renderDashboard());
-                document.getElementById('flashcard').addEventListener('click', e => { if (e.target.closest('.audio-btn')) return; e.currentTarget.classList.toggle('is-flipped'); });
-                document.getElementById('prev-card-btn').addEventListener('click', () => this.navigateCard(-1));
-                document.getElementById('next-card-btn').addEventListener('click', () => this.navigateCard(1));
-            },
-
-            updateFlashcardView() {
-                const { items, index } = this.state.currentFlashcard;
-                const item = items[index];
-                const card = document.getElementById('flashcard');
-                if (!item || !card) return;
-
-                card.classList.remove('is-flipped');
-                
-                setTimeout(() => {
-                    const audioBtnHTML = item.audioUrl ? `<button class="audio-btn" data-audio-url="${item.audioUrl}"><i class="fas fa-volume-up"></i></button>` : '';
-                    const frontHTML = `${audioBtnHTML}<div class="flashcard-word">${item.word}</div>`;
-                    const backHTML = `${audioBtnHTML}<div class="flashcard-meaning">${item.meaning}</div><p class="flashcard-pronunciation">${item.pronunciation || ''} <span class="mx-2">&bull;</span> ${item.type || ''}</p><p class="flashcard-example">"${item.generated_tasks?.basic_example || ''}"</p>`;
-                    
-                    card.innerHTML = `<div class="flashcard-face flashcard-front">${frontHTML}</div><div class="flashcard-face flashcard-back">${backHTML}</div>`;
-                    
-                    card.querySelectorAll('.audio-btn').forEach(btn => {
-                        btn.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            this.playAudio(e.currentTarget.dataset.audioUrl);
-                        });
+                card.querySelectorAll('.audio-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.playAudio(e.currentTarget.dataset.audioUrl);
                     });
-                }, 150);
-                
-                document.getElementById('card-counter').textContent = `${index + 1} / ${items.length}`;
-            },
-
-            navigateCard(direction) {
-                const { items } = this.state.currentFlashcard;
-                const newIndex = this.state.currentFlashcard.index + direction;
-                this.state.currentFlashcard.index = (newIndex + items.length) % items.length;
-                this.updateFlashcardView();
-            },
-
-            playAudio(url) {
-                if (!url) return;
-                const audio = new Audio(url);
-                audio.play().catch(e => console.error("Audio play failed:", e));
-            },
-
-            async handleReportSubmission(reportType) {
-                const item = this.state.currentPractice.items[this.state.currentPractice.index];
-                if (!item) return;
-
-                const result = await this.showReportModal(reportType);
-                if (!result.confirmed) return;
-
-                const issueId = `${this.state.testData.id}_${item.id}_${item.exerciseType}`;
-                const issueRef = doc(this.db, "test_issues", issueId);
-                
-                const questionContainer = this.DOM.main.querySelector('#question-container');
-                const renderedQuestionHTML = questionContainer ? questionContainer.innerHTML : '<em>Không thể tải nội dung câu hỏi.</em>';
-
-                try {
-                    await runTransaction(this.db, async (transaction) => {
-                        const issueDoc = await transaction.get(issueRef);
-                        const reporterInfo = {
-                            studentId: this.state.studentId, studentName: this.state.studentName,
-                            comment: result.comment, category: result.category, reportedAt: serverTimestamp() 
-                        };
-
-                        if (!issueDoc.exists()) {
-                            const newIssueData = {
-                                testId: this.state.testData.id, testTitle: this.state.testData.title,
-                                itemId: item.id, itemWord: item.word, questionType: item.exerciseType,
-                                questionData: item, renderedQuestionHTML: renderedQuestionHTML,
-                                status: 'open', lastReportedAt: serverTimestamp(),
-                                reports: [reporterInfo]
-                            };
-                            transaction.set(issueRef, newIssueData);
-                        } else {
-                            transaction.update(issueRef, {
-                                reports: arrayUnion(reporterInfo),
-                                lastReportedAt: serverTimestamp(),
-                                status: 'open'
-                            });
-                        }
-                    });
-                    this.showModal("Thành công", "Báo cáo của bạn đã được gửi đến giáo viên.");
-                } catch (error) {
-                    console.error("Lỗi khi gửi báo cáo:", error);
-                    this.showModal("Lỗi", "Không thể gửi báo cáo. Vui lòng thử lại.");
-                }
-            },
-
-            showReportModal(reportType) {
-                return new Promise(resolve => {
-                    const isError = reportType === 'error'; 
-                    const title = isError ? 'Báo cáo lỗi đề' : 'Yêu cầu giải thích';
-                    let contentHTML = isError 
-                        ? `<p class="text-text-secondary mb-4">Vui lòng chọn loại lỗi bạn gặp phải:</p><div class="report-category-group space-y-2"><div><input type="radio" name="error-category" value="Lỗi chính tả" id="cat-typo" checked><label for="cat-typo">Lỗi chính tả</label></div><div><input type="radio" name="error-category" value="Đáp án đúng bị sai" id="cat-wrong-answer"><label for="cat-wrong-answer">Đáp án đúng bị sai</label></div><div><input type="radio" name="error-category" value="Câu hỏi không rõ ràng" id="cat-unclear"><label for="cat-unclear">Câu hỏi không rõ ràng</label></div><div><input type="radio" name="error-category" value="Lỗi kỹ thuật" id="cat-tech"><label for="cat-tech">Lỗi kỹ thuật</label></div></div>` 
-                        : `<p class="text-text-secondary mb-4">Ghi chú của bạn sẽ được gửi tới giáo viên để được giải đáp.</p>`;
-                    contentHTML += `<textarea id="report-comment-input" placeholder="Thêm ghi chú (không bắt buộc)..." rows="3"></textarea>`;
-                    
-                    this.showModal(
-                        title, 
-                        contentHTML, 
-                        true, 
-                        () => {
-                            const selectedCategory = isError ? (document.querySelector('input[name="error-category"]:checked')?.value || 'Khác') : 'Yêu cầu giải thích';
-                            const comment = document.getElementById('report-comment-input').value;
-                            resolve({ confirmed: true, category: selectedCategory, comment: comment });
-                        },
-                        () => resolve({ confirmed: false }),
-                        "Gửi",
-                        "Hủy"
-                    );
                 });
-            }
-        };
+            }, 150);
+            
+            document.getElementById('card-counter').textContent = `${index + 1} / ${items.length}`;
+        },
 
-        document.addEventListener('DOMContentLoaded', () => App.init());
-    </script>
+        navigateCard(direction) {
+            const { items } = this.state.currentFlashcard;
+            const newIndex = this.state.currentFlashcard.index + direction;
+            this.state.currentFlashcard.index = (newIndex + items.length) % items.length;
+            this.updateFlashcardView();
+        },
+
+        playAudio(url) {
+            if (!url) return;
+            const audio = new Audio(url);
+            audio.play().catch(e => console.error("Audio play failed:", e));
+        },
+
+        async handleReportSubmission(reportType) {
+            const item = this.state.currentPractice.items[this.state.currentPractice.index];
+            if (!item) return;
+
+            const result = await this.showReportModal(reportType);
+            if (!result.confirmed) return;
+
+            const issueId = `${this.state.testData.id}_${item.id}_${item.exerciseType}`;
+            const issueRef = doc(this.db, "test_issues", issueId);
+            
+            const questionContainer = this.DOM.main.querySelector('#question-container');
+            const renderedQuestionHTML = questionContainer ? questionContainer.innerHTML : '<em>Không thể tải nội dung câu hỏi.</em>';
+
+            try {
+                await runTransaction(this.db, async (transaction) => {
+                    const issueDoc = await transaction.get(issueRef);
+                    const reporterInfo = {
+                        studentId: this.state.studentId, studentName: this.state.studentName,
+                        comment: result.comment, category: result.category, reportedAt: serverTimestamp() 
+                    };
+
+                    if (!issueDoc.exists()) {
+                        const newIssueData = {
+                            testId: this.state.testData.id, testTitle: this.state.testData.title,
+                            itemId: item.id, itemWord: item.word, questionType: item.exerciseType,
+                            questionData: item, renderedQuestionHTML: renderedQuestionHTML,
+                            status: 'open', lastReportedAt: serverTimestamp(),
+                            reports: [reporterInfo]
+                        };
+                        transaction.set(issueRef, newIssueData);
+                    } else {
+                        transaction.update(issueRef, {
+                            reports: arrayUnion(reporterInfo),
+                            lastReportedAt: serverTimestamp(),
+                            status: 'open'
+                        });
+                    }
+                });
+                this.showModal("Thành công", "Báo cáo của bạn đã được gửi đến giáo viên.");
+            } catch (error) {
+                console.error("Lỗi khi gửi báo cáo:", error);
+                this.showModal("Lỗi", "Không thể gửi báo cáo. Vui lòng thử lại.");
+            }
+        },
+
+        showReportModal(reportType) {
+            return new Promise(resolve => {
+                const isError = reportType === 'error'; 
+                const title = isError ? 'Báo cáo lỗi đề' : 'Yêu cầu giải thích';
+                let contentHTML = isError 
+                    ? `<p class="text-text-secondary mb-4">Vui lòng chọn loại lỗi bạn gặp phải:</p><div class="report-category-group space-y-2"><div><input type="radio" name="error-category" value="Lỗi chính tả" id="cat-typo" checked><label for="cat-typo">Lỗi chính tả</label></div><div><input type="radio" name="error-category" value="Đáp án đúng bị sai" id="cat-wrong-answer"><label for="cat-wrong-answer">Đáp án đúng bị sai</label></div><div><input type="radio" name="error-category" value="Câu hỏi không rõ ràng" id="cat-unclear"><label for="cat-unclear">Câu hỏi không rõ ràng</label></div><div><input type="radio" name="error-category" value="Lỗi kỹ thuật" id="cat-tech"><label for="cat-tech">Lỗi kỹ thuật</label></div></div>` 
+                    : `<p class="text-text-secondary mb-4">Ghi chú của bạn sẽ được gửi tới giáo viên để được giải đáp.</p>`;
+                contentHTML += `<textarea id="report-comment-input" placeholder="Thêm ghi chú (không bắt buộc)..." rows="3"></textarea>`;
+                
+                this.showModal(
+                    title, 
+                    contentHTML, 
+                    true, 
+                    () => {
+                        const selectedCategory = isError ? (document.querySelector('input[name="error-category"]:checked')?.value || 'Khác') : 'Yêu cầu giải thích';
+                        const comment = document.getElementById('report-comment-input').value;
+                        resolve({ confirmed: true, category: selectedCategory, comment: comment });
+                    },
+                    () => resolve({ confirmed: false }),
+                    "Gửi",
+                    "Hủy"
+                );
+            });
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => App.init());
+</script>
 </body>
 </html>
