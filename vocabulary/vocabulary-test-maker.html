@@ -58,7 +58,6 @@
         .task-content .sentence, .task-content .option { background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 6px; margin: 4px 0; color: var(--text-primary); }
         body.dark .task-content .sentence, body.dark .task-content .option { background: rgba(255,255,255,0.08); }
         .correct-answer { border-left: 3px solid #22c55e; }
-        .missing-task { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -163,9 +162,7 @@
                     </div>
                     <div class="mt-6 text-center flex flex-wrap justify-center gap-4">
                         <button id="fetch-audio-btn" class="btn btn-secondary"><i class="fas fa-volume-up mr-2"></i>Tìm Audio</button>
-                        <button id="enrich-missing-btn" class="btn btn-secondary"><i class="fas fa-magic-wand-sparkles mr-2"></i>Làm giàu (Lỗ hổng)</button>
-                        <button id="enrich-all-btn" class="btn btn-secondary"><i class="fas fa-sync-alt mr-2"></i>Làm giàu (Ghi đè)</button>
-                        <button id="manual-enrich-btn" class="btn btn-secondary"><i class="fas fa-paste mr-2"></i>Làm giàu Thủ công</button>
+                        <button id="enrich-data-btn" class="btn btn-secondary"><i class="fas fa-wand-magic-sparkles mr-2"></i>Làm giàu Dữ liệu</button>
                         <button id="export-word-btn" class="btn btn-secondary"><i class="fas fa-file-word mr-2"></i>Xuất ra Word</button>
                     </div>
                 </div>
@@ -234,8 +231,7 @@
             loginError: document.getElementById('login-error'), testIdInput: document.getElementById('test-id'),
             testTitleInput: document.getElementById('test-title'), dataReviewSection: document.getElementById('data-review-section'),
             dataTableBody: document.getElementById('data-table-body'), fetchAudioBtn: document.getElementById('fetch-audio-btn'),
-            enrichMissingBtn: document.getElementById('enrich-missing-btn'), enrichAllBtn: document.getElementById('enrich-all-btn'),
-            manualEnrichBtn: document.getElementById('manual-enrich-btn'),
+            enrichDataBtn: document.getElementById('enrich-data-btn'),
             uploadBtn: document.getElementById('upload-btn'), uploadLog: document.getElementById('upload-log'),
             alertModal: document.getElementById('custom-alert-modal'), 
             vocabCsvUploadInput: document.getElementById('vocab-csv-upload'), vocabFileNameDisplay: document.getElementById('vocab-file-name'),
@@ -259,6 +255,26 @@
             DOM.alertModal.innerHTML = `<div class="glass-panel text-center p-8 rounded-lg max-w-lg w-full"><p class="text-lg mb-6">${message}</p>${detailsHTML}<button id="alert-ok-btn" class="btn ${colorClass} text-white mt-4">OK</button></div>`;
             DOM.alertModal.classList.add('is-open');
             document.getElementById('alert-ok-btn').onclick = () => DOM.alertModal.classList.remove('is-open');
+        }
+        
+        function showChoiceModal(title, message, choices) {
+            return new Promise(resolve => {
+                const modal = document.createElement('div');
+                modal.className = 'modal is-open';
+                const buttonsHTML = choices.map(choice => `<button class="btn btn-secondary" data-resolve="${choice.value}">${choice.label}</button>`).join('');
+                modal.innerHTML = `<div class="modal-content glass-panel text-center p-8 w-full max-w-sm">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">${title}</h3>
+                    <p class="text-gray-600 mb-6">${message}</p>
+                    <div class="flex gap-4 justify-center">${buttonsHTML}<button class="btn btn-danger" data-resolve="cancel">Hủy</button></div>
+                </div>`;
+                DOM.alertModal.appendChild(modal);
+                modal.querySelectorAll('button').forEach(btn => {
+                    btn.onclick = () => {
+                        modal.remove();
+                        resolve(btn.dataset.resolve);
+                    };
+                });
+            });
         }
 
         function getCefrLevelDescription() {
@@ -345,20 +361,45 @@
                         ${structuresHTML}
                     </td>`;
                 
+                let tasksHTML = '<span class="text-xs text-gray-400 italic">Chưa có dữ liệu AI.</span>';
                 const tasks = word.generated_tasks;
-                const missingTasks = ALL_TASK_TYPES.filter(type => !tasks || !tasks[type]);
 
-                let tasksHTML = '';
                 if (tasks) {
-                    tasksHTML = ALL_TASK_TYPES.map(taskKey => {
-                        const taskData = tasks[taskKey];
-                        if (!taskData) return '';
-                        return `<span class="inline-block bg-green-100 text-green-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">${taskKey}</span>`;
-                    }).join('');
-                }
-                
-                if (missingTasks.length > 0) {
-                    tasksHTML += missingTasks.map(taskKey => `<span class="inline-block bg-red-100 text-red-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full dark:bg-red-900 dark:text-red-300">${taskKey}</span>`).join('');
+                    const renderTask = (taskData, title, contentRenderer) => {
+                        if (!taskData) return `<details class="mt-2"><summary class="task-summary text-red-500">${title} (còn thiếu)</summary></details>`;
+                        return `
+                            <details class="mt-2" open>
+                                <summary class="task-summary">${title}</summary>
+                                <div class="task-details">
+                                    ${contentRenderer(taskData)}
+                                </div>
+                            </details>`;
+                    };
+
+                    const editableP = (path, text) => `<p class="sentence" contenteditable="true" data-path="${path}" data-word-index="${wordIndex}">${text}</p>`;
+                    const editableSpan = (path, text) => `<span contenteditable="true" data-path="${path}" data-word-index="${wordIndex}">${text}</span>`;
+                    const editableList = (basePath, items) => (items || []).map((item, i) => `<li class="option" contenteditable="true" data-path="${basePath}[${i}]" data-word-index="${wordIndex}">${item}</li>`).join('');
+
+                    tasksHTML = [
+                        renderTask(tasks.basic_example, '1. Basic Example', data => `<div class="task-content">${editableP(`generated_tasks.basic_example`, data)}</div>`),
+                        renderTask(tasks.meaning_mcq, '2. Meaning MCQ', data => `<div class="task-content"><b>Distractors (EN):</b> <ul>${editableList(`generated_tasks.meaning_mcq.distractors_en`, data.distractors_en)}</ul><b>Distractors (VI):</b> <ul>${editableList(`generated_tasks.meaning_mcq.distractors_vi`, data.distractors_vi)}</ul></div>`),
+                        renderTask(tasks.word_family_mcq, '3. Word Family MCQ', data => `<div class="task-content"><p class="sentence">${editableSpan(`generated_tasks.word_family_mcq.sentence`, data.sentence || '').replace(data.blank_placeholder, `<b>[____]</b>`)}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.word_family_mcq.correct_answer`, data.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.word_family_mcq.distractors`, data.distractors)}</ul></p></div>`),
+                        renderTask(tasks.sentence_unscramble, '4. Sentence Unscramble', data => `<div class="task-content">${editableP(`generated_tasks.sentence_unscramble.correct_sentence`, data.correct_sentence || '')}</div>`),
+                        renderTask(tasks.error_correction, '5. Error Correction', data => `<div class="task-content"><p><b>Incorrect:</b> ${editableSpan(`generated_tasks.error_correction.incorrect_sentence`, data.incorrect_sentence || '')}</p><p><b>Correct:</b> ${editableSpan(`generated_tasks.error_correction.correct_sentence`, data.correct_sentence || '')}</p></div>`),
+                        renderTask(tasks.ipa_fill, '6. IPA Fill', data => `<div class="task-content"><p><b>Gapped IPA:</b> ${editableSpan(`generated_tasks.ipa_fill.gapped_ipa`, data.gapped_ipa || '')}</p><p><b>Correct Vowel:</b> ${editableSpan(`generated_tasks.ipa_fill.correct_vowel`, data.correct_vowel || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.ipa_fill.distractors`, data.distractors)}</ul></p></div>`),
+                        renderTask(tasks.collocation_odd_one_out, '7. Collocation Odd One Out', data => `<div class="task-content"><p><b>Question:</b> ${editableSpan(`generated_tasks.collocation_odd_one_out.question`, data.question || '')}</p><p><b>Options:</b><ul>${(data.options || []).map((opt, i) => `<li class="option ${opt === data.answer ? 'correct-answer' : ''}" contenteditable="true" data-path="generated_tasks.collocation_odd_one_out.options[${i}]" data-word-index="${wordIndex}">${opt}</li>`).join('')}</ul></p><p><b>Answer:</b> ${editableSpan(`generated_tasks.collocation_odd_one_out.answer`, data.answer || '')}</p></div>`),
+                        renderTask(tasks.best_fit_replacement, '8. Best-fit Replacement', data => `<div class="task-content"><p class="sentence">${editableSpan(`generated_tasks.best_fit_replacement.sentence`, data.sentence || '').replace(data.word_to_replace, `<b><u>${data.word_to_replace}</u></b>`)}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.best_fit_replacement.correct_answer`, data.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.best_fit_replacement.distractors`, data.distractors)}</ul></p></div>`),
+                        renderTask(tasks.inference_from_scenario, '9. Inference', data => `<div class="task-content"><p><b>Scenario:</b> ${editableSpan(`generated_tasks.inference_from_scenario.scenario`, data.scenario || '')}</p><p><b>Question:</b> ${editableSpan(`generated_tasks.inference_from_scenario.question`, data.question || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.inference_from_scenario.correct_answer`, data.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.inference_from_scenario.distractors`, data.distractors)}</ul></p></div>`),
+                        renderTask(tasks.best_paraphrase, '10. Best Paraphrase', data => `<div class="task-content"><p><b>Original:</b> ${editableP(`generated_tasks.best_paraphrase.original_sentence`, data.original_sentence || '')}</p><p><b>Options:</b><ul>${(data.options || []).map((opt, i) => `<li class="option ${opt.is_correct ? 'correct-answer' : ''}" contenteditable="true" data-path="generated_tasks.best_paraphrase.options[${i}].text" data-word-index="${wordIndex}">${opt.text}</li>`).join('')}</ul></p></div>`),
+                        renderTask(tasks.antonym_mcq, '11. Antonym MCQ', data => `<div class="task-content"><p><b>Context:</b> ${editableSpan(`generated_tasks.antonym_mcq.sentence_context`, data.sentence_context || '')}</p><p><b>Keyword:</b> ${editableSpan(`generated_tasks.antonym_mcq.keyword`, data.keyword || '')}</p><p><b>Antonym:</b> ${editableSpan(`generated_tasks.antonym_mcq.correct_antonym`, data.correct_antonym || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.antonym_mcq.distractors`, data.distractors)}</ul></p></div>`),
+                        renderTask(tasks.tripled_sentence, '12. Tripled Sentence', data => `<div class="task-content"><p><b>Keyword:</b> ${editableSpan(`generated_tasks.tripled_sentence.keyword`, data.keyword || '')}</p><b>Examples:</b><ul>${editableList(`generated_tasks.tripled_sentence.examples`, data.examples)}</ul></div>`),
+                        renderTask(tasks.main_idea, '13. Main Idea', data => `<div class="task-content"><p><b>Paragraph:</b> ${editableSpan(`generated_tasks.main_idea.paragraph`, data.paragraph || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.main_idea.correct_answer`, data.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.main_idea.distractors`, data.distractors)}</ul></p></div>`),
+                        renderTask(tasks.paragraph_completion, '14. Paragraph Completion', data => `<div class="task-content"><p><b>Body:</b> ${editableSpan(`generated_tasks.paragraph_completion.paragraph_body`, data.paragraph_body || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.paragraph_completion.correct_conclusion`, data.correct_conclusion || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.paragraph_completion.distractors`, data.distractors)}</ul></p></div>`),
+                        renderTask(tasks.argument_strengthening, '15. Argument Strengthening', data => `<div class="task-content"><p><b>Argument:</b> ${editableSpan(`generated_tasks.argument_strengthening.argument_text`, data.argument_text || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.argument_strengthening.correct_evidence`, data.correct_evidence || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.argument_strengthening.distractors`, data.distractors)}</ul></p></div>`),
+                        renderTask(tasks.argument_weakening, '16. Argument Weakening', data => `<div class="task-content"><p><b>Argument:</b> ${editableSpan(`generated_tasks.argument_weakening.argument_text`, data.argument_text || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.argument_weakening.correct_weakener`, data.correct_weakener || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.argument_weakening.distractors`, data.distractors)}</ul></p></div>`),
+                        renderTask(tasks.tone_purpose_analysis, '17. Tone/Purpose Analysis', data => `<div class="task-content"><p><b>Paragraph:</b> ${editableSpan(`generated_tasks.tone_purpose_analysis.paragraph`, data.paragraph || '')}</p><p><b>Question:</b> ${editableSpan(`generated_tasks.tone_purpose_analysis.question`, data.question || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.tone_purpose_analysis.correct_answer`, data.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.tone_purpose_analysis.distractors`, data.distractors)}</ul></p></div>`),
+                        renderTask(tasks.sentence_role_analysis, '18. Sentence Role Analysis', data => `<div class="task-content"><p><b>Paragraph:</b> ${editableSpan(`generated_tasks.sentence_role_analysis.paragraph`, data.paragraph || '')}</p><p><b>Role of Sentence ${data.highlighted_sentence_index + 1}:</b> ${editableSpan(`generated_tasks.sentence_role_analysis.correct_role`, data.correct_role || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.sentence_role_analysis.distractors`, data.distractors)}</ul></p></div>`),
+                    ].filter(Boolean).join('');
                 }
 
                 const aiStatusIcon = tasks ? `<i class="fas fa-check-circle text-2xl text-green-500"></i>` : `<i class="fas fa-times-circle text-2xl text-gray-400"></i>`;
@@ -406,13 +447,14 @@
 
             return `
 # MISSION & ROLE
-You are a **Master Instructional Designer** for English Language Testing (ELT). Your mission is to craft high-quality, pedagogically sound assessment items based on a provided list of words and specific task types.
+You are a **Master Instructional Designer** specializing in English Language Testing (ELT). Your mission is to craft high-quality, pedagogically sound assessment items. You are not a mere content generator; you are an expert in cognitive science and language acquisition, creating "cognitive puzzles" that test and reinforce a learner's understanding of vocabulary in a comprehensive, meaningful way.
 
 # GUIDING PRINCIPLES
-- **CEFR Alignment**: All content MUST be appropriate for the target **${cefrLevel}** level.
-- **Context is King**: Leverage provided \`structures\` to create authentic contexts.
-- **Plausible Distractors**: Distractors should be tempting but clearly incorrect.
-- **Targeted Generation**: You will be given a specific list of \`tasks_to_generate\` for each word. You MUST generate ONLY these specified tasks.
+- **Pedagogical Soundness**: Every item must have a clear learning objective.
+- **CEFR Alignment**: All content, from example sentences to distractors, MUST be appropriate for the target **${cefrLevel}** level.
+- **Context is King**: Leverage the provided \`structures\` to create authentic, natural-sounding contexts. Avoid generic or nonsensical sentences.
+- **Plausible Distractors**: The art of a good question lies in its distractors. They should be tempting to a learner who has a partial understanding but clearly incorrect to one who has mastered the concept.
+- **Creativity & Variety**: Avoid repetitive sentence structures. Showcase the vocabulary in diverse and interesting scenarios. Example: A good passage in a self-help book, the "letters to the editor" section in a newspaper, the postscript in an old letter, the subject line of a work email, a hastily written line in a diary, the description of a special dish on a menu, the ingredient list for a baking recipe, the chorus of a famous song, a haiku verse, a memorable line of dialogue in a movie script, a crossed-out item on a grocery list, the work experience description on a CV, the opening paragraph of a cover letter, a short greeting on the back of a postcard, a penalty clause in a contract, the name and date of birth on a birth certificate, the line stating the major on a university diploma, an entry stamp in a passport, the seat number and showtime on a movie ticket, the total amount line on a receipt, the washing instructions on a clothing tag, the calorie count on food packaging, a troubleshooting step in an instruction manual, the summary paragraph of a blog post, a short comment with an emoji, a line of translated subtitles, a bullet point on a presentation slide, the conclusion section in a weekly report, a line designating an heir in a will, the expiration date on a warranty card, the sign for a small alley, the regional code on a license plate, a single word tattooed on a wrist, a sentence in an oath, a quote at the bottom of a book page, an advertising slogan on a large billboard, the wordmark of a brand, a teacher's comment at the end of a test, the copyright notice at the bottom of a webpage, a thought bubble of a comic book character, the headline of a press release, a phone number scribbled on the edge of a notebook, the "dress code" note in a wedding invitation, a decision recorded in meeting minutes, the thank-you note at the end of a speech, a line of prophecy in a myth, the clue section of a crossword puzzle, a word in a magic spell, the rule about silence in a library, the dosage instructions on a prescription, a blood test result value, a product code in a catalog, a "birthday" note on a calendar date, the legend for a symbol on a map, the definition of a word in a dictionary, a date in a historical article, the dedication on the first page of a book, the signature at the end of a pledge, the violation recorded in a penalty notice, the star rating in an online review, the name of a person on a family tree, an "I'm busy" auto-reply message, a line of comment in a programming code, the title of a promotional notification, the punchline of a written joke, the first article in a manifesto, the legal representative's name on a business license, the coordinates written on a piece of paper in a bottle, the date of birth engraved on a tombstone, the main question in a forum thread.
 
 # INPUT & OUTPUT SPECIFICATION
 
@@ -423,21 +465,126 @@ ${JSON.stringify(batchInput, null, 2)}
 \`\`\`
 
 ## OUTPUT
-You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any explanatory text or markdown formatting. Each object in the output array must contain the original \`id\` and a \`generated_tasks\` object containing ONLY the newly generated tasks.
-
-**Example Output Structure for a single word:**
+You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any explanatory text, markdown formatting like \`\`\`json, or any other content outside of the JSON array itself. Each object in the output array must strictly adhere to the following full structure, containing all 18 task types:
 \`\`\`json
 {
-  "id": 1,
+  "id": "the_original_id_of_the_word",
   "generated_tasks": {
     "basic_example": "A clear, contextual sentence using the word.",
-    "meaning_mcq": { "distractors_en": ["word1", "word2"], "distractors_vi": ["nghĩa1", "nghĩa2"] }
+    "meaning_mcq": { "distractors_en": ["word1", "word2"], "distractors_vi": ["nghĩa1", "nghĩa2"] },
+    "word_family_mcq": { "sentence": "A gapped sentence.", "blank_placeholder": "[BLANK]", "correct_answer": "The correct form.", "distractors": ["wrong_form1", "wrong_form2"] },
+    "sentence_unscramble": { "correct_sentence": "The complete, correct sentence." },
+    "error_correction": { "incorrect_sentence": "A sentence with a subtle error.", "correct_sentence": "The corrected version." },
+    "ipa_fill": { "gapped_ipa": "/g_pt/", "correct_vowel": "æ", "distractors": ["e", "ɪ", "ɑː"] },
+    "collocation_odd_one_out": { "question": "Which word does NOT collocate with '...'", "options": ["collocate1", "collocate2", "non_collocate"], "answer": "non_collocate" },
+    "best_fit_replacement": { "sentence": "A sentence with a word to replace.", "word_to_replace": "The target word.", "correct_answer": "The best synonym.", "distractors": ["weaker_synonym1", "weaker_synonym2"] },
+    "inference_from_scenario": { "scenario": "A short story.", "question": "What can be inferred?", "correct_answer": "The logical inference.", "distractors": ["distractor1", "distractor2"] },
+    "best_paraphrase": { "original_sentence": "The original sentence.", "options": [ {"text": "A perfect paraphrase.", "similarity": 100, "is_correct": true}, {"text": "A slightly different meaning.", "similarity": 60, "is_correct": false} ] },
+    "antonym_mcq": { "keyword": "the_word", "sentence_context": "A sentence highlighting the keyword.", "correct_antonym": "The true antonym.", "distractors": ["synonym1", "synonym2"] },
+    "tripled_sentence": { "keyword": "the_word", "examples": ["Sentence in context A.", "Sentence in context B.", "Sentence in context C."] },
+    "main_idea": { "paragraph": "A short paragraph.", "correct_answer": "The main point.", "distractors": ["A supporting detail.", "An overgeneralization."] },
+    "paragraph_completion": { "paragraph_body": "A paragraph missing its conclusion.", "correct_conclusion": "The logical concluding sentence.", "distractors": ["An abrupt or illogical conclusion."] },
+    "argument_strengthening": { "argument_text": "An author's argument.", "author_viewpoint": "A summary of the viewpoint.", "correct_evidence": "Evidence that supports the argument.", "distractors": ["Evidence that weakens it."] },
+    "argument_weakening": { "argument_text": "An author's argument.", "author_viewpoint": "A summary of the viewpoint.", "correct_weakener": "Evidence that undermines the argument.", "distractors": ["Evidence that strengthens it."] },
+    "tone_purpose_analysis": { "paragraph": "A paragraph with a specific tone.", "question": "The primary purpose of this passage is to...", "correct_answer": "e.g., 'question a popular belief'", "distractors": ["e.g., 'present an objective overview'"] },
+    "sentence_role_analysis": { "paragraph": "[1] Sentence one. [2] Sentence two.", "highlighted_sentence_index": 1, "correct_role": "e.g., 'To provide evidence for the claim in sentence 1.'", "distractors": ["e.g., 'To state the main conclusion.'"] }
   }
 }
 \`\`\`
+
+# DETAILED TASK GUIDELINES & HIGH-QUALITY EXAMPLES
+
+**1. \`basic_example\`**:
+- **Objective**: Provide the most clear, simple, and contextually appropriate example sentence.
+- **High-Quality Example** (for "ubiquitous"): "In today's world, smartphones and Wi-Fi have become ubiquitous."
+- **Poor Example**: "The ubiquitousness of the problem was startling." (Uses a different word form, less common).
+
+**2. \`meaning_mcq\`**:
+- **Objective**: Test semantic understanding with plausible distractors.
+- **Strategy**: Distractors should be related (e.g., other feelings for an emotion word) or be common mistakes.
+- **High-Quality Example** (for "diligent"): distractors_en: ["lazy", "intelligent", "creative"], distractors_vi: ["lười biếng", "thông minh", "sáng tạo"].
+
+**3. \`word_family_mcq\`**:
+- **Objective**: Test knowledge of different forms of a word.
+- **Strategy**: Distractors MUST be other members of the word family or commonly confused forms.
+- **High-Quality Example** (for "economy"): sentence: "The government needs to _______ the national budget carefully.", blank_placeholder: "[BLANK]", correct_answer: "economize", distractors: ["economic", "economical", "economics"].
+
+**4. \`sentence_unscramble\`**:
+- **Objective**: Test understanding of syntax and word order.
+- **High-Quality Example** (for "collaborate"): "The two rival companies agreed to collaborate on the new project."
+
+**5. \`error_correction\`**:
+- **Objective**: Test ability to spot subtle grammatical or collocational errors.
+- **Strategy**: Focus on common errors like prepositions, articles, or verb tenses, not obvious spelling mistakes.
+- **High-Quality Example** (for "responsible"): incorrect_sentence: "He is responsible at managing the team.", correct_sentence: "He is responsible for managing the team."
+
+**6. \`ipa_fill\`**:
+- **Objective**: Test phonemic awareness.
+- **Strategy**: Gap a single, distinctive vowel or consonant sound. Distractors should be phonetically similar.
+- **High-Quality Example** (for "heat" /hiːt/): gapped_ipa: "/h_t/", correct_vowel: "iː", distractors: ["ɪ", "e", "eɪ"].
+
+**7. \`collocation_odd_one_out\`**:
+- **Objective**: Test knowledge of common word pairings (collocations).
+- **High-Quality Example** (for "effort"): question: "Which verb does NOT typically collocate with 'effort'?", options: ["make", "put in", "do", "save"], answer: "do".
+
+**8. \`best_fit_replacement\`**:
+- **Objective**: Test understanding of semantic nuance and connotation.
+- **Strategy**: Distractors should be synonyms but less precise or appropriate for the specific context.
+- **High-Quality Example** (for "crucial"): sentence: "It is **crucial** that you submit the report by Friday.", word_to_replace: "crucial", correct_answer: "vital", distractors: ["important", "helpful", "suggested"].
+
+**9. \`inference_from_scenario\`**:
+- **Objective**: Test reading comprehension and logical deduction.
+- **Strategy**: The answer must be strongly implied by the text, not explicitly stated.
+- **High-Quality Example** (for "reluctant"): scenario: "John looked at the huge plate of Brussels sprouts. He slowly picked up his fork but didn't take a bite. 'My mother said I have to eat them,' he sighed.", question: "How does John feel about eating the Brussels sprouts?", correct_answer: "He is reluctant to eat them.", distractors: ["He is excited to eat them.", "He is allergic to them.", "He has never tried them before."].
+
+**10. \`best_paraphrase\`**:
+- **Objective**: Test ability to recognize the same meaning expressed differently.
+- **Strategy**: Distractors should alter the original meaning in a subtle way (e.g., changing the certainty, scope, or focus).
+- **High-Quality Example** (for "mitigate"): original_sentence: "The new flood barriers are designed to mitigate the effects of storm surges.", options: [{"text": "The barriers aim to lessen the impact of storm surges.", "similarity": 100, "is_correct": true}, {"text": "The barriers will completely prevent all damage from storms.", "similarity": 60, "is_correct": false}].
+
+**11. \`antonym_mcq\`**:
+- **Objective**: Test knowledge of opposites, with a twist.
+- **Strategy**: The most effective distractors are often **synonyms** of the keyword, forcing the learner to carefully read the question.
+- **High-Quality Example** (for "expand"): sentence_context: "The company plans to **expand** its operations in Asia.", keyword: "expand", correct_antonym: "contract", distractors: ["grow", "enlarge", "develop"].
+
+**12. \`tripled_sentence\`**:
+- **Objective**: Show understanding of a word's different uses or shades of meaning.
+- **Strategy**: Use the keyword in three distinct, non-repetitive contexts.
+- **High-Quality Example** (for "policy"): keyword: "policy", examples: ["The company has a strict no-smoking policy.", "The government's new economic policy was met with criticism.", "It's a good policy to always check your work before submitting it."].
+
+**13. \`main_idea\`**:
+- **Objective**: Test ability to synthesize information and identify the central point.
+- **Strategy**: Distractors should be: a true but minor detail, a statement that is too broad, or a misinterpretation of the paragraph's focus.
+- **High-Quality Example** (for "sustainable"): paragraph: "Sustainable agriculture focuses on long-term solutions. It avoids harsh chemicals that deplete the soil and seeks to conserve water. The goal is to produce healthy food for today's population without compromising the ability of future generations to do the same.", correct_answer: "Sustainable agriculture balances present needs with future resources.", distractors: ["Sustainable agriculture avoids harsh chemicals.", "All farming should be sustainable."].
+
+**14. \`paragraph_completion\`**:
+- **Objective**: Test logical flow and coherence.
+- **Strategy**: The correct answer should logically follow from the preceding sentences. Distractors might be contradictory, irrelevant, or introduce a new topic abruptly.
+- **High-Quality Example** (for "innovative"): paragraph_body: "The company's research team spent two years developing the new material. It's lighter, stronger, and more flexible than anything on the market. This breakthrough has already attracted interest from the aerospace and automotive industries...", correct_conclusion: "Consequently, the company is poised to become a leader in the field.", distractors: ["However, the team was disappointed with the results.", "The company also produces office furniture."].
+
+**15. \`argument_strengthening\`**:
+- **Objective**: Test critical thinking and the ability to evaluate evidence.
+- **Strategy**: The correct answer provides a new piece of information or a logical reason that directly supports the argument's conclusion.
+- **High-Quality Example** (for "mandatory"): argument_text: "The city council argues that bicycle helmets should be mandatory for all riders to reduce head injuries.", correct_evidence: "A recent study in a similar city showed a 40% decrease in serious head injuries after they implemented a mandatory helmet law.", distractors: ["Bicycle helmets can be expensive for some residents.", "Many cyclists enjoy the feeling of riding without a helmet."].
+
+**16. \`argument_weakening\`**:
+- **Objective**: Test the ability to identify flaws or counter-evidence.
+- **Strategy**: The correct answer should expose a flaw in the argument's logic or provide evidence that contradicts its conclusion.
+- **High-Quality Example** (for "censorship"): argument_text: "The activist group argues that censoring certain online content is necessary to protect children from harmful material.", correct_weakener: "Studies have shown that such censorship often leads to a 'Streisand effect,' where the banned content becomes even more popular and widely distributed.", distractors: ["Protecting children is a very important goal."].
+
+**17. \`tone_purpose_analysis\`**:
+- **Objective**: Test the ability to discern an author's attitude or intent.
+- **Strategy**: Distractors should be plausible but less accurate descriptions of the tone (e.g., 'objective' vs. 'cautious', 'enthusiastic' vs. 'biased').
+- **High-Quality Example** (for "skeptical"): paragraph: "While the new 'super-juice' is marketed as a miracle cure, its health claims are based on a single, small-scale study funded by its own parent company. Independent researchers have not yet replicated these extraordinary findings.", question: "The author's tone is best described as...", correct_answer: "skeptical and cautionary", distractors: ["enthusiastic and supportive", "objective and informative"].
+
+**18. \`sentence_role_analysis\`**:
+- **Objective**: Test understanding of how sentences function within a larger argument.
+- **Strategy**: The correct answer accurately describes the logical function of one sentence in relation to another. Distractors can describe the roles of other sentences in the paragraph.
+- **High-Quality Example** (for "illustrate"): paragraph: "[1] Many animals have developed incredible methods of camouflage. [2] For instance, the stick insect is almost indistinguishable from a twig, which helps it avoid predators.", "highlighted_sentence_index": 1, "correct_role": "To provide a specific example that illustrates the claim made in sentence 1.", "distractors": ["To state the main idea of the paragraph.", "To contradict the claim made in sentence 1."].
+
 ---
 **FINAL INSTRUCTIONS**
-- **Proficiency Level**: Strictly align with the **${cefrLevel}** level.
+- **Proficiency Level**: All generated content must be strictly aligned with the **${cefrLevel}** level.
 - **Format**: Return only a valid JSON array.
 - **Begin!**
 `;
@@ -740,7 +887,7 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                 updateButtonState(button, false, originalHTML);
             });
 
-            const handleEnrichment = async (overwriteAll) => {
+            const handleAutomaticEnrichment = async (overwriteAll) => {
                 const selectedRows = Array.from(document.querySelectorAll('.row-checkbox:checked'));
                 const selectedWordIds = selectedRows.map(cb => parseInt(cb.dataset.wordId, 10));
                 
@@ -756,7 +903,7 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                     }
                 }
 
-                const button = overwriteAll ? DOM.enrichAllBtn : DOM.enrichMissingBtn;
+                const button = DOM.enrichDataBtn;
                 const originalHTML = button.innerHTML;
                 updateButtonState(button, true, originalHTML);
 
@@ -776,27 +923,63 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                 }
             };
 
-            DOM.enrichMissingBtn.addEventListener('click', () => handleEnrichment(false));
-            DOM.enrichAllBtn.addEventListener('click', async () => {
-                const confirmed = confirm("Hành động này sẽ ghi đè tất cả dữ liệu AI hiện có cho các từ đã chọn. Bạn có chắc chắn?");
-                if (confirmed) {
-                    await handleEnrichment(true);
+            const handleManualEnrichment = (overwriteAll) => {
+                const selectedRows = Array.from(document.querySelectorAll('.row-checkbox:checked'));
+                const selectedWordIds = selectedRows.map(cb => parseInt(cb.dataset.wordId, 10));
+                let wordsToEnrich = localWordList.filter(w => selectedWordIds.includes(w.id));
+                if (wordsToEnrich.length === 0) return showAlert("Vui lòng chọn ít nhất một từ để làm giàu thủ công.", 'error');
+
+                if (!overwriteAll) {
+                    wordsToEnrich = wordsToEnrich.filter(w => ALL_TASK_TYPES.some(type => !w.generated_tasks || !w.generated_tasks[type]));
+                     if (wordsToEnrich.length === 0) {
+                        return showAlert("Các từ đã chọn đã có đủ dữ liệu. Chọn 'Làm giàu (Ghi đè)' nếu muốn tạo lại.", 'info');
+                    }
+                }
+                
+                DOM.manualPromptOutput.value = getPromptForBatch(wordsToEnrich, overwriteAll);
+                DOM.manualPromptInput.value = '';
+                DOM.manualPromptModal.classList.add('is-open');
+            };
+
+            DOM.enrichDataBtn.addEventListener('click', async () => {
+                const selectedRows = Array.from(document.querySelectorAll('.row-checkbox:checked'));
+                if (selectedRows.length === 0) {
+                    return showAlert("Vui lòng chọn ít nhất một từ để làm giàu.", 'error');
+                }
+                
+                const enrichmentType = await showChoiceModal(
+                    "Chọn Phương thức", 
+                    "Bạn muốn làm giàu những phần còn thiếu hay tạo lại toàn bộ?",
+                    [
+                        { label: "Làm giàu Lỗ hổng", value: "missing" },
+                        { label: "Làm giàu Ghi đè", value: "all" }
+                    ]
+                );
+
+                if (enrichmentType === 'cancel') return;
+                const overwriteAll = enrichmentType === 'all';
+
+                const executionType = await showChoiceModal(
+                    "Chọn Cách thực hiện",
+                    "Sử dụng AI tự động hay nhập thủ công?",
+                    [
+                        { label: "Tự động (AI)", value: "auto" },
+                        { label: "Thủ công", value: "manual" }
+                    ]
+                );
+                
+                if (executionType === 'cancel') return;
+
+                if (executionType === 'auto') {
+                    handleAutomaticEnrichment(overwriteAll);
+                } else if (executionType === 'manual') {
+                    handleManualEnrichment(overwriteAll);
                 }
             });
 
+
             DOM.exportWordBtn.addEventListener('click', exportToWord);
-
-            DOM.manualEnrichBtn.addEventListener('click', () => {
-                const selectedRows = Array.from(document.querySelectorAll('.row-checkbox:checked'));
-                const selectedWordIds = selectedRows.map(cb => parseInt(cb.dataset.wordId, 10));
-                const wordsToEnrich = localWordList.filter(w => selectedWordIds.includes(w.id));
-
-                if (wordsToEnrich.length === 0) return showAlert("Vui lòng chọn ít nhất một từ để làm giàu thủ công.", 'error');
-                
-                DOM.manualPromptOutput.value = getPromptForBatch(wordsToEnrich, false); // Always generate for missing
-                DOM.manualPromptInput.value = '';
-                DOM.manualPromptModal.classList.add('is-open');
-            });
+            
             DOM.closeManualModalBtn.addEventListener('click', () => DOM.manualPromptModal.classList.remove('is-open'));
             DOM.copyPromptBtn.addEventListener('click', () => {
                 DOM.manualPromptOutput.select();
