@@ -3,19 +3,200 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Học Từ Vựng - lingua Xplore</title>
+    <title>Trình Soạn Thảo Bộ Từ Vựng Chuyên Nghiệp</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- MỚI: Thêm thư viện docx.js để xuất file Word -->
+    <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+    <style>
+        :root {
+            --blur-intensity: 12px; --saturation-intensity: 150%; --glass-bg-color: rgba(255, 255, 255, 0.45);
+            --glass-border-color: rgba(255, 255, 255, 0.6); --shadow-color: rgba(67, 56, 202, 0.15);
+            --primary-accent: #6d28d9; --text-primary: #0f172a; --text-secondary: #475569;
+            --app-bg-start: #f5f7ff; --app-bg-end: #e0e7ff;
+        }
+        body.dark {
+            --glass-bg-color: rgba(29, 39, 58, 0.45); --glass-border-color: rgba(255, 255, 255, 0.2);
+            --shadow-color: rgba(0, 0, 0, 0.25); --primary-accent: #a78bfa; --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8; --app-bg-start: #0f172a; --app-bg-end: #1e293b;
+        }
+        body { font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--app-bg-start); background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%); color: var(--text-primary); transition: background-color 0.3s, color 0.3s; }
+        body.dark h1, body.dark h2, body.dark label, body.dark p, body.dark input, body.dark textarea, body.dark select, body.dark summary, body.dark th { color: var(--text-primary); }
+        body.dark .text-gray-700 { color: var(--text-primary) !important; }
+        body.dark #dark-mode-label .fa-moon { color: var(--primary-accent); } #dark-mode-label .fa-sun { color: #f59e0b; }
+        .background-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+        .shape { position: absolute; border-radius: 50%; filter: blur(25px); opacity: 0.6; animation: float 30s infinite alternate ease-in-out; }
+        .shape1 { width: 250px; height: 250px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); top: 10%; left: 5%; }
+        .shape2 { width: 180px; height: 180px; background: linear-gradient(135deg, #14b8a6, #67e8f9); bottom: 15%; right: 10%; animation-duration: 35s; }
+        @keyframes float { from { transform: translateY(20px) scale(1); } to { transform: translateY(-20px) scale(1.05); } }
+        .glass-panel { background: var(--glass-bg-color); backdrop-filter: blur(var(--blur-intensity)) saturate(var(--saturation-intensity)); border-radius: 24px; border: 1px solid var(--glass-border-color); box-shadow: 0 8px 32px 0 var(--shadow-color); transition: background 0.3s, border 0.3s; }
+        .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; user-select: none; }
+        .btn:disabled { cursor: not-allowed; opacity: 0.6; transform: none !important; }
+        .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .btn-primary { background: var(--primary-accent); color: white; }
+        .btn-secondary { background: rgba(255, 255, 255, 0.4); color: var(--text-primary); border: 1px solid rgba(255, 255, 255, 0.6); }
+        body.dark .btn-secondary { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
+        .btn-danger { background: #ef4444; color: white; }
+        .input-field { background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.5); width: 100%; padding: 12px; border-radius: 12px; transition: background 0.3s, border 0.3s; }
+        .input-field:focus { outline: none; box-shadow: 0 0 0 2px var(--primary-accent); }
+        body.dark .input-field { background: rgba(0,0,0,0.2); border-color: rgba(255,255,255,0.2); }
+        .input-field:disabled { background-color: rgba(229, 231, 235, 0.5); cursor: not-allowed; }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); align-items: center; justify-content: center; animation: fadeIn 0.3s ease; }
+        .modal.is-open { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .loader { width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid var(--primary-accent); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #data-table th { position: sticky; top: 0; background-color: rgba(255,255,255,0.6); backdrop-filter: blur(5px); z-index: 10; }
+        body.dark #data-table th { background-color: rgba(29, 39, 58, 0.6); }
+        [contenteditable]:focus { outline: 2px solid var(--primary-accent); background-color: rgba(255, 255, 255, 0.7); border-radius: 4px; }
+        body.dark [contenteditable]:focus { background-color: rgba(0, 0, 0, 0.3); }
+        .task-details { border-left: 2px solid var(--primary-accent); padding-left: 12px; margin-top: 8px; }
+        .task-summary { font-weight: 700; cursor: pointer; list-style: none; }
+        .task-summary::-webkit-details-marker { display: none; }
+        .task-content { font-size: 12px; margin-top: 8px; color: var(--text-secondary); }
+        .task-content .sentence { background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 6px; margin: 4px 0; color: var(--text-primary); }
+        body.dark .task-content .sentence { background: rgba(255,255,255,0.08); }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+    <div class="background-shapes"><div class="shape shape1"></div><div class="shape shape2"></div></div>
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="modal is-open">
+        <div class="glass-panel p-8 rounded-2xl shadow-xl text-center w-full max-w-sm">
+            <h2 class="text-2xl font-bold mb-6">Đăng nhập</h2>
+            <div class="space-y-4 text-left">
+                <div><label for="email-input" class="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" id="email-input" class="input-field"></div>
+                <div><label for="password-input" class="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label><input type="password" id="password-input" class="input-field"></div>
+            </div>
+            <button id="login-btn" class="btn btn-primary w-full mt-6">Đăng nhập</button>
+            <p id="login-error" class="text-red-500 mt-2 h-5"></p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-content" class="max-w-screen-2xl mx-auto" style="display: none;">
+        <header class="flex justify-between items-center mb-8">
+            <h1 id="page-title" class="text-4xl font-bold">Trình Soạn Thảo Bộ Từ Vựng</h1>
+            <div class="flex items-center gap-4">
+                <label id="dark-mode-label" class="flex items-center cursor-pointer text-slate-500">
+                    <i class="fas fa-moon mr-2"></i>
+                    <div class="relative">
+                        <input type="checkbox" id="dark-mode-toggle" class="sr-only">
+                        <div class="block bg-gray-600 w-14 h-8 rounded-full"></div>
+                        <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
+                    </div>
+                    <i class="fas fa-sun ml-2"></i>
+                </label>
+                <button id="logout-btn" class="btn btn-danger">Đăng xuất</button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <!-- Left Panel: Controls -->
+            <aside class="lg:col-span-2 space-y-8">
+                <div class="glass-panel p-6">
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4">1. Thông tin chung</h2>
+                    <div class="space-y-4">
+                        <div><label for="test-id" class="block text-sm font-medium">Mã định danh (ID)</label><input type="text" id="test-id" class="input-field" placeholder="vd: unit_1_family"></div>
+                        <div><label for="test-title" class="block text-sm font-medium">Tiêu đề bộ từ vựng</label><input type="text" id="test-title" class="input-field" placeholder="vd: Unit 1: Family Life"></div>
+                    </div>
+                </div>
+                 <div class="glass-panel p-6">
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4">2. Nhập liệu & Cài đặt</h2>
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                         <div>
+                             <label class="block text-sm font-medium mb-1">File Từ vựng (.csv)</label>
+                             <label for="vocab-csv-upload" class="btn btn-secondary w-full"><i class="fas fa-upload mr-2"></i>Tải lên</label>
+                             <input type="file" id="vocab-csv-upload" class="hidden" accept=".csv">
+                             <p id="vocab-file-name" class="text-gray-600 mt-2 text-sm text-center truncate"></p>
+                         </div>
+                         <div>
+                             <label class="block text-sm font-medium mb-1">File Cấu trúc (.csv)</label>
+                             <label for="structures-csv-upload" class="btn btn-secondary w-full"><i class="fas fa-upload mr-2"></i>Tải lên</label>
+                             <input type="file" id="structures-csv-upload" class="hidden" accept=".csv">
+                             <p id="structures-file-name" class="text-gray-600 mt-2 text-sm text-center truncate"></p>
+                         </div>
+                     </div>
+                    <div class="mt-6">
+                        <label for="cefr-level-slider" class="block text-sm font-medium mb-1">Trình độ (CEFR)</label>
+                        <input type="range" id="cefr-level-slider" min="0" max="100" value="50" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700">
+                        <div class="flex justify-between text-xs mt-1"><span>A1</span><span>A2</span><span>B1</span><span>B2</span><span>C1</span><span>C2</span></div>
+                        <p id="cefr-level-display" class="text-center font-semibold mt-2"></p>
+                    </div>
+                    <div class="text-center mt-6"><button id="process-files-btn" class="btn btn-primary">Xử lý Dữ liệu</button></div>
+                </div>
+                 <div class="glass-panel p-6">
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4">3. Cấu hình AI</h2>
+                    <div class="space-y-4">
+                        <div><label for="gemini-api-key" class="block text-sm font-medium">Google Gemini API Key</label><input type="password" id="gemini-api-key" class="input-field" placeholder="Dán API Key của bạn..."></div>
+                        <div>
+                            <label for="ai-model-select" class="block text-sm font-medium text-gray-700 mb-1">Mô hình Gemini</label>
+                            <select id="ai-model-select" class="input-field w-full">
+                                <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Nhanh & Tiết kiệm)</option>
+                                <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro (Chất lượng cao)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Right Panel: Data and Actions -->
+            <main class="lg:col-span-3 space-y-8">
+                <div id="data-review-section" class="glass-panel p-6 hidden">
+                     <h2 class="text-2xl font-bold text-gray-700 mb-4">4. Dữ liệu Khảo thí do AI tạo</h2>
+                    <div id="table-container" class="max-h-[80vh] overflow-auto rounded-lg border border-white/50">
+                        <table id="data-table" class="w-full text-sm">
+                            <thead>
+                                <tr class="text-left">
+                                    <th class="p-3 w-1/4">Từ vựng & Cấu trúc</th>
+                                    <th class="p-3 w-3/4">Các Gói Bài Tập</th>
+                                    <th class="p-3 text-center">AI</th>
+                                </tr>
+                            </thead>
+                            <tbody id="data-table-body"></tbody>
+                        </table>
+                    </div>
+                    <div class="mt-6 text-center flex flex-wrap justify-center gap-4">
+                        <button id="fetch-audio-btn" class="btn btn-secondary"><i class="fas fa-volume-up mr-2"></i>Tìm Audio</button>
+                        <button id="enrich-ai-btn" class="btn btn-secondary"><i class="fas fa-wand-magic-sparkles mr-2"></i>Làm giàu Tự động</button>
+                        <button id="manual-enrich-btn" class="btn btn-secondary"><i class="fas fa-paste mr-2"></i>Làm giàu Thủ công</button>
+                        <button id="export-word-btn" class="btn btn-secondary"><i class="fas fa-file-word mr-2"></i>Xuất ra Word</button>
+                    </div>
+                </div>
+                <div class="text-center"><button id="upload-btn" class="btn btn-primary text-lg w-full"><i class="fas fa-cloud-upload-alt mr-2"></i>Lưu Bộ Từ Vựng</button><p id="upload-log" class="font-semibold mt-2 h-5"></p></div>
+            </main>
+        </div>
+    </div>
     
+    <!-- Modals -->
+    <div id="custom-alert-modal" class="modal"></div>
+    <div id="manual-prompt-modal" class="modal">
+        <div class="glass-panel p-8 w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4">Làm giàu dữ liệu thủ công</h2>
+            <div class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-6 overflow-hidden">
+                <div class="flex flex-col h-full">
+                    <label class="font-medium mb-2">Bước 1: Sao chép Prompt này</label>
+                    <textarea id="manual-prompt-output" readonly class="input-field flex-grow font-mono text-xs"></textarea>
+                    <button id="copy-prompt-btn" class="btn btn-primary mt-2">Sao chép Prompt</button>
+                </div>
+                <div class="flex flex-col h-full">
+                    <label class="font-medium mb-2">Bước 2: Dán kết quả JSON từ Gemini vào đây</label>
+                    <textarea id="manual-prompt-input" class="input-field flex-grow font-mono text-xs" placeholder="Dán kết quả JSON tại đây..."></textarea>
+                    <button id="process-manual-result-btn" class="btn btn-primary mt-2">Cập nhật dữ liệu</button>
+                </div>
+            </div>
+            <button id="close-manual-modal-btn" class="btn btn-danger mt-6 mx-auto">Đóng</button>
+        </div>
+    </div>
+
     <script type="module">
-        import { Renderer, Camera, Transform, Program, Geometry, Mesh } from 'https://cdn.skypack.dev/ogl';
-        window.OGL = { Renderer, Camera, Transform, Program, Geometry, Mesh };
-    </script>
-    
-    <script>
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+
+        // --- CONFIGURATION ---
         const firebaseConfig = {
             apiKey: "AIzaSyBUet6ZsBTwJG_gTKM2bGFG1AKD3t0hV20",
             authDomain: "b1-baotram.firebaseapp.com",
@@ -25,1603 +206,689 @@
             appId: "1:948701163187:web:043f2d381d63e741114ac6",
             measurementId: "G-33NHT07JHE"
         };
-        window.firebaseConfig = firebaseConfig;
-    </script>
-
-    <style>
-        :root {
-            --bg-dark: #111827;
-            --text-light: #f0f6fc;
-            --text-secondary: #a2a6c3;
-            --glass-bg: radial-gradient(ellipse at center, rgba(31, 41, 55, 0.65) 0%, rgba(31, 41, 55, 0.4) 100%);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --primary-accent: #8b5cf6;
-            --primary-accent-glow: rgba(139, 92, 246, 0.5);
-            --correct-color: #22c55e;
-            --incorrect-color: #ef4444;
-            --grad-color-1: #d8b4fe;
-            --grad-color-2: #a855f7;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { height: 100%; width: 100%; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-light);
-            overflow-x: hidden;
-        }
-        .background-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
-        .shape { position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.5; }
-        .shape1 { width: 40vw; height: 40vw; max-width: 450px; max-height: 450px; background: #a855f7; top: -15%; left: -10%; animation: float 28s infinite alternate ease-in-out; }
-        .shape2 { width: 35vw; height: 35vw; max-width: 400px; max-height: 400px; background: #22d3ee; bottom: -15%; right: -10%; animation: float 32s infinite alternate ease-in-out; }
-        @keyframes float { from { transform: translateY(20px); } to { transform: translateY(-20px); } }
-        .glass-panel {
-            background: var(--glass-bg);
-            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        }
-        .main-container { position: relative; z-index: 2; }
-        .fade-in { animation: fadeIn 0.5s ease-in-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .cta-btn {
-            position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 12px;
-            background: linear-gradient(90deg, #8b5cf6, #6d28d9); font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 16px;
-            padding: 12px 24px; border-radius: 99px; border: none; cursor: pointer; text-decoration: none; color: rgba(255,255,255,0.9);
-            box-shadow: 0 10px 30px -10px var(--primary-accent-glow); transition: all 0.3s ease;
-        }
-        .cta-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
-        .cta-btn.secondary { background: transparent; border: 2px solid #5c5f89; box-shadow: none; color: #a2a6c3; }
-        .cta-btn.danger { background: transparent; border: 2px solid var(--incorrect-color); color: var(--incorrect-color); }
-        .progress-track { background: rgba(255, 255, 255, 0.1); border-radius: 9999px; height: 10px; overflow: hidden; border: 1px solid var(--glass-border); }
-        .progress-fill { background: linear-gradient(90deg, var(--grad-color-1) 0%, var(--grad-color-2) 100%); height: 100%; transition: width 0.5s cubic-bezier(0.25, 1, 0.5, 1); }
-        .flashcard-viewer { display: flex; flex-direction: column; height: 70vh; max-width: 800px; margin: 0 auto; }
-        .flashcard-main { flex-grow: 1; display: flex; align-items: center; justify-content: center; perspective: 1500px; }
-        .flashcard { width: 100%; height: 80%; max-height: 400px; cursor: pointer; position: relative; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(0.25, 1, 0.5, 1); }
-        .flashcard.is-flipped { transform: rotateY(180deg); }
-        .flashcard-face {
-            position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 2rem; text-align: center;
-            background: var(--glass-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-            border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        }
-        .flashcard-back { transform: rotateY(180deg); }
-        .flashcard-word { font-family: 'Poppins', sans-serif; font-size: clamp(2rem, 8vw, 4rem); font-weight: 700; }
-        .flashcard-pronunciation { font-family: 'Inter', sans-serif; color: var(--text-secondary); margin-top: 0.5rem; }
-        .flashcard-meaning { font-family: 'Poppins', sans-serif; font-size: clamp(1.5rem, 6vw, 2.5rem); font-weight: 600; }
-        .flashcard-example { font-style: italic; color: var(--text-secondary); margin-top: 1.5rem; }
-        .audio-btn {
-            position: absolute; top: 1.5rem; right: 1.5rem; width: 44px; height: 44px; border-radius: 50%;
-            background-color: rgba(255, 255, 255, 0.1); color: var(--text-secondary); cursor: pointer;
-            display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; z-index: 10;
-        }
-        .answer-option {
-            display: block; width: 100%; padding: 1rem; border-radius: 16px; text-align: left; font-weight: 500;
-            background: transparent; border: 2px solid #5c5f89; color: #a2a6c3; transition: all 0.2s ease;
-        }
-        .answer-option.disabled { cursor: not-allowed; opacity: 0.6; }
-        .answer-option.correct { border-color: var(--correct-color); background: rgba(34, 197, 94, 0.2); color: #bbf7d0; }
-        .answer-option.incorrect { border-color: var(--incorrect-color); background: rgba(239, 68, 68, 0.2); color: #fecaca; }
-        .token-area { display: flex; flex-wrap: wrap; gap: 0.75rem; padding: 1rem; border: 2px dashed #5c5f89; border-radius: 16px; min-height: 80px; }
-        .word-token {
-            padding: 0.5rem 1rem; border-radius: 12px; font-weight: 600; cursor: pointer;
-            background: linear-gradient(90deg, #8b5cf6, #6d28d9); color: white;
-            box-shadow: 0 4px 15px -5px var(--primary-accent-glow); transition: all 0.2s ease;
-        }
-        .text-input-styled {
-            background: rgba(55, 65, 81, 0.5); border: 1px solid var(--glass-border); border-radius: 12px;
-            padding: 0.75rem 1rem; color: var(--text-light); caret-color: var(--primary-accent);
-        }
-        .text-input-styled:focus { outline: none; border-color: var(--primary-accent); box-shadow: 0 0 0 3px var(--primary-accent-glow); }
-        .report-actions {
-            border-top: 1px solid var(--glass-border);
-            margin-top: 1.5rem;
-            padding-top: 1rem;
-            display: flex;
-            gap: 0.75rem;
-            z-index: 10;
-        }
-        .report-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--text-secondary);
-            padding: 0.5rem 0.75rem;
-            border-radius: 8px;
-            font-size: 0.75rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .report-category-group label {
-            display: block;
-            padding: 0.75rem;
-            border-radius: 12px;
-            border: 1px solid var(--glass-border);
-            background: rgba(0,0,0,0.2);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .report-category-group input:checked + label {
-            background: var(--primary-accent);
-            border-color: var(--primary-accent-glow);
-            color: white;
-        }
-        .report-category-group input { display: none; }
-        #report-comment-input {
-            width: 100%;
-            padding: 0.75rem;
-            border-radius: 8px;
-            border: 1px solid var(--glass-border);
-            background: rgba(0,0,0,0.2);
-            color: var(--text-light);
-            margin-top: 1rem;
-            resize: vertical;
-        }
-        
-        @media (hover: hover) {
-            .cta-btn:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 15px 30px -10px var(--primary-accent); }
-            .cta-btn.secondary:hover:not(:disabled) { background: rgba(139, 92, 246, 0.2); border-color: var(--primary-accent); color: white; box-shadow: 0 10px 25px -10px var(--primary-accent-glow); }
-            .cta-btn.danger:hover:not(:disabled) { background: rgba(239, 68, 68, 0.2); color: white; }
-            .audio-btn:hover { background-color: var(--primary-accent); color: white; }
-            .answer-option:hover:not(.disabled) { border-color: var(--primary-accent); background: rgba(139, 92, 246, 0.2); color: white; }
-            .word-token:hover { transform: translateY(-2px); box-shadow: 0 6px 20px -5px var(--primary-accent); }
-            .report-btn:hover {
-                background: var(--primary-accent);
-                color: white;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="background-layer">
-        <div class="shape shape1"></div>
-        <div class="shape shape2"></div>
-    </div>
-    <div id="ogl-canvas-back" class="background-layer"></div>
-
-    <div id="loader-overlay" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm flex items-center justify-center z-50">
-        <div class="text-center">
-            <div class="w-16 h-16 border-4 border-t-violet-500 border-gray-600 rounded-full animate-spin"></div>
-            <p id="loader-text" class="text-lg font-semibold text-white mt-4">Đang tải dữ liệu bài học...</p>
-        </div>
-    </div>
-    <div id="modal-container"></div>
-    
-    <div id="app-container" class="max-w-5xl mx-auto p-4 sm:p-8 hidden">
-        <header id="app-header" class="mb-8"></header>
-        <main id="app-main"></main>
-    </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc, serverTimestamp, collection, runTransaction, arrayUnion } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-
-        // CẬP NHẬT: Toàn bộ khối script này đã được đồng bộ với phiên bản mới nhất của file vocabulary-test.html
-        // để đảm bảo tính nhất quán về tính năng.
-
-        if (window.OGL) {
-            const { Renderer, Camera, Program, Geometry, Mesh, Transform } = window.OGL;
-            const container = document.getElementById('ogl-canvas-back');
-            if (container) {
-                const renderer = new Renderer({ dpr: 2, alpha: true });
-                const gl = renderer.gl;
-                container.appendChild(gl.canvas);
-                const camera = new Camera(gl, { fov: 15, near: 1, far: 100 });
-                camera.position.set(0, 0, 25);
-                const scene = new Transform();
-                const program = new Program(gl, {
-                    vertex: `attribute vec3 position;attribute vec4 random;attribute vec3 color;uniform mat4 modelMatrix;uniform mat4 viewMatrix;uniform mat4 projectionMatrix;uniform float uTime;uniform float uSpread;uniform float uBaseSize;varying vec4 vRandom;varying vec3 vColor;void main(){vRandom=random;vColor=color;vec3 pos=position*uSpread;vec4 mPos=modelMatrix*vec4(pos,1.);float t=uTime*.1;mPos.x+=sin(t*random.z+6.28*random.w)*mix(.1,1.5,random.x);mPos.y+=sin(t*random.y+6.28*random.x)*mix(.1,1.5,random.w);mPos.z+=cos(t*random.w+6.28*random.y)*mix(.1,1.5,random.z);vec4 mvPos=viewMatrix*mPos;gl_PointSize=uBaseSize/-mvPos.z;gl_Position=projectionMatrix*mvPos;}`,
-                    fragment: `precision highp float;varying vec3 vColor;void main(){vec2 uv=gl_PointCoord.xy;float d=length(uv-vec2(.5));float glow=smoothstep(.5,0.,d)*.3;float core=smoothstep(.2,.18,d);float alpha=max(core,glow);if(alpha<.01)discard;vec3 finalColor=vColor+vColor*pow(glow,2.)*2.;gl_FragColor=vec4(finalColor,alpha);}`,
-                    uniforms: { uTime: { value: 0 }, uSpread: { value: 10 }, uBaseSize: { value: 350 } },
-                    transparent: true, depthTest: false
-                });
-                const count = 1000;
-                const positions = new Float32Array(count * 3);
-                const randoms = new Float32Array(count * 4);
-                const colors = new Float32Array(count * 3);
-                const palette = ['#a855f7', '#8b5cf6', '#22d3ee', '#f59e0b'];
-                const hexToRgb = (h) => { const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h); return r ? [parseInt(r[1], 16)/255, parseInt(r[2], 16)/255, parseInt(r[3], 16)/255] : [0,0,0]; };
-                for (let i = 0; i < count; i++) {
-                    const z = (Math.random() - 0.5) * 30;
-                    positions.set([(Math.random() - 0.5) * 30, (Math.random() - 0.5) * 30, z], i * 3);
-                    randoms.set([Math.random(), Math.random(), Math.random(), Math.random()], i * 4);
-                    colors.set(hexToRgb(palette[Math.floor(Math.random() * palette.length)]), i * 3);
-                }
-                const geometry = new Geometry(gl, { position: { size: 3, data: positions }, random: { size: 4, data: randoms }, color: { size: 3, data: colors } });
-                const particles = new Mesh(gl, { mode: gl.POINTS, geometry, program });
-                particles.setParent(scene);
-                function resize() { renderer.setSize(window.innerWidth, window.innerHeight); camera.perspective({ aspect: window.innerWidth / window.innerHeight }); }
-                window.addEventListener("resize", resize, false);
-                resize();
-                requestAnimationFrame(update);
-                function update(t) { requestAnimationFrame(update); program.uniforms.uTime.value = t * 0.001; renderer.render({ scene, camera }); }
-            }
-        }
-
-        const App = {
-            state: {
-                db: null,
-                submissionId: null,
-                studentId: '',
-                studentName: '',
-                testData: {},
-                wordList: [],
-                structureList: [],
-                wordFamilies: {},
-                currentSessionItems: [],
-                sessionCorrectItems: [],
-                sessionIncorrectItems: [],
-                currentIndex: 0,
-                currentScore: 0,
-                currentCorrectAnswer: null,
-                progress: {
-                    learnedItems: new Set(),
-                    incorrectCounts: {},
-                    usedExercises: {},
-                    finalTestNotifShown: false,
-                },
-                isSubmitting: false,
-                audioPlayer: null,
-                playbackRate: 1.0,
-                session: {
-                    isCompleted: false,
-                    finalTestTaken: false,
-                    finalTestScore: null,
-                },
-                proctoring: {
-                    violations: 0,
-                    timerId: null,
-                    timeRemaining: 0,
-                    eventHandler: null,
-                    keyHandler: null,
-                }
-            },
-            DOM: {},
-
-            async init() {
-                this.DOM = {
-                    loader: document.getElementById('loader-overlay'),
-                    loaderText: document.getElementById('loader-text'),
-                    container: document.getElementById('app-container'),
-                    header: document.getElementById('app-header'),
-                    main: document.getElementById('app-main'),
-                    modal: document.getElementById('modal-container'),
-                };
-                this.state.db = getFirestore(initializeApp(window.firebaseConfig));
-                this.state.audioPlayer = new Audio();
-                const params = new URLSearchParams(window.location.search);
-                const submissionId = params.get('submission_id');
-
-                if (!submissionId) {
-                    this.showModal("Lỗi", "Không tìm thấy mã bài làm (Submission ID).");
-                    return;
-                }
-                
-                this.state.submissionId = submissionId;
-                await this.startSession(submissionId);
-            },
-            
-            async startSession(submissionId) {
-                try {
-                    const submissionRef = doc(this.state.db, 'submissions', submissionId);
-                    const submissionSnap = await getDoc(submissionRef);
-                    if (!submissionSnap.exists()) throw new Error("Mã bài làm không hợp lệ.");
-
-                    let submissionData = submissionSnap.data();
-                    this.state.studentId = submissionData.studentId;
-                    
-                    this.state.session.isCompleted = submissionData.status === 'submitted';
-
-                    if (submissionData.finalTest && submissionData.finalTest.status === 'completed') {
-                        this.state.session.finalTestTaken = true;
-                        this.state.session.finalTestScore = submissionData.finalTest.score;
-                    }
-                    
-                    this.state.testData = submissionData.testSnapshot;
-                    
-                    const userDoc = await getDoc(doc(this.state.db, "users", this.state.studentId));
-                    this.state.studentName = userDoc.exists() ? userDoc.data().displayName : "Không rõ";
-
-                    this.state.wordList = this.state.testData.wordList || [];
-                    
-                    this.processData();
-
-                    if (submissionData.liveProgress) {
-                        this.state.progress = {
-                            learnedItems: new Set(submissionData.liveProgress.learnedItems || []),
-                            incorrectCounts: submissionData.liveProgress.incorrectCounts || {},
-                            usedExercises: submissionData.liveProgress.usedExercises || {},
-                            finalTestNotifShown: submissionData.liveProgress.finalTestNotifShown || false,
-                        };
-                    }
-                    
-                    this.DOM.loader.classList.add('hidden');
-                    this.DOM.container.classList.remove('hidden');
-                    
-                    this.renderHeader();
-                    this.renderDashboard();
-                } catch (error) {
-                    this.showModal("Lỗi", "Không thể tải phiên làm bài: " + error.message);
-                }
-            },
-            
-            processData() {
-                const structures = [];
-                const families = {};
-                this.state.wordList.forEach((word, idx) => {
-                    word.id = `word_${word.id || idx}`; 
-                    word.itemType = 'word';
-                    if (word.structures && Array.isArray(word.structures)) {
-                        word.structures.forEach((struct, s_idx) => {
-                            structures.push({ ...struct, id: `structure_${word.id}_${s_idx}`, itemType: 'structure', rootWord: word.word, generated_tasks: word.generated_tasks });
-                        });
-                    }
-                    const root = this.findRoot(word.word);
-                    word.familyRoot = root;
-                    if (!families[root]) families[root] = [];
-                    families[root].push(word);
-                });
-                this.state.structureList = structures;
-                this.state.wordFamilies = families;
-            },
-
-            async updateFirestoreProgress() {
-                if (!this.state.submissionId) return;
-                const progressPayload = {
-                    learnedItems: [...this.state.progress.learnedItems],
-                    incorrectCounts: this.state.progress.incorrectCounts,
-                    usedExercises: this.state.progress.usedExercises,
-                    finalTestNotifShown: this.state.progress.finalTestNotifShown,
-                };
-                try {
-                    const submissionRef = doc(this.state.db, 'submissions', this.state.submissionId);
-                    await updateDoc(submissionRef, { liveProgress: progressPayload });
-                } catch (error) {
-                    console.error("Lỗi khi đồng bộ tiến trình:", error);
-                }
-            },
-
-            async handleReportSubmission(reportType) {
-                const item = this.state.currentSessionItems[this.state.currentIndex];
-                if (!item) return;
-
-                const result = await this.showReportModal(reportType);
-                if (!result.confirmed) return;
-
-                const issueId = `${this.state.testData.id}_${item.id}`;
-                const issueRef = doc(this.state.db, "test_issues", issueId);
-                
-                const questionContainer = this.DOM.main.querySelector('#question-container');
-                const renderedQuestionHTML = questionContainer ? questionContainer.innerHTML : '<em>Không thể tải nội dung câu hỏi.</em>';
-
-                try {
-                    await runTransaction(this.state.db, async (transaction) => {
-                        const issueDoc = await transaction.get(issueRef);
-                        const reporterInfo = {
-                            studentId: this.state.studentId,
-                            studentName: this.state.studentName,
-                            comment: result.comment,
-                            category: result.category,
-                            reportedAt: new Date() 
-                        };
-
-                        if (!issueDoc.exists()) {
-                            const newIssueData = {
-                                testId: this.state.testData.id,
-                                testTitle: this.state.testData.title,
-                                itemId: item.id,
-                                questionData: item,
-                                renderedQuestionHTML: renderedQuestionHTML,
-                                status: 'open',
-                                lastReportedAt: serverTimestamp(),
-                                errorReportsCount: reportType === 'error' ? 1 : 0,
-                                explanationRequestsCount: reportType === 'explanation' ? 1 : 0,
-                                errorReporters: reportType === 'error' ? [reporterInfo] : [],
-                                explanationRequesters: reportType === 'explanation' ? [reporterInfo] : [],
-                            };
-                            transaction.set(issueRef, newIssueData);
-                        } else {
-                            if (reportType === 'error') {
-                                transaction.update(issueRef, {
-                                    errorReportsCount: (issueDoc.data().errorReportsCount || 0) + 1,
-                                    errorReporters: arrayUnion(reporterInfo),
-                                    lastReportedAt: serverTimestamp(),
-                                    status: 'open'
-                                });
-                            } else {
-                                transaction.update(issueRef, {
-                                    explanationRequestsCount: (issueDoc.data().explanationRequestsCount || 0) + 1,
-                                    explanationRequesters: arrayUnion(reporterInfo),
-                                    lastReportedAt: serverTimestamp(),
-                                    status: 'open'
-                                });
-                            }
-                        }
-                    });
-                    this.showModal("Thành công", "Báo cáo của bạn đã được gửi đến giáo viên.");
-                } catch (error) {
-                    console.error("Lỗi khi gửi báo cáo:", error);
-                    this.showModal("Lỗi", "Không thể gửi báo cáo. Vui lòng thử lại.");
-                }
-            },
-
-            renderHeader() {
-                const isCompleted = this.state.session.isCompleted;
-                const buttonText = isCompleted ? "Cập nhật tiến độ" : "Hoàn thành & Lưu";
-                const buttonIcon = isCompleted ? "fa-sync-alt" : "fa-check-circle";
-
-                this.DOM.header.innerHTML = `
-                    <div class="glass-panel p-4 flex flex-wrap justify-between items-center gap-4">
-                        <div>
-                            <h1 class="text-2xl font-bold font-poppins">${this.state.testData.title}</h1>
-                            <p class="text-sm text-text-secondary">Học sinh: <span class="font-medium text-text-light">${this.state.studentName}</span></p>
-                        </div>
-                        <div class="flex items-center gap-4">
-                            <a href="#" onclick="window.history.back(); return false;" class="cta-btn secondary !py-2 !px-4"><i class="fas fa-arrow-left mr-2"></i> Dashboard</a>
-                            <button id="submit-final-btn" class="cta-btn !py-2 !px-4"><i class="fas ${buttonIcon} mr-2"></i> ${buttonText}</button>
-                        </div>
-                    </div>`;
-                document.getElementById('submit-final-btn').addEventListener('click', () => {
-                    const title = isCompleted ? "Xác nhận Cập nhật" : "Xác nhận Hoàn thành";
-                    const message = isCompleted ? "Bạn có muốn lưu lại tiến độ học tập mới nhất không?" : "Bạn có chắc muốn kết thúc và lưu tiến độ không? Thao tác này sẽ ghi nhận kết quả cuối cùng của bạn.";
-                    this.showModal(title, message, true, () => this.submitToFirebase(true));
-                });
-            },
-
-            renderDashboard() {
-                const { wordList, structureList, progress } = this.state;
-                const allItems = [...wordList, ...structureList];
-                const learnedCount = progress.learnedItems.size;
-                const totalItems = allItems.length;
-                
-                const vocabLearned = wordList.filter(w => progress.learnedItems.has(w.id)).length;
-                const structLearned = structureList.filter(s => progress.learnedItems.has(s.id)).length;
-                const vocabProgress = wordList.length > 0 ? (vocabLearned / wordList.length * 100) : 0;
-                const structProgress = structureList.length > 0 ? (structLearned / structureList.length * 100) : 0;
-
-                const overallProgress = totalItems > 0 ? (learnedCount / totalItems * 100) : 0;
-                const requiredProgress = 85; 
-                const isEligibleForFinalTest = overallProgress >= requiredProgress;
-
-                if (isEligibleForFinalTest && !this.state.progress.finalTestNotifShown && !this.state.session.finalTestTaken) {
-                    setTimeout(() => {
-                        this.showModal("Chúc mừng!", `Bạn đã học được ${requiredProgress}% kiến thức và mở khóa Bài kiểm tra cuối kỳ!`);
-                        this.state.progress.finalTestNotifShown = true;
-                        this.updateFirestoreProgress();
-                    }, 1000);
-                }
-
-                this.DOM.main.innerHTML = `
-                    <div class="space-y-8 fade-in">
-                        <div class="glass-panel p-6">
-                             <h2 class="text-xl font-bold font-poppins mb-4">Tổng quan Tiến độ</h2>
-                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                 <div><p class="font-medium mb-1 text-text-secondary">Từ vựng đã học: <span class="text-text-light font-semibold">${vocabLearned}/${wordList.length}</span></p><div class="progress-track"><div class="progress-fill" style="width: ${vocabProgress.toFixed(0)}%;"></div></div></div>
-                                 <div><p class="font-medium mb-1 text-text-secondary">Cấu trúc đã học: <span class="text-text-light font-semibold">${structLearned}/${structureList.length}</span></p><div class="progress-track"><div class="progress-fill" style="width: ${structProgress.toFixed(0)}%;"></div></div></div>
-                             </div>
-                        </div>
-                        <div class="glass-panel p-6">
-                            <h2 class="text-xl font-bold font-poppins mb-4">Chế độ Học 📚</h2>
-                            <div id="study-buttons" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <button data-study-mode="vocab-flashcard" class="cta-btn secondary !p-4 !items-start !text-left !rounded-2xl"><div class="text-lg"><i class="fas fa-clone w-6 text-primary-accent"></i></div><div><p class="font-bold">Flashcard Từ vựng</p><p class="text-xs font-normal">Học từ mới qua flashcard.</p></div></button>
-                                <button data-study-mode="mindmap" class="cta-btn secondary !p-4 !items-start !text-left !rounded-2xl" disabled>
-                                    <div class="text-lg"><i class="fas fa-project-diagram w-6 text-sky-400"></i></div>
-                                    <div>
-                                        <p class="font-bold">Sơ đồ Từ loại <span class="text-xs font-normal bg-yellow-500 text-black rounded-full px-2 py-0.5 ml-1">Sắp ra mắt</span></p>
-                                        <p class="text-xs font-normal">Khám phá mối liên hệ.</p>
-                                    </div>
-                                </button>
-                                <button data-study-mode="struct-flashcard" class="cta-btn secondary !p-4 !items-start !text-left !rounded-2xl"><div class="text-lg"><i class="fas fa-sitemap w-6 text-emerald-400"></i></div><div><p class="font-bold">Flashcard Cấu trúc</p><p class="text-xs font-normal">Học các cấu trúc câu.</p></div></button>
-                            </div>
-                        </div>
-                        <div class="glass-panel p-6">
-                            <h2 class="text-xl font-bold font-poppins mb-4">Chế độ Luyện tập 🏋️‍♀️</h2>
-                            <div id="practice-guide-buttons" class="flex flex-wrap gap-3 mb-6"></div>
-                            <div id="practice-buttons" class="flex flex-col gap-4">
-                                <div class="flex flex-col sm:flex-row gap-4">
-                                    <button data-practice-mode="normal" class="cta-btn flex-1"><i class="fas fa-random mr-2"></i> Luyện tập Thường</button>
-                                    <button data-practice-mode="weakness" class="cta-btn secondary flex-1"><i class="fas fa-star-half-alt mr-2"></i> Ôn tập Điểm yếu</button>
-                                </div>
-                                ${ isEligibleForFinalTest ? `
-                                    <button id="start-final-test-btn" class="cta-btn danger w-full mt-4 text-lg !py-4" ${this.state.session.finalTestTaken ? 'disabled' : ''}>
-                                        <i class="fas fa-graduation-cap mr-2"></i>
-                                        ${this.state.session.finalTestTaken ? `Đã làm KT cuối kỳ (Điểm: ${this.state.session.finalTestScore}%)` : 'Bắt đầu KT cuối kỳ'}
-                                    </button>
-                                ` : `
-                                    <div class="mt-4 text-center text-sm text-text-secondary bg-black/20 p-3 rounded-lg">
-                                        <i class="fas fa-lock mr-2"></i>
-                                        Bài kiểm tra cuối kỳ sẽ mở khóa khi bạn học được <strong>${requiredProgress}%</strong> kiến thức. (Hiện tại: ${overallProgress.toFixed(1)}%)
-                                    </div>
-                                ` }
-                            </div>
-                        </div>
-                    </div>`;
-
-                this.renderPracticeGuide();
-                document.getElementById('study-buttons').addEventListener('click', e => {
-                    const button = e.target.closest('button');
-                    if (!button || !button.dataset.studyMode || button.disabled) return;
-                    const mode = button.dataset.studyMode;
-                    if (mode === 'vocab-flashcard') this.startFlashcardSession('word');
-                    if (mode === 'struct-flashcard') this.startFlashcardSession('structure');
-                    if (mode === 'mindmap') {
-                         this.showModal("Sắp ra mắt", "Chức năng 'Sơ đồ Từ loại' hiện đang được phát triển và sẽ sớm có mặt. Vui lòng quay lại sau!");
-                    }
-                });
-
-                const practiceButtons = document.getElementById('practice-buttons');
-                practiceButtons.addEventListener('click', e => {
-                    const button = e.target.closest('button');
-                    if (button && button.dataset.practiceMode) this.startPractice(button.dataset.practiceMode);
-                });
-
-                const finalTestBtn = document.getElementById('start-final-test-btn');
-                if (finalTestBtn) {
-                    finalTestBtn.addEventListener('click', () => {
-                        this.showModal(
-                            "Xác nhận KT cuối kỳ", 
-                            "Đây là bài kiểm tra cuối cùng. Nó chỉ được làm một lần và sẽ được tính giờ. Bạn đã sẵn sàng chưa?", 
-                            true, 
-                            this.startFinalTest.bind(this)
-                        );
-                    });
-                }
-
-                if (Object.keys(this.state.progress.incorrectCounts).length === 0) {
-                    practiceButtons.querySelector('[data-practice-mode="weakness"]').disabled = true;
-                }
-            },
-            
-            // CẬP NHẬT: Bổ sung các dạng bài mới vào danh sách hướng dẫn.
-            renderPracticeGuide() {
-                const guideContainer = document.getElementById('practice-guide-buttons');
-                const exerciseTypes = [
-                    { type: 'MeaningMCQ', name: 'Meaning MCQ', icon: 'fa-list-check', color: 'text-violet-400' },
-                    { type: 'WordFamilyMCQ', name: 'Word Family', icon: 'fa-users', color: 'text-blue-400' },
-                    { type: 'SentenceUnscramble', name: 'Unscramble', icon: 'fa-sort-alpha-down', color: 'text-indigo-400' },
-                    { type: 'ErrorCorrection', name: 'Error Correction', icon: 'fa-check-double', color: 'text-rose-400' },
-                    { type: 'AudioListening', name: 'Listening', icon: 'fa-volume-up', color: 'text-teal-400' },
-                    { type: 'AntonymMCQ', name: 'Antonym', icon: 'fa-exchange-alt', color: 'text-amber-400' },
-                    { type: 'TripledSentence', name: 'Tripled Sentence', icon: 'fa-clone', color: 'text-purple-400' },
-                    { type: 'MainIdea', name: 'Main Idea', icon: 'fa-lightbulb', color: 'text-yellow-400' },
-                    { type: 'ParagraphCompletion', name: 'Conclusion', icon: 'fa-flag-checkered', color: 'text-lime-400' },
-                    { type: 'ArgumentStrengthening', name: 'Strengthen Arg.', icon: 'fa-angle-double-up', color: 'text-green-400' },
-                    { type: 'ArgumentWeakening', name: 'Weaken Arg.', icon: 'fa-angle-double-down', color: 'text-red-400' },
-                    { type: 'TonePurposeAnalysis', name: 'Tone/Purpose', icon: 'fa-theater-masks', color: 'text-cyan-400' },
-                    { type: 'SentenceRoleAnalysis', name: 'Sentence Role', icon: 'fa-puzzle-piece', color: 'text-orange-400' },
-                ];
-                guideContainer.innerHTML = exerciseTypes.map(ex => `
-                    <button data-guide-type="${ex.type}" class="cta-btn secondary !p-2 !justify-start !text-left !rounded-lg !text-sm">
-                        <i class="fas ${ex.icon} ${ex.color} w-8 text-center text-base"></i>
-                        <span class="font-semibold">${ex.name}</span>
-                    </button>
-                `).join('');
-                
-                guideContainer.addEventListener('click', e => {
-                    const button = e.target.closest('button');
-                    if (button && button.dataset.guideType) {
-                        this.renderGuideModal(button.dataset.guideType);
-                    }
-                });
-            },
-
-            // CẬP NHẬT: Thêm logic xử lý khi không có dữ liệu và thêm thông tin cho các dạng bài mới.
-            renderGuideModal(exerciseType) {
-                const exerciseInfo = {
-                    'MeaningMCQ': { name: 'Meaning MCQ', desc: 'Choose the correct Vietnamese meaning for the English word, or vice versa.' },
-                    'WordFamilyMCQ': { name: 'Word Family MCQ', desc: 'Choose the correct form of a word (noun, verb, adjective, etc.) from the same word family to complete the sentence.' },
-                    'SentenceUnscramble': { name: 'Sentence Unscramble', desc: 'Click on the given words in the correct order to form a complete sentence.' },
-                    'ErrorCorrection': { name: 'Error Correction', desc: 'Read the sentence and find the mistake (if any).' },
-                    'AudioListening': { name: 'Listening & Typing', desc: 'Listen to the pronunciation of a word or sentence and type exactly what you hear.' },
-                    'AntonymMCQ': { name: 'Antonym Challenge', desc: 'Choose the word that has the opposite meaning to the given keyword.' },
-                    'TripledSentence': { name: 'Tripled Sentence', desc: 'The same word is missing from three different sentences. Your task is to type the correct word that fits all three contexts.' },
-                    'MainIdea': { name: 'Find the Main Idea', desc: 'Read a short passage and select the statement that best expresses the central point.' },
-                    'ParagraphCompletion': { name: 'Find the Conclusion', desc: 'Read a passage with its final sentence missing and choose the best concluding sentence from the options.' },
-                    'ArgumentStrengthening': { name: 'Strengthen the Argument', desc: 'Read a short argument and choose the piece of evidence that would best support the author\'s point of view.' },
-                    'ArgumentWeakening': { name: 'Weaken the Argument', desc: 'Read a short argument and choose the piece of evidence that would most seriously undermine the author\'s point of view.' },
-                    'TonePurposeAnalysis': { name: 'Tone/Purpose Identification', desc: 'Read a passage and determine the author\'s attitude (tone) or reason for writing (purpose).' },
-                    'SentenceRoleAnalysis': { name: 'Sentence Role Analysis', desc: 'Analyze a passage and identify the specific function of a highlighted sentence within the author\'s argument.' },
-                };
-                
-                const info = exerciseInfo[exerciseType];
-                const allItems = [...this.state.wordList, ...this.state.structureList];
-                const suitableItem = allItems.find(item => this.getPossibleExerciseTypes(item).includes(exerciseType));
-
-                // CẬP NHẬT: Xử lý khi không tìm thấy dữ liệu phù hợp
-                if (!suitableItem) {
-                    this.showModal("Không có dữ liệu", `Hiện tại chưa có dữ liệu phù hợp trong bài học này để tạo ví dụ cho dạng bài: "${info.name}".`);
-                    return;
-                }
-                
-                suitableItem.exerciseType = exerciseType;
-                
-                // MỚI: Sử dụng tên hàm động để lấy HTML
-                const renderFunction = this[`get${exerciseType}HTML`];
-                if (typeof renderFunction !== 'function') {
-                    this.showModal("Lỗi", `Hàm render cho dạng bài "${exerciseType}" không tồn tại.`);
-                    return;
-                }
-                const exampleHTML = renderFunction.call(this, suitableItem, true);
-
-                this.showModal(
-                    `Hướng dẫn: ${info.name}`,
-                    `<p class="text-text-secondary mb-6 text-left">${info.desc}</p>
-                     <div class="bg-bg-dark p-4 rounded-lg border border-glass-border">
-                         <h4 class="font-bold mb-3 text-left">Ví dụ tương tác:</h4>
-                         <div id="guide-question-container">${exampleHTML}</div>
-                         <div id="guide-feedback-container" class="mt-4"></div>
-                     </div>`,
-                    false, null, true
-                );
-                
-                const guideContainer = document.getElementById('guide-question-container');
-                this.attachPracticeEventListeners(suitableItem, guideContainer, true);
-            },
-            
-            updateFlashcardView() {
-                const item = this.state.currentSessionItems[this.state.currentIndex];
-                const card = document.getElementById('flashcard');
-                if (!item || !card) return;
-
-                card.classList.remove('is-flipped');
-                
-                // Sử dụng timeout để animation lật thẻ mượt hơn trước khi thay đổi nội dung
-                setTimeout(() => {
-                    const isStructure = item.itemType === 'structure';
-                    const audioBtnHTML = item.audioUrl ? `<button class="audio-btn" data-audio-url="${item.audioUrl}"><i class="fas fa-volume-up"></i></button>` : '';
-                    
-                    const frontHTML = `${audioBtnHTML}<div class="flashcard-word">${isStructure ? item.phrase : item.word}</div>`;
-                    const backHTML = isStructure
-                        ? `<div class="flashcard-meaning">${item.meaning}</div><p class="flashcard-example">"${item.generated_tasks?.basic_example || ''}"</p>`
-                        : `${audioBtnHTML}<div class="flashcard-meaning">${item.meaning}</div><p class="flashcard-pronunciation">${item.pronunciation} <span class="mx-2">&bull;</span> ${item.type}</p><p class="flashcard-example">"${item.generated_tasks?.basic_example || ''}"</p>`;
-                    
-                    card.innerHTML = `<div class="flashcard-face flashcard-front">${frontHTML}</div><div class="flashcard-face flashcard-back">${backHTML}</div>`;
-                    
-                    card.querySelectorAll('.audio-btn').forEach(btn => {
-                        btn.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            this.playAudio(e.currentTarget.dataset.audioUrl);
-                        });
-                    });
-                }, 150); 
-                
-                document.getElementById('card-counter').textContent = `${this.state.currentIndex + 1} / ${this.state.currentSessionItems.length}`;
-            },
-
-            // CẬP NHẬT: Thêm kiểm tra cho các dạng bài mới.
-            getPossibleExerciseTypes(item) {
-                const types = [];
-                const tasks = item.generated_tasks;
-                if (!tasks) return ['MeaningMCQ']; // Mặc định nếu không có tasks
-
-                // Dạng cũ
-                if (tasks.meaning_mcq?.distractors_vi?.length >= 3) types.push('MeaningMCQ');
-                if (tasks.word_family_mcq?.distractors?.length >= 3) types.push('WordFamilyMCQ');
-                if (tasks.sentence_unscramble?.correct_sentence) types.push('SentenceUnscramble');
-                if (tasks.error_correction?.incorrect_sentence) types.push('ErrorCorrection');
-                if (tasks.ipa_fill?.distractors?.length >= 3) types.push('IPAFill');
-                if (tasks.best_fit_replacement?.distractors?.length >= 3) types.push('BestFitReplacement');
-                if (tasks.inference_from_scenario?.distractors?.length >= 3) types.push('InferenceFromScenario');
-                if (tasks.best_paraphrase?.options?.length > 1) types.push('BestParaphrase');
-                if (item.audioUrl) types.push('AudioListening');
-
-                // MỚI: Thêm kiểm tra cho các dạng bài mới
-                if (tasks.antonym_mcq?.correct_antonym && tasks.antonym_mcq.distractors?.length >= 3) types.push('AntonymMCQ');
-                if (tasks.tripled_sentence?.examples?.length >= 1) types.push('TripledSentence');
-                if (tasks.main_idea?.correct_answer && tasks.main_idea.distractors?.length >= 3) types.push('MainIdea');
-                if (tasks.paragraph_completion?.correct_conclusion && tasks.paragraph_completion.distractors?.length >= 3) types.push('ParagraphCompletion');
-                if (tasks.argument_strengthening?.correct_evidence && tasks.argument_strengthening.distractors?.length >= 3) types.push('ArgumentStrengthening');
-                if (tasks.argument_weakening?.correct_weakener && tasks.argument_weakening.distractors?.length >= 3) types.push('ArgumentWeakening');
-                if (tasks.tone_purpose_analysis?.correct_answer && tasks.tone_purpose_analysis.distractors?.length >= 3) types.push('TonePurposeAnalysis');
-                if (tasks.sentence_role_analysis?.correct_role && tasks.sentence_role_analysis.distractors?.length >= 3) types.push('SentenceRoleAnalysis');
-                
-                // Luôn có ít nhất 1 dạng bài để làm fallback
-                return types.length > 0 ? types : ['MeaningMCQ'];
-            },
-            
-            getMeaningMCQHTML(item, isExample = false) {
-                const tasks = item.generated_tasks.meaning_mcq;
-                if (!tasks || !tasks.distractors_vi || !tasks.distractors_en) {
-                    return '<div>Không có đủ dữ liệu cho dạng bài tập này.</div>';
-                }
-
-                const isStructure = item.itemType === 'structure';
-                const isEngToViet = Math.random() > 0.5;
-
-                let question, correctAnswer, distractors;
-
-                if (isEngToViet) {
-                    question = `<span class="font-poppins font-bold text-3xl">${isStructure ? item.phrase : item.word}</span> ${!isStructure ? `<span class="text-base font-normal text-text-secondary">(${item.type})</span>` : ''}`;
-                    correctAnswer = item.meaning;
-                    distractors = this.shuffleArray([...tasks.distractors_vi]).slice(0, 3);
-                } else {
-                    question = `<span class="font-poppins font-bold text-3xl">${item.meaning}</span>`;
-                    correctAnswer = isStructure ? item.phrase : item.word;
-                    distractors = this.shuffleArray([...tasks.distractors_en]).slice(0, 3);
-                }
-
-                this.state.currentCorrectAnswer = correctAnswer;
-                const options = this.shuffleArray([correctAnswer, ...distractors]);
-
-                return `<div class="question-block">
-                            <h2 class="text-sm font-semibold text-primary-accent mb-2">Trắc nghiệm: Chọn đáp án đúng</h2>
-                            <div class="min-h-[60px] mb-8">${question}</div>
-                            <div id="answer-options" class="space-y-3">
-                                ${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}
-                            </div>
-                        </div>`;
-            },
-            
-            getWordFamilyMCQHTML(item, isExample = false) {
-                const tasks = item.generated_tasks.word_family_mcq;
-                if (!tasks || !tasks.sentence) return this.getMeaningMCQHTML(item);
-                
-                this.state.currentCorrectAnswer = tasks.correct_answer;
-                const sentence = tasks.sentence.replace(tasks.blank_placeholder, '<span class="font-bold text-primary-accent">[...]</span>');
-                const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
-
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Trắc nghiệm: Họ từ</h2><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
-            },
-            
-            getSentenceUnscrambleHTML(item, isExample = false) {
-                const tasks = item.generated_tasks.sentence_unscramble;
-                if (!tasks || !tasks.correct_sentence) return this.getMeaningMCQHTML(item);
-
-                this.state.currentCorrectAnswer = tasks.correct_sentence;
-                const words = this.shuffleArray(tasks.correct_sentence.split(' '));
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Sắp xếp câu</h2><p class="text-text-secondary mb-4">Click on the words in the correct order to form a complete sentence.</p><div id="unscramble-answer-area" class="token-area mb-4"></div><div id="unscramble-source-area" class="token-area bg-black/20">${words.map(word => `<span class="word-token">${word}</span>`).join('')}</div><div class="mt-6 text-right"><button id="check-btn" class="cta-btn">Check</button></div></div>`;
-            },
-            
-            getErrorCorrectionHTML(item, isExample = false) {
-                const tasks = item.generated_tasks.error_correction;
-                if (!tasks || !tasks.incorrect_sentence) return this.getMeaningMCQHTML(item);
-                
-                this.state.currentCorrectAnswer = tasks.correct_sentence;
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Sửa lỗi</h2><p class="text-text-secondary mb-4">Correct the following sentence.</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${tasks.incorrect_sentence}"</p><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type the correct sentence..."><button id="check-btn" class="cta-btn !py-3">Check</button></div></div>`;
-            },
-            
-            getIPAFillHTML(item, isExample = false) {
-                const tasks = item.generated_tasks.ipa_fill;
-                if (!tasks || !tasks.gapped_ipa) return this.getMeaningMCQHTML(item);
-
-                this.state.currentCorrectAnswer = tasks.correct_vowel;
-                const options = this.shuffleArray([tasks.correct_vowel, ...tasks.distractors]);
-
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Điền phiên âm</h2>
-                <p class="text-text-secondary mb-4">Choose the correct sound to complete the transcription for the word <strong class="text-primary-accent">"${item.word}"</strong></p>
-                <p class="text-3xl font-mono text-center min-h-[60px] mb-8">/${tasks.gapped_ipa}/</p>
-                <div id="answer-options" class="grid grid-cols-2 gap-3">${options.map(opt => `<button class="answer-option font-mono text-center !text-2xl" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
-            },
-
-            getBestFitReplacementHTML(item, isExample = false) {
-                const tasks = item.generated_tasks.best_fit_replacement;
-                if (!tasks || !tasks.sentence) return this.getMeaningMCQHTML(item);
-
-                this.state.currentCorrectAnswer = tasks.correct_answer;
-                const sentence = tasks.sentence.replace(tasks.word_to_replace, `<span class="font-bold text-primary-accent"><u>${tasks.word_to_replace}</u></span>`);
-                const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Choose the best replacement</h2><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
-            },
-            
-            getInferenceFromScenarioHTML(item, isExample = false) {
-                const tasks = item.generated_tasks.inference_from_scenario;
-                if (!tasks || !tasks.scenario) return this.getMeaningMCQHTML(item);
-
-                this.state.currentCorrectAnswer = tasks.correct_answer;
-                const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Suy luận từ kịch bản</h2><p class="text-md font-serif italic text-text-secondary mb-4">"${tasks.scenario}"</p><p class="text-lg font-semibold text-text-light mb-6">${tasks.question}</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
-            },
-
-            getBestParaphraseHTML(item, isExample = false) {
-                const tasks = item.generated_tasks.best_paraphrase;
-                if (!tasks || !tasks.options) return this.getMeaningMCQHTML(item);
-
-                const correctOption = tasks.options.find(opt => opt.is_correct);
-                this.state.currentCorrectAnswer = correctOption.text;
-                const options = this.shuffleArray(tasks.options.map(opt => opt.text));
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">Chọn câu diễn giải tốt nhất</h2><p class="text-text-secondary mb-4">Original sentence:</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${tasks.original_sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
-            },
-
-            getAudioListeningHTML(item, isExample = false) {
-                this.state.currentCorrectAnswer = item.word;
-                return `<div class="question-block">
-                    <h2 class="text-sm font-semibold text-primary-accent mb-2">Nghe: Gõ lại từ</h2>
-                    <div class="text-center mb-6">
-                        <button id="play-audio-btn" data-audio-url="${item.audioUrl}" class="text-6xl text-primary-accent hover:text-violet-400 transition-colors"><i class="fas fa-play-circle"></i></button>
-                    </div>
-                    <div class="flex justify-center mb-6">
-                        <div class="flex items-center gap-2 bg-black/20 p-1 rounded-full text-xs">
-                            <button data-speed="0.75" class="speed-btn px-3 py-1 rounded-full">0.75x</button>
-                            <button data-speed="1.0" class="speed-btn px-3 py-1 rounded-full font-bold bg-primary-accent">1x</button>
-                            <button data-speed="1.25" class="speed-btn px-3 py-1 rounded-full">1.25x</button>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type what you hear...">
-                        <button id="check-btn" class="cta-btn !py-3">Check</button>
-                    </div>
-                </div>`;
-            },
-            
-            // MỚI: Các hàm render HTML cho các dạng bài mới
-            getTripledSentenceHTML(item, isExample = false) {
-                const tasks = item.generated_tasks.tripled_sentence;
-                this.state.currentCorrectAnswer = tasks.keyword;
-                const sentencesHTML = tasks.examples.map(sentence => {
-                    const highlighted = sentence.replace(new RegExp(`\\b${tasks.keyword}\\b`, 'gi'), '[...]');
-                    return `<p class="text-lg font-serif italic text-text-secondary mb-2">"${highlighted}"</p>`;
-                }).join('');
-
-                return `<div class="question-block">
-                    <h2 class="text-sm font-semibold text-primary-accent mb-2">Tripled Sentence</h2>
-                    <p class="text-text-secondary mb-4">The same word is missing from all three sentences. Type the missing word.</p>
-                    <div class="space-y-3 mb-6">${sentencesHTML}</div>
-                    <div class="flex gap-2">
-                        <input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type the missing word...">
-                        <button id="check-btn" class="cta-btn !py-3">Check</button>
-                    </div>
-                </div>`;
-            },
-
-            getAntonymMCQHTML(item, isExample = false) {
-                const tasks = item.generated_tasks.antonym_mcq;
-                this.state.currentCorrectAnswer = tasks.correct_antonym;
-                const options = this.shuffleArray([tasks.correct_antonym, ...tasks.distractors]);
-                const sentence = tasks.sentence_context.replace(tasks.keyword, `<strong class="text-primary-accent">${tasks.keyword}</strong>`);
-
-                return `<div class="question-block">
-                    <h2 class="text-sm font-semibold text-primary-accent mb-2">Antonym Challenge</h2>
-                    <p class="text-text-secondary mb-4">Which of the following is an antonym for the word in bold?</p>
-                    <p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p>
-                    <div id="answer-options" class="space-y-3">
-                        ${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}
-                    </div>
-                </div>`;
-            },
-
-            getMainIdeaHTML(item, isExample = false) {
-                const tasks = item.generated_tasks.main_idea;
-                this.state.currentCorrectAnswer = tasks.correct_answer;
-                const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
-
-                return `<div class="question-block">
-                    <h2 class="text-sm font-semibold text-primary-accent mb-2">Find the Main Idea</h2>
-                    <p class="text-text-secondary mb-4">Read the passage and select the statement that best expresses the central point.</p>
-                    <p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph}"</p>
-                    <div id="answer-options" class="space-y-3">
-                        ${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}
-                    </div>
-                </div>`;
-            },
-
-            getParagraphCompletionHTML(item, isExample = false) {
-                const tasks = item.generated_tasks.paragraph_completion;
-                this.state.currentCorrectAnswer = tasks.correct_conclusion;
-                const options = this.shuffleArray([tasks.correct_conclusion, ...tasks.distractors]);
-
-                return `<div class="question-block">
-                    <h2 class="text-sm font-semibold text-primary-accent mb-2">Find the Conclusion</h2>
-                    <p class="text-text-secondary mb-4">Which of the following sentences would best conclude the passage?</p>
-                    <p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph_body}"</p>
-                    <div id="answer-options" class="space-y-3">
-                        ${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}
-                    </div>
-                </div>`;
-            },
-
-            getArgumentStrengtheningHTML(item, isExample = false) {
-                const tasks = item.generated_tasks.argument_strengthening;
-                this.state.currentCorrectAnswer = tasks.correct_evidence;
-                const options = this.shuffleArray([tasks.correct_evidence, ...tasks.distractors]);
-                
-                return `<div class="question-block">
-                    <h2 class="text-sm font-semibold text-primary-accent mb-2">Strengthen the Argument</h2>
-                    <p class="text-text-secondary mb-4">Which of the following statements, if true, would most strengthen the author's argument?</p>
-                    <p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.argument_text}"</p>
-                    <div id="answer-options" class="space-y-3">
-                        ${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}
-                    </div>
-                </div>`;
-            },
-            
-            getArgumentWeakeningHTML(item, isExample = false) {
-                const tasks = item.generated_tasks.argument_weakening;
-                this.state.currentCorrectAnswer = tasks.correct_weakener;
-                const options = this.shuffleArray([tasks.correct_weakener, ...tasks.distractors]);
-                
-                return `<div class="question-block">
-                    <h2 class="text-sm font-semibold text-primary-accent mb-2">Weaken the Argument</h2>
-                    <p class="text-text-secondary mb-4">Which of the following statements, if true, would most seriously weaken the author's argument?</p>
-                    <p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.argument_text}"</p>
-                    <div id="answer-options" class="space-y-3">
-                        ${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}
-                    </div>
-                </div>`;
-            },
-
-            getTonePurposeAnalysisHTML(item, isExample = false) {
-                const tasks = item.generated_tasks.tone_purpose_analysis;
-                this.state.currentCorrectAnswer = tasks.correct_answer;
-                const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
-                
-                return `<div class="question-block">
-                    <h2 class="text-sm font-semibold text-primary-accent mb-2">Tone & Purpose</h2>
-                    <p class="text-text-secondary mb-4">${tasks.question}</p>
-                    <p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph}"</p>
-                    <div id="answer-options" class="space-y-3">
-                        ${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}
-                    </div>
-                </div>`;
-            },
-            
-            getSentenceRoleAnalysisHTML(item, isExample = false) {
-                const tasks = item.generated_tasks.sentence_role_analysis;
-                this.state.currentCorrectAnswer = tasks.correct_role;
-                const options = this.shuffleArray([tasks.correct_role, ...tasks.distractors]);
-                
-                const sentences = tasks.paragraph.split(/(\[\d+\])/).filter(Boolean);
-                let paragraphHTML = '';
-                for (let i = 0; i < sentences.length; i += 2) {
-                    const sentenceIndex = parseInt(sentences[i].replace(/[\[\]]/g, '')) - 1;
-                    const sentenceText = sentences[i+1];
-                    if (sentenceIndex === tasks.highlighted_sentence_index) {
-                        paragraphHTML += `<strong class="text-primary-accent">${sentenceText}</strong>`;
-                    } else {
-                        paragraphHTML += sentenceText;
-                    }
-                }
-
-                return `<div class="question-block">
-                    <h2 class="text-sm font-semibold text-primary-accent mb-2">Sentence Role Analysis</h2>
-                    <p class="text-text-secondary mb-4">What is the function of the sentence in bold in the passage?</p>
-                    <p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${paragraphHTML}"</p>
-                    <div id="answer-options" class="space-y-3">
-                        ${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}
-                    </div>
-                </div>`;
-            },
-
-            async submitToFirebase(isFinal = false) {
-                if (this.state.isSubmitting) return;
-                this.state.isSubmitting = true;
-                
-                const loaderText = this.state.session.isCompleted ? "Đang cập nhật..." : "Đang nộp bài...";
-                this.DOM.loaderText.textContent = loaderText;
-                this.DOM.loader.classList.remove('hidden');
-
-                const learnedCount = this.state.progress.learnedItems.size;
-                const totalItems = this.state.wordList.length + this.state.structureList.length;
-                const score = totalItems > 0 ? Math.round((learnedCount / totalItems) * 100) : 0;
-                
-                const submissionPayload = {
-                    score: score,
-                    totalPoints: 100,
-                    answers: { 
-                        learnedCount, 
-                        totalItems,
-                        incorrectCounts: this.state.progress.incorrectCounts 
-                    },
-                };
-
-                if (isFinal) {
-                    submissionPayload.status = 'submitted';
-                    if (!this.state.session.isCompleted) {
-                        submissionPayload.submissionTime = serverTimestamp();
-                    }
-                }
-
-                try {
-                    await updateDoc(doc(this.state.db, 'submissions', this.state.submissionId), submissionPayload);
-                    
-                    const message = this.state.session.isCompleted
-                        ? `Đã cập nhật tiến độ thành công.`
-                        : `Đã nộp bài thành công với mức độ hoàn thành ${score}%.`;
-
-                    this.showModal("Thành công!", message, false, () => {
-                        this.state.session.isCompleted = true;
-                        this.renderHeader();
-                    });
-
-                } catch(error) { 
-                    this.showModal("Lỗi", "Không thể lưu tiến độ: " + error.message); 
-                } finally { 
-                    this.state.isSubmitting = false;
-                    this.DOM.loader.classList.add('hidden');
-                }
-            },
-            
-            startFlashcardSession(type) {
-                this.state.currentSessionItems = type === 'word' ? this.state.wordList : this.state.structureList;
-                if(this.state.currentSessionItems.length === 0) {
-                    this.showModal("Thông báo", "Không có dữ liệu cho chế độ học này.");
-                    return;
-                }
-                this.state.currentIndex = 0;
-                this.renderFlashcardViewer();
-            },
-            
-            renderFlashcardViewer() {
-                this.DOM.main.innerHTML = `
-                <div class="glass-panel p-6 fade-in">
-                    <div class="flashcard-viewer">
-                        <div class="flex justify-between items-center mb-4">
-                            <button id="back-to-dashboard-btn" class="cta-btn secondary !py-2 !px-4"><i class="fas fa-arrow-left mr-2"></i> Quay lại</button>
-                            <div id="card-counter" class="font-semibold text-text-secondary"></div>
-                        </div>
-                        <div class="flashcard-main"><div class="flashcard" id="flashcard"></div></div>
-                        <div class="flashcard-nav flex justify-between items-center p-4">
-                            <button id="prev-card-btn" class="cta-btn secondary !rounded-full !w-14 !h-14 text-xl"><i class="fas fa-arrow-left"></i></button>
-                            <p class="text-sm text-text-secondary">Bấm vào thẻ để lật</p>
-                            <button id="next-card-btn" class="cta-btn secondary !rounded-full !w-14 !h-14 text-xl"><i class="fas fa-arrow-right"></i></button>
-                        </div>
-                    </div>
-                </div>`;
-                
-                this.updateFlashcardView();
-                document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.renderDashboard());
-                document.getElementById('flashcard').addEventListener('click', e => {
-                    if (e.target.closest('.audio-btn')) return;
-                    e.currentTarget.classList.toggle('is-flipped');
-                });
-                document.getElementById('prev-card-btn').addEventListener('click', () => this.navigateCard(-1));
-                document.getElementById('next-card-btn').addEventListener('click', () => this.navigateCard(1));
-            },
-
-            navigateCard(direction) {
-                const card = document.getElementById('flashcard');
-                if (!card) return;
-                const newIndex = this.state.currentIndex + direction;
-                const total = this.state.currentSessionItems.length;
-                this.state.currentIndex = (newIndex + total) % total;
-                this.updateFlashcardView();
-            },
-
-            startPractice(mode, count = 10) {
-                this.state.currentIndex = 0;
-                this.state.currentScore = 0;
-                this.state.sessionCorrectItems = [];
-                this.state.sessionIncorrectItems = [];
-                let itemsToPractice = [];
-                const allItems = [...this.state.wordList, ...this.state.structureList];
-
-                if (mode === 'weakness') {
-                    const weakItemIds = Object.keys(this.state.progress.incorrectCounts)
-                        .sort((a,b) => this.state.progress.incorrectCounts[b] - this.state.progress.incorrectCounts[a]);
-                    itemsToPractice = weakItemIds.map(id => allItems.find(item => item.id === id)).filter(Boolean);
-                } else { 
-                    const unlearnedItems = allItems.filter(item => !this.state.progress.learnedItems.has(item.id));
-                    const learnedItems = allItems.filter(item => this.state.progress.learnedItems.has(item.id));
-                    
-                    const learnedItemsForReview = learnedItems.filter(() => Math.random() < 0.3);
-
-                    itemsToPractice = [...unlearnedItems, ...learnedItemsForReview];
-                }
-
-                if (itemsToPractice.length === 0) {
-                    this.showModal("Tuyệt vời!", mode === 'weakness' ? "Bạn không có điểm yếu nào cần ôn tập." : "Bạn đã học hết mọi thứ!");
-                    return;
-                }
-                
-                this.state.currentSessionItems = this.shuffleArray(itemsToPractice).slice(0, count);
-                this.renderPracticeView();
-            },
-
-            renderPracticeView() {
-                const total = this.state.currentSessionItems.length;
-                const progressPercent = total > 0 ? ((this.state.currentIndex) / total * 100) : 0;
-                this.DOM.main.innerHTML = `
-                    <div class="glass-panel p-6 fade-in flex flex-col">
-                        <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <p class="text-sm font-medium text-text-secondary">Question ${this.state.currentIndex + 1} / ${total}</p>
-                                <button id="exit-practice-btn" class="text-sm font-semibold text-text-secondary hover:text-incorrect-color"><i class="fas fa-times mr-1"></i> Exit</button>
-                            </div>
-                            <div class="progress-track"><div class="progress-fill" style="width: ${progressPercent}%;"></div></div>
-                        </div>
-                        <div id="question-container" class="flex-grow my-4 min-h-[300px]"></div>
-                        <div id="feedback-container" class="mt-auto"></div>
-                        <div class="report-actions">
-                            <button class="report-btn" data-report-type="error"><i class="fas fa-bug mr-2"></i>Report Issue</button>
-                            <button class="report-btn" data-report-type="explanation"><i class="fas fa-question-circle mr-2"></i>Need Explanation</button>
-                        </div>
-                    </div>`;
-                
-                document.getElementById('exit-practice-btn').addEventListener('click', () => this.renderDashboard());
-                
-                this.DOM.main.querySelector('.report-actions').addEventListener('click', e => {
-                    const button = e.target.closest('button');
-                    if (button && button.dataset.reportType) {
-                        this.handleReportSubmission(button.dataset.reportType);
-                    }
-                });
-
-                this.renderNextQuestion();
-            },
-
-            renderNextQuestion() {
-                if (this.state.currentIndex >= this.state.currentSessionItems.length) {
-                    if (document.getElementById('progress-bar-final-test')) {
-                        this.submitFinalTest();
-                    } else {
-                        this.renderSummary();
-                    }
-                    return;
-                }
-                const item = this.state.currentSessionItems[this.state.currentIndex];
-                const qContainer = document.getElementById('question-container');
-                const fContainer = document.getElementById('feedback-container');
-                if (!qContainer || !fContainer) return;
-
-                qContainer.innerHTML = '';
-                fContainer.innerHTML = '';
-                
-                const possibleTypes = this.getPossibleExerciseTypes(item);
-                const usedTypes = this.state.progress.usedExercises[item.id] || [];
-                let availableTypes = possibleTypes.filter(type => !usedTypes.includes(type));
-
-                if (availableTypes.length === 0) {
-                    delete this.state.progress.usedExercises[item.id];
-                    availableTypes = possibleTypes;
-                }
-
-                const exerciseType = this.shuffleArray(availableTypes)[0];
-                item.exerciseType = exerciseType;
-
-                const renderFunction = this[`get${exerciseType}HTML`];
-                qContainer.innerHTML = renderFunction.call(this, item);
-                this.attachPracticeEventListeners(item, qContainer);
-            },
-
-            renderSummary() {
-                const score = this.state.currentScore;
-                const total = this.state.currentSessionItems.length;
-                this.DOM.main.innerHTML = `
-                    <div class="text-center max-w-lg mx-auto glass-panel p-8 fade-in">
-                        <h1 class="text-3xl font-bold font-poppins mb-2">Practice Complete!</h1>
-                        <p class="text-lg text-text-secondary mb-6">You answered ${score} / ${total} questions correctly.</p>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-                            <div class="bg-bg-dark p-4 rounded-lg border border-glass-border">
-                                <h3 class="font-bold text-green-400 mb-2">Correct (${this.state.sessionCorrectItems.length})</h3>
-                                <ul class="text-sm space-y-1 max-h-32 overflow-y-auto">${this.state.sessionCorrectItems.map(item => `<li>${item.word || item.phrase}</li>`).join('')}</ul>
-                            </div>
-                            <div class="bg-bg-dark p-4 rounded-lg border border-glass-border">
-                                <h3 class="font-bold text-red-400 mb-2">Needs Review (${this.state.sessionIncorrectItems.length})</h3>
-                                <ul class="text-sm space-y-1 max-h-32 overflow-y-auto">${this.state.sessionIncorrectItems.map(item => `<li>${item.word || item.phrase}</li>`).join('')}</ul>
-                            </div>
-                        </div>
-                        <div class="mt-8 flex flex-col sm:flex-row gap-4">
-                            <button id="continue-practice-btn" class="cta-btn w-full">Practice Again</button>
-                            <button id="back-to-dashboard-btn" class="cta-btn secondary w-full">Exit</button>
-                        </div>
-                    </div>`;
-                document.getElementById('continue-practice-btn').addEventListener('click', () => this.startPractice('normal'));
-                document.getElementById('back-to-dashboard-btn').addEventListener('click', () => this.renderDashboard());
-            },
-
-            startFinalTest() {
-                const allItems = [...this.state.wordList, ...this.state.structureList];
-                let numQuestions = Math.min(Math.floor(allItems.length * 0.5), 50);
-
-                const weakItemIds = Object.keys(this.state.progress.incorrectCounts)
-                    .sort((a,b) => this.state.progress.incorrectCounts[b] - this.state.progress.incorrectCounts[a]);
-                
-                let itemsToPractice = weakItemIds
-                    .map(id => allItems.find(item => item.id === id))
-                    .filter(Boolean);
-
-                if (itemsToPractice.length < numQuestions) {
-                    const learnedButNotWeak = [...this.state.progress.learnedItems]
-                        .filter(id => !this.state.progress.incorrectCounts[id])
-                        .map(id => allItems.find(item => item.id === id))
-                        .filter(Boolean);
-                    itemsToPractice.push(...this.shuffleArray(learnedButNotWeak));
-                }
-
-                if (itemsToPractice.length === 0) {
-                    this.showModal("Lỗi", "Không có đủ mục đã học để bắt đầu bài kiểm tra cuối kỳ.");
-                    return;
-                }
-
-                this.state.currentSessionItems = this.shuffleArray(itemsToPractice).slice(0, numQuestions);
-                this.state.currentIndex = 0;
-                this.state.currentScore = 0;
-                this.state.sessionCorrectItems = [];
-                this.state.sessionIncorrectItems = [];
-                this.state.proctoring.violations = 0;
-                this.state.proctoring.timeRemaining = this.state.currentSessionItems.length * 75;
-
-                this.renderFinalTestView();
-                this.startProctoring();
-            },
-
-            renderFinalTestView() {
-                const total = this.state.currentSessionItems.length;
-                const progressPercent = total > 0 ? (this.state.currentIndex / total * 100) : 0;
-                
-                const minutes = Math.floor(this.state.proctoring.timeRemaining / 60);
-                const seconds = this.state.proctoring.timeRemaining % 60;
-                const timeString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-
-                this.DOM.main.innerHTML = `
-                    <div class="glass-panel p-6 border-2 border-red-500/50 fade-in">
-                        <div class="mb-6">
-                            <div class="flex justify-between items-center mb-2 text-red-400 font-bold">
-                                <p>FINAL TEST - Question ${this.state.currentIndex + 1} / ${total}</p>
-                                <div id="timer-display" class="text-lg"><i class="fas fa-clock mr-2"></i>${timeString}</div>
-                            </div>
-                            <div class="progress-track"><div id="progress-bar-final-test" class="progress-fill bg-gradient-to-r from-red-500 to-orange-500" style="width: ${progressPercent}%;"></div></div>
-                        </div>
-                        <div id="question-container" class="min-h-[300px]"></div>
-                        <div id="feedback-container" class="mt-4"></div>
-                    </div>`;
-                
-                clearInterval(this.state.proctoring.timerId);
-                this.state.proctoring.timerId = setInterval(() => {
-                    this.state.proctoring.timeRemaining--;
-                    const mins = Math.floor(this.state.proctoring.timeRemaining / 60);
-                    const secs = this.state.proctoring.timeRemaining % 60;
-                    const timerDisplay = document.getElementById('timer-display');
-                    if (timerDisplay) {
-                        timerDisplay.innerHTML = `<i class="fas fa-clock mr-2"></i>${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-                    }
-                    if (this.state.proctoring.timeRemaining <= 0) {
-                        this.submitFinalTest();
-                    }
-                }, 1000);
-
-                this.renderNextQuestion();
-            },
-
-            startProctoring() {
-                const logViolation = (type) => {
-                    this.state.proctoring.violations++;
-                    console.warn(`Violation detected: ${type}. Total: ${this.state.proctoring.violations}`);
-                    const warning = document.createElement('div');
-                    warning.className = 'fixed top-4 right-4 bg-yellow-400 text-black p-3 rounded-lg shadow-lg z-50';
-                    warning.innerHTML = `<i class="fas fa-exclamation-triangle mr-2"></i> Warning: Activity detected! Violations: ${this.state.proctoring.violations}`;
-                    document.body.appendChild(warning);
-                    setTimeout(() => warning.remove(), 3000);
-                };
-
-                this.state.proctoring.eventHandler = (e) => {
-                    logViolation(e.type);
-                };
-
-                this.state.proctoring.keyHandler = (e) => {
-                    const isSuspicious = e.key.startsWith('F') ||
-                                         (e.ctrlKey && e.shiftKey) ||
-                                         (e.metaKey && e.altKey) ||
-                                         e.key === 'ContextMenu';
-                    
-                    if (isSuspicious) {
-                        e.preventDefault();
-                        logViolation(`keydown: ${e.key}`);
-                    }
-                };
-                
-                window.addEventListener('blur', this.state.proctoring.eventHandler);
-                document.addEventListener('visibilitychange', this.state.proctoring.eventHandler);
-                document.addEventListener('contextmenu', this.state.proctoring.eventHandler);
-                document.addEventListener('copy', this.state.proctoring.eventHandler);
-                document.addEventListener('paste', this.state.proctoring.eventHandler);
-                document.addEventListener('keydown', this.state.proctoring.keyHandler);
-            },
-
-            stopProctoring() {
-                clearInterval(this.state.proctoring.timerId);
-                if (this.state.proctoring.eventHandler) {
-                    window.removeEventListener('blur', this.state.proctoring.eventHandler);
-                    document.removeEventListener('visibilitychange', this.state.proctoring.eventHandler);
-                    document.removeEventListener('contextmenu', this.state.proctoring.eventHandler);
-                    document.removeEventListener('copy', this.state.proctoring.eventHandler);
-                    document.removeEventListener('paste', this.state.proctoring.eventHandler);
-                }
-                if (this.state.proctoring.keyHandler) {
-                    document.removeEventListener('keydown', this.state.proctoring.keyHandler);
-                }
-            },
-
-            async submitFinalTest() {
-                this.stopProctoring();
-                if (this.state.isSubmitting) return;
-                this.state.isSubmitting = true;
-
-                const score = this.state.currentSessionItems.length > 0 ? Math.round((this.state.currentScore / this.state.currentSessionItems.length) * 100) : 0;
-                
-                this.DOM.main.innerHTML = `<div class="text-center p-8"><div class="w-12 h-12 border-4 border-t-violet-500 border-gray-200 rounded-full animate-spin mx-auto"></div><p class="mt-4 font-semibold">Submitting your score...</p></div>`;
-
-                const payload = {
-                    score: score,
-                    finalTest: {
-                        status: 'completed',
-                        score: score,
-                        violations: this.state.proctoring.violations,
-                        takenAt: serverTimestamp(),
-                        correctCount: this.state.currentScore,
-                        totalQuestions: this.state.currentSessionItems.length
-                    }
-                };
-
-                try {
-                    await updateDoc(doc(this.state.db, 'submissions', this.state.submissionId), payload);
-                    this.state.session.finalTestTaken = true;
-                    this.state.session.finalTestScore = score;
-                    this.showModal(
-                        "Submitted!",
-                        `You have completed the final test with a score of ${score}%.<br>Violations: ${this.state.proctoring.violations}.<br><br>You can now continue to review the material.`,
-                        false,
-                        () => this.renderDashboard()
-                    );
-                } catch(error) {
-                    this.showModal("Error", "Could not submit test score: " + error.message);
-                } finally {
-                    this.state.isSubmitting = false;
-                }
-            },
-
-            // CẬP NHẬT: Thêm các case cho dạng bài mới.
-            attachPracticeEventListeners(item, container, isGuide = false) {
-                if (!container) return;
-                const checkAnswerFunction = isGuide ? this.checkGuideAnswer.bind(this) : this.checkAnswer.bind(this);
-                
-                switch(item.exerciseType) {
-                    // Hầu hết các dạng bài mới là trắc nghiệm, nên gom vào đây.
-                    case 'MeaningMCQ': 
-                    case 'WordFamilyMCQ': 
-                    case 'IPAFill': 
-                    case 'BestFitReplacement': 
-                    case 'InferenceFromScenario': 
-                    case 'BestParaphrase':
-                    case 'AntonymMCQ':
-                    case 'MainIdea':
-                    case 'ParagraphCompletion':
-                    case 'ArgumentStrengthening':
-                    case 'ArgumentWeakening':
-                    case 'TonePurposeAnalysis':
-                    case 'SentenceRoleAnalysis':
-                        container.querySelectorAll('.answer-option').forEach(option => {
-                            option.addEventListener('click', (e) => checkAnswerFunction(e.target.closest('.answer-option').dataset.answer, item, container));
-                        });
-                        break;
-                    
-                    // Các dạng bài nhập liệu
-                    case 'AudioListening': 
-                    case 'ErrorCorrection':
-                    case 'TripledSentence':
-                        const input = container.querySelector('#text-input');
-                        const checkBtn = container.querySelector('#check-btn');
-                        
-                        // Event listener cho nút audio (nếu có)
-                        container.querySelector('#play-audio-btn')?.addEventListener('click', (e) => {
-                            this.playAudio(e.currentTarget.dataset.audioUrl);
-                        });
-                        container.querySelectorAll('.speed-btn').forEach(btn => {
-                            btn.addEventListener('click', e => {
-                                this.state.playbackRate = parseFloat(e.currentTarget.dataset.speed);
-                                container.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('font-bold', 'bg-primary-accent'));
-                                e.currentTarget.classList.add('font-bold', 'bg-primary-accent');
-                            });
-                        });
-                        
-                        if (input && checkBtn) {
-                            const doCheck = () => checkAnswerFunction(input.value, item, container);
-                            checkBtn.addEventListener('click', doCheck);
-                            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') doCheck(); });
-                        }
-                        break;
-                    
-                    // Dạng bài sắp xếp
-                    case 'SentenceUnscramble': {
-                        const answerArea = container.querySelector('#unscramble-answer-area');
-                        const sourceArea = container.querySelector('#unscramble-source-area');
-                        const moveToken = (e) => {
-                            if (e.target.classList.contains('word-token')) {
-                                const isFromSource = e.currentTarget.id === 'unscramble-source-area';
-                                (isFromSource ? answerArea : sourceArea).appendChild(e.target);
-                            }
-                        };
-                        sourceArea.addEventListener('click', moveToken);
-                        answerArea.addEventListener('click', moveToken);
-                        container.querySelector('#check-btn')?.addEventListener('click', () => {
-                            const answer = Array.from(answerArea.querySelectorAll('.word-token')).map(t => t.textContent).join(' ');
-                            checkAnswerFunction(answer, item, container);
-                        });
-                        break;
-                    }
-                }
-            },
-
-            checkAnswer(userAnswer, item, container) {
-                if (!item) item = this.state.currentSessionItems[this.state.currentIndex];
-                const correctAnswer = this.state.currentCorrectAnswer;
-                const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
-
-                (container || this.DOM.main).querySelectorAll('button, input').forEach(el => el.disabled = true);
-                
-                const itemId = item.id;
-                const wasLearned = this.state.progress.learnedItems.has(itemId);
-
-                if (isCorrect) {
-                    this.state.currentScore++;
-                    this.state.sessionCorrectItems.push(item);
-                    this.state.progress.learnedItems.add(itemId);
-                    delete this.state.progress.incorrectCounts[itemId];
-                } else {
-                    this.state.sessionIncorrectItems.push(item);
-                    this.state.progress.incorrectCounts[itemId] = (this.state.progress.incorrectCounts[itemId] || 0) + 1;
-                    if (wasLearned) {
-                        this.state.progress.learnedItems.delete(itemId);
-                    }
-                }
-
-                const usedTypes = this.state.progress.usedExercises[itemId] || [];
-                if (!usedTypes.includes(item.exerciseType)) {
-                    usedTypes.push(item.exerciseType);
-                }
-                this.state.progress.usedExercises[itemId] = usedTypes;
-                
-                this.updateFirestoreProgress();
-
-                this.showFeedback(isCorrect, correctAnswer);
-            },
-
-            checkGuideAnswer(userAnswer, item, container) {
-                const correctAnswer = this.state.currentCorrectAnswer;
-                const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
-                container.querySelectorAll('button, input').forEach(el => el.disabled = true);
-                this.showFeedback(isCorrect, correctAnswer, container.parentElement.querySelector('#guide-feedback-container'), true);
-            },
-
-            showFeedback(isCorrect, correctAnswer, container = null, isGuide = false) {
-                if (!container) container = document.getElementById('feedback-container');
-                if (!container) return;
-
-                const bgColor = isCorrect ? 'bg-green-500/20' : 'bg-red-500/20';
-                const textColor = isCorrect ? 'text-green-300' : 'text-red-300';
-                let message = isCorrect ? 'Correct!' : `Incorrect! The correct answer is: <strong class="font-bold text-white">${correctAnswer}</strong>`;
-
-                const nextButtonHTML = isGuide ? '' : `<button id="next-question-btn" class="cta-btn secondary !py-2 !px-4">Next <i class="fas fa-arrow-right ml-2"></i></button>`;
-                container.innerHTML = `
-                    <div class="${bgColor} ${textColor} p-4 rounded-lg flex justify-between items-center fade-in">
-                        <p class="font-semibold">${message}</p>
-                        ${nextButtonHTML}
-                    </div>`;
-
-                if (!isGuide) {
-                    const nextBtn = document.getElementById('next-question-btn');
-                    nextBtn.focus();
-                    nextBtn.addEventListener('click', () => {
-                        this.state.currentIndex++;
-                        if (document.getElementById('progress-bar-final-test')) {
-                            if (this.state.currentIndex >= this.state.currentSessionItems.length) {
-                                this.submitFinalTest();
-                            } else {
-                                this.renderFinalTestView();
-                            }
-                        } else {
-                            if (this.state.currentIndex >= this.state.currentSessionItems.length) {
-                                this.renderSummary();
-                            } else {
-                                this.renderPracticeView(); 
-                            }
-                        }
-                    });
-                }
-            },
-
-            playAudio(url) {
-                if (!url) {
-                    console.warn("No audio URL provided.");
-                    return;
-                }
-                this.state.audioPlayer.src = url;
-                this.state.audioPlayer.playbackRate = this.state.playbackRate;
-                this.state.audioPlayer.play().catch(e => console.error("Audio play failed:", e));
-            },
-
-            shuffleArray(array) {
-                for (let i = array.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [array[i], array[j]] = [array[j], array[i]];
-                }
-                return array;
-            },
-
-            findRoot(word) {
-                const endings = ['s', 'es', 'ing', 'ed', 'er', 'est', 'ly', 'tion', 'sion', 'ment', 'able', 'ible', 'al', 'ial', 'ive', 'ous', 'ness'];
-                for (const ending of endings) {
-                    if (word.length > ending.length + 3 && word.endsWith(ending)) {
-                        return word.slice(0, -ending.length);
-                    }
-                }
-                return word;
-            },
-
-            showModal(title, message, showCancel = false, onConfirm = null, isGuide = false) {
-                const modalId = isGuide ? 'guide-modal' : 'main-modal';
-                const existingModal = document.getElementById(modalId);
-                if (existingModal) existingModal.remove();
-
-                const modalContainer = document.createElement('div');
-                modalContainer.id = modalId;
-                modalContainer.className = "fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4";
-                
-                const buttonsHTML = showCancel 
-                    ? `<button id="modal-cancel-btn" class="cta-btn secondary">Hủy</button><button id="modal-confirm-btn" class="cta-btn">Xác nhận</button>`
-                    : `<button id="modal-confirm-btn" class="cta-btn w-full">${isGuide ? 'Đóng' : 'OK'}</button>`;
-                
-                const modalWidth = isGuide ? 'max-w-2xl' : 'max-w-sm';
-                modalContainer.innerHTML = `
-                    <div class="glass-panel p-6 sm:p-8 w-full ${modalWidth} fade-in">
-                        <h3 class="text-xl font-bold font-poppins mb-4 text-left">${title}</h3>
-                        <div class="text-text-secondary mb-6">${message}</div>
-                        <div class="flex gap-4 justify-end mt-8">${buttonsHTML}</div>
-                    </div>`;
-                this.DOM.modal.appendChild(modalContainer);
-
-                const confirmBtn = modalContainer.querySelector('#modal-confirm-btn');
-                const cancelBtn = modalContainer.querySelector('#modal-cancel-btn');
-
-                const closeModal = () => modalContainer.remove();
-
-                confirmBtn.onclick = () => {
-                    closeModal();
-                    if (onConfirm) onConfirm();
-                };
-                if(cancelBtn) {
-                    cancelBtn.onclick = closeModal;
-                }
-            },
-
-            showReportModal(reportType) {
-                return new Promise(resolve => {
-                    const isError = reportType === 'error';
-                    const title = isError ? 'Báo cáo lỗi đề' : 'Yêu cầu giải thích';
-                    
-                    let contentHTML = isError ? `
-                        <p class="text-text-secondary mb-4">Vui lòng chọn loại lỗi bạn gặp phải:</p>
-                        <div class="report-category-group space-y-2">
-                            <div><input type="radio" name="error-category" value="Lỗi chính tả" id="cat-typo"><label for="cat-typo">Lỗi chính tả</label></div>
-                            <div><input type="radio" name="error-category" value="Đáp án đúng bị sai" id="cat-wrong-answer"><label for="cat-wrong-answer">Đáp án đúng bị sai</label></div>
-                            <div><input type="radio" name="error-category" value="Câu hỏi không rõ ràng" id="cat-unclear"><label for="cat-unclear">Câu hỏi không rõ ràng</label></div>
-                            <div><input type="radio" name="error-category" value="Lỗi kỹ thuật" id="cat-tech"><label for="cat-tech">Lỗi kỹ thuật</label></div>
-                        </div>` : `<p class="text-text-secondary mb-4">Ghi chú của bạn sẽ được gửi tới giáo viên để được giải đáp.</p>`;
-                    
-                    contentHTML += `<textarea id="report-comment-input" placeholder="Thêm ghi chú (không bắt buộc)..." rows="3"></textarea>`;
-
-                    const modalContainer = document.createElement('div');
-                    modalContainer.className = "fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4";
-                    modalContainer.innerHTML = `
-                        <div class="glass-panel p-6 sm:p-8 w-full max-w-md fade-in">
-                            <h3 class="text-xl font-bold font-poppins mb-4 text-left">${title}</h3>
-                            <div class="mb-6">${contentHTML}</div>
-                            <div class="flex gap-4 justify-end mt-8">
-                                <button id="modal-cancel-btn" class="cta-btn secondary">Hủy</button>
-                                <button id="modal-confirm-btn" class="cta-btn">Gửi</button>
-                            </div>
-                        </div>`;
-                    this.DOM.modal.appendChild(modalContainer);
-
-                    const confirmBtn = modalContainer.querySelector('#modal-confirm-btn');
-                    const cancelBtn = modalContainer.querySelector('#modal-cancel-btn');
-                    
-                    const closeModal = (result) => {
-                        modalContainer.remove();
-                        resolve(result);
-                    };
-
-                    confirmBtn.onclick = () => {
-                        const selectedCategory = isError ? (modalContainer.querySelector('input[name="error-category"]:checked')?.value || 'Khác') : null;
-                        const comment = modalContainer.querySelector('#report-comment-input').value;
-                        closeModal({ confirmed: true, category: selectedCategory, comment: comment });
-                    };
-                    cancelBtn.onclick = () => closeModal({ confirmed: false });
-                });
-            }
+        const CLOUD_FUNCTION_URL = "https://getoaldaudio-asjwauz37q-uc.a.run.app";
+        const AI_BATCH_SIZE = 5;
+
+        // --- INITIALIZATION ---
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        let localWordList = [], vocabCsvText = '', structuresCsvText = '';
+
+        // --- DOM ELEMENTS ---
+        const DOM = {
+            loginScreen: document.getElementById('login-screen'), mainContent: document.getElementById('main-content'),
+            loginBtn: document.getElementById('login-btn'), logoutBtn: document.getElementById('logout-btn'),
+            emailInput: document.getElementById('email-input'), passwordInput: document.getElementById('password-input'),
+            loginError: document.getElementById('login-error'), testIdInput: document.getElementById('test-id'),
+            testTitleInput: document.getElementById('test-title'), dataReviewSection: document.getElementById('data-review-section'),
+            dataTableBody: document.getElementById('data-table-body'), fetchAudioBtn: document.getElementById('fetch-audio-btn'),
+            enrichAiBtn: document.getElementById('enrich-ai-btn'), manualEnrichBtn: document.getElementById('manual-enrich-btn'),
+            uploadBtn: document.getElementById('upload-btn'), uploadLog: document.getElementById('upload-log'),
+            alertModal: document.getElementById('custom-alert-modal'), 
+            vocabCsvUploadInput: document.getElementById('vocab-csv-upload'), vocabFileNameDisplay: document.getElementById('vocab-file-name'),
+            structuresCsvUploadInput: document.getElementById('structures-csv-upload'), structuresFileNameDisplay: document.getElementById('structures-file-name'),
+            processFilesBtn: document.getElementById('process-files-btn'), darkModeToggle: document.getElementById('dark-mode-toggle'),
+            cefrSlider: document.getElementById('cefr-level-slider'), cefrDisplay: document.getElementById('cefr-level-display'),
+            geminiApiKeyInput: document.getElementById('gemini-api-key'), aiModelSelect: document.getElementById('ai-model-select'),
+            manualPromptModal: document.getElementById('manual-prompt-modal'), manualPromptOutput: document.getElementById('manual-prompt-output'),
+            manualPromptInput: document.getElementById('manual-prompt-input'), copyPromptBtn: document.getElementById('copy-prompt-btn'),
+            processManualResultBtn: document.getElementById('process-manual-result-btn'), closeManualModalBtn: document.getElementById('close-manual-modal-btn'),
+            pageTitle: document.getElementById('page-title'),
+            exportWordBtn: document.getElementById('export-word-btn'),
         };
 
-        document.addEventListener('DOMContentLoaded', () => App.init());
+        // --- UI & HELPERS ---
+        function showAlert(message, type = 'info') {
+            const colors = { info: 'blue', success: 'green', error: 'red' };
+            const colorClass = `bg-${colors[type]}-500`;
+            DOM.alertModal.innerHTML = `<div class="glass-panel text-center p-8 rounded-lg"><p class="text-lg mb-6">${message}</p><button id="alert-ok-btn" class="btn ${colorClass} text-white">OK</button></div>`;
+            DOM.alertModal.classList.add('is-open');
+            document.getElementById('alert-ok-btn').onclick = () => DOM.alertModal.classList.remove('is-open');
+        }
+
+        function getCefrLevelDescription() {
+            const value = parseInt(DOM.cefrSlider.value, 10);
+            if (value <= 10) return "A1"; if (value <= 30) return "A2"; if (value <= 50) return "B1";
+            if (value <= 70) return "B2"; if (value <= 90) return "C1"; return "C2";
+        }
+
+        function updateButtonState(button, isLoading, originalHTML, loadingText = 'Đang xử lý...') {
+            button.disabled = isLoading;
+            if (isLoading) {
+                button.innerHTML = `<div class="loader"></div><span class="ml-2">${loadingText}</span>`;
+            } else {
+                button.innerHTML = originalHTML;
+            }
+        }
+
+        // --- DATA PROCESSING ---
+        function parseAndStructureCSV(vocabText, structuresText) {
+            const vocabRows = vocabText.trim().split(/\r?\n/).filter(Boolean);
+            const vocab = vocabRows.map((row, index) => {
+                const columns = row.split(',').map(c => c.trim().replace(/"/g, ''));
+                if (columns.length >= 4 && columns[0]) {
+                    return { 
+                        id: index + 1, word: columns[0], type: columns[1], 
+                        pronunciation: columns[2], meaning: columns[3], 
+                        audioUrl: '', isEnriched: false, structures: [], generated_tasks: null
+                    };
+                }
+                return null;
+            }).filter(Boolean);
+            
+            if (structuresText) {
+                const structureRows = structuresText.trim().split(/\r?\n/).filter(Boolean);
+                const structures = structureRows.map(row => {
+                    const columns = row.split(',').map(c => c.trim().replace(/"/g, ''));
+                    if (columns.length >= 2 && columns[0]) return { phrase: columns[0], meaning: columns[1] };
+                    return null;
+                }).filter(Boolean);
+
+                vocab.forEach(v => {
+                    const wordLower = v.word.toLowerCase();
+                    const matchRegex = new RegExp(`\\b${wordLower}(s|es|ing|ed)?\\b`, 'i');
+                    v.structures = structures
+                        .filter(s => matchRegex.test(s.phrase.toLowerCase()))
+                        .map(s => ({...s}));
+                });
+            }
+            localWordList = vocab;
+        }
+
+        function renderTable() {
+            DOM.dataTableBody.innerHTML = '';
+            localWordList.forEach((word, wordIndex) => {
+                const row = document.createElement('tr');
+                row.className = 'border-b dark:border-slate-700 align-top';
+
+                const audioIconHTML = word.audioUrl ? `<a href="${word.audioUrl}" target="_blank" title="Nghe"><i class="fas fa-volume-up ml-2 text-blue-500 hover:text-blue-400"></i></a>` : '';
+                
+                const structuresHTML = word.structures && word.structures.length > 0
+                    ? `<div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-600">
+                        <h4 class="font-semibold text-xs uppercase text-slate-400 dark:text-slate-500">Cấu trúc liên quan</h4>
+                        <ul class="mt-1 space-y-2">
+                            ${word.structures.map((structure, structIndex) => `
+                                <li class="text-sm">
+                                    <p class="font-semibold" contenteditable="true" data-path="structures[${structIndex}].phrase" data-word-index="${wordIndex}">${structure.phrase}</p>
+                                    <p class="text-xs text-slate-500" contenteditable="true" data-path="structures[${structIndex}].meaning" data-word-index="${wordIndex}">${structure.meaning}</p>
+                                </li>
+                            `).join('')}
+                        </ul>
+                       </div>`
+                    : '';
+
+                const wordInfoHTML = `
+                    <td class="p-3">
+                        <div class="flex items-center">
+                            <p class="font-bold text-base" contenteditable="true" data-path="word" data-word-index="${wordIndex}">${word.word}</p>
+                            ${audioIconHTML}
+                        </div>
+                        <p class="font-mono text-sm text-violet-700 dark:text-violet-400" contenteditable="true" data-path="pronunciation" data-word-index="${wordIndex}">${word.pronunciation}</p>
+                        <p class="text-xs text-slate-500">(${word.type})</p>
+                        <p class="mt-2 text-sm" contenteditable="true" data-path="meaning" data-word-index="${wordIndex}">${word.meaning}</p>
+                        ${structuresHTML}
+                    </td>`;
+
+                let tasksHTML = '<span class="text-xs text-gray-400 italic">Chưa có dữ liệu AI.</span>';
+                const tasks = word.generated_tasks;
+
+                if (tasks) {
+                    const renderTask = (taskData, title, contentRenderer) => {
+                        if (!taskData) return '';
+                        return `
+                            <details class="mt-2">
+                                <summary class="task-summary">${title}</summary>
+                                <div class="task-details">
+                                    ${contentRenderer(taskData)}
+                                </div>
+                            </details>`;
+                    };
+
+                    tasksHTML = [
+                        renderTask(tasks.basic_example, '1. Basic Example', data => `<div class="task-content"><p class="sentence" contenteditable="true" data-path="generated_tasks.basic_example" data-word-index="${wordIndex}">${data}</p></div>`),
+                        renderTask(tasks.meaning_mcq, '2. Meaning MCQ', data => `<div class="task-content"><p><b>Distractors (EN):</b> ${(data.distractors_en || []).join(', ')}</p><p><b>Distractors (VI):</b> ${(data.distractors_vi || []).join(', ')}</p></div>`),
+                        renderTask(tasks.word_family_mcq, '3. Word Family MCQ', data => `<div class="task-content"><p class="sentence">${(data.sentence || '').replace(data.blank_placeholder, `<b>[____]</b>`)}</p><p><b>Answer:</b> ${data.correct_answer || ''}</p><p><b>Distractors:</b> ${(data.distractors || []).join(', ')}</p></div>`),
+                        renderTask(tasks.sentence_unscramble, '4. Sentence Unscramble', data => `<div class="task-content"><p class="sentence">${data.correct_sentence || ''}</p></div>`),
+                        renderTask(tasks.error_correction, '5. Error Correction', data => `<div class="task-content"><p><b>Incorrect:</b> <span class="sentence">${data.incorrect_sentence || ''}</span></p><p><b>Correct:</b> <span class="sentence">${data.correct_sentence || ''}</span></p></div>`),
+                        renderTask(tasks.ipa_fill, '6. IPA Fill', data => `<div class="task-content"><p><b>Gapped IPA:</b> ${data.gapped_ipa || ''}</p><p><b>Correct Vowel:</b> ${data.correct_vowel || ''}</p><p><b>Distractors:</b> ${(data.distractors || []).join(', ')}</p></div>`),
+                        renderTask(tasks.best_fit_replacement, '7. Best-fit Replacement', data => `<div class="task-content"><p class="sentence">${(data.sentence || '').replace(data.word_to_replace, `<b><u>${data.word_to_replace}</u></b>`)}</p><p><b>Answer:</b> ${data.correct_answer}</p><p><b>Distractors:</b> ${(data.distractors || []).join(', ')}</p></div>`),
+                        renderTask(tasks.inference_from_scenario, '8. Inference', data => `<div class="task-content"><p class="sentence">${data.scenario || ''}</p><p><b>Question:</b> ${data.question}</p><p><b>Answer:</b> ${data.correct_answer}</p></div>`),
+                        renderTask(tasks.best_paraphrase, '9. Best Paraphrase', data => `<div class="task-content"><p><b>Original:</b></p><p class="sentence">${data.original_sentence || ''}</p><p><b>Correct Paraphrase:</b> ${ (data.options || []).find(o => o.is_correct)?.text || ''}</p></div>`),
+                        renderTask(tasks.antonym_mcq, '10. Antonym MCQ', data => `<div class="task-content"><p class="sentence">${data.sentence_context || ''}</p><p><b>Keyword:</b> ${data.keyword}</p><p><b>Antonym:</b> ${data.correct_antonym}</p><p><b>Distractors:</b> ${(data.distractors || []).join(', ')}</p></div>`),
+                        renderTask(tasks.tripled_sentence, '11. Tripled Sentence', data => `<div class="task-content"><p><b>Keyword:</b> ${data.keyword}</p><ul>${(data.examples || []).map(ex => `<li>${ex}</li>`).join('')}</ul></div>`),
+                        renderTask(tasks.main_idea, '12. Main Idea', data => `<div class="task-content"><p><b>Paragraph:</b> ${data.paragraph || ''}</p><p><b>Main Idea:</b> ${data.correct_answer}</p></div>`),
+                        renderTask(tasks.paragraph_completion, '13. Paragraph Completion', data => `<div class="task-content"><p><b>Body:</b> ${data.paragraph_body || ''}</p><p><b>Conclusion:</b> ${data.correct_conclusion}</p></div>`),
+                        renderTask(tasks.argument_strengthening, '14. Argument Strengthening', data => `<div class="task-content"><p><b>Argument:</b> ${data.argument_text || ''}</p><p><b>Evidence:</b> ${data.correct_evidence}</p></div>`),
+                        renderTask(tasks.argument_weakening, '15. Argument Weakening', data => `<div class="task-content"><p><b>Argument:</b> ${data.argument_text || ''}</p><p><b>Evidence:</b> ${data.correct_weakener}</p></div>`),
+                        renderTask(tasks.tone_purpose_analysis, '16. Tone/Purpose Analysis', data => `<div class="task-content"><p><b>Paragraph:</b> ${data.paragraph || ''}</p><p><b>Question:</b> ${data.question}</p><p><b>Answer:</b> ${data.correct_answer}</p></div>`),
+                        renderTask(tasks.sentence_role_analysis, '17. Sentence Role Analysis', data => `<div class="task-content"><p><b>Paragraph:</b> ${data.paragraph || ''}</p><p><b>Role of Sentence ${data.highlighted_sentence_index + 1}:</b> ${data.correct_role}</p></div>`),
+                    ].filter(Boolean).join('');
+                }
+
+                row.innerHTML = `
+                    ${wordInfoHTML}
+                    <td class="p-3">${tasksHTML}</td>
+                    <td class="p-3 text-center align-middle">${word.isEnriched ? '<i class="fas fa-check-circle text-2xl text-green-500"></i>' : '<i class="fas fa-hourglass-half text-2xl text-gray-400"></i>'}</td>
+                `;
+                DOM.dataTableBody.appendChild(row);
+            });
+        }
+        
+        function updateNestedObject(obj, path, value) {
+            const keys = path.replace(/\[(\w+)\]/g, '.$1').replace(/^\./, '').split('.');
+            let current = obj;
+            for (let i = 0; i < keys.length - 1; i++) {
+                if (current[keys[i]] === undefined || current[keys[i]] === null) { console.error(`Path does not exist: ${keys.slice(0, i + 1).join('.')}`); return; }
+                current = current[keys[i]];
+            }
+            current[keys[keys.length - 1]] = value;
+        }
+
+        // --- AI & API ---
+        
+        // UPGRADED PROMPT
+        function getPromptForBatch(batch) {
+            const cefrLevel = getCefrLevelDescription();
+            const batchInput = batch.map(wordData => ({
+                id: wordData.id,
+                word: wordData.word,
+                type: wordData.type,
+                meaning: wordData.meaning,
+                pronunciation: wordData.pronunciation,
+                structures: wordData.structures 
+            }));
+
+            return `
+# MISSION & ROLE
+You are a **Master Instructional Designer** specializing in English Language Testing (ELT). Your mission is to craft high-quality, pedagogically sound assessment items. You are not a mere content generator; you are an expert in cognitive science and language acquisition, creating "cognitive puzzles" that test and reinforce a learner's understanding of vocabulary in a comprehensive, meaningful way.
+
+# GUIDING PRINCIPLES
+- **Pedagogical Soundness**: Every item must have a clear learning objective.
+- **CEFR Alignment**: All content, from example sentences to distractors, MUST be appropriate for the target **${cefrLevel}** level.
+- **Context is King**: Leverage the provided \`structures\` to create authentic, natural-sounding contexts. Avoid generic or nonsensical sentences.
+- **Plausible Distractors**: The art of a good question lies in its distractors. They should be tempting to a learner who has a partial understanding but clearly incorrect to one who has mastered the concept.
+- **Creativity & Variety**: Avoid repetitive sentence structures. Showcase the vocabulary in diverse and interesting scenarios.
+
+# INPUT & OUTPUT SPECIFICATION
+
+## INPUT
+You will receive a JSON array of word objects. You MUST process every object in the array.
+\`\`\`json
+${JSON.stringify(batchInput, null, 2)}
+\`\`\`
+
+## OUTPUT
+You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any explanatory text, markdown formatting like \`\`\`json, or any other content outside of the JSON array itself. Each object in the output array must strictly adhere to the following full structure, containing all 18 task types:
+\`\`\`json
+{
+  "id": "the_original_id_of_the_word",
+  "generated_tasks": {
+    "basic_example": "A clear, contextual sentence using the word.",
+    "meaning_mcq": { "distractors_en": ["word1", "word2"], "distractors_vi": ["nghĩa1", "nghĩa2"] },
+    "word_family_mcq": { "sentence": "A gapped sentence.", "blank_placeholder": "[BLANK]", "correct_answer": "The correct form.", "distractors": ["wrong_form1", "wrong_form2"] },
+    "sentence_unscramble": { "correct_sentence": "The complete, correct sentence." },
+    "error_correction": { "incorrect_sentence": "A sentence with a subtle error.", "correct_sentence": "The corrected version." },
+    "ipa_fill": { "gapped_ipa": "/g_pt/", "correct_vowel": "æ", "distractors": ["e", "ɪ", "ɑː"] },
+    "collocation_odd_one_out": { "question": "Which word does NOT collocate with '...'", "options": ["collocate1", "collocate2", "non_collocate"], "answer": "non_collocate" },
+    "best_fit_replacement": { "sentence": "A sentence with a word to replace.", "word_to_replace": "The target word.", "correct_answer": "The best synonym.", "distractors": ["weaker_synonym1", "weaker_synonym2"] },
+    "inference_from_scenario": { "scenario": "A short story.", "question": "What can be inferred?", "correct_answer": "The logical inference.", "distractors": ["distractor1", "distractor2"] },
+    "best_paraphrase": { "original_sentence": "The original sentence.", "options": [ {"text": "A perfect paraphrase.", "similarity": 100, "is_correct": true}, {"text": "A slightly different meaning.", "similarity": 60, "is_correct": false} ] },
+    "antonym_mcq": { "keyword": "the_word", "sentence_context": "A sentence highlighting the keyword.", "correct_antonym": "The true antonym.", "distractors": ["synonym1", "synonym2"] },
+    "tripled_sentence": { "keyword": "the_word", "examples": ["Sentence in context A.", "Sentence in context B.", "Sentence in context C."] },
+    "main_idea": { "paragraph": "A short paragraph.", "correct_answer": "The main point.", "distractors": ["A supporting detail.", "An overgeneralization."] },
+    "paragraph_completion": { "paragraph_body": "A paragraph missing its conclusion.", "correct_conclusion": "The logical concluding sentence.", "distractors": ["An abrupt or illogical conclusion."] },
+    "argument_strengthening": { "argument_text": "An author's argument.", "author_viewpoint": "A summary of the viewpoint.", "correct_evidence": "Evidence that supports the argument.", "distractors": ["Evidence that weakens it."] },
+    "argument_weakening": { "argument_text": "An author's argument.", "author_viewpoint": "A summary of the viewpoint.", "correct_weakener": "Evidence that undermines the argument.", "distractors": ["Evidence that strengthens it."] },
+    "tone_purpose_analysis": { "paragraph": "A paragraph with a specific tone.", "question": "The primary purpose of this passage is to...", "correct_answer": "e.g., 'question a popular belief'", "distractors": ["e.g., 'present an objective overview'"] },
+    "sentence_role_analysis": { "paragraph": "[1] Sentence one. [2] Sentence two.", "highlighted_sentence_index": 1, "correct_role": "e.g., 'To provide evidence for the claim in sentence 1.'", "distractors": ["e.g., 'To state the main conclusion.'"] }
+  }
+}
+\`\`\`
+
+# DETAILED TASK GUIDELINES & HIGH-QUALITY EXAMPLES
+
+**1. \`basic_example\`**:
+- **Objective**: Provide the most clear, simple, and contextually appropriate example sentence.
+- **High-Quality Example** (for "ubiquitous"): "In today's world, smartphones and Wi-Fi have become ubiquitous."
+- **Poor Example**: "The ubiquitousness of the problem was startling." (Uses a different word form, less common).
+
+**2. \`meaning_mcq\`**:
+- **Objective**: Test semantic understanding with plausible distractors.
+- **Strategy**: Distractors should be related (e.g., other feelings for an emotion word) or be common mistakes.
+- **High-Quality Example** (for "diligent"): distractors_en: ["lazy", "intelligent", "creative"], distractors_vi: ["lười biếng", "thông minh", "sáng tạo"].
+
+**3. \`word_family_mcq\`**:
+- **Objective**: Test knowledge of different forms of a word.
+- **Strategy**: Distractors MUST be other members of the word family or commonly confused forms.
+- **High-Quality Example** (for "economy"): sentence: "The government needs to _______ the national budget carefully.", blank_placeholder: "[BLANK]", correct_answer: "economize", distractors: ["economic", "economical", "economics"].
+
+**4. \`sentence_unscramble\`**:
+- **Objective**: Test understanding of syntax and word order.
+- **High-Quality Example** (for "collaborate"): "The two rival companies agreed to collaborate on the new project."
+
+**5. \`error_correction\`**:
+- **Objective**: Test ability to spot subtle grammatical or collocational errors.
+- **Strategy**: Focus on common errors like prepositions, articles, or verb tenses, not obvious spelling mistakes.
+- **High-Quality Example** (for "responsible"): incorrect_sentence: "He is responsible at managing the team.", correct_sentence: "He is responsible for managing the team."
+
+**6. \`ipa_fill\`**:
+- **Objective**: Test phonemic awareness.
+- **Strategy**: Gap a single, distinctive vowel or consonant sound. Distractors should be phonetically similar.
+- **High-Quality Example** (for "heat" /hiːt/): gapped_ipa: "/h_t/", correct_vowel: "iː", distractors: ["ɪ", "e", "eɪ"].
+
+**7. \`collocation_odd_one_out\`**:
+- **Objective**: Test knowledge of common word pairings (collocations).
+- **High-Quality Example** (for "effort"): question: "Which verb does NOT typically collocate with 'effort'?", options: ["make", "put in", "do", "save"], answer: "do".
+
+**8. \`best_fit_replacement\`**:
+- **Objective**: Test understanding of semantic nuance and connotation.
+- **Strategy**: Distractors should be synonyms but less precise or appropriate for the specific context.
+- **High-Quality Example** (for "crucial"): sentence: "It is **crucial** that you submit the report by Friday.", word_to_replace: "crucial", correct_answer: "vital", distractors: ["important", "helpful", "suggested"].
+
+**9. \`inference_from_scenario\`**:
+- **Objective**: Test reading comprehension and logical deduction.
+- **Strategy**: The answer must be strongly implied by the text, not explicitly stated.
+- **High-Quality Example** (for "reluctant"): scenario: "John looked at the huge plate of Brussels sprouts. He slowly picked up his fork but didn't take a bite. 'My mother said I have to eat them,' he sighed.", question: "How does John feel about eating the Brussels sprouts?", correct_answer: "He is reluctant to eat them.", distractors: ["He is excited to eat them.", "He is allergic to them.", "He has never tried them before."].
+
+**10. \`best_paraphrase\`**:
+- **Objective**: Test ability to recognize the same meaning expressed differently.
+- **Strategy**: Distractors should alter the original meaning in a subtle way (e.g., changing the certainty, scope, or focus).
+- **High-Quality Example** (for "mitigate"): original_sentence: "The new flood barriers are designed to mitigate the effects of storm surges.", options: [{"text": "The barriers aim to lessen the impact of storm surges.", "similarity": 100, "is_correct": true}, {"text": "The barriers will completely prevent all damage from storms.", "similarity": 60, "is_correct": false}].
+
+**11. \`antonym_mcq\`**:
+- **Objective**: Test knowledge of opposites, with a twist.
+- **Strategy**: The most effective distractors are often **synonyms** of the keyword, forcing the learner to carefully read the question.
+- **High-Quality Example** (for "expand"): sentence_context: "The company plans to **expand** its operations in Asia.", keyword: "expand", correct_antonym: "contract", distractors: ["grow", "enlarge", "develop"].
+
+**12. \`tripled_sentence\`**:
+- **Objective**: Show understanding of a word's different uses or shades of meaning.
+- **Strategy**: Use the keyword in three distinct, non-repetitive contexts.
+- **High-Quality Example** (for "policy"): keyword: "policy", examples: ["The company has a strict no-smoking policy.", "The government's new economic policy was met with criticism.", "It's a good policy to always check your work before submitting it."].
+
+**13. \`main_idea\`**:
+- **Objective**: Test ability to synthesize information and identify the central point.
+- **Strategy**: Distractors should be: a true but minor detail, a statement that is too broad, or a misinterpretation of the paragraph's focus.
+- **High-Quality Example** (for "sustainable"): paragraph: "Sustainable agriculture focuses on long-term solutions. It avoids harsh chemicals that deplete the soil and seeks to conserve water. The goal is to produce healthy food for today's population without compromising the ability of future generations to do the same.", correct_answer: "Sustainable agriculture balances present needs with future resources.", distractors: ["Sustainable agriculture avoids harsh chemicals.", "All farming should be sustainable."].
+
+**14. \`paragraph_completion\`**:
+- **Objective**: Test logical flow and coherence.
+- **Strategy**: The correct answer should logically follow from the preceding sentences. Distractors might be contradictory, irrelevant, or introduce a new topic abruptly.
+- **High-Quality Example** (for "innovative"): paragraph_body: "The company's research team spent two years developing the new material. It's lighter, stronger, and more flexible than anything on the market. This breakthrough has already attracted interest from the aerospace and automotive industries...", correct_conclusion: "Consequently, the company is poised to become a leader in the field.", distractors: ["However, the team was disappointed with the results.", "The company also produces office furniture."].
+
+**15. \`argument_strengthening\`**:
+- **Objective**: Test critical thinking and the ability to evaluate evidence.
+- **Strategy**: The correct answer provides a new piece of information or a logical reason that directly supports the argument's conclusion.
+- **High-Quality Example** (for "mandatory"): argument_text: "The city council argues that bicycle helmets should be mandatory for all riders to reduce head injuries.", correct_evidence: "A recent study in a similar city showed a 40% decrease in serious head injuries after they implemented a mandatory helmet law.", distractors: ["Bicycle helmets can be expensive for some residents.", "Many cyclists enjoy the feeling of riding without a helmet."].
+
+**16. \`argument_weakening\`**:
+- **Objective**: Test the ability to identify flaws or counter-evidence.
+- **Strategy**: The correct answer should expose a flaw in the argument's logic or provide evidence that contradicts its conclusion.
+- **High-Quality Example** (for "censorship"): argument_text: "The activist group argues that censoring certain online content is necessary to protect children from harmful material.", correct_weakener: "Studies have shown that such censorship often leads to a 'Streisand effect,' where the banned content becomes even more popular and widely distributed.", distractors: ["Protecting children is a very important goal."].
+
+**17. \`tone_purpose_analysis\`**:
+- **Objective**: Test the ability to discern an author's attitude or intent.
+- **Strategy**: Distractors should be plausible but less accurate descriptions of the tone (e.g., 'objective' vs. 'cautious', 'enthusiastic' vs. 'biased').
+- **High-Quality Example** (for "skeptical"): paragraph: "While the new 'super-juice' is marketed as a miracle cure, its health claims are based on a single, small-scale study funded by its own parent company. Independent researchers have not yet replicated these extraordinary findings.", question: "The author's tone is best described as...", correct_answer: "skeptical and cautionary", distractors: ["enthusiastic and supportive", "objective and informative"].
+
+**18. \`sentence_role_analysis\`**:
+- **Objective**: Test understanding of how sentences function within a larger argument.
+- **Strategy**: The correct answer accurately describes the logical function of one sentence in relation to another. Distractors can describe the roles of other sentences in the paragraph.
+- **High-Quality Example** (for "illustrate"): paragraph: "[1] Many animals have developed incredible methods of camouflage. [2] For instance, the stick insect is almost indistinguishable from a twig, which helps it avoid predators.", "highlighted_sentence_index": 1, "correct_role": "To provide a specific example that illustrates the claim made in sentence 1.", "distractors": ["To state the main idea of the paragraph.", "To contradict the claim made in sentence 1."].
+
+---
+**FINAL INSTRUCTIONS**
+- **Proficiency Level**: All generated content must be strictly aligned with the **${cefrLevel}** level.
+- **Format**: Return only a valid JSON array.
+- **Begin!**
+`;
+        }
+
+
+        async function callGeminiAPI(prompt, model) {
+            const apiKey = DOM.geminiApiKeyInput.value.trim();
+            if (!apiKey) throw new Error("Vui lòng nhập Google Gemini API Key.");
+            
+            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: "application/json" }
+            };
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                const errorBody = await response.json();
+                throw new Error(`Lỗi API Gemini: ${errorBody.error.message}`);
+            }
+            const result = await response.json();
+            const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!responseText) throw new Error("Cấu trúc phản hồi API không hợp lệ.");
+            try {
+                return JSON.parse(responseText);
+            } catch (e) {
+                console.error("Lỗi parse JSON từ API:", responseText);
+                throw new Error("Kết quả trả về từ AI không phải là JSON hợp lệ.");
+            }
+        }
+
+        function processAiResults(aiDataArray) {
+            if (!Array.isArray(aiDataArray)) throw new Error("Kết quả AI không phải là một mảng.");
+            
+            aiDataArray.forEach(enrichedData => {
+                const wordToUpdate = localWordList.find(w => w.id === enrichedData.id);
+                if (wordToUpdate) {
+                    wordToUpdate.generated_tasks = enrichedData.generated_tasks || null;
+                    wordToUpdate.isEnriched = true;
+                }
+            });
+            renderTable();
+        }
+
+        // --- FIREBASE & AUTHENTICATION ---
+        async function uploadToFirebase() {
+            const testId = DOM.testIdInput.value.trim();
+            const title = DOM.testTitleInput.value.trim();
+            if (!testId || !title || localWordList.length === 0) {
+                return showAlert("Vui lòng nhập ID, Tiêu đề và xử lý dữ liệu.", 'error');
+            }
+            DOM.uploadBtn.disabled = true;
+            DOM.uploadLog.textContent = 'Đang lưu...';
+            try {
+                await setDoc(doc(db, "vocab_sets", testId), { 
+                    title, 
+                    wordList: localWordList, 
+                    updatedAt: serverTimestamp() 
+                }, { merge: true });
+                DOM.uploadLog.textContent = 'Lưu THÀNH CÔNG!';
+                setTimeout(() => { DOM.uploadLog.textContent = ''; }, 3000);
+            } catch (error) {
+                DOM.uploadLog.textContent = `LỖI: ${error.message}`;
+            } finally {
+                DOM.uploadBtn.disabled = false;
+            }
+        }
+
+        async function loadAndPopulateTestData(testId) {
+            showAlert("Đang tải dữ liệu đề thi...");
+            const docRef = doc(db, "vocab_sets", testId);
+            try {
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const testData = docSnap.data();
+                    
+                    DOM.pageTitle.textContent = "Chỉnh sửa Bộ từ vựng";
+                    DOM.testIdInput.value = testId;
+                    DOM.testIdInput.disabled = true;
+                    DOM.testTitleInput.value = testData.title || "";
+                    
+                    localWordList = testData.wordList || [];
+                    
+                    localWordList.forEach(word => {
+                        if (!word.generated_tasks) word.generated_tasks = null;
+                        if (!word.structures) word.structures = [];
+                    });
+
+                    renderTable();
+                    DOM.dataReviewSection.classList.remove('hidden');
+                    
+                    DOM.uploadBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Cập nhật Bộ Từ Vựng';
+                    
+                    const uploadSection = DOM.processFilesBtn.closest('.glass-panel');
+                    uploadSection.style.opacity = '0.5';
+                    uploadSection.style.pointerEvents = 'none';
+                    uploadSection.title = 'Không thể nhập file CSV khi đang chỉnh sửa.';
+
+                    DOM.alertModal.classList.remove('is-open');
+
+                } else {
+                    showAlert(`Lỗi: Không tìm thấy bộ từ vựng với ID: ${testId}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`Lỗi khi tải dữ liệu: ${error.message}`, 'error');
+                console.error("Error loading test data:", error);
+            }
+        }
+        
+        function exportToWord() {
+            if (localWordList.length === 0) {
+                return showAlert("Không có dữ liệu để xuất.", 'error');
+            }
+
+            const { Document, Packer, Paragraph, TextRun, HeadingLevel } = docx;
+            const docChildren = [];
+            const charOpts = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+            docChildren.push(new Paragraph({
+                text: DOM.testTitleInput.value || "Vocabulary Test",
+                heading: HeadingLevel.TITLE,
+                alignment: 'center',
+            }));
+
+            localWordList.forEach((wordData, index) => {
+                if (!wordData.generated_tasks) return;
+
+                docChildren.push(new Paragraph({
+                    children: [
+                        new TextRun({ text: `${index + 1}. ${wordData.word}`, bold: true, size: 28 }),
+                        new TextRun({ text: `    ${wordData.pronunciation}`, italics: true, size: 24 })
+                    ],
+                    spacing: { before: 400, after: 200 },
+                }));
+
+                const tasks = wordData.generated_tasks;
+                
+                const createMCQ = (title, question, correctAnswer, distractors) => {
+                    if(!question || !correctAnswer || !distractors || distractors.length < 1) return;
+                    docChildren.push(new Paragraph({ text: title, bold: true, spacing: { before: 200 } }));
+                    docChildren.push(new Paragraph({ text: question, italics: true }));
+                    const options = [correctAnswer, ...distractors].sort(() => Math.random() - 0.5);
+                    options.forEach((opt, i) => {
+                        docChildren.push(new Paragraph({ text: `${charOpts[i]}. ${opt}` }));
+                    });
+                    docChildren.push(new Paragraph({ text: " " }));
+                };
+                
+                const createTextInput = (title, question) => {
+                    if(!question) return;
+                    docChildren.push(new Paragraph({ text: title, bold: true, spacing: { before: 200 } }));
+                    docChildren.push(new Paragraph({ text: question, italics: true }));
+                    docChildren.push(new Paragraph("Answer: __________________________________________________"));
+                    docChildren.push(new Paragraph({ text: " " }));
+                };
+                
+                if(tasks.meaning_mcq) createMCQ('Meaning MCQ (English)', `What is the meaning of "${wordData.word}"?`, wordData.meaning, tasks.meaning_mcq.distractors_vi);
+                if(tasks.word_family_mcq) createMCQ('Word Family', tasks.word_family_mcq.sentence.replace(tasks.word_family_mcq.blank_placeholder, '______'), tasks.word_family_mcq.correct_answer, tasks.word_family_mcq.distractors);
+                if(tasks.antonym_mcq) createMCQ('Antonym', tasks.antonym_mcq.sentence_context, tasks.antonym_mcq.correct_antonym, tasks.antonym_mcq.distractors);
+                if(tasks.error_correction) createTextInput('Error Correction', `Correct the sentence: "${tasks.error_correction.incorrect_sentence}"`);
+                if(tasks.sentence_unscramble) createTextInput('Sentence Unscramble', `Unscramble the words to form a correct sentence: "${tasks.sentence_unscramble.correct_sentence.split(' ').sort(() => Math.random() - 0.5).join(' / ')}"`);
+                if(tasks.best_fit_replacement) createMCQ('Best-fit Replacement', tasks.best_fit_replacement.sentence, tasks.best_fit_replacement.correct_answer, tasks.best_fit_replacement.distractors);
+                if(tasks.main_idea) createMCQ(`Main Idea of the Passage`, tasks.main_idea.paragraph, tasks.main_idea.correct_answer, tasks.main_idea.distractors);
+                if(tasks.paragraph_completion) createMCQ(`Find the Conclusion`, tasks.paragraph_completion.paragraph_body, tasks.paragraph_completion.correct_conclusion, tasks.paragraph_completion.distractors);
+                if(tasks.argument_strengthening) createMCQ(`Strengthen the Argument`, tasks.argument_strengthening.argument_text, tasks.argument_strengthening.correct_evidence, tasks.argument_strengthening.distractors);
+                if(tasks.argument_weakening) createMCQ(`Weaken the Argument`, tasks.argument_weakening.argument_text, tasks.argument_weakening.correct_weakener, tasks.argument_weakening.distractors);
+                if(tasks.tone_purpose_analysis) createMCQ(tasks.tone_purpose_analysis.question, tasks.tone_purpose_analysis.paragraph, tasks.tone_purpose_analysis.correct_answer, tasks.tone_purpose_analysis.distractors);
+            });
+
+            const doc = new Document({
+                sections: [{ properties: {}, children: docChildren }],
+            });
+
+            Packer.toBlob(doc).then(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${DOM.testIdInput.value || 'vocabulary-test'}.docx`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showAlert("File Word đã được tạo và tải xuống!", 'success');
+            });
+        }
+
+        // --- EVENT LISTENERS ---
+        function setupEventListeners() {
+            onAuthStateChanged(auth, user => {
+                if (user) {
+                    DOM.loginScreen.classList.remove('is-open');
+                    DOM.mainContent.style.display = 'block';
+                    initializePage();
+                } else {
+                    DOM.loginScreen.classList.add('is-open');
+                    DOM.mainContent.style.display = 'none';
+                }
+            });
+
+            DOM.loginBtn.addEventListener('click', async () => {
+                DOM.loginError.textContent = '';
+                try { 
+                    await signInWithEmailAndPassword(auth, DOM.emailInput.value, DOM.passwordInput.value); 
+                } catch (e) { 
+                    DOM.loginError.textContent = 'Email hoặc mật khẩu không đúng.'; 
+                }
+            });
+
+            DOM.logoutBtn.addEventListener('click', () => signOut(auth));
+            DOM.uploadBtn.addEventListener('click', uploadToFirebase);
+
+            const handleFileUpload = (event, type) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    if (type === 'vocab') { 
+                        vocabCsvText = e.target.result; 
+                        DOM.vocabFileNameDisplay.textContent = file.name; 
+                    } else { 
+                        structuresCsvText = e.target.result; 
+                        DOM.structuresFileNameDisplay.textContent = file.name; 
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            DOM.vocabCsvUploadInput.addEventListener('change', (e) => handleFileUpload(e, 'vocab'));
+            DOM.structuresCsvUploadInput.addEventListener('change', (e) => handleFileUpload(e, 'structures'));
+            
+            DOM.processFilesBtn.addEventListener('click', () => {
+                if (!vocabCsvText) return showAlert("Vui lòng tải lên file CSV từ vựng.", 'error');
+                parseAndStructureCSV(vocabCsvText, structuresCsvText || '');
+                renderTable();
+                DOM.dataReviewSection.classList.remove('hidden');
+            });
+
+            DOM.darkModeToggle.addEventListener('change', () => {
+                document.body.classList.toggle('dark');
+                const dot = DOM.darkModeToggle.nextElementSibling.nextElementSibling;
+                dot.style.transform = DOM.darkModeToggle.checked ? 'translateX(100%)' : 'translateX(0)';
+            });
+            
+            DOM.cefrSlider.addEventListener('input', () => DOM.cefrDisplay.textContent = getCefrLevelDescription());
+            
+            DOM.fetchAudioBtn.addEventListener('click', async () => {
+                if (localWordList.length === 0) return showAlert("Chưa có dữ liệu.", 'error');
+                const button = DOM.fetchAudioBtn;
+                const originalHTML = button.innerHTML;
+                button.disabled = true;
+                for (let i = 0; i < localWordList.length; i++) {
+                    const wordData = localWordList[i];
+                    updateButtonState(button, true, '', `Đang tìm... (${i + 1}/${localWordList.length})`);
+                    if (wordData.audioUrl || !wordData.word) continue;
+                    try {
+                        const response = await fetch(`${CLOUD_FUNCTION_URL}?word=${encodeURIComponent(wordData.word)}`);
+                        if (!response.ok) throw new Error(`Server error`);
+                        const result = await response.json();
+                        if (result.success) wordData.audioUrl = result.audioUrl;
+                    } catch (error) { console.error(`Lỗi với từ '${wordData.word}':`, error); }
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
+                renderTable();
+                updateButtonState(button, false, originalHTML);
+            });
+
+            DOM.enrichAiBtn.addEventListener('click', async () => {
+                const wordsToEnrich = localWordList.filter(w => !w.isEnriched);
+                if (wordsToEnrich.length === 0) return showAlert("Tất cả các từ đã được làm giàu.", 'success');
+                const button = DOM.enrichAiBtn;
+                const originalHTML = button.innerHTML;
+                updateButtonState(button, true, originalHTML);
+                try {
+                    for (let i = 0; i < wordsToEnrich.length; i += AI_BATCH_SIZE) {
+                        const batch = wordsToEnrich.slice(i, i + AI_BATCH_SIZE);
+                        updateButtonState(button, true, '', `Đang xử lý... (${i + batch.length}/${wordsToEnrich.length})`);
+                        const prompt = getPromptForBatch(batch);
+                        const model = DOM.aiModelSelect.value;
+                        const results = await callGeminiAPI(prompt, model);
+                        processAiResults(results);
+                    }
+                    showAlert("Làm giàu dữ liệu bằng AI thành công!", 'success');
+                } catch (error) {
+                    showAlert(`Lỗi khi làm giàu dữ liệu: ${error.message}`, 'error');
+                } finally {
+                    updateButtonState(button, false, originalHTML);
+                }
+            });
+
+            DOM.exportWordBtn.addEventListener('click', exportToWord);
+
+            DOM.manualEnrichBtn.addEventListener('click', () => {
+                const wordsToEnrich = localWordList.filter(w => !w.isEnriched);
+                if (wordsToEnrich.length === 0) return showAlert("Tất cả các từ đã được làm giàu.", 'success');
+                DOM.manualPromptOutput.value = getPromptForBatch(wordsToEnrich);
+                DOM.manualPromptInput.value = '';
+                DOM.manualPromptModal.classList.add('is-open');
+            });
+            DOM.closeManualModalBtn.addEventListener('click', () => DOM.manualPromptModal.classList.remove('is-open'));
+            DOM.copyPromptBtn.addEventListener('click', () => {
+                DOM.manualPromptOutput.select();
+                document.execCommand('copy');
+                showAlert("Đã sao chép Prompt!", 'success');
+            });
+            DOM.processManualResultBtn.addEventListener('click', () => {
+                try {
+                    const jsonText = DOM.manualPromptInput.value.trim().replace(/^```json\s*|```\s*$/g, '');
+                    if (!jsonText) throw new Error("Vui lòng dán kết quả JSON.");
+                    const results = JSON.parse(jsonText);
+                    processAiResults(results);
+                    DOM.manualPromptModal.classList.remove('is-open');
+                    showAlert("Cập nhật thủ công thành công!", 'success');
+                } catch (error) {
+                    showAlert(`Lỗi xử lý JSON: ${error.message}`, 'error');
+                }
+            });
+            
+            DOM.dataTableBody.addEventListener('blur', (e) => {
+                const target = e.target;
+                if (target.hasAttribute('contenteditable')) {
+                    const wordIndex = parseInt(target.dataset.wordIndex, 10);
+                    const path = target.dataset.path;
+                    const newText = target.textContent;
+                    if (isNaN(wordIndex) || !localWordList[wordIndex] || !path) return;
+                    updateNestedObject(localWordList[wordIndex], path, newText);
+                }
+            }, true);
+        }
+        
+        // --- PAGE INITIALIZATION ---
+        async function initializePage() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const testIdToEdit = urlParams.get('edit');
+
+            if (testIdToEdit) {
+                await loadAndPopulateTestData(testIdToEdit);
+            } else {
+                DOM.pageTitle.textContent = "Trình Soạn Thảo Bộ Từ Vựng";
+                DOM.uploadBtn.innerHTML = '<i class="fas fa-cloud-upload-alt mr-2"></i>Lưu Bộ Từ Vựng';
+            }
+        }
+
+        // Start the application
+        DOM.cefrDisplay.textContent = getCefrLevelDescription();
+        setupEventListeners();
+
     </script>
 </body>
 </html>
