@@ -65,33 +65,27 @@
         details[open] > .rule-summary { background-color: rgba(139, 92, 246, 0.1); }
         .rule-details { border-left: 2px solid var(--primary-accent); padding-left: 20px; margin-left: 12px; margin-top: 8px; margin-bottom: 16px; font-size: 0.9em; }
         .level-card { border: 2px solid var(--glass-border); text-align: center; transition: all 0.3s ease; }
-        .level-card.locked { opacity: 0.5; filter: grayscale(80%); }
+        .level-card.locked { opacity: 0.5; filter: grayscale(80%); pointer-events: none; }
         .level-card.passed { border-color: var(--correct-color); background: rgba(34, 197, 94, 0.1); }
         .level-card.active { border-color: var(--primary-accent); box-shadow: 0 0 20px var(--primary-accent-glow); transform: translateY(-5px); }
         .level-card.unlocked:not(.active):hover { border-color: var(--primary-accent); transform: translateY(-5px); }
-        
-        /* --- NEW: Flashcard Styles --- */
         .flashcard-viewer { display: flex; flex-direction: column; height: 70vh; max-width: 800px; margin: 0 auto; }
         .flashcard-main { flex-grow: 1; display: flex; align-items: center; justify-content: center; perspective: 1500px; }
         .flashcard { width: 100%; height: 80%; max-height: 400px; cursor: pointer; position: relative; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(0.25, 1, 0.5, 1); }
         .flashcard.is-flipped { transform: rotateY(180deg); }
-        .flashcard-face {
-            position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 2rem; text-align: center;
-            background: var(--glass-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-            border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        }
+        .flashcard-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; text-align: center; background: var(--glass-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); }
         .flashcard-back { transform: rotateY(180deg); }
         .flashcard-word { font-family: 'Poppins', sans-serif; font-size: clamp(2rem, 8vw, 4rem); font-weight: 700; }
         .flashcard-pronunciation { font-family: 'Inter', sans-serif; color: var(--text-secondary); margin-top: 0.5rem; }
         .flashcard-meaning { font-family: 'Poppins', sans-serif; font-size: clamp(1.5rem, 6vw, 2.5rem); font-weight: 600; }
         .flashcard-example { font-style: italic; color: var(--text-secondary); margin-top: 1.5rem; }
-        .audio-btn {
-            position: absolute; top: 1.5rem; right: 1.5rem; width: 44px; height: 44px; border-radius: 50%;
-            background-color: rgba(255, 255, 255, 0.1); color: var(--text-secondary); cursor: pointer;
-            display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; z-index: 10;
-        }
+        .audio-btn { position: absolute; top: 1.5rem; right: 1.5rem; width: 44px; height: 44px; border-radius: 50%; background-color: rgba(255, 255, 255, 0.1); color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; z-index: 10; }
+        .report-actions { border-top: 1px solid var(--glass-border); margin-top: 1.5rem; padding-top: 1rem; display: flex; gap: 0.75rem; z-index: 10; }
+        .report-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-secondary); padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s ease; }
+        .report-category-group label { display: block; padding: 0.75rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); cursor: pointer; transition: all 0.2s ease; }
+        .report-category-group input:checked + label { background: var(--primary-accent); border-color: var(--primary-accent-glow); color: white; }
+        .report-category-group input { display: none; }
+        #report-comment-input { width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: var(--text-light); margin-top: 1rem; resize: vertical; }
     </style>
 </head>
 <body>
@@ -114,19 +108,16 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, runTransaction, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
-        // --- OGL Background ---
         if (window.OGL) {
             // OGL background rendering code (kept as is)
         }
 
-        // --- NEW ADAPTIVE LEARNING SYSTEM ---
         const App = {
-            state: {}, // Will be initialized in init()
+            state: {},
             DOM: {},
 
-            // --- CONFIGURATION CONSTANTS ---
             CONFIG: {
                 LEVELS: {
                     1: { name: "Nền tảng", tasks: ['MeaningMCQ', 'IPAFill', 'AudioListening'] },
@@ -135,18 +126,17 @@
                     4: { name: "Tư duy Phản biện", tasks: ['InferenceFromScenario', 'MainIdea', 'ParagraphCompletion', 'ArgumentStrengthening', 'ArgumentWeakening', 'TonePurposeAnalysis', 'SentenceRoleAnalysis'] }
                 },
                 RULES: {
-                    UNLOCK_THRESHOLD: 0.6,
-                    SKIP_TRIGGERS: {
-                        2: { accuracy: 0.80, questions: 20, skips: 1 },
-                        3: { accuracy: 0.85, questions: 20, skips: 2 },
-                        4: { accuracy: 0.90, questions: 20, skips: 3 }
+                    UNLOCK_THRESHOLD: 0.9, // Rule 7: 90% to unlock next level
+                    SKIP_TRIGGERS: { // Rule 7
+                        2: { accuracy: 0.80, questions: 20, skips: 2 }, // Hoàn thành 80% L2 -> test L2
+                        3: { accuracy: 0.90, questions: 20, skips: 3 }, // Hoàn thành 90% L3 -> test L3
                     },
-                    PROFICIENCY_TESTS: {
-                        1: { questionCount: 15, passMark: 13 }, // 85%
-                        2: { questionCount: 15, passMark: 12 }, // 80%
-                        3: { questionCount: 15, passMark: 13 }  // 85%
+                    PROFICIENCY_TESTS: { // Rule 2 & 5
+                        1: { passMark: 0.9, maxAttempts: 3 },
+                        2: { passMark: 0.9, maxAttempts: 3 },
+                        3: { passMark: 0.9, maxAttempts: 3 },
                     },
-                    FINAL_TEST_UNLOCK_THRESHOLD: 0.85 // 85% overall progress
+                    FINAL_TEST_UNLOCK_THRESHOLD: 0.8 // Rule 8
                 }
             },
 
@@ -177,34 +167,23 @@
             
             resetState() {
                 this.state = {
-                    ...this.state, // keep db connection
-                    submissionId: null,
-                    studentId: '',
-                    studentName: '',
-                    testData: {},
-                    wordList: [],
+                    ...this.state,
+                    submissionId: null, studentId: '', studentName: '', testData: {}, wordList: [],
                     isSubmitting: false,
                     userProgress: {
                         levels: {
-                            1: { status: 'locked', completedTasks: 0, totalTasks: 0, accuracyTracker: [] },
-                            2: { status: 'locked', completedTasks: 0, totalTasks: 0, accuracyTracker: [] },
-                            3: { status: 'locked', completedTasks: 0, totalTasks: 0, accuracyTracker: [] },
-                            4: { status: 'locked', completedTasks: 0, totalTasks: 0, accuracyTracker: [] },
+                            1: { status: 'locked', completedTasks: new Set(), totalTasks: 0, testAttempts: 0, accuracyTracker: [] },
+                            2: { status: 'locked', completedTasks: new Set(), totalTasks: 0, testAttempts: 0, accuracyTracker: [] },
+                            3: { status: 'locked', completedTasks: new Set(), totalTasks: 0, testAttempts: 0, accuracyTracker: [] },
+                            4: { status: 'locked', completedTasks: new Set(), totalTasks: 0, accuracyTracker: [] },
                         },
+                        totalCompletedTasks: 0,
+                        totalTasksInTest: 0,
                         finalTestTaken: false,
                         finalTestScore: null,
                     },
-                    currentPractice: {
-                        level: null,
-                        items: [],
-                        index: 0,
-                        isTest: false,
-                        correctAnswer: null,
-                    },
-                    currentFlashcard: {
-                        items: [],
-                        index: 0,
-                    }
+                    currentPractice: { level: null, items: [], index: 0, isTest: false, correctAnswer: null },
+                    currentFlashcard: { items: [], index: 0 }
                 };
             },
 
@@ -222,39 +201,36 @@
                     const userDoc = await getDoc(doc(this.state.db, "users", this.state.studentId));
                     this.state.studentName = userDoc.exists() ? userDoc.data().displayName : "Không rõ";
 
-                    // Load or initialize user progress
-                    if (submissionData.adaptiveProgress) {
-                        this.state.userProgress = submissionData.adaptiveProgress;
+                    if (submissionData.adaptiveProgressV2) {
+                        const progress = submissionData.adaptiveProgressV2;
+                        Object.keys(progress.levels).forEach(level => {
+                            progress.levels[level].completedTasks = new Set(progress.levels[level].completedTasks || []);
+                        });
+                        this.state.userProgress = progress;
                     } else {
-                        // First time, calculate total tasks per level
+                        let totalTasks = 0;
                         Object.keys(this.CONFIG.LEVELS).forEach(level => {
                             const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
                             let count = 0;
                             this.state.wordList.forEach(word => {
                                 if (word.generated_tasks) {
                                     tasksForLevel.forEach(taskType => {
-                                        if (this.isTaskAvailable(word, taskType)) {
-                                            count++;
-                                        }
+                                        if (this.isTaskAvailable(word, taskType)) count++;
                                     });
                                 }
                             });
                             this.state.userProgress.levels[level].totalTasks = count;
+                            totalTasks += count;
                         });
+                        this.state.userProgress.totalTasksInTest = totalTasks;
+                        this.state.userProgress.levels[1].status = 'unlocked';
                     }
                     
                     this.DOM.loader.classList.add('hidden');
                     this.DOM.container.classList.remove('hidden');
                     
                     this.renderHeader();
-
-                    // Check if placement test was done
-                    const level1Status = this.state.userProgress.levels[1].status;
-                    if (level1Status === 'locked') {
-                        this.showPlacementTestPrompt();
-                    } else {
-                        this.renderDashboard();
-                    }
+                    this.renderDashboard();
 
                 } catch (error) {
                     this.showModal("Lỗi", "Không thể tải phiên làm bài: " + error.message);
@@ -289,19 +265,31 @@
             async updateFirestoreProgress() {
                 if (!this.state.submissionId) return;
                 try {
+                    const progressToSave = JSON.parse(JSON.stringify(this.state.userProgress));
+                    Object.keys(progressToSave.levels).forEach(level => {
+                        progressToSave.levels[level].completedTasks = Array.from(this.state.userProgress.levels[level].completedTasks);
+                    });
+
                     const submissionRef = doc(this.state.db, 'submissions', this.state.submissionId);
-                    await updateDoc(submissionRef, { adaptiveProgress: this.state.userProgress });
+                    await updateDoc(submissionRef, { adaptiveProgressV2: progressToSave });
                 } catch (error) {
                     console.error("Lỗi khi đồng bộ tiến trình:", error);
                 }
             },
 
             renderHeader() {
+                const { totalCompletedTasks, totalTasksInTest } = this.state.userProgress;
+                const overallProgress = totalTasksInTest > 0 ? (totalCompletedTasks / totalTasksInTest * 100) : 0;
+
                 this.DOM.header.innerHTML = `
                     <div class="glass-panel p-4 flex flex-wrap justify-between items-center gap-4">
                         <div>
                             <h1 class="text-2xl font-bold font-poppins">${this.state.testData.title}</h1>
                             <p class="text-sm text-text-secondary">Học sinh: <span class="font-medium text-text-light">${this.state.studentName}</span></p>
+                        </div>
+                        <div class="w-full sm:w-auto flex-grow sm:flex-grow-0 max-w-xs">
+                            <p class="text-sm text-center font-medium mb-1">Tiến độ tổng quát: ${overallProgress.toFixed(1)}%</p>
+                            <div class="progress-track"><div class="progress-fill" style="width: ${overallProgress.toFixed(1)}%;"></div></div>
                         </div>
                     </div>`;
             },
@@ -309,31 +297,28 @@
             renderDashboard() {
                 this.DOM.main.innerHTML = `
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 fade-in">
-                        <!-- Left Panel: Rules -->
                         <aside class="lg:col-span-1 space-y-6">
                             <div class="glass-panel p-6">
-                                <h2 class="text-xl font-bold font-poppins mb-4">📜 Bảng Quy Tắc</h2>
-                                <div class="space-y-1 text-sm">
-                                    <details open><summary class="rule-summary">Quy tắc 0: Kiểm tra đầu vào</summary><div class="rule-details"><p>Khi bắt đầu, bạn có thể làm bài test để bỏ qua Level 1 nếu đã có kiến thức nền (yêu cầu >= 85%).</p></div></details>
-                                    <details><summary class="rule-summary">Quy tắc 1: Mở khóa Level</summary><div class="rule-details"><p>Hoàn thành <strong>60%</strong> bài tập ở level hiện tại sẽ mở khóa level tiếp theo.</p></div></details>
-                                    <details><summary class="rule-summary">Quy tắc 2: Vượt cấp</summary><div class="rule-details"><p>Đạt hiệu suất cao ở level hiện tại để có cơ hội làm bài test bỏ qua level thấp hơn.</p></div></details>
-                                    <details><summary class="rule-summary">Quy tắc 3: Hoàn thành</summary><div class="rule-details"><p>Vượt qua cả 4 Level để mở khóa <strong>Bài kiểm tra Cuối kỳ</strong>.</p></div></details>
+                                <h2 class="text-xl font-bold font-poppins mb-4">📚 Chế độ Học</h2>
+                                <div class="space-y-3">
+                                    <button id="start-flashcard-btn" class="cta-btn secondary w-full !rounded-lg"><i class="fas fa-clone mr-2"></i>Học bằng Flashcard</button>
+                                    <button id="show-guide-btn" class="cta-btn secondary w-full !rounded-lg"><i class="fas fa-book-open mr-2"></i>Hướng dẫn Dạng bài</button>
                                 </div>
                             </div>
-                             <!-- NEW: Flashcard Section -->
                             <div class="glass-panel p-6">
-                                <h2 class="text-xl font-bold font-poppins mb-4">📚 Chế độ Học</h2>
-                                <button id="start-flashcard-btn" class="cta-btn secondary w-full !rounded-lg"><i class="fas fa-clone mr-2"></i>Học bằng Flashcard</button>
+                                <h2 class="text-xl font-bold font-poppins mb-4">📜 Bảng Quy Tắc</h2>
+                                <div class="space-y-1 text-sm max-h-96 overflow-y-auto pr-2">
+                                    <details><summary class="rule-summary">Quy tắc 0: Kiểm tra đầu vào</summary><div class="rule-details"><p>Bạn có thể làm bài test để bỏ qua Level 1. Số câu hỏi là 25% tổng số câu của level. Yêu cầu pass >= 90%. Tối đa 3 lần làm.</p></div></details>
+                                    <details><summary class="rule-summary">Quy tắc 1: Mở khóa Level</summary><div class="rule-details"><p>Hoàn thành <strong>90%</strong> bài tập ở level hiện tại sẽ mở khóa level tiếp theo.</p></div></details>
+                                    <details><summary class="rule-summary">Quy tắc 2: Vượt cấp</summary><div class="rule-details"><p>Hoàn thành <strong>80%</strong> Level 2 để được làm test vượt cấp Level 2. Hoàn thành <strong>90%</strong> Level 3 để được làm test vượt cấp Level 3. Tối đa 3 lần làm.</p></div></details>
+                                    <details><summary class="rule-summary">Quy tắc 3: Hoàn thành</summary><div class="rule-details"><p>Vượt qua cả 4 Level để mở khóa <strong>Bài kiểm tra Cuối kỳ</strong>. Yêu cầu tiến độ tổng quát >= 80%.</p></div></details>
+                                </div>
                             </div>
                         </aside>
-
-                        <!-- Right Panel: Learning Interface -->
                         <main class="lg:col-span-2 space-y-6">
-                            <div class="glass-panel p-8">
+                            <div class="glass-panel p-6 sm:p-8">
                                 <h2 class="text-2xl font-bold font-poppins mb-6">🏋️‍♀️ Lộ Trình Luyện Tập</h2>
-                                <div id="levels-container" class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                    <!-- Level cards will be rendered here -->
-                                </div>
+                                <div id="levels-container" class="grid grid-cols-1 sm:grid-cols-2 gap-6"></div>
                             </div>
                             <div id="final-test-container" class="glass-panel p-8 text-center"></div>
                         </main>
@@ -343,6 +328,7 @@
                 this.renderFinalTestSection();
 
                 document.getElementById('start-flashcard-btn').addEventListener('click', () => this.startFlashcardSession());
+                document.getElementById('show-guide-btn').addEventListener('click', () => this.renderGuideModal());
             },
             
             renderLevelCards() {
@@ -354,21 +340,25 @@
                     const progress = this.state.userProgress.levels[levelNum];
                     
                     let statusClass = progress.status;
-                    let buttonText = 'Bị khóa';
+                    let buttonText = 'Luyện tập';
                     let buttonDisabled = true;
                     let icon = 'fa-lock';
-                    
+                    let placementTestHTML = '';
+
                     if (progress.status === 'passed') {
                         buttonText = 'Đã qua';
                         icon = 'fa-check-circle text-correct-color';
-                    } else if (progress.status === 'unlocked' || progress.status === 'active') {
+                        buttonDisabled = true; // Cannot practice a passed level
+                    } else if (progress.status === 'unlocked') {
                         statusClass = 'unlocked';
-                        buttonText = 'Luyện tập';
                         buttonDisabled = false;
                         icon = 'fa-play-circle';
+                        if (levelNum === 1 && progress.testAttempts < this.CONFIG.RULES.PROFICIENCY_TESTS[1].maxAttempts) {
+                            placementTestHTML = `<button data-test-level="1" class="cta-btn w-full !rounded-lg mt-3 !text-sm !py-2">Kiểm tra vượt cấp (${progress.testAttempts}/${this.CONFIG.RULES.PROFICIENCY_TESTS[1].maxAttempts})</button>`;
+                        }
                     }
                     
-                    const percent = progress.totalTasks > 0 ? (progress.completedTasks / progress.totalTasks * 100) : 0;
+                    const percent = progress.totalTasks > 0 ? (progress.completedTasks.size / progress.totalTasks * 100) : 0;
 
                     return `
                         <div id="level-card-${levelNum}" class="level-card p-6 rounded-2xl ${statusClass}">
@@ -379,14 +369,19 @@
                             <p class="text-sm text-text-secondary mb-4 text-left">${levelConfig.name}</p>
                             <div class="progress-track mb-4"><div class="progress-fill" style="width: ${percent.toFixed(0)}%;"></div></div>
                             <button data-level="${levelNum}" class="cta-btn secondary w-full !rounded-lg" ${buttonDisabled}>${buttonText}</button>
+                            ${placementTestHTML}
                         </div>
                     `;
                 }).join('');
 
                 container.addEventListener('click', e => {
-                    const button = e.target.closest('button[data-level]');
-                    if (button && !button.disabled) {
-                        this.startPractice(parseInt(button.dataset.level));
+                    const practiceButton = e.target.closest('button[data-level]');
+                    const testButton = e.target.closest('button[data-test-level]');
+                    if (practiceButton && !practiceButton.disabled) {
+                        this.startPractice(parseInt(practiceButton.dataset.level));
+                    }
+                    if (testButton && !testButton.disabled) {
+                        this.runProficiencyTest(parseInt(testButton.dataset.test-level));
                     }
                 });
             },
@@ -394,118 +389,96 @@
             renderFinalTestSection() {
                 const container = document.getElementById('final-test-container');
                 if (!container) return;
-                const allPassed = Object.values(this.state.userProgress.levels).every(p => p.status === 'passed');
+                const { totalCompletedTasks, totalTasksInTest } = this.state.userProgress;
+                const overallProgress = totalTasksInTest > 0 ? (totalCompletedTasks / totalTasksInTest) : 0;
+                const isEligible = overallProgress >= this.CONFIG.RULES.FINAL_TEST_UNLOCK_THRESHOLD;
 
-                if (allPassed) {
+                if (isEligible) {
                     container.innerHTML = `
                         <h3 class="text-xl font-bold font-poppins mb-4">Bài Kiểm Tra Cuối Kỳ</h3>
-                        <p class="text-text-secondary mb-6">Bạn đã hoàn thành tất cả các level. Hãy bắt đầu bài kiểm tra cuối cùng để hoàn tất khóa học!</p>
+                        <p class="text-text-secondary mb-6">Bạn đã đủ điều kiện. Hãy bắt đầu bài kiểm tra cuối cùng để hoàn tất!</p>
                         <button id="start-final-test-btn" class="cta-btn danger w-full max-w-xs mx-auto" ${this.state.userProgress.finalTestTaken ? 'disabled' : ''}>
                             <i class="fas fa-graduation-cap mr-2"></i>
                             ${this.state.userProgress.finalTestTaken ? `Đã làm (Điểm: ${this.state.userProgress.finalTestScore}%)` : 'Bắt đầu KT Cuối Kỳ'}
                         </button>
                     `;
-                    // Add event listener for the final test button
                 } else {
-                    container.innerHTML = `<p class="text-text-secondary"><i class="fas fa-lock mr-2"></i>Hoàn thành tất cả 4 level để mở khóa bài kiểm tra cuối cùng.</p>`;
+                    container.innerHTML = `<p class="text-text-secondary"><i class="fas fa-lock mr-2"></i>Hoàn thành ${this.CONFIG.RULES.FINAL_TEST_UNLOCK_THRESHOLD * 100}% tiến độ tổng quát để mở khóa.</p>`;
                 }
             },
 
-            showPlacementTestPrompt() {
-                this.showModal(
-                    "Chào mừng bạn!",
-                    "Để tối ưu hóa lộ trình, bạn có muốn làm một bài kiểm tra ngắn để xác định trình độ không? Nếu vượt qua, bạn có thể bỏ qua Level 1.",
-                    true,
-                    () => this.runProficiencyTest(1, true), // onConfirm
-                    () => { // onCancel
-                        this.state.userProgress.levels[1].status = 'unlocked';
-                        this.renderDashboard();
-                        this.updateFirestoreProgress();
-                    },
-                    "Kiểm tra ngay",
-                    "Bắt đầu từ Level 1"
-                );
-            },
-
-            async runProficiencyTest(levelToSkip, isPlacementTest = false) {
-                const testConfig = this.CONFIG.RULES.PROFICIENCY_TESTS[levelToSkip];
-                const items = this.shuffleArray(this.state.wordList).slice(0, testConfig.questionCount);
-                const result = window.prompt(`Bài test Level ${levelToSkip} (${testConfig.questionCount} câu).\nNhập số câu đúng của bạn để mô phỏng:`, testConfig.passMark);
-                const score = parseInt(result, 10) || 0;
-
-                if (score >= testConfig.passMark) {
-                    this.state.userProgress.levels[levelToSkip].status = 'passed';
-                    this.showModal("Thành công!", `Bạn đã vượt qua bài kiểm tra và bỏ qua Level ${levelToSkip}.`);
-                    
-                    if (this.state.userProgress.levels[levelToSkip + 1]) {
-                        this.state.userProgress.levels[levelToSkip + 1].status = 'unlocked';
-                    }
-                } else {
-                    this.showModal("Không sao cả!", "Hãy bắt đầu từ level này để xây dựng nền tảng vững chắc.");
-                    if (isPlacementTest) {
-                         this.state.userProgress.levels[levelToSkip].status = 'unlocked';
-                    }
+            async runProficiencyTest(levelToTest) {
+                const progress = this.state.userProgress.levels[levelToTest];
+                if (progress.testAttempts >= this.CONFIG.RULES.PROFICIENCY_TESTS[levelToTest].maxAttempts) {
+                    this.showModal("Thông báo", "Bạn đã hết số lần làm bài kiểm tra cho level này.");
+                    return;
                 }
                 
-                await this.updateFirestoreProgress();
-                this.renderDashboard();
-            },
-
-            startPractice(levelNum) {
-                this.state.currentPractice.level = levelNum;
-                this.state.currentPractice.index = 0;
-                
-                const tasksForLevel = this.CONFIG.LEVELS[levelNum].tasks;
-                
-                let practiceItems = [];
+                const tasksForLevel = this.CONFIG.LEVELS[levelToTest].tasks;
+                let allLevelTasks = [];
                 this.state.wordList.forEach(word => {
                     tasksForLevel.forEach(taskType => {
                         if (this.isTaskAvailable(word, taskType)) {
-                            const taskUID = `${word.id}::${taskType}`;
-                            practiceItems.push({ ...word, exerciseType: taskType, taskUID });
+                            allLevelTasks.push({ ...word, exerciseType: taskType, taskUID: `${word.id}::${taskType}` });
                         }
                     });
                 });
 
-                this.state.currentPractice.items = this.shuffleArray(practiceItems).slice(0, 15);
-                if (this.state.currentPractice.items.length === 0) {
-                    this.showModal("Thông báo", "Không có bài tập nào cho level này. Có thể bạn đã hoàn thành hết rồi!");
-                    return;
-                }
+                const numQuestions = Math.ceil(allLevelTasks.length * 0.25);
+                this.state.currentPractice.items = this.shuffleArray(allLevelTasks).slice(0, numQuestions);
+                this.state.currentPractice.level = levelToTest;
+                this.state.currentPractice.index = 0;
+                this.state.currentPractice.isTest = true;
+                
+                progress.testAttempts++;
+                await this.updateFirestoreProgress();
                 this.renderPracticeView();
             },
-
+            
+            // --- ALL RENDER AND UTILITY FUNCTIONS (INCLUDING FLASHCARD, MODALS, ETC.) ---
             renderPracticeView() {
-                const { items, index, level } = this.state.currentPractice;
+                const { items, index, level, isTest } = this.state.currentPractice;
                 const total = items.length;
+                
                 if (index >= total) {
-                    this.renderDashboard();
+                    isTest ? this.renderTestSummary() : this.renderDashboard();
                     return;
                 }
+                
                 const currentItem = items[index];
                 const renderFunction = this[`get${currentItem.exerciseType}HTML`];
                 
+                const title = isTest ? `Kiểm tra Level ${level}` : `Level ${level} - Luyện tập`;
+
                 this.DOM.main.innerHTML = `
                     <div class="glass-panel p-4 sm:p-6 fade-in">
                         <div class="flex justify-between items-center mb-4">
-                            <h2 class="font-bold text-primary-accent">Level ${level} - Luyện tập</h2>
+                            <h2 class="font-bold text-primary-accent">${title}</h2>
                             <p class="text-sm font-medium text-text-secondary">Câu ${index + 1} / ${total}</p>
                         </div>
                         <div id="question-container" class="min-h-[300px]">
                             ${renderFunction ? renderFunction.call(this, currentItem) : 'Lỗi: Không thể render câu hỏi.'}
                         </div>
                         <div id="feedback-container" class="mt-4"></div>
-                         <div class="mt-6 flex justify-end">
+                        <div class="flex justify-between items-center mt-6">
+                            <div class="report-actions">
+                                <button class="report-btn" data-report-type="error"><i class="fas fa-bug mr-2"></i>Báo lỗi</button>
+                                <button class="report-btn" data-report-type="explanation"><i class="fas fa-question-circle mr-2"></i>Cần giải thích</button>
+                            </div>
                             <button id="exit-practice-btn" class="cta-btn secondary !py-2 !px-4"><i class="fas fa-times mr-2"></i> Thoát</button>
                         </div>
                     </div>
                 `;
                 document.getElementById('exit-practice-btn').addEventListener('click', () => this.renderDashboard());
+                this.DOM.main.querySelector('.report-actions').addEventListener('click', e => {
+                    const button = e.target.closest('button');
+                    if (button && button.dataset.reportType) {
+                        this.handleReportSubmission(button.dataset.reportType);
+                    }
+                });
                 this.attachPracticeEventListeners(currentItem, document.getElementById('question-container'));
             },
 
-            // --- ALL RENDER AND UTILITY FUNCTIONS ---
-            
             getMeaningMCQHTML(item) {
                 const tasks = item.generated_tasks.meaning_mcq;
                 if (!tasks || !tasks.distractors_vi || !tasks.distractors_en) { return '<div>Không có đủ dữ liệu cho dạng bài tập này.</div>'; }
@@ -675,11 +648,14 @@
                 const levelProgress = this.state.userProgress.levels[this.state.currentPractice.level];
                 
                 if (isCorrect) {
-                    levelProgress.completedTasks++;
+                    if (!levelProgress.completedTasks.has(item.taskUID)) {
+                        levelProgress.completedTasks.add(item.taskUID);
+                        this.state.userProgress.totalCompletedTasks++;
+                    }
                 }
 
                 levelProgress.accuracyTracker.push(isCorrect ? 1 : 0);
-                if (levelProgress.accuracyTracker.length > this.CONFIG.RULES.SKIP_TRIGGERS[this.state.currentPractice.level]?.questions) {
+                if (levelProgress.accuracyTracker.length > 20) { // Keep last 20 answers
                     levelProgress.accuracyTracker.shift();
                 }
 
@@ -750,7 +726,6 @@
                 }
             },
             
-            // --- NEW: Flashcard Functions ---
             startFlashcardSession() {
                 this.state.currentFlashcard.items = this.shuffleArray([...this.state.wordList]);
                 if (this.state.currentFlashcard.items.length === 0) {
@@ -823,6 +798,81 @@
                 if (!url) return;
                 const audio = new Audio(url);
                 audio.play().catch(e => console.error("Audio play failed:", e));
+            },
+
+            async handleReportSubmission(reportType) {
+                const item = this.state.currentPractice.items[this.state.currentPractice.index];
+                if (!item) return;
+
+                const result = await this.showReportModal(reportType);
+                if (!result.confirmed) return;
+
+                const issueId = `${this.state.testData.id}_${item.id}`;
+                const issueRef = doc(this.state.db, "test_issues", issueId);
+                
+                const questionContainer = this.DOM.main.querySelector('#question-container');
+                const renderedQuestionHTML = questionContainer ? questionContainer.innerHTML : '<em>Không thể tải nội dung câu hỏi.</em>';
+
+                try {
+                    await runTransaction(this.state.db, async (transaction) => {
+                        const issueDoc = await transaction.get(issueRef);
+                        const reporterInfo = {
+                            studentId: this.state.studentId, studentName: this.state.studentName,
+                            comment: result.comment, category: result.category, reportedAt: new Date() 
+                        };
+
+                        if (!issueDoc.exists()) {
+                            const newIssueData = {
+                                testId: this.state.testData.id, testTitle: this.state.testData.title,
+                                itemId: item.id, questionData: item, renderedQuestionHTML: renderedQuestionHTML,
+                                status: 'open', lastReportedAt: serverTimestamp(),
+                                errorReportsCount: reportType === 'error' ? 1 : 0,
+                                explanationRequestsCount: reportType === 'explanation' ? 1 : 0,
+                                errorReporters: reportType === 'error' ? [reporterInfo] : [],
+                                explanationRequesters: reportType === 'explanation' ? [reporterInfo] : [],
+                            };
+                            transaction.set(issueRef, newIssueData);
+                        } else {
+                            if (reportType === 'error') {
+                                transaction.update(issueRef, {
+                                    errorReportsCount: (issueDoc.data().errorReportsCount || 0) + 1,
+                                    errorReporters: arrayUnion(reporterInfo), lastReportedAt: serverTimestamp(), status: 'open'
+                                });
+                            } else {
+                                transaction.update(issueRef, {
+                                    explanationRequestsCount: (issueDoc.data().explanationRequestsCount || 0) + 1,
+                                    explanationRequesters: arrayUnion(reporterInfo), lastReportedAt: serverTimestamp(), status: 'open'
+                                });
+                            }
+                        }
+                    });
+                    this.showModal("Thành công", "Báo cáo của bạn đã được gửi đến giáo viên.");
+                } catch (error) {
+                    console.error("Lỗi khi gửi báo cáo:", error);
+                    this.showModal("Lỗi", "Không thể gửi báo cáo. Vui lòng thử lại.");
+                }
+            },
+
+            showReportModal(reportType) {
+                return new Promise(resolve => {
+                    const isError = reportType === 'error'; const title = isError ? 'Báo cáo lỗi đề' : 'Yêu cầu giải thích';
+                    let contentHTML = isError ? `<p class="text-text-secondary mb-4">Vui lòng chọn loại lỗi bạn gặp phải:</p><div class="report-category-group space-y-2"><div><input type="radio" name="error-category" value="Lỗi chính tả" id="cat-typo"><label for="cat-typo">Lỗi chính tả</label></div><div><input type="radio" name="error-category" value="Đáp án đúng bị sai" id="cat-wrong-answer"><label for="cat-wrong-answer">Đáp án đúng bị sai</label></div><div><input type="radio" name="error-category" value="Câu hỏi không rõ ràng" id="cat-unclear"><label for="cat-unclear">Câu hỏi không rõ ràng</label></div><div><input type="radio" name="error-category" value="Lỗi kỹ thuật" id="cat-tech"><label for="cat-tech">Lỗi kỹ thuật</label></div></div>` : `<p class="text-text-secondary mb-4">Ghi chú của bạn sẽ được gửi tới giáo viên để được giải đáp.</p>`;
+                    contentHTML += `<textarea id="report-comment-input" placeholder="Thêm ghi chú (không bắt buộc)..." rows="3"></textarea>`;
+                    
+                    this.showModal(
+                        title, 
+                        contentHTML, 
+                        true, 
+                        () => {
+                            const selectedCategory = isError ? (document.querySelector('input[name="error-category"]:checked')?.value || 'Khác') : null;
+                            const comment = document.getElementById('report-comment-input').value;
+                            resolve({ confirmed: true, category: selectedCategory, comment: comment });
+                        },
+                        () => resolve({ confirmed: false }),
+                        "Gửi",
+                        "Hủy"
+                    );
+                });
             }
         };
 
