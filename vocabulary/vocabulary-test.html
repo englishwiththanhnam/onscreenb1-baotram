@@ -17,10 +17,10 @@
 
     <style>
         :root {
-            --bg-dark: #0f172a; /* Darker blue */
+            --bg-dark: #0f172a;
             --text-light: #e2e8f0;
             --text-secondary: #94a3b8;
-            --glass-bg: rgba(30, 41, 59, 0.5); /* Slate color */
+            --glass-bg: rgba(30, 41, 59, 0.5);
             --glass-border: rgba(255, 255, 255, 0.1);
             --primary-accent: #8b5cf6;
             --primary-accent-glow: rgba(139, 92, 246, 0.5);
@@ -28,17 +28,21 @@
             --incorrect-color: #ef4444;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { height: 100%; width: 100%; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-dark); color: var(--text-light); overflow: hidden; }
+        html { scroll-behavior: smooth; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-dark); 
+            color: var(--text-light); 
+            overflow-x: hidden; 
+            overflow-y: auto; /* FIX: Allow vertical scrolling */
+        }
         
-        /* New Background Style */
         .background-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: hidden; }
         .shape { position: absolute; border-radius: 50%; filter: blur(150px); opacity: 0.3; }
         .shape1 { width: 40vw; height: 40vw; max-width: 500px; max-height: 500px; background: #a855f7; top: -15%; left: -10%; animation: float 28s infinite alternate ease-in-out; }
         .shape2 { width: 35vw; height: 35vw; max-width: 450px; max-height: 450px; background: #22d3ee; bottom: -15%; right: -10%; animation: float 32s infinite alternate ease-in-out; }
         @keyframes float { from { transform: translateY(20px) rotate(0deg); } to { transform: translateY(-20px) rotate(15deg); } }
 
-        .main-container { position: relative; z-index: 2; }
         .fade-in { animation: fadeIn 0.5s ease-in-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .glass-panel { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); }
@@ -71,6 +75,11 @@
         .report-category-group input:checked + label { background: var(--primary-accent); border-color: var(--primary-accent-glow); color: white; }
         .report-category-group input { display: none; }
         #report-comment-input { width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: var(--text-light); margin-top: 1rem; resize: vertical; }
+        
+        /* Styles for Guide Modal */
+        .guide-section h3 { font-family: 'Poppins', sans-serif; font-size: 1.5rem; font-weight: 700; color: var(--primary-accent); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary-accent); }
+        .guide-rule { background: rgba(255, 255, 255, 0.05); padding: 1rem; border-radius: 12px; border-left: 4px solid var(--primary-accent); }
+        .task-example-card { background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 16px; padding: 1.5rem; }
     </style>
 </head>
 <body>
@@ -88,7 +97,7 @@
     </div>
     <div id="modal-container"></div>
     
-    <div id="app-container" class="max-w-7xl mx-auto p-4 sm:p-8 hidden">
+    <div id="app-container" class="max-w-7xl mx-auto p-4 sm:p-8">
         <header id="app-header" class="mb-8"></header>
         <main id="app-main"></main>
     </div>
@@ -97,7 +106,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc, runTransaction, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
-        // OGL Particle Effect
         if (window.OGL) {
             const { Renderer, Camera, Program, Geometry, Mesh, Transform } = window.OGL;
             const container = document.getElementById('ogl-canvas-back');
@@ -114,7 +122,7 @@
                     uniforms: { uTime: { value: 0 }, uSpread: { value: 10 }, uBaseSize: { value: 350 } },
                     transparent: true, depthTest: false
                 });
-                const count = 200; // Reduced particle count
+                const count = 200;
                 const positions = new Float32Array(count * 3);
                 const randoms = new Float32Array(count * 4);
                 const colors = new Float32Array(count * 3);
@@ -197,7 +205,6 @@
                 this.state.submissionId = submissionId;
                 await this.loadData(submissionId);
 
-                // Auto-save on exit
                 window.addEventListener('beforeunload', () => {
                     if (this.state.submissionId) {
                         this.updateFirestoreProgress();
@@ -240,7 +247,6 @@
                     const userDoc = await getDoc(doc(this.db, "users", this.state.studentId));
                     this.state.studentName = userDoc.exists() ? userDoc.data().displayName : "Không rõ";
 
-                    // Recalculate total tasks every time
                     let totalTasks = 0;
                     Object.keys(this.CONFIG.LEVELS).forEach(level => {
                         const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
@@ -257,7 +263,6 @@
                     });
                     this.state.userProgress.totalTasksInTest = totalTasks;
 
-                    // Load saved progress
                     if (submissionData.adaptiveProgressV2) {
                         const progress = submissionData.adaptiveProgressV2;
                         if (!progress.levels) progress.levels = this.state.userProgress.levels;
@@ -341,7 +346,6 @@
                 return count;
             },
 
-            // --- UI RENDERING ---
             renderHeader(showBackButton = false) {
                 this.state.userProgress.totalCompletedTasks = this.calculateTotalCompletedTasks();
                 const { totalCompletedTasks, totalTasksInTest } = this.state.userProgress;
@@ -367,7 +371,7 @@
                 document.getElementById('header-back-btn')?.addEventListener('click', async () => {
                     await this.updateFirestoreProgress();
                     this.renderDashboard();
-                    this.renderHeader(false); // Re-render header without back button
+                    this.renderHeader(false);
                 });
             },
 
@@ -376,14 +380,12 @@
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 fade-in">
                         <aside class="lg:col-span-1 space-y-6">
                             <div class="glass-panel p-6">
-                                <h2 class="text-xl font-bold font-poppins mb-4">📚 Chế độ Học</h2>
+                                <h2 class="text-xl font-bold font-poppins mb-4">📚 Bắt đầu</h2>
                                 <div class="space-y-3">
-                                    <button id="start-flashcard-btn" class="cta-btn secondary w-full !rounded-lg"><i class="fas fa-clone mr-2"></i>Học bằng Flashcard</button>
+                                    <button id="show-guide-btn" class="cta-btn secondary w-full !rounded-lg"><i class="fas fa-book-open mr-2"></i>Xem Hướng Dẫn & Quy Tắc</button>
+                                    <button data-flashcard-type="word" class="cta-btn secondary w-full !rounded-lg"><i class="fas fa-clone mr-2"></i>Flashcard Từ Vựng</button>
+                                    <button data-flashcard-type="structure" class="cta-btn secondary w-full !rounded-lg" disabled><i class="fas fa-sitemap mr-2"></i>Flashcard Cấu Trúc</button>
                                 </div>
-                            </div>
-                            <div class="glass-panel p-6">
-                                <h2 class="text-xl font-bold font-poppins mb-4">📖 Hướng dẫn Dạng bài</h2>
-                                <div id="practice-guide-buttons" class="flex flex-wrap gap-3"></div>
                             </div>
                         </aside>
                         <main class="lg:col-span-2 space-y-6">
@@ -397,9 +399,11 @@
                 `;
                 this.renderLevelCards();
                 this.renderFinalTestSection();
-                this.renderPracticeGuide();
-
-                document.getElementById('start-flashcard-btn').addEventListener('click', () => this.startFlashcardSession());
+                
+                document.getElementById('show-guide-btn').addEventListener('click', () => this.renderGuideModal());
+                this.DOM.main.querySelectorAll('button[data-flashcard-type]').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.startFlashcardSession(e.currentTarget.dataset.flashcardType));
+                });
             },
             
             renderLevelCards() {
@@ -491,7 +495,6 @@
                 }
             },
             
-            // --- PRACTICE & TEST LOGIC ---
             async checkLevelUp(level) {
                 const progress = this.state.userProgress.levels[level];
                 const nextLevelKey = level + 1;
@@ -511,7 +514,7 @@
             },
 
             startPractice(level) {
-                this.renderHeader(true); // Show back button
+                this.renderHeader(true);
                 const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
                 const completedTasks = this.state.userProgress.levels[level].completedTasks;
                 let practiceItems = [];
@@ -526,7 +529,10 @@
                 });
 
                 if (practiceItems.length === 0) {
-                    this.showModal("Hoàn thành!", "Bạn đã làm hết các bài tập cho level này. Hãy thử làm bài kiểm tra vượt cấp nếu có.", false, () => this.renderHeader(false));
+                    this.showModal("Hoàn thành!", "Bạn đã làm hết các bài tập cho level này. Hãy thử làm bài kiểm tra vượt cấp nếu có.", false, () => {
+                        this.renderDashboard();
+                        this.renderHeader(false);
+                    });
                     return;
                 }
 
@@ -542,7 +548,7 @@
             },
 
             async runProficiencyTest(levelToTest) {
-                this.renderHeader(true); // Show back button
+                this.renderHeader(true);
                 const progress = this.state.userProgress.levels[levelToTest];
                 const testConfig = this.CONFIG.RULES.PROFICIENCY_TESTS[levelToTest];
                 if (progress.testAttempts >= testConfig.maxAttempts) {
@@ -581,7 +587,7 @@
             },
 
             startFinalTest() {
-                this.renderHeader(true); // Show back button
+                this.renderHeader(true);
                 let allTasks = [];
                 Object.keys(this.CONFIG.LEVELS).forEach(level => {
                     const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
@@ -669,7 +675,6 @@
                     message += `<br>Level ${level} đã được đánh dấu là hoàn thành. Level tiếp theo đã được mở khóa.`;
                     levelProgress.status = 'passed';
                     
-                    // Add all tasks from this level to completedTasks
                     const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
                     this.state.wordList.forEach(word => {
                         tasksForLevel.forEach(taskType => {
@@ -873,7 +878,6 @@
                     } else {
                         if (levelProgress && !levelProgress.completedTasks.has(item.taskUID)) {
                             levelProgress.completedTasks.add(item.taskUID);
-                            this.state.userProgress.totalCompletedTasks++;
                         }
                     }
                 }
@@ -917,13 +921,12 @@
                 }
             },
             
-            // --- UTILITIES & HELPERS ---
             shuffleArray(array) {
                 for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [array[i], array[j]] = [array[j], array[i]]; }
                 return array;
             },
 
-            showModal(title, message, showCancel = false, onConfirm = null, onCancel = null, confirmText = 'Xác nhận', cancelText = 'Hủy') {
+            showModal(title, message, showCancel = false, onConfirm = null, onCancel = null, confirmText = 'Xác nhận', cancelText = 'Hủy', modalClass = 'max-w-md') {
                 const modalId = 'main-modal';
                 const existingModal = document.getElementById(modalId);
                 if (existingModal) existingModal.remove();
@@ -937,7 +940,7 @@
                     : `<button id="modal-confirm-btn" class="cta-btn w-full">${confirmText}</button>`;
                 
                 modalContainer.innerHTML = `
-                    <div class="glass-panel p-6 sm:p-8 w-full max-w-md fade-in max-h-[90vh] overflow-y-auto">
+                    <div class="glass-panel p-6 sm:p-8 w-full ${modalClass} fade-in max-h-[90vh] overflow-y-auto">
                         <h3 class="text-xl font-bold font-poppins mb-4 text-left">${title}</h3>
                         <div class="text-text-secondary mb-6">${message}</div>
                         <div class="flex gap-4 justify-end mt-8">${buttonsHTML}</div>
@@ -951,21 +954,24 @@
                 const closeModal = () => modalContainer.remove();
                 
                 confirmBtn.onclick = () => {
-                    closeModal();
                     if (onConfirm) onConfirm();
+                    closeModal();
                 };
                 
                 if (cancelBtn) {
                     cancelBtn.onclick = () => {
-                        closeModal();
                         if (onCancel) onCancel();
+                        closeModal();
                     };
                 }
             },
 
-            // --- FLASHCARD METHODS ---
-            startFlashcardSession() {
-                this.renderHeader(true); // Show back button
+            startFlashcardSession(type) {
+                if (type === 'structure') {
+                    this.showModal("Tính năng sắp ra mắt", "Học flashcard cho cấu trúc câu hiện đang được phát triển. Vui lòng quay lại sau.");
+                    return;
+                }
+                this.renderHeader(true);
                 this.state.currentFlashcard.items = this.shuffleArray([...this.state.wordList]);
                 if (this.state.currentFlashcard.items.length === 0) {
                     this.showModal("Thông báo", "Không có từ vựng để học bằng flashcard.");
@@ -978,12 +984,12 @@
             renderFlashcardViewer() {
                 this.DOM.main.innerHTML = `
                     <div class="glass-panel p-4 sm:p-6 fade-in">
-                        <div class="flashcard-viewer">
+                        <div class="flashcard-viewer" style="height: 70vh; max-width: 800px; margin: 0 auto;">
                             <div class="flex justify-end items-center mb-4">
                                 <div id="card-counter" class="font-semibold text-text-secondary"></div>
                             </div>
-                            <div class="flashcard-main">
-                                <div class="flashcard" id="flashcard"></div>
+                            <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; perspective: 1500px;">
+                                <div class="flashcard" id="flashcard" style="width: 100%; height: 80%; max-height: 400px; cursor: pointer; position: relative; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(0.25, 1, 0.5, 1);"></div>
                             </div>
                             <div class="flashcard-nav flex justify-between items-center p-4">
                                 <button id="prev-card-btn" class="cta-btn secondary !rounded-full !w-14 !h-14 text-xl"><i class="fas fa-arrow-left"></i></button>
@@ -1007,10 +1013,10 @@
                 
                 setTimeout(() => {
                     const audioBtnHTML = item.audioUrl ? `<button class="audio-btn" data-audio-url="${item.audioUrl}"><i class="fas fa-volume-up"></i></button>` : '';
-                    const frontHTML = `${audioBtnHTML}<div class="flashcard-word">${item.word}</div>`;
-                    const backHTML = `${audioBtnHTML}<div class="flashcard-meaning">${item.meaning}</div><p class="flashcard-pronunciation">${item.pronunciation || ''} <span class="mx-2">&bull;</span> ${item.type || ''}</p><p class="flashcard-example">"${item.generated_tasks?.basic_example || ''}"</p>`;
+                    const frontHTML = `${audioBtnHTML}<div class="flashcard-word" style="font-family: 'Poppins', sans-serif; font-size: clamp(2rem, 8vw, 4rem); font-weight: 700;">${item.word}</div>`;
+                    const backHTML = `${audioBtnHTML}<div class="flashcard-meaning" style="font-family: 'Poppins', sans-serif; font-size: clamp(1.5rem, 6vw, 2.5rem); font-weight: 600;">${item.meaning}</div><p class="flashcard-pronunciation" style="font-family: 'Inter', sans-serif; color: var(--text-secondary); margin-top: 0.5rem;">${item.pronunciation || ''} <span class="mx-2">&bull;</span> ${item.type || ''}</p><p class="flashcard-example" style="font-style: italic; color: var(--text-secondary); margin-top: 1.5rem;">"${item.generated_tasks?.basic_example || ''}"</p>`;
                     
-                    card.innerHTML = `<div class="flashcard-face flashcard-front">${frontHTML}</div><div class="flashcard-face flashcard-back">${backHTML}</div>`;
+                    card.innerHTML = `<div class="flashcard-face">${frontHTML}</div><div class="flashcard-face" style="transform: rotateY(180deg);">${backHTML}</div>`;
                     
                     card.querySelectorAll('.audio-btn').forEach(btn => {
                         btn.addEventListener('click', (e) => {
@@ -1018,6 +1024,7 @@
                             this.playAudio(e.currentTarget.dataset.audioUrl);
                         });
                     });
+                    card.addEventListener('click', e => { if (!e.target.closest('.audio-btn')) card.classList.toggle('is-flipped'); });
                 }, 150);
                 
                 document.getElementById('card-counter').textContent = `${index + 1} / ${items.length}`;
@@ -1036,7 +1043,6 @@
                 audio.play().catch(e => console.error("Audio play failed:", e));
             },
 
-            // --- REPORTING METHODS ---
             async handleReportSubmission(reportType) {
                 const item = this.state.currentPractice.items[this.state.currentPractice.index];
                 if (!item) return;
@@ -1108,7 +1114,6 @@
                 });
             },
             
-            // --- GUIDE VIEW METHODS ---
             renderPracticeGuide() {
                 const guideContainer = document.getElementById('practice-guide-buttons');
                 const exerciseTypes = [
@@ -1140,12 +1145,43 @@
                 guideContainer.addEventListener('click', e => {
                     const button = e.target.closest('button');
                     if (button && button.dataset.guideType) {
-                        this.renderGuideModal(button.dataset.guideType);
+                        this.renderGuideExampleModal(button.dataset.guideType);
                     }
                 });
             },
 
-            renderGuideModal(exerciseType) {
+            renderGuideModal() {
+                const rules = this.CONFIG.RULES;
+                const message = `
+                    <div class="space-y-8 text-left">
+                        <div class="guide-section">
+                            <h3><i class="fas fa-scroll mr-3"></i>Quy Tắc Chung</h3>
+                            <div class="space-y-4">
+                                <div class="guide-rule">
+                                    <h4 class="font-bold text-lg text-light">Mở Khóa Level</h4>
+                                    <p class="text-text-secondary">Hoàn thành <strong class="text-white">${rules.UNLOCK_THRESHOLD * 100}%</strong> số bài tập của một level để tự động mở khóa level tiếp theo.</p>
+                                </div>
+                                <div class="guide-rule">
+                                    <h4 class="font-bold text-lg text-light">Kiểm Tra Vượt Cấp</h4>
+                                    <p class="text-text-secondary">Yêu cầu để qua là <strong class="text-white">${rules.PROFICIENCY_TESTS[1].passMark * 100}%</strong>. Bạn có tối đa <strong class="text-white">${rules.PROFICIENCY_TESTS[1].maxAttempts}</strong> lần thử cho mỗi level.</p>
+                                    <ul class="list-disc list-inside text-text-secondary mt-2 space-y-1">
+                                        <li><strong class="text-white">Level 1:</strong> Luôn có sẵn.</li>
+                                        <li><strong class="text-white">Level 2:</strong> Mở khóa khi hoàn thành <strong class="text-white">${rules.PROFICIENCY_TEST_UNLOCK[2] * 100}%</strong> bài tập Level 2.</li>
+                                        <li><strong class="text-white">Level 3:</strong> Mở khóa khi hoàn thành <strong class="text-white">${rules.PROFICIENCY_TEST_UNLOCK[3] * 100}%</strong> bài tập Level 3.</li>
+                                    </ul>
+                                </div>
+                                <div class="guide-rule">
+                                    <h4 class="font-bold text-lg text-light">Bài Kiểm Tra Cuối Kỳ</h4>
+                                    <p class="text-text-secondary">Mở khóa khi tiến độ tổng quát đạt <strong class="text-white">${rules.FINAL_TEST_UNLOCK_THRESHOLD * 100}%</strong>.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                this.showModal("Hướng Dẫn & Quy Tắc", message, false, null, null, 'Đã hiểu', null, 'max-w-4xl');
+            },
+
+            renderGuideExampleModal(exerciseType) {
                 const exerciseInfo = {
                     'MeaningMCQ': { name: 'Meaning MCQ', desc: 'Chọn đúng nghĩa tiếng Việt của từ đã cho.' },
                     'WordFamilyMCQ': { name: 'Word Family', desc: 'Chọn dạng từ đúng (danh từ, động từ, tính từ...) để hoàn thành câu.' },
@@ -1188,7 +1224,7 @@
                         <div id="guide-question-container">${exampleHTML}</div>
                         <div id="guide-feedback-container" class="mt-4"></div>
                     </div>`,
-                    false, null, null, 'Đóng'
+                    false, null, null, 'Đóng', null, 'max-w-2xl'
                 );
                 
                 const guideContainer = document.getElementById('guide-question-container');
