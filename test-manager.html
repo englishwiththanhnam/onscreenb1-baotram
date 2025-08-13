@@ -116,6 +116,8 @@
         .question-preview-container .answer-option { background: #f3f4f6; border-color: #d1d5db; color: #374151; }
         .question-preview-container .token-area { border-color: #9ca3af; }
         .question-preview-container .word-token { background: #8b5cf6; color: white; }
+        .progress-bar { background-color: rgba(0,0,0,0.1); border-radius: 9999px; height: 6px; overflow: hidden; }
+        .progress-bar-fill { background-color: var(--primary-accent); height: 100%; transition: width 0.4s ease; }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -539,10 +541,9 @@
                     contentHTML += `
                         <div class="p-4 rounded-xl bg-white/40 border border-white/60 flex justify-between items-center">
                             <div>
-                                <p class="font-semibold">${issue.questionData.word || issue.questionData.phrase} <span class="text-sm text-gray-500">(${issue.questionData.itemType})</span></p>
+                                <p class="font-semibold">${issue.itemWord || issue.questionData?.word || 'Không rõ'} <span class="text-sm text-gray-500">(${issue.questionType})</span></p>
                                 <div class="flex gap-4 mt-1 text-sm">
-                                    <span class="font-semibold text-red-600">${issue.errorReportsCount} Báo lỗi</span>
-                                    <span class="font-semibold text-blue-600">${issue.explanationRequestsCount} Cần giải thích</span>
+                                    <span class="font-semibold text-red-600">${issue.reports?.length || 0} báo cáo</span>
                                 </div>
                             </div>
                             <div class="flex items-center gap-4">
@@ -562,20 +563,11 @@
 
             let detailsHTML = `<h4 class="font-bold text-lg mb-2">Câu hỏi học sinh đã thấy:</h4><div class="p-3 bg-indigo-100 rounded-lg text-gray-800 question-preview-container">${issue.renderedQuestionHTML}</div>`;
 
-            if (issue.errorReporters && issue.errorReporters.length > 0) {
-                detailsHTML += `<h4 class="font-bold text-lg mt-4 mb-2">Danh sách báo lỗi (${issue.errorReportsCount}):</h4><div class="space-y-2 max-h-40 overflow-y-auto p-2 bg-red-50 rounded-lg">`;
-                issue.errorReporters.forEach(r => {
+            if (issue.reports && issue.reports.length > 0) {
+                detailsHTML += `<h4 class="font-bold text-lg mt-4 mb-2">Danh sách báo cáo (${issue.reports.length}):</h4><div class="space-y-2 max-h-40 overflow-y-auto p-2 bg-red-50 rounded-lg">`;
+                issue.reports.forEach(r => {
                     const reportedDate = r.reportedAt ? new Date(r.reportedAt.seconds * 1000).toLocaleString('vi-VN') : '';
                     detailsHTML += `<div class="text-sm"><strong class="text-red-800">${r.studentName}</strong> (${reportedDate}): ${r.category} <em class="text-gray-600">(${r.comment || 'không có ghi chú'})</em></div>`;
-                });
-                detailsHTML += `</div>`;
-            }
-
-            if (issue.explanationRequesters && issue.explanationRequesters.length > 0) {
-                 detailsHTML += `<h4 class="font-bold text-lg mt-4 mb-2">Danh sách cần giải thích (${issue.explanationRequestsCount}):</h4><div class="space-y-2 max-h-40 overflow-y-auto p-2 bg-blue-50 rounded-lg">`;
-                issue.explanationRequesters.forEach(r => {
-                    const reportedDate = r.reportedAt ? new Date(r.reportedAt.seconds * 1000).toLocaleString('vi-VN') : '';
-                    detailsHTML += `<div class="text-sm"><strong class="text-blue-800">${r.studentName}</strong> (${reportedDate}) <em class="text-gray-600">(${r.comment || 'không có ghi chú'})</em></div>`;
                 });
                 detailsHTML += `</div>`;
             }
@@ -631,7 +623,7 @@
                 const studentUidsInClass = selectedClass.studentUids || [];
                 const studentsInClass = appState.localStudentsCache.filter(s => studentUidsInClass.includes(s.uid)).sort((a,b) => a.displayName.localeCompare(b.displayName));
                 
-                const submissionsOfClass = appState.localSubmissionsCache.filter(sub => studentUidsInClass.includes(sub.studentId));
+                const submissionsOfClass = appState.localSubmissionsCache.filter(sub => sub.classId === selectedClass.id);
                 const uniqueTestIds = [...new Set(submissionsOfClass.map(s => s.testId))];
                 const assignments = uniqueTestIds.map(id => appState.localTestsCache.find(t => t.id === id)).filter(Boolean);
 
@@ -651,10 +643,19 @@
                         const submission = submissionsOfClass.find(s => s.studentId === student.uid && s.testId === assign.id);
                         let cellContent = '<span class="text-gray-400">-</span>';
                         if (submission) {
-                            if (submission.status === 'submitted') {
+                            if (assign.testType === 'vocabulary') {
+                                const progress = calculateAdaptiveProgress(submission.adaptiveProgressV2);
+                                cellContent = `
+                                    <div class="w-24">
+                                        <p class="text-xs">Học: ${progress.percentage.toFixed(0)}%</p>
+                                        <div class="progress-bar mt-1"><div class="progress-bar-fill" style="width: ${progress.percentage.toFixed(0)}%;"></div></div>
+                                        <p class="text-xs mt-1">KT: ${progress.finalScore !== null ? `${progress.finalScore}%` : 'N/A'}</p>
+                                    </div>
+                                `;
+                            } else if (submission.status === 'submitted') {
                                 const onTime = submission.submissionTime && submission.dueDate ? submission.submissionTime.toDate() <= submission.dueDate.toDate() : true;
                                 cellContent = `<span class="font-bold text-green-700">${submission.score !== undefined ? `${submission.score}/${submission.totalPoints}` : 'N/A'}</span>
-                                                ${!onTime ? '<span class="block text-xs text-red-500">Nộp muộn</span>' : ''}`;
+                                               ${!onTime ? '<span class="block text-xs text-red-500">Nộp muộn</span>' : ''}`;
                             } else if (submission.dueDate && new Date() > submission.dueDate.toDate()){
                                 cellContent = '<span class="font-semibold text-red-500">Quá hạn</span>';
                             } else {
@@ -766,10 +767,40 @@
                    </div>
 
                    <div id="settings-panel" class="my-6 p-4 bg-white/30 rounded-2xl" data-testid="${test.id}" data-testtype="${test.testType}"><h3 class="font-bold mb-3">Cài đặt & Trạng thái</h3><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div class="flex items-center justify-between p-3 bg-white/40 rounded-lg"><label for="lock-test-toggle" class="font-medium">Khóa đề thi</label><label class="toggle-switch"><input type="checkbox" id="lock-test-toggle" ${test.isLocked ? 'checked' : ''}><span class="slider"></span></label></div><div class="p-3 bg-white/40 rounded-lg"><span class="font-medium">Công bố kết quả</span><div class="flex justify-around mt-2 custom-radio-group"><input type="radio" name="publish-results" value="none" id="pub-none" ${(!test.resultsPublished || test.resultsPublished === 'none') ? 'checked' : ''}><label for="pub-none">Không</label><input type="radio" name="publish-results" value="correctIncorrect" id="pub-ci" ${test.resultsPublished === 'correctIncorrect' ? 'checked' : ''}><label for="pub-ci">Đúng/Sai</label><input type="radio" name="publish-results" value="full" id="pub-full" ${test.resultsPublished === 'full' ? 'checked' : ''}><label for="pub-full">Toàn bộ</label></div></div></div></div>
-                   <div><h3 class="font-bold mb-2">Danh sách các bài đã giao (Submissions)</h3><div class="overflow-x-auto max-h-[45vh]"><table class="w-full text-left border-collapse"><thead class="sticky top-0 bg-white/50 backdrop-blur-sm"><tr><th class="p-3 border-b border-gray-300">Tên</th><th class="p-3 border-b border-gray-300">Hạn nộp</th><th class="p-3 border-b border-gray-300">Trạng thái</th><th class="p-3 border-b border-gray-300">Điểm</th><th class="p-3 border-b border-gray-300">Vi phạm</th><th class="p-3 border-b border-gray-300"></th></tr></thead><tbody id="submission-table-body"><tr><td colspan="6" class="p-4 text-center">Đang tải danh sách...</td></tr></tbody></table></div></div>
+                   <div><h3 class="font-bold mb-2">Danh sách các bài đã giao (Submissions)</h3><div class="overflow-x-auto max-h-[45vh]"><table class="w-full text-left border-collapse"><thead class="sticky top-0 bg-white/50 backdrop-blur-sm"><tr><th class="p-3 border-b border-gray-300">Tên</th><th class="p-3 border-b border-gray-300">Hạn nộp</th><th class="p-3 border-b border-gray-300">Trạng thái</th><th class="p-3 border-b border-gray-300">Điểm/Tiến độ</th><th class="p-3 border-b border-gray-300">Vi phạm</th><th class="p-3 border-b border-gray-300"></th></tr></thead><tbody id="submission-table-body"><tr><td colspan="6" class="p-4 text-center">Đang tải danh sách...</td></tr></tbody></table></div></div>
                </div>`;
             
             renderSubmissionsTable(appState.localSubmissionsCache.filter(s => s.testId === test.id));
+        }
+
+        // *** HÀM MỚI: Tính toán tiến độ cho bài tập thích ứng (GIỐNG BÊN STUDENT DASHBOARD) ***
+        function calculateAdaptiveProgress(progressData) {
+            if (!progressData || !progressData.levels) {
+                return { completed: 0, total: 0, percentage: 0, finalScore: null };
+            }
+
+            let totalCompleted = 0;
+            let totalTasks = 0;
+
+            Object.values(progressData.levels).forEach(level => {
+                const levelTotal = level.totalTasks || 0;
+                totalTasks += levelTotal;
+
+                if (level.status === 'passed') {
+                    totalCompleted += levelTotal;
+                } else if (level.completedTasks) {
+                    totalCompleted += Array.isArray(level.completedTasks) ? level.completedTasks.length : 0;
+                }
+            });
+
+            const percentage = totalTasks > 0 ? (totalCompleted / totalTasks) * 100 : 0;
+            
+            return {
+                completed: totalCompleted,
+                total: totalTasks,
+                percentage: percentage,
+                finalScore: progressData.finalTestScore !== undefined ? progressData.finalTestScore : null,
+            };
         }
 
         function renderSubmissionsTable(submissions) {
@@ -779,12 +810,27 @@
             
             const enrichedSubmissions = submissions.map(sub => {
                 const student = appState.localStudentsCache.find(s => s.id === sub.studentId);
-                return { ...sub, studentName: student ? student.displayName : 'Không rõ' };
+                const test = appState.localTestsCache.find(t => t.id === sub.testId);
+                return { ...sub, studentName: student ? student.displayName : 'Không rõ', testType: test ? test.testType : null };
             });
 
             tableBody.innerHTML = enrichedSubmissions.map(sub => {
                 const statusInfo = getStatusInfo(sub);
-                const scoreDisplay = (sub.status === 'submitted' && sub.score !== undefined) ? `${sub.score}/${sub.totalPoints}` : '-';
+                let scoreDisplay = '-';
+                
+                if (sub.testType === 'vocabulary') {
+                    const progress = calculateAdaptiveProgress(sub.adaptiveProgressV2);
+                    scoreDisplay = `
+                        <div class="w-24">
+                            <p class="text-xs">Học: ${progress.percentage.toFixed(0)}%</p>
+                            <div class="progress-bar mt-1"><div class="progress-bar-fill" style="width: ${progress.percentage.toFixed(0)}%;"></div></div>
+                            <p class="text-xs mt-1">KT: ${progress.finalScore !== null ? `${progress.finalScore}%` : 'N/A'}</p>
+                        </div>
+                    `;
+                } else if (sub.status === 'submitted' && sub.score !== undefined) {
+                    scoreDisplay = `${sub.score}/${sub.totalPoints}`;
+                }
+
                 const dueDate = sub.dueDate ? sub.dueDate.toDate().toLocaleString('vi-VN') : 'N/A';
                 return `<tr class="hover:bg-white/40" data-submission-id="${sub.id}">
                             <td class="p-3 border-b border-gray-200 font-semibold">${sub.studentName}</td>
