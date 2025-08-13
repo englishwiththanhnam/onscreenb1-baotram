@@ -65,7 +65,8 @@
         details[open] > .rule-summary { background-color: rgba(139, 92, 246, 0.1); }
         .rule-details { border-left: 2px solid var(--primary-accent); padding-left: 20px; margin-left: 12px; margin-top: 8px; margin-bottom: 16px; font-size: 0.9em; }
         .level-card { border: 2px solid var(--glass-border); text-align: center; transition: all 0.3s ease; }
-        .level-card.locked { opacity: 0.5; filter: grayscale(80%); pointer-events: none; }
+        .level-card.locked { opacity: 0.5; filter: grayscale(80%); }
+        .level-card.locked .cta-btn { pointer-events: none; }
         .level-card.passed { border-color: var(--correct-color); background: rgba(34, 197, 94, 0.1); }
         .level-card.active { border-color: var(--primary-accent); box-shadow: 0 0 20px var(--primary-accent-glow); transform: translateY(-5px); }
         .level-card.unlocked:not(.active):hover { border-color: var(--primary-accent); transform: translateY(-5px); }
@@ -182,7 +183,7 @@
                         finalTestTaken: false,
                         finalTestScore: null,
                     },
-                    currentPractice: { level: null, items: [], index: 0, isTest: false, correctAnswer: null },
+                    currentPractice: { level: null, items: [], index: 0, isTest: false, correctAnswer: null, score: 0 },
                     currentFlashcard: { items: [], index: 0 }
                 };
             },
@@ -348,7 +349,7 @@
                     if (progress.status === 'passed') {
                         buttonText = 'Đã qua';
                         icon = 'fa-check-circle text-correct-color';
-                        buttonDisabled = true; // Cannot practice a passed level
+                        buttonDisabled = true;
                     } else if (progress.status === 'unlocked') {
                         statusClass = 'unlocked';
                         buttonDisabled = false;
@@ -429,6 +430,7 @@
                 this.state.currentPractice.level = levelToTest;
                 this.state.currentPractice.index = 0;
                 this.state.currentPractice.isTest = true;
+                this.state.currentPractice.score = 0;
                 
                 progress.testAttempts++;
                 await this.updateFirestoreProgress();
@@ -655,7 +657,7 @@
                 }
 
                 levelProgress.accuracyTracker.push(isCorrect ? 1 : 0);
-                if (levelProgress.accuracyTracker.length > 20) { // Keep last 20 answers
+                if (levelProgress.accuracyTracker.length > 20) {
                     levelProgress.accuracyTracker.shift();
                 }
 
