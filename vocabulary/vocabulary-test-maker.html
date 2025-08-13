@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- MỚI: Thêm thư viện docx.js để xuất file Word -->
+    <!-- Thư viện docx.js để xuất file Word -->
     <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
     <style>
         :root {
@@ -55,8 +55,9 @@
         .task-summary { font-weight: 700; cursor: pointer; list-style: none; }
         .task-summary::-webkit-details-marker { display: none; }
         .task-content { font-size: 12px; margin-top: 8px; color: var(--text-secondary); }
-        .task-content .sentence { background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 6px; margin: 4px 0; color: var(--text-primary); }
-        body.dark .task-content .sentence { background: rgba(255,255,255,0.08); }
+        .task-content .sentence, .task-content .option { background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 6px; margin: 4px 0; color: var(--text-primary); }
+        body.dark .task-content .sentence, body.dark .task-content .option { background: rgba(255,255,255,0.08); }
+        .correct-answer { border-left: 3px solid #22c55e; }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -325,7 +326,7 @@
                             ${audioIconHTML}
                         </div>
                         <p class="font-mono text-sm text-violet-700 dark:text-violet-400" contenteditable="true" data-path="pronunciation" data-word-index="${wordIndex}">${word.pronunciation}</p>
-                        <p class="text-xs text-slate-500">(${word.type})</p>
+                        <p class="text-xs text-slate-500" contenteditable="true" data-path="type" data-word-index="${wordIndex}">(${word.type})</p>
                         <p class="mt-2 text-sm" contenteditable="true" data-path="meaning" data-word-index="${wordIndex}">${word.meaning}</p>
                         ${structuresHTML}
                     </td>`;
@@ -337,7 +338,7 @@
                     const renderTask = (taskData, title, contentRenderer) => {
                         if (!taskData) return '';
                         return `
-                            <details class="mt-2">
+                            <details class="mt-2" open>
                                 <summary class="task-summary">${title}</summary>
                                 <div class="task-details">
                                     ${contentRenderer(taskData)}
@@ -345,24 +346,29 @@
                             </details>`;
                     };
 
+                    const editableP = (path, text) => `<p class="sentence" contenteditable="true" data-path="${path}" data-word-index="${wordIndex}">${text}</p>`;
+                    const editableSpan = (path, text) => `<span contenteditable="true" data-path="${path}" data-word-index="${wordIndex}">${text}</span>`;
+                    const editableList = (basePath, items) => (items || []).map((item, i) => `<li class="option" contenteditable="true" data-path="${basePath}[${i}]" data-word-index="${wordIndex}">${item}</li>`).join('');
+
                     tasksHTML = [
-                        renderTask(tasks.basic_example, '1. Basic Example', data => `<div class="task-content"><p class="sentence" contenteditable="true" data-path="generated_tasks.basic_example" data-word-index="${wordIndex}">${data}</p></div>`),
-                        renderTask(tasks.meaning_mcq, '2. Meaning MCQ', data => `<div class="task-content"><p><b>Distractors (EN):</b> ${(data.distractors_en || []).join(', ')}</p><p><b>Distractors (VI):</b> ${(data.distractors_vi || []).join(', ')}</p></div>`),
-                        renderTask(tasks.word_family_mcq, '3. Word Family MCQ', data => `<div class="task-content"><p class="sentence">${(data.sentence || '').replace(data.blank_placeholder, `<b>[____]</b>`)}</p><p><b>Answer:</b> ${data.correct_answer || ''}</p><p><b>Distractors:</b> ${(data.distractors || []).join(', ')}</p></div>`),
-                        renderTask(tasks.sentence_unscramble, '4. Sentence Unscramble', data => `<div class="task-content"><p class="sentence">${data.correct_sentence || ''}</p></div>`),
-                        renderTask(tasks.error_correction, '5. Error Correction', data => `<div class="task-content"><p><b>Incorrect:</b> <span class="sentence">${data.incorrect_sentence || ''}</span></p><p><b>Correct:</b> <span class="sentence">${data.correct_sentence || ''}</span></p></div>`),
-                        renderTask(tasks.ipa_fill, '6. IPA Fill', data => `<div class="task-content"><p><b>Gapped IPA:</b> ${data.gapped_ipa || ''}</p><p><b>Correct Vowel:</b> ${data.correct_vowel || ''}</p><p><b>Distractors:</b> ${(data.distractors || []).join(', ')}</p></div>`),
-                        renderTask(tasks.best_fit_replacement, '7. Best-fit Replacement', data => `<div class="task-content"><p class="sentence">${(data.sentence || '').replace(data.word_to_replace, `<b><u>${data.word_to_replace}</u></b>`)}</p><p><b>Answer:</b> ${data.correct_answer}</p><p><b>Distractors:</b> ${(data.distractors || []).join(', ')}</p></div>`),
-                        renderTask(tasks.inference_from_scenario, '8. Inference', data => `<div class="task-content"><p class="sentence">${data.scenario || ''}</p><p><b>Question:</b> ${data.question}</p><p><b>Answer:</b> ${data.correct_answer}</p></div>`),
-                        renderTask(tasks.best_paraphrase, '9. Best Paraphrase', data => `<div class="task-content"><p><b>Original:</b></p><p class="sentence">${data.original_sentence || ''}</p><p><b>Correct Paraphrase:</b> ${ (data.options || []).find(o => o.is_correct)?.text || ''}</p></div>`),
-                        renderTask(tasks.antonym_mcq, '10. Antonym MCQ', data => `<div class="task-content"><p class="sentence">${data.sentence_context || ''}</p><p><b>Keyword:</b> ${data.keyword}</p><p><b>Antonym:</b> ${data.correct_antonym}</p><p><b>Distractors:</b> ${(data.distractors || []).join(', ')}</p></div>`),
-                        renderTask(tasks.tripled_sentence, '11. Tripled Sentence', data => `<div class="task-content"><p><b>Keyword:</b> ${data.keyword}</p><ul>${(data.examples || []).map(ex => `<li>${ex}</li>`).join('')}</ul></div>`),
-                        renderTask(tasks.main_idea, '12. Main Idea', data => `<div class="task-content"><p><b>Paragraph:</b> ${data.paragraph || ''}</p><p><b>Main Idea:</b> ${data.correct_answer}</p></div>`),
-                        renderTask(tasks.paragraph_completion, '13. Paragraph Completion', data => `<div class="task-content"><p><b>Body:</b> ${data.paragraph_body || ''}</p><p><b>Conclusion:</b> ${data.correct_conclusion}</p></div>`),
-                        renderTask(tasks.argument_strengthening, '14. Argument Strengthening', data => `<div class="task-content"><p><b>Argument:</b> ${data.argument_text || ''}</p><p><b>Evidence:</b> ${data.correct_evidence}</p></div>`),
-                        renderTask(tasks.argument_weakening, '15. Argument Weakening', data => `<div class="task-content"><p><b>Argument:</b> ${data.argument_text || ''}</p><p><b>Evidence:</b> ${data.correct_weakener}</p></div>`),
-                        renderTask(tasks.tone_purpose_analysis, '16. Tone/Purpose Analysis', data => `<div class="task-content"><p><b>Paragraph:</b> ${data.paragraph || ''}</p><p><b>Question:</b> ${data.question}</p><p><b>Answer:</b> ${data.correct_answer}</p></div>`),
-                        renderTask(tasks.sentence_role_analysis, '17. Sentence Role Analysis', data => `<div class="task-content"><p><b>Paragraph:</b> ${data.paragraph || ''}</p><p><b>Role of Sentence ${data.highlighted_sentence_index + 1}:</b> ${data.correct_role}</p></div>`),
+                        renderTask(tasks.basic_example, '1. Basic Example', data => `<div class="task-content">${editableP(`generated_tasks.basic_example`, data)}</div>`),
+                        renderTask(tasks.meaning_mcq, '2. Meaning MCQ', data => `<div class="task-content"><b>Distractors (EN):</b> <ul>${editableList(`generated_tasks.meaning_mcq.distractors_en`, data.distractors_en)}</ul><b>Distractors (VI):</b> <ul>${editableList(`generated_tasks.meaning_mcq.distractors_vi`, data.distractors_vi)}</ul></div>`),
+                        renderTask(tasks.word_family_mcq, '3. Word Family MCQ', data => `<div class="task-content"><p class="sentence">${editableSpan(`generated_tasks.word_family_mcq.sentence`, data.sentence || '').replace(data.blank_placeholder, `<b>[____]</b>`)}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.word_family_mcq.correct_answer`, data.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.word_family_mcq.distractors`, data.distractors)}</ul></p></div>`),
+                        renderTask(tasks.sentence_unscramble, '4. Sentence Unscramble', data => `<div class="task-content">${editableP(`generated_tasks.sentence_unscramble.correct_sentence`, data.correct_sentence || '')}</div>`),
+                        renderTask(tasks.error_correction, '5. Error Correction', data => `<div class="task-content"><p><b>Incorrect:</b> ${editableSpan(`generated_tasks.error_correction.incorrect_sentence`, data.incorrect_sentence || '')}</p><p><b>Correct:</b> ${editableSpan(`generated_tasks.error_correction.correct_sentence`, data.correct_sentence || '')}</p></div>`),
+                        renderTask(tasks.ipa_fill, '6. IPA Fill', data => `<div class="task-content"><p><b>Gapped IPA:</b> ${editableSpan(`generated_tasks.ipa_fill.gapped_ipa`, data.gapped_ipa || '')}</p><p><b>Correct Vowel:</b> ${editableSpan(`generated_tasks.ipa_fill.correct_vowel`, data.correct_vowel || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.ipa_fill.distractors`, data.distractors)}</ul></p></div>`),
+                        renderTask(tasks.collocation_odd_one_out, '7. Collocation Odd One Out', data => `<div class="task-content"><p><b>Question:</b> ${editableSpan(`generated_tasks.collocation_odd_one_out.question`, data.question || '')}</p><p><b>Options:</b><ul>${(data.options || []).map((opt, i) => `<li class="option ${opt === data.answer ? 'correct-answer' : ''}" contenteditable="true" data-path="generated_tasks.collocation_odd_one_out.options[${i}]" data-word-index="${wordIndex}">${opt}</li>`).join('')}</ul></p><p><b>Answer:</b> ${editableSpan(`generated_tasks.collocation_odd_one_out.answer`, data.answer || '')}</p></div>`),
+                        renderTask(tasks.best_fit_replacement, '8. Best-fit Replacement', data => `<div class="task-content"><p class="sentence">${editableSpan(`generated_tasks.best_fit_replacement.sentence`, data.sentence || '').replace(data.word_to_replace, `<b><u>${data.word_to_replace}</u></b>`)}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.best_fit_replacement.correct_answer`, data.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.best_fit_replacement.distractors`, data.distractors)}</ul></p></div>`),
+                        renderTask(tasks.inference_from_scenario, '9. Inference', data => `<div class="task-content"><p><b>Scenario:</b> ${editableSpan(`generated_tasks.inference_from_scenario.scenario`, data.scenario || '')}</p><p><b>Question:</b> ${editableSpan(`generated_tasks.inference_from_scenario.question`, data.question || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.inference_from_scenario.correct_answer`, data.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.inference_from_scenario.distractors`, data.distractors)}</ul></p></div>`),
+                        renderTask(tasks.best_paraphrase, '10. Best Paraphrase', data => `<div class="task-content"><p><b>Original:</b> ${editableP(`generated_tasks.best_paraphrase.original_sentence`, data.original_sentence || '')}</p><p><b>Options:</b><ul>${(data.options || []).map((opt, i) => `<li class="option ${opt.is_correct ? 'correct-answer' : ''}" contenteditable="true" data-path="generated_tasks.best_paraphrase.options[${i}].text" data-word-index="${wordIndex}">${opt.text}</li>`).join('')}</ul></p></div>`),
+                        renderTask(tasks.antonym_mcq, '11. Antonym MCQ', data => `<div class="task-content"><p><b>Context:</b> ${editableSpan(`generated_tasks.antonym_mcq.sentence_context`, data.sentence_context || '')}</p><p><b>Keyword:</b> ${editableSpan(`generated_tasks.antonym_mcq.keyword`, data.keyword || '')}</p><p><b>Antonym:</b> ${editableSpan(`generated_tasks.antonym_mcq.correct_antonym`, data.correct_antonym || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.antonym_mcq.distractors`, data.distractors)}</ul></p></div>`),
+                        renderTask(tasks.tripled_sentence, '12. Tripled Sentence', data => `<div class="task-content"><p><b>Keyword:</b> ${editableSpan(`generated_tasks.tripled_sentence.keyword`, data.keyword || '')}</p><b>Examples:</b><ul>${editableList(`generated_tasks.tripled_sentence.examples`, data.examples)}</ul></div>`),
+                        renderTask(tasks.main_idea, '13. Main Idea', data => `<div class="task-content"><p><b>Paragraph:</b> ${editableSpan(`generated_tasks.main_idea.paragraph`, data.paragraph || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.main_idea.correct_answer`, data.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.main_idea.distractors`, data.distractors)}</ul></p></div>`),
+                        renderTask(tasks.paragraph_completion, '14. Paragraph Completion', data => `<div class="task-content"><p><b>Body:</b> ${editableSpan(`generated_tasks.paragraph_completion.paragraph_body`, data.paragraph_body || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.paragraph_completion.correct_conclusion`, data.correct_conclusion || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.paragraph_completion.distractors`, data.distractors)}</ul></p></div>`),
+                        renderTask(tasks.argument_strengthening, '15. Argument Strengthening', data => `<div class="task-content"><p><b>Argument:</b> ${editableSpan(`generated_tasks.argument_strengthening.argument_text`, data.argument_text || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.argument_strengthening.correct_evidence`, data.correct_evidence || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.argument_strengthening.distractors`, data.distractors)}</ul></p></div>`),
+                        renderTask(tasks.argument_weakening, '16. Argument Weakening', data => `<div class="task-content"><p><b>Argument:</b> ${editableSpan(`generated_tasks.argument_weakening.argument_text`, data.argument_text || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.argument_weakening.correct_weakener`, data.correct_weakener || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.argument_weakening.distractors`, data.distractors)}</ul></p></div>`),
+                        renderTask(tasks.tone_purpose_analysis, '17. Tone/Purpose Analysis', data => `<div class="task-content"><p><b>Paragraph:</b> ${editableSpan(`generated_tasks.tone_purpose_analysis.paragraph`, data.paragraph || '')}</p><p><b>Question:</b> ${editableSpan(`generated_tasks.tone_purpose_analysis.question`, data.question || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.tone_purpose_analysis.correct_answer`, data.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.tone_purpose_analysis.distractors`, data.distractors)}</ul></p></div>`),
+                        renderTask(tasks.sentence_role_analysis, '18. Sentence Role Analysis', data => `<div class="task-content"><p><b>Paragraph:</b> ${editableSpan(`generated_tasks.sentence_role_analysis.paragraph`, data.paragraph || '')}</p><p><b>Role of Sentence ${data.highlighted_sentence_index + 1}:</b> ${editableSpan(`generated_tasks.sentence_role_analysis.correct_role`, data.correct_role || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.sentence_role_analysis.distractors`, data.distractors)}</ul></p></div>`),
                     ].filter(Boolean).join('');
                 }
 
@@ -379,15 +385,20 @@
             const keys = path.replace(/\[(\w+)\]/g, '.$1').replace(/^\./, '').split('.');
             let current = obj;
             for (let i = 0; i < keys.length - 1; i++) {
-                if (current[keys[i]] === undefined || current[keys[i]] === null) { console.error(`Path does not exist: ${keys.slice(0, i + 1).join('.')}`); return; }
-                current = current[keys[i]];
+                const key = keys[i];
+                if (current[key] === undefined || current[key] === null) { 
+                    console.error(`Path does not exist: ${keys.slice(0, i + 1).join('.')}`); 
+                    // Optionally create path
+                    // current[key] = isNaN(keys[i+1]) ? {} : [];
+                    return; 
+                }
+                current = current[key];
             }
             current[keys[keys.length - 1]] = value;
         }
 
         // --- AI & API ---
         
-        // UPGRADED PROMPT
         function getPromptForBatch(batch) {
             const cefrLevel = getCefrLevelDescription();
             const batchInput = batch.map(wordData => ({
@@ -657,14 +668,14 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                 return showAlert("Không có dữ liệu để xuất.", 'error');
             }
 
-            const { Document, Packer, Paragraph, TextRun, HeadingLevel } = docx;
+            const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = docx;
             const docChildren = [];
             const charOpts = ['A', 'B', 'C', 'D', 'E', 'F'];
 
             docChildren.push(new Paragraph({
                 text: DOM.testTitleInput.value || "Vocabulary Test",
                 heading: HeadingLevel.TITLE,
-                alignment: 'center',
+                alignment: AlignmentType.CENTER,
             }));
 
             localWordList.forEach((wordData, index) => {
@@ -681,14 +692,16 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                 const tasks = wordData.generated_tasks;
                 
                 const createMCQ = (title, question, correctAnswer, distractors) => {
-                    if(!question || !correctAnswer || !distractors || distractors.length < 1) return;
+                    // Defensive check for data
+                    if(!question || !correctAnswer || !Array.isArray(distractors)) return;
+                    
                     docChildren.push(new Paragraph({ text: title, bold: true, spacing: { before: 200 } }));
                     docChildren.push(new Paragraph({ text: question, italics: true }));
                     const options = [correctAnswer, ...distractors].sort(() => Math.random() - 0.5);
                     options.forEach((opt, i) => {
                         docChildren.push(new Paragraph({ text: `${charOpts[i]}. ${opt}` }));
                     });
-                    docChildren.push(new Paragraph({ text: " " }));
+                    docChildren.push(new Paragraph({ text: " " })); // Spacer
                 };
                 
                 const createTextInput = (title, question) => {
@@ -696,20 +709,23 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                     docChildren.push(new Paragraph({ text: title, bold: true, spacing: { before: 200 } }));
                     docChildren.push(new Paragraph({ text: question, italics: true }));
                     docChildren.push(new Paragraph("Answer: __________________________________________________"));
-                    docChildren.push(new Paragraph({ text: " " }));
+                    docChildren.push(new Paragraph({ text: " " })); // Spacer
                 };
                 
-                if(tasks.meaning_mcq) createMCQ('Meaning MCQ (English)', `What is the meaning of "${wordData.word}"?`, wordData.meaning, tasks.meaning_mcq.distractors_vi);
-                if(tasks.word_family_mcq) createMCQ('Word Family', tasks.word_family_mcq.sentence.replace(tasks.word_family_mcq.blank_placeholder, '______'), tasks.word_family_mcq.correct_answer, tasks.word_family_mcq.distractors);
-                if(tasks.antonym_mcq) createMCQ('Antonym', tasks.antonym_mcq.sentence_context, tasks.antonym_mcq.correct_antonym, tasks.antonym_mcq.distractors);
-                if(tasks.error_correction) createTextInput('Error Correction', `Correct the sentence: "${tasks.error_correction.incorrect_sentence}"`);
-                if(tasks.sentence_unscramble) createTextInput('Sentence Unscramble', `Unscramble the words to form a correct sentence: "${tasks.sentence_unscramble.correct_sentence.split(' ').sort(() => Math.random() - 0.5).join(' / ')}"`);
-                if(tasks.best_fit_replacement) createMCQ('Best-fit Replacement', tasks.best_fit_replacement.sentence, tasks.best_fit_replacement.correct_answer, tasks.best_fit_replacement.distractors);
-                if(tasks.main_idea) createMCQ(`Main Idea of the Passage`, tasks.main_idea.paragraph, tasks.main_idea.correct_answer, tasks.main_idea.distractors);
-                if(tasks.paragraph_completion) createMCQ(`Find the Conclusion`, tasks.paragraph_completion.paragraph_body, tasks.paragraph_completion.correct_conclusion, tasks.paragraph_completion.distractors);
-                if(tasks.argument_strengthening) createMCQ(`Strengthen the Argument`, tasks.argument_strengthening.argument_text, tasks.argument_strengthening.correct_evidence, tasks.argument_strengthening.distractors);
-                if(tasks.argument_weakening) createMCQ(`Weaken the Argument`, tasks.argument_weakening.argument_text, tasks.argument_weakening.correct_weakener, tasks.argument_weakening.distractors);
-                if(tasks.tone_purpose_analysis) createMCQ(tasks.tone_purpose_analysis.question, tasks.tone_purpose_analysis.paragraph, tasks.tone_purpose_analysis.correct_answer, tasks.tone_purpose_analysis.distractors);
+                // Safely access task data
+                if(tasks.meaning_mcq) createMCQ('Meaning MCQ (English)', `What is the meaning of "${wordData.word}"?`, wordData.meaning, tasks.meaning_mcq.distractors_vi || []);
+                if(tasks.word_family_mcq) createMCQ('Word Family', (tasks.word_family_mcq.sentence || '').replace(tasks.word_family_mcq.blank_placeholder || '[BLANK]', '______'), tasks.word_family_mcq.correct_answer, tasks.word_family_mcq.distractors || []);
+                if(tasks.antonym_mcq) createMCQ('Antonym', tasks.antonym_mcq.sentence_context, tasks.antonym_mcq.correct_antonym, tasks.antonym_mcq.distractors || []);
+                if(tasks.error_correction) createTextInput('Error Correction', `Correct the sentence: "${tasks.error_correction.incorrect_sentence || ''}"`);
+                if(tasks.sentence_unscramble) createTextInput('Sentence Unscramble', `Unscramble the words to form a correct sentence: "${(tasks.sentence_unscramble.correct_sentence || '').split(' ').sort(() => Math.random() - 0.5).join(' / ')}"`);
+                if(tasks.best_fit_replacement) createMCQ('Best-fit Replacement', tasks.best_fit_replacement.sentence, tasks.best_fit_replacement.correct_answer, tasks.best_fit_replacement.distractors || []);
+                if(tasks.main_idea) createMCQ(`Main Idea of the Passage`, tasks.main_idea.paragraph, tasks.main_idea.correct_answer, tasks.main_idea.distractors || []);
+                if(tasks.paragraph_completion) createMCQ(`Find the Conclusion`, tasks.paragraph_completion.paragraph_body, tasks.paragraph_completion.correct_conclusion, tasks.paragraph_completion.distractors || []);
+                if(tasks.argument_strengthening) createMCQ(`Strengthen the Argument`, tasks.argument_strengthening.argument_text, tasks.argument_strengthening.correct_evidence, tasks.argument_strengthening.distractors || []);
+                if(tasks.argument_weakening) createMCQ(`Weaken the Argument`, tasks.argument_weakening.argument_text, tasks.argument_weakening.correct_weakener, tasks.argument_weakening.distractors || []);
+                if(tasks.tone_purpose_analysis) createMCQ(tasks.tone_purpose_analysis.question, tasks.tone_purpose_analysis.paragraph, tasks.tone_purpose_analysis.correct_answer, tasks.tone_purpose_analysis.distractors || []);
+                if(tasks.collocation_odd_one_out) createMCQ('Collocation Odd One Out', tasks.collocation_odd_one_out.question, `(The odd one out is: ${tasks.collocation_odd_one_out.answer})`, tasks.collocation_odd_one_out.options || []);
+
             });
 
             const doc = new Document({
@@ -726,6 +742,9 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
                 showAlert("File Word đã được tạo và tải xuống!", 'success');
+            }).catch(err => {
+                console.error("Error exporting to Word:", err);
+                showAlert("Đã xảy ra lỗi khi xuất file Word.", 'error');
             });
         }
 
