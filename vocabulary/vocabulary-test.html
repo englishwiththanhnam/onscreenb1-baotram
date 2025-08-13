@@ -303,7 +303,6 @@
                                 <h2 class="text-xl font-bold font-poppins mb-4">📚 Chế độ Học</h2>
                                 <div class="space-y-3">
                                     <button id="start-flashcard-btn" class="cta-btn secondary w-full !rounded-lg"><i class="fas fa-clone mr-2"></i>Học bằng Flashcard</button>
-                                    <button id="show-guide-btn" class="cta-btn secondary w-full !rounded-lg"><i class="fas fa-book-open mr-2"></i>Hướng dẫn Dạng bài</button>
                                 </div>
                             </div>
                             <div class="glass-panel p-6">
@@ -319,17 +318,18 @@
                         <main class="lg:col-span-2 space-y-6">
                             <div class="glass-panel p-6 sm:p-8">
                                 <h2 class="text-2xl font-bold font-poppins mb-6">🏋️‍♀️ Lộ Trình Luyện Tập</h2>
+                                <div id="guide-container" class="mb-6"></div>
                                 <div id="levels-container" class="grid grid-cols-1 sm:grid-cols-2 gap-6"></div>
                             </div>
                             <div id="final-test-container" class="glass-panel p-8 text-center"></div>
                         </main>
                     </div>
                 `;
+                this.renderGuidePanel();
                 this.renderLevelCards();
                 this.renderFinalTestSection();
 
                 document.getElementById('start-flashcard-btn').addEventListener('click', () => this.startFlashcardSession());
-                document.getElementById('show-guide-btn').addEventListener('click', () => this.renderGuideModal());
             },
             
             renderLevelCards() {
