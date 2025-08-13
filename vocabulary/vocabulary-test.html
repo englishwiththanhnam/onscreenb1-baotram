@@ -37,7 +37,8 @@
             overflow-y: auto;
         }
         
-        .background-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: hidden; }
+        .background-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; overflow: hidden; }
+        #ogl-canvas-back { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         .shape { position: absolute; border-radius: 50%; filter: blur(150px); opacity: 0.3; }
         .shape1 { width: 40vw; height: 40vw; max-width: 500px; max-height: 500px; background: #a855f7; top: -15%; left: -10%; animation: float 28s infinite alternate ease-in-out; }
         .shape2 { width: 35vw; height: 35vw; max-width: 450px; max-height: 450px; background: #22d3ee; bottom: -15%; right: -10%; animation: float 32s infinite alternate ease-in-out; }
@@ -47,7 +48,7 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .glass-panel { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); }
         .cta-btn {
-            position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 12px;
+            position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: 12px;
             background: linear-gradient(90deg, #8b5cf6, #6d28d9); font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 16px;
             padding: 12px 24px; border-radius: 99px; border: none; cursor: pointer; text-decoration: none; color: rgba(255,255,255,0.9);
             box-shadow: 0 10px 30px -10px var(--primary-accent-glow); transition: all 0.3s ease;
@@ -58,9 +59,11 @@
         .progress-track { background: rgba(255, 255, 255, 0.1); border-radius: 9999px; height: 10px; overflow: hidden; border: 1px solid var(--glass-border); }
         .progress-fill { background: linear-gradient(90deg, #d8b4fe 0%, #a855f7 100%); height: 100%; transition: width 0.5s cubic-bezier(0.25, 1, 0.5, 1); }
         .answer-option { display: block; width: 100%; padding: 1rem; border-radius: 16px; text-align: left; font-weight: 500; background: transparent; border: 2px solid #5c5f89; color: #a2a6c3; transition: all 0.2s ease; }
+        .answer-option:not(.disabled):hover { border-color: var(--primary-accent); background-color: rgba(139, 92, 246, 0.1); }
         .answer-option.disabled { cursor: not-allowed; opacity: 0.6; }
-        .answer-option.correct { border-color: var(--correct-color); background: rgba(34, 197, 94, 0.2); color: #bbf7d0; }
-        .answer-option.incorrect { border-color: var(--incorrect-color); background: rgba(239, 68, 68, 0.2); color: #fecaca; }
+        .answer-option.selected.correct { border-color: var(--correct-color); background: rgba(34, 197, 94, 0.2); color: #bbf7d0; }
+        .answer-option.selected.incorrect { border-color: var(--incorrect-color); background: rgba(239, 68, 68, 0.2); color: #fecaca; }
+        .answer-option.correct-answer { border-color: var(--correct-color); background: rgba(34, 197, 94, 0.1); }
         .text-input-styled { background: rgba(55, 65, 81, 0.5); border: 1px solid var(--glass-border); border-radius: 12px; padding: 0.75rem 1rem; color: var(--text-light); caret-color: var(--primary-accent); }
         .text-input-styled:focus { outline: none; border-color: var(--primary-accent); box-shadow: 0 0 0 3px var(--primary-accent-glow); }
         .level-card { border: 2px solid var(--glass-border); text-align: center; transition: all 0.3s ease; }
@@ -69,7 +72,7 @@
         .level-card.passed { border-color: var(--correct-color); background: rgba(34, 197, 94, 0.1); }
         .level-card.active { border-color: var(--primary-accent); box-shadow: 0 0 20px var(--primary-accent-glow); transform: translateY(-5px); }
         .level-card.unlocked:not(.active):hover { border-color: var(--primary-accent); transform: translateY(-5px); }
-        .report-actions { border-top: 1px solid var(--glass-border); margin-top: 1.5rem; padding-top: 1rem; display: flex; gap: 0.75rem; z-index: 10; }
+        .report-actions { border-top: 1px solid var(--glass-border); margin-top: 1.5rem; padding-top: 1.5rem; display: flex; gap: 0.75rem; z-index: 10; }
         .report-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-secondary); padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s ease; }
         .report-category-group label { display: block; padding: 0.75rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); cursor: pointer; transition: all 0.2s ease; }
         .report-category-group input:checked + label { background: var(--primary-accent); border-color: var(--primary-accent-glow); color: white; }
@@ -101,11 +104,9 @@
         <div id="ogl-canvas-back"></div>
     </div>
     
-    <div id="loader-overlay" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm flex items-center justify-center z-50">
-        <div class="text-center">
-            <div class="w-16 h-16 border-4 border-t-violet-500 border-gray-600 rounded-full animate-spin"></div>
-            <p id="loader-text" class="text-lg font-semibold text-white mt-4">Đang tải dữ liệu...</p>
-        </div>
+    <div id="loader-overlay" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center z-50">
+        <div class="w-16 h-16 border-4 border-t-violet-500 border-gray-600 rounded-full animate-spin"></div>
+        <p id="loader-text" class="text-lg font-semibold text-white mt-4">Đang tải dữ liệu...</p>
     </div>
     <div id="modal-container"></div>
     
@@ -118,6 +119,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc, runTransaction, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
+        // Background Animation
         if (window.OGL) {
             const { Renderer, Camera, Program, Geometry, Mesh, Transform } = window.OGL;
             const container = document.getElementById('ogl-canvas-back');
@@ -177,8 +179,29 @@
                         2: { passMark: 0.9, maxAttempts: 3 },
                         3: { passMark: 0.9, maxAttempts: 3 },
                     },
-                    FINAL_TEST_UNLOCK_THRESHOLD: 0.8
+                    FINAL_TEST_UNLOCK_THRESHOLD: 0.8,
+                    PRACTICE_SESSION_LENGTH: 10,
                 }
+            },
+            
+            EXERCISE_INFO: {
+                'MeaningMCQ': { name: 'Meaning MCQ', icon: '💡', desc: 'Chọn đúng nghĩa tiếng Việt của từ đã cho.' },
+                'WordFamilyMCQ': { name: 'Word Family', icon: '👨‍👩‍👧‍👦', desc: 'Chọn dạng từ đúng (danh từ, động từ, tính từ...) để hoàn thành câu.' },
+                'SentenceUnscramble': { name: 'Sentence Unscramble', icon: '🔄', desc: 'Sắp xếp các từ bị xáo trộn thành một câu hoàn chỉnh.' },
+                'ErrorCorrection': { name: 'Error Correction', icon: '✍️', desc: 'Đọc và sửa lại lỗi sai trong câu.' },
+                'IPAFill': { name: 'IPA Fill', icon: '🗣️', desc: 'Chọn đúng nguyên âm để hoàn thành phiên âm IPA của từ.' },
+                'BestFitReplacement': { name: 'Best-fit Replacement', icon: '🎯', desc: 'Chọn từ đồng nghĩa phù hợp nhất để thay thế từ được gạch chân.' },
+                'InferenceFromScenario': { name: 'Inference from Scenario', icon: '🧠', desc: 'Đọc một tình huống ngắn và trả lời câu hỏi suy luận về nó.' },
+                'BestParaphrase': { name: 'Best Paraphrase', icon: '📑', desc: 'Chọn câu diễn giải lại đúng nhất ý của câu gốc.' },
+                'AudioListening': { name: 'Listening & Typing', icon: '🎧', desc: 'Nghe và gõ lại chính xác từ bạn nghe được.' },
+                'AntonymMCQ': { name: 'Antonym Challenge', icon: '↔️', desc: 'Chọn từ có nghĩa trái ngược với từ cho trước.' },
+                'TripledSentence': { name: 'Tripled Sentence', icon: '🧩', desc: 'Một từ bị thiếu trong cả ba câu. Hãy tìm ra từ đó.' },
+                'MainIdea': { name: 'Find the Main Idea', icon: '🎯', desc: 'Đọc một đoạn văn ngắn và chọn câu diễn đạt đúng nhất ý chính.' },
+                'ParagraphCompletion': { name: 'Find the Conclusion', icon: '🏁', desc: 'Chọn câu phù hợp nhất để kết thúc đoạn văn.' },
+                'ArgumentStrengthening': { name: 'Strengthen the Argument', icon: '👍', desc: 'Chọn luận điểm củng cố mạnh nhất cho lập luận của tác giả.' },
+                'ArgumentWeakening': { name: 'Weaken the Argument', icon: '👎', desc: 'Chọn luận điểm làm suy yếu nhất lập luận của tác giả.' },
+                'TonePurposeAnalysis': { name: 'Tone/Purpose Identification', icon: '🎭', desc: 'Xác định giọng văn (thái độ) hoặc mục đích viết của tác giả.' },
+                'SentenceRoleAnalysis': { name: 'Sentence Role Analysis', icon: '🔍', desc: 'Phân tích và xác định vai trò của một câu được đánh dấu trong lập luận.' },
             },
 
             async init() {
@@ -211,15 +234,18 @@
 
                 if (!submissionId) {
                     this.showModal("Lỗi", "Không tìm thấy mã bài làm (Submission ID).");
+                    this.DOM.loader.classList.add('hidden');
                     return;
                 }
                 
                 this.state.submissionId = submissionId;
                 await this.loadData(submissionId);
 
-                window.addEventListener('beforeunload', () => {
+                window.addEventListener('beforeunload', (e) => {
                     if (this.state.submissionId) {
-                        this.updateFirestoreProgress();
+                        // This is a failsafe, but async operations are not guaranteed here.
+                        // Main saving logic is now tied to explicit navigation.
+                        this.updateFirestoreProgress(); 
                     }
                 });
             },
@@ -301,6 +327,7 @@
 
                 } catch (error) {
                     console.error("Load data error:", error);
+                    this.DOM.loader.classList.add('hidden');
                     this.showModal("Lỗi", "Không thể tải phiên làm bài: " + error.message);
                 }
             },
@@ -351,7 +378,7 @@
                 Object.values(this.state.userProgress.levels).forEach(levelData => {
                     if (levelData.status === 'passed') {
                         count += levelData.totalTasks;
-                    } else {
+                    } else if (levelData.completedTasks) {
                         count += levelData.completedTasks.size;
                     }
                 });
@@ -382,8 +409,11 @@
                 
                 document.getElementById('header-back-btn')?.addEventListener('click', async (e) => {
                     e.preventDefault();
+                    const btn = e.currentTarget;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Đang lưu...';
+                    btn.disabled = true;
                     await this.updateFirestoreProgress();
-                    window.location.href = e.currentTarget.href;
+                    window.location.href = btn.href;
                 });
             },
 
@@ -529,20 +559,25 @@
                 this.renderHeader(true);
                 const levelProgress = this.state.userProgress.levels[level];
                 
-                let practicePool = [];
                 const allLevelTasks = this.getAllTasksForLevel(level);
-
-                const uncompletedTasks = allLevelTasks.filter(task => !levelProgress.completedTasks.has(task.taskUID));
+                // Prioritize uncompleted tasks
+                const uncompletedTasks = this.shuffleArray(allLevelTasks.filter(task => !levelProgress.completedTasks.has(task.taskUID)));
+                
+                let practicePool = [];
 
                 if (uncompletedTasks.length > 0) {
-                    practicePool = uncompletedTasks;
-                } else if (allLevelTasks.length > 0) {
-                    // If all tasks are completed, allow reviewing them
-                    practicePool = allLevelTasks;
+                    practicePool.push(...uncompletedTasks);
+                }
+                
+                // If not enough uncompleted tasks, fill with completed ones for review
+                if (practicePool.length < this.CONFIG.RULES.PRACTICE_SESSION_LENGTH) {
+                    const completedTasks = this.shuffleArray(allLevelTasks.filter(task => levelProgress.completedTasks.has(task.taskUID)));
+                    const needed = this.CONFIG.RULES.PRACTICE_SESSION_LENGTH - practicePool.length;
+                    practicePool.push(...completedTasks.slice(0, needed));
                 }
 
                 if (practicePool.length === 0) {
-                    this.showModal("Hoàn thành!", "Bạn đã làm hết các bài tập cho level này. Hãy thử làm bài kiểm tra vượt cấp nếu có.", false, () => {
+                    this.showModal("Hoàn thành!", "Bạn đã làm hết các bài tập cho level này. Hãy thử làm bài kiểm tra vượt cấp nếu có, hoặc quay lại sau.", false, () => {
                         this.renderDashboard();
                         this.renderHeader(false);
                     });
@@ -551,7 +586,7 @@
 
                 this.state.currentPractice = {
                     level: level,
-                    items: this.shuffleArray(practicePool).slice(0, 10),
+                    items: practicePool.slice(0, this.CONFIG.RULES.PRACTICE_SESSION_LENGTH),
                     index: 0,
                     isTest: false,
                     score: 0,
@@ -578,7 +613,7 @@
                     return;
                 }
 
-                const numQuestions = Math.ceil(allLevelTasks.length * 0.25);
+                const numQuestions = Math.min(allLevelTasks.length, Math.max(10, Math.ceil(allLevelTasks.length * 0.25)));
                 this.state.currentPractice = {
                     items: this.shuffleArray(allLevelTasks).slice(0, numQuestions),
                     level: levelToTest,
@@ -607,7 +642,7 @@
 
                 this.state.currentPractice = {
                     level: "Final",
-                    items: this.shuffleArray(allTasks),
+                    items: this.shuffleArray(allTasks).slice(0, 50), // Limit final test to 50 questions
                     index: 0,
                     isTest: true,
                     score: 0,
@@ -635,18 +670,18 @@
                 const title = isTest ? `Kiểm tra ${level === "Final" ? "Cuối kỳ" : `Level ${level}`}` : `Level ${level} - Luyện tập`;
 
                 this.DOM.main.innerHTML = `
-                    <div class="glass-panel p-4 sm:p-6 fade-in">
-                        <div class="flex justify-between items-center mb-4">
+                    <div class="glass-panel p-6 sm:p-8 fade-in">
+                        <div class="flex justify-between items-center mb-6">
                             <h2 class="font-bold text-primary-accent">${title}</h2>
                             <div class="flex items-center gap-4">
                                 <p class="text-sm font-medium text-text-secondary">Câu ${index + 1} / ${total}</p>
-                                <button id="exit-practice-btn" class="text-sm font-semibold text-text-secondary hover:text-incorrect-color"><i class="fas fa-times mr-1"></i> Thoát</button>
+                                <button id="exit-practice-btn" class="text-sm font-semibold text-text-secondary hover:text-incorrect-color transition-colors"><i class="fas fa-times mr-1"></i> Thoát</button>
                             </div>
                         </div>
                         <div id="question-container" class="min-h-[300px]">
                             ${renderFunction ? renderFunction.call(this, currentItem) : 'Lỗi: Không thể render câu hỏi.'}
                         </div>
-                        <div id="feedback-container" class="mt-4"></div>
+                        <div id="feedback-container" class="mt-6 min-h-[68px]"></div>
                         <div class="report-actions">
                             <button class="report-btn" data-report-type="error"><i class="fas fa-bug mr-2"></i>Báo lỗi</button>
                             <button class="report-btn" data-report-type="explanation"><i class="fas fa-question-circle mr-2"></i>Cần giải thích</button>
@@ -654,7 +689,8 @@
                     </div>
                 `;
 
-                document.getElementById('exit-practice-btn').addEventListener('click', () => {
+                document.getElementById('exit-practice-btn').addEventListener('click', async () => {
+                    await this.updateFirestoreProgress();
                     this.renderDashboard();
                     this.renderHeader(false);
                 });
@@ -719,150 +755,172 @@
                 }, null, "Về Bảng điều khiển");
             },
 
-            renderSessionSummary() {
+            async renderSessionSummary() {
                 const { level, sessionCorrectUIDs, sessionIncorrectUIDs } = this.state.currentPractice;
-                const correctItems = [...sessionCorrectUIDs].map(uid => this.state.wordList.find(w => w.id === uid.split('::')[0]));
-                const incorrectItems = [...sessionIncorrectUIDs].map(uid => this.state.wordList.find(w => w.id === uid.split('::')[0]));
+                const correctCount = sessionCorrectUIDs.size;
+                const incorrectCount = sessionIncorrectUIDs.size;
 
                 const message = `
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-                        <div class="bg-bg-dark p-4 rounded-lg border border-glass-border">
-                            <h3 class="font-bold text-green-400 mb-2">Đã trả lời đúng (${correctItems.length})</h3>
-                            <ul class="text-sm space-y-1 max-h-32 overflow-y-auto">${correctItems.map(item => `<li>${item.word}</li>`).join('') || '<li class="text-text-secondary">Không có</li>'}</ul>
-                        </div>
-                        <div class="bg-bg-dark p-4 rounded-lg border border-glass-border">
-                            <h3 class="font-bold text-red-400 mb-2">Cần xem lại (${incorrectItems.length})</h3>
-                            <ul class="text-sm space-y-1 max-h-32 overflow-y-auto">${incorrectItems.map(item => `<li>${item.word}</li>`).join('') || '<li class="text-text-secondary">Không có</li>'}</ul>
+                    <div class="text-left">
+                        <p class="mb-4">Bạn vừa hoàn thành một phiên luyện tập. Dưới đây là kết quả:</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-bg-dark p-4 rounded-lg border border-glass-border">
+                                <h3 class="font-bold text-green-400 mb-2">Đã trả lời đúng (${correctCount})</h3>
+                                <p class="text-sm text-text-secondary">Tuyệt vời! Những kiến thức này đã được ghi nhận vào tiến trình của bạn.</p>
+                            </div>
+                            <div class="bg-bg-dark p-4 rounded-lg border border-glass-border">
+                                <h3 class="font-bold text-red-400 mb-2">Cần xem lại (${incorrectCount})</h3>
+                                <p class="text-sm text-text-secondary">Đừng lo, hệ thống sẽ ưu tiên những dạng bài này trong các phiên học tới.</p>
+                            </div>
                         </div>
                     </div>
                 `;
+                await this.updateFirestoreProgress();
                 this.showModal(`Tổng kết phiên học Level ${level}`, message, true, () => this.startPractice(level), () => {
                     this.renderDashboard();
                     this.renderHeader(false);
                 }, "Luyện tập tiếp", "Về Dashboard");
             },
-
-            getMeaningMCQHTML(item, isExample = false) {
+            
+            // --- HTML Generation for Questions ---
+            getMeaningMCQHTML(item) {
                 const tasks = item.generated_tasks.meaning_mcq;
-                if (!tasks || !tasks.distractors_vi || !tasks.distractors_en) { return '<div>Không có đủ dữ liệu cho dạng bài tập này.</div>'; }
+                if (!tasks || !tasks.distractors_vi) return '<div>Không có đủ dữ liệu cho dạng bài tập này.</div>';
                 const correctAnswer = item.meaning;
                 const distractors = this.shuffleArray([...tasks.distractors_vi]).slice(0, 3);
                 this.state.currentPractice.correctAnswer = correctAnswer;
                 const options = this.shuffleArray([correctAnswer, ...distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">💡 Meaning MCQ</h2><div class="min-h-[60px] mb-8 font-poppins font-bold text-3xl">${item.word}</div><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                const info = this.EXERCISE_INFO.MeaningMCQ;
+                return `<div class="question-block"><h2 class="text-xl font-bold font-poppins text-text-light mb-4">${info.icon} ${info.name}</h2><div class="min-h-[60px] mb-8 font-poppins font-bold text-4xl text-center">${item.word}</div><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getWordFamilyMCQHTML(item, isExample = false) {
+            getWordFamilyMCQHTML(item) {
                 const tasks = item.generated_tasks.word_family_mcq;
                 if (!tasks || !tasks.sentence) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_answer;
                 const sentence = tasks.sentence.replace(tasks.blank_placeholder, '<span class="font-bold text-primary-accent">[...]</span>');
                 const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">👨‍👩‍👧‍👦 Word Family</h2><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                const info = this.EXERCISE_INFO.WordFamilyMCQ;
+                return `<div class="question-block"><h2 class="text-xl font-bold font-poppins text-text-light mb-4">${info.icon} ${info.name}</h2><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getSentenceUnscrambleHTML(item, isExample = false) {
+            getSentenceUnscrambleHTML(item) {
                 const tasks = item.generated_tasks.sentence_unscramble;
                 if (!tasks || !tasks.correct_sentence) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_sentence;
                 const words = this.shuffleArray(tasks.correct_sentence.split(' '));
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">🔄 Sentence Unscramble</h2><p class="text-text-secondary mb-4">Click on the words in the correct order.</p><div id="unscramble-answer-area" class="min-h-[60px] p-4 border-2 border-dashed border-gray-600 rounded-lg mb-4 flex flex-wrap gap-2"></div><div id="unscramble-source-area" class="flex flex-wrap gap-2">${words.map(word => `<button class="px-4 py-2 bg-purple-600 rounded-lg">${word}</button>`).join('')}</div><div class="mt-6 text-right"><button id="check-btn" class="cta-btn">Check</button></div></div>`;
+                const info = this.EXERCISE_INFO.SentenceUnscramble;
+                return `<div class="question-block"><h2 class="text-xl font-bold font-poppins text-text-light mb-4">${info.icon} ${info.name}</h2><p class="text-text-secondary mb-4">Click vào các từ theo đúng thứ tự để tạo thành câu hoàn chỉnh.</p><div id="unscramble-answer-area" class="min-h-[60px] p-4 border-2 border-dashed border-gray-600 rounded-lg mb-4 flex flex-wrap gap-2"></div><div id="unscramble-source-area" class="flex flex-wrap gap-2">${words.map(word => `<button class="px-4 py-2 bg-purple-600 hover:bg-purple-500 transition-colors rounded-lg">${word}</button>`).join('')}</div><div class="mt-6 text-right"><button id="check-btn" class="cta-btn">Kiểm tra</button></div></div>`;
             },
-            getErrorCorrectionHTML(item, isExample = false) {
+            getErrorCorrectionHTML(item) {
                 const tasks = item.generated_tasks.error_correction;
                 if (!tasks || !tasks.incorrect_sentence) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_sentence;
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">✍️ Error Correction</h2><p class="text-text-secondary mb-4">Correct the following sentence.</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${tasks.incorrect_sentence}"</p><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type the correct sentence..."><button id="check-btn" class="cta-btn !py-3">Check</button></div></div>`;
+                const info = this.EXERCISE_INFO.ErrorCorrection;
+                return `<div class="question-block"><h2 class="text-xl font-bold font-poppins text-text-light mb-4">${info.icon} ${info.name}</h2><p class="text-text-secondary mb-4">Viết lại câu sau cho đúng.</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${tasks.incorrect_sentence}"</p><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Nhập câu đúng tại đây..."><button id="check-btn" class="cta-btn !py-3">Kiểm tra</button></div></div>`;
             },
-            getIPAFillHTML(item, isExample = false) {
+            getIPAFillHTML(item) {
                 const tasks = item.generated_tasks.ipa_fill;
                 if (!tasks || !tasks.gapped_ipa) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_vowel;
                 const options = this.shuffleArray([tasks.correct_vowel, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">🗣️ IPA Fill</h2><p class="text-text-secondary mb-4">Choose the correct sound for <strong class="text-primary-accent">"${item.word}"</strong></p><p class="text-3xl font-mono text-center min-h-[60px] mb-8">/${tasks.gapped_ipa}/</p><div id="answer-options" class="grid grid-cols-2 gap-3">${options.map(opt => `<button class="answer-option font-mono text-center !text-2xl" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                const info = this.EXERCISE_INFO.IPAFill;
+                return `<div class="question-block"><h2 class="text-xl font-bold font-poppins text-text-light mb-4">${info.icon} ${info.name}</h2><p class="text-text-secondary mb-4">Chọn âm đúng để hoàn thành phiên âm cho từ <strong class="text-primary-accent">"${item.word}"</strong></p><p class="text-3xl font-mono text-center min-h-[60px] mb-8">/${tasks.gapped_ipa}/</p><div id="answer-options" class="grid grid-cols-2 sm:grid-cols-4 gap-3">${options.map(opt => `<button class="answer-option font-mono text-center !text-2xl" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getBestFitReplacementHTML(item, isExample = false) {
+            getBestFitReplacementHTML(item) {
                 const tasks = item.generated_tasks.best_fit_replacement;
                 if (!tasks || !tasks.sentence) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_answer;
                 const sentence = tasks.sentence.replace(tasks.word_to_replace, `<span class="font-bold text-primary-accent"><u>${tasks.word_to_replace}</u></span>`);
                 const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">🎯 Best-fit Replacement</h2><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                const info = this.EXERCISE_INFO.BestFitReplacement;
+                return `<div class="question-block"><h2 class="text-xl font-bold font-poppins text-text-light mb-4">${info.icon} ${info.name}</h2><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getInferenceFromScenarioHTML(item, isExample = false) {
+            getInferenceFromScenarioHTML(item) {
                 const tasks = item.generated_tasks.inference_from_scenario;
                 if (!tasks || !tasks.scenario) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_answer;
                 const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">🧠 Inference from Scenario</h2><p class="text-md font-serif italic text-text-secondary mb-4">"${tasks.scenario}"</p><p class="text-lg font-semibold text-text-light mb-6">${tasks.question}</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                const info = this.EXERCISE_INFO.InferenceFromScenario;
+                return `<div class="question-block"><h2 class="text-xl font-bold font-poppins text-text-light mb-4">${info.icon} ${info.name}</h2><p class="text-md font-serif italic text-text-secondary mb-4">"${tasks.scenario}"</p><p class="text-lg font-semibold text-text-light mb-6">${tasks.question}</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getBestParaphraseHTML(item, isExample = false) {
+            getBestParaphraseHTML(item) {
                 const tasks = item.generated_tasks.best_paraphrase;
                 if (!tasks || !tasks.options) return this.getMeaningMCQHTML(item);
                 const correctOption = tasks.options.find(opt => opt.is_correct);
                 this.state.currentPractice.correctAnswer = correctOption.text;
                 const options = this.shuffleArray(tasks.options.map(opt => opt.text));
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">📑 Best Paraphrase</h2><p class="text-text-secondary mb-4">Original sentence:</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${tasks.original_sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                const info = this.EXERCISE_INFO.BestParaphrase;
+                return `<div class="question-block"><h2 class="text-xl font-bold font-poppins text-text-light mb-4">${info.icon} ${info.name}</h2><p class="text-text-secondary mb-4">Câu gốc:</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${tasks.original_sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getAudioListeningHTML(item, isExample = false) {
+            getAudioListeningHTML(item) {
                 this.state.currentPractice.correctAnswer = item.word;
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">🎧 Listening</h2><div class="text-center mb-6"><button id="play-audio-btn" data-audio-url="${item.audioUrl}" class="text-6xl text-primary-accent hover:text-violet-400 transition-colors"><i class="fas fa-play-circle"></i></button></div><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type what you hear..."><button id="check-btn" class="cta-btn !py-3">Check</button></div></div>`;
+                const info = this.EXERCISE_INFO.AudioListening;
+                return `<div class="question-block"><h2 class="text-xl font-bold font-poppins text-text-light mb-4">${info.icon} ${info.name}</h2><div class="text-center mb-6"><button id="play-audio-btn" data-audio-url="${item.audioUrl}" class="text-6xl text-primary-accent hover:text-violet-400 transition-colors"><i class="fas fa-play-circle"></i></button></div><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Nhập từ bạn nghe được..."><button id="check-btn" class="cta-btn !py-3">Kiểm tra</button></div></div>`;
             },
-            getTripledSentenceHTML(item, isExample = false) {
+            getTripledSentenceHTML(item) {
                 const tasks = item.generated_tasks.tripled_sentence;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.keyword;
                 const sentencesHTML = tasks.examples.map(sentence => `<p class="text-lg font-serif italic text-text-secondary mb-2">"${sentence.replace(new RegExp(`\\b${tasks.keyword}\\b`, 'gi'), '[...]')}"</p>`).join('');
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">🧩 Tripled Sentence</h2><p class="text-text-secondary mb-4">The same word is missing from all three sentences.</p><div class="space-y-3 mb-6">${sentencesHTML}</div><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Type the missing word..."><button id="check-btn" class="cta-btn !py-3">Check</button></div></div>`;
+                const info = this.EXERCISE_INFO.TripledSentence;
+                return `<div class="question-block"><h2 class="text-xl font-bold font-poppins text-text-light mb-4">${info.icon} ${info.name}</h2><p class="text-text-secondary mb-4">Cùng một từ còn thiếu trong cả ba câu sau.</p><div class="space-y-3 mb-6">${sentencesHTML}</div><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Nhập từ còn thiếu..."><button id="check-btn" class="cta-btn !py-3">Kiểm tra</button></div></div>`;
             },
-            getAntonymMCQHTML(item, isExample = false) {
+            getAntonymMCQHTML(item) {
                 const tasks = item.generated_tasks.antonym_mcq;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_antonym;
                 const options = this.shuffleArray([tasks.correct_antonym, ...tasks.distractors]);
                 const sentence = tasks.sentence_context.replace(tasks.keyword, `<strong class="text-primary-accent">${tasks.keyword}</strong>`);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">↔️ Antonym Challenge</h2><p class="text-text-secondary mb-4">Which is an antonym for the word in bold?</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                const info = this.EXERCISE_INFO.AntonymMCQ;
+                return `<div class="question-block"><h2 class="text-xl font-bold font-poppins text-text-light mb-4">${info.icon} ${info.name}</h2><p class="text-text-secondary mb-4">Đâu là từ trái nghĩa với từ được in đậm?</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getMainIdeaHTML(item, isExample = false) {
+            getMainIdeaHTML(item) {
                 const tasks = item.generated_tasks.main_idea;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_answer;
                 const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">🎯 Find the Main Idea</h2><p class="text-text-secondary mb-4">Read the passage and select the main point.</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                const info = this.EXERCISE_INFO.MainIdea;
+                return `<div class="question-block"><h2 class="text-xl font-bold font-poppins text-text-light mb-4">${info.icon} ${info.name}</h2><p class="text-text-secondary mb-4">Đọc đoạn văn và chọn ý chính.</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getParagraphCompletionHTML(item, isExample = false) {
+            getParagraphCompletionHTML(item) {
                 const tasks = item.generated_tasks.paragraph_completion;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_conclusion;
                 const options = this.shuffleArray([tasks.correct_conclusion, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">🏁 Find the Conclusion</h2><p class="text-text-secondary mb-4">Which sentence best concludes the passage?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph_body}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                const info = this.EXERCISE_INFO.ParagraphCompletion;
+                return `<div class="question-block"><h2 class="text-xl font-bold font-poppins text-text-light mb-4">${info.icon} ${info.name}</h2><p class="text-text-secondary mb-4">Câu nào sau đây kết thúc đoạn văn hợp lý nhất?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph_body}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getArgumentStrengtheningHTML(item, isExample = false) {
+            getArgumentStrengtheningHTML(item) {
                 const tasks = item.generated_tasks.argument_strengthening;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_evidence;
                 const options = this.shuffleArray([tasks.correct_evidence, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">👍 Strengthen the Argument</h2><p class="text-text-secondary mb-4">Which statement best supports the argument?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.argument_text}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                const info = this.EXERCISE_INFO.ArgumentStrengthening;
+                return `<div class="question-block"><h2 class="text-xl font-bold font-poppins text-text-light mb-4">${info.icon} ${info.name}</h2><p class="text-text-secondary mb-4">Luận điểm nào củng cố cho lập luận sau?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.argument_text}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getArgumentWeakeningHTML(item, isExample = false) {
+            getArgumentWeakeningHTML(item) {
                 const tasks = item.generated_tasks.argument_weakening;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_weakener;
                 const options = this.shuffleArray([tasks.correct_weakener, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">👎 Weaken the Argument</h2><p class="text-text-secondary mb-4">Which statement most weakens the argument?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.argument_text}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                const info = this.EXERCISE_INFO.ArgumentWeakening;
+                return `<div class="question-block"><h2 class="text-xl font-bold font-poppins text-text-light mb-4">${info.icon} ${info.name}</h2><p class="text-text-secondary mb-4">Luận điểm nào làm suy yếu lập luận sau?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.argument_text}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getTonePurposeAnalysisHTML(item, isExample = false) {
+            getTonePurposeAnalysisHTML(item) {
                 const tasks = item.generated_tasks.tone_purpose_analysis;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_answer;
                 const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">🎭 Tone & Purpose</h2><p class="text-text-secondary mb-4">${tasks.question}</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                const info = this.EXERCISE_INFO.TonePurposeAnalysis;
+                return `<div class="question-block"><h2 class="text-xl font-bold font-poppins text-text-light mb-4">${info.icon} ${info.name}</h2><p class="text-text-secondary mb-4">${tasks.question}</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
-            getSentenceRoleAnalysisHTML(item, isExample = false) {
+            getSentenceRoleAnalysisHTML(item) {
                 const tasks = item.generated_tasks.sentence_role_analysis;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_role;
                 const options = this.shuffleArray([tasks.correct_role, ...tasks.distractors]);
                 const paragraphHTML = tasks.paragraph.replace(`[${tasks.highlighted_sentence_index + 1}]`, `<strong class="text-primary-accent">[${tasks.highlighted_sentence_index + 1}]</strong>`);
-                return `<div class="question-block"><h2 class="text-sm font-semibold text-primary-accent mb-2">🔍 Sentence Role Analysis</h2><p class="text-text-secondary mb-4">What is the function of the sentence in bold?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${paragraphHTML}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                const info = this.EXERCISE_INFO.SentenceRoleAnalysis;
+                return `<div class="question-block"><h2 class="text-xl font-bold font-poppins text-text-light mb-4">${info.icon} ${info.name}</h2><p class="text-text-secondary mb-4">Vai trò của câu được in đậm là gì?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${paragraphHTML}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
 
             attachPracticeEventListeners(item, container, isGuide = false) {
@@ -870,23 +928,23 @@
                 const checkAnswerFunction = isGuide ? this.checkGuideAnswer.bind(this) : this.checkAnswer.bind(this);
                 switch(item.exerciseType) {
                     case 'MeaningMCQ': case 'WordFamilyMCQ': case 'IPAFill': case 'BestFitReplacement': case 'InferenceFromScenario': case 'BestParaphrase': case 'AntonymMCQ': case 'MainIdea': case 'ParagraphCompletion': case 'ArgumentStrengthening': case 'ArgumentWeakening': case 'TonePurposeAnalysis': case 'SentenceRoleAnalysis':
-                        container.querySelectorAll('.answer-option').forEach(option => { option.addEventListener('click', (e) => checkAnswerFunction(e.currentTarget.dataset.answer, item, container)); }); break;
+                        container.querySelectorAll('.answer-option').forEach(option => { option.addEventListener('click', (e) => checkAnswerFunction(e.currentTarget.dataset.answer, item, container, e.currentTarget)); }); break;
                     case 'AudioListening': case 'ErrorCorrection': case 'TripledSentence':
                         const input = container.querySelector('#text-input'); const checkBtn = container.querySelector('#check-btn');
                         container.querySelector('#play-audio-btn')?.addEventListener('click', (e) => { this.playAudio(e.currentTarget.dataset.audioUrl); });
-                        if (input && checkBtn) { const doCheck = () => checkAnswerFunction(input.value, item, container); checkBtn.addEventListener('click', doCheck); input.addEventListener('keypress', (e) => { if (e.key === 'Enter') doCheck(); }); }
+                        if (input && checkBtn) { const doCheck = () => checkAnswerFunction(input.value, item, container, input); checkBtn.addEventListener('click', doCheck); input.addEventListener('keypress', (e) => { if (e.key === 'Enter') doCheck(); }); }
                         break;
                     case 'SentenceUnscramble': {
                         const answerArea = container.querySelector('#unscramble-answer-area'); const sourceArea = container.querySelector('#unscramble-source-area');
                         const moveToken = (e) => { if (e.target.tagName === 'BUTTON') { const isFromSource = e.currentTarget.id === 'unscramble-source-area'; (isFromSource ? answerArea : sourceArea).appendChild(e.target); } };
                         sourceArea.addEventListener('click', moveToken); answerArea.addEventListener('click', moveToken);
-                        container.querySelector('#check-btn')?.addEventListener('click', () => { const answer = Array.from(answerArea.querySelectorAll('button')).map(t => t.textContent).join(' '); checkAnswerFunction(answer, item, container); });
+                        container.querySelector('#check-btn')?.addEventListener('click', () => { const answer = Array.from(answerArea.querySelectorAll('button')).map(t => t.textContent).join(' '); checkAnswerFunction(answer, item, container, answerArea); });
                         break;
                     }
                 }
             },
 
-            checkAnswer(userAnswer, item, container) {
+            checkAnswer(userAnswer, item, container, selectedElement) {
                 const correctAnswer = this.state.currentPractice.correctAnswer;
                 const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
                 
@@ -907,37 +965,55 @@
                     this.state.currentPractice.sessionIncorrectUIDs.add(item.taskUID);
                 }
                 
-                this.showFeedback(isCorrect, correctAnswer, container);
+                this.showFeedback(isCorrect, correctAnswer, container, selectedElement);
                 
                 if (isCorrect && !this.state.currentPractice.isTest) {
                     this.checkLevelUp(this.state.currentPractice.level);
                 }
             },
 
-            checkGuideAnswer(userAnswer, item, container) {
+            checkGuideAnswer(userAnswer, item, container, selectedElement) {
                 const correctAnswer = this.state.currentPractice.correctAnswer;
                 const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
                 container.querySelectorAll('button, input').forEach(el => el.disabled = true);
-                this.showFeedback(isCorrect, correctAnswer, container.parentElement.querySelector('#guide-feedback-container'), true);
+                this.showFeedback(isCorrect, correctAnswer, container.parentElement.querySelector('#guide-feedback-container'), selectedElement, true);
             },
 
-            showFeedback(isCorrect, correctAnswer, container = null, isGuide = false) {
-                if (!container) container = document.getElementById('feedback-container');
-                if (!container) return;
+            showFeedback(isCorrect, correctAnswer, questionContainer, selectedElement, isGuide = false) {
+                const feedbackContainer = document.getElementById(isGuide ? 'guide-feedback-container' : 'feedback-container');
+                if (!feedbackContainer) return;
+
+                // Highlight selected MCQ option
+                if(selectedElement && selectedElement.classList.contains('answer-option')) {
+                    selectedElement.classList.add('selected', isCorrect ? 'correct' : 'incorrect');
+                }
+                
+                // Highlight correct MCQ option if answer was wrong
+                if (!isCorrect) {
+                    const options = questionContainer.querySelectorAll('.answer-option');
+                    options.forEach(opt => {
+                        if (opt.dataset.answer.trim().toLowerCase() === correctAnswer.trim().toLowerCase()) {
+                            opt.classList.add('correct-answer');
+                        }
+                    });
+                }
+
                 const bgColor = isCorrect ? 'bg-green-500/20' : 'bg-red-500/20';
                 const textColor = isCorrect ? 'text-green-300' : 'text-red-300';
                 let message = isCorrect ? 'Chính xác!' : `Sai rồi! Đáp án đúng là: <strong class="font-bold text-white">${correctAnswer}</strong>`;
                 
                 const nextButtonHTML = isGuide ? '' : `<button id="next-question-btn" class="cta-btn secondary !py-2 !px-4">Tiếp tục <i class="fas fa-arrow-right ml-2"></i></button>`;
 
-                container.innerHTML = `
+                feedbackContainer.innerHTML = `
                     <div class="${bgColor} ${textColor} p-4 rounded-lg flex justify-between items-center fade-in">
                         <p class="font-semibold">${message}</p>
                         ${nextButtonHTML}
                     </div>`;
                 
                 if (!isGuide) {
-                    document.getElementById('next-question-btn').addEventListener('click', () => {
+                    const nextBtn = document.getElementById('next-question-btn');
+                    nextBtn.focus();
+                    nextBtn.addEventListener('click', () => {
                         this.state.currentPractice.index++;
                         this.renderPracticeView();
                     });
@@ -1183,18 +1259,15 @@
             getGuideLevelSectionHTML(levelKey) {
                 const levelNum = parseInt(levelKey);
                 const levelConfig = this.CONFIG.LEVELS[levelNum];
-                const exerciseTypes = [
-                    { type: 'MeaningMCQ', name: 'Meaning MCQ' }, { type: 'WordFamilyMCQ', name: 'Word Family' }, { type: 'AntonymMCQ', name: 'Antonym' }, { type: 'IPAFill', name: 'IPA Fill' }, { type: 'AudioListening', name: 'Listening' }, { type: 'SentenceUnscramble', name: 'Unscramble' }, { type: 'ErrorCorrection', name: 'Error Correction' }, { type: 'BestFitReplacement', name: 'Replacement' }, { type: 'BestParaphrase', name: 'Paraphrase' }, { type: 'TripledSentence', name: 'Tripled Sentence' }, { type: 'InferenceFromScenario', name: 'Inference' }, { type: 'MainIdea', name: 'Main Idea' }, { type: 'ParagraphCompletion', name: 'Conclusion' }, { type: 'ArgumentStrengthening', name: 'Strengthen Arg.' }, { type: 'ArgumentWeakening', name: 'Weaken Arg.' }, { type: 'TonePurposeAnalysis', name: 'Tone/Purpose' }, { type: 'SentenceRoleAnalysis', name: 'Sentence Role' },
-                ];
-
+                
                 return `
                 <div class="guide-section mt-8">
                     <h3><i class="fas fa-layer-group mr-3"></i>Level ${levelNum}: ${levelConfig.name}</h3>
                     <p class="text-text-secondary mb-6">Các dạng bài tập có trong level này:</p>
                     <div class="flex flex-wrap gap-3">
                         ${levelConfig.tasks.map(taskType => {
-                            const info = exerciseTypes.find(t => t.type === taskType);
-                            return `<button data-guide-type="${info.type}" class="cta-btn secondary !rounded-lg !text-sm !py-2 !px-4">${info.name}</button>`;
+                            const info = this.EXERCISE_INFO[taskType];
+                            return `<button data-guide-type="${taskType}" class="cta-btn secondary !rounded-lg !text-sm !py-2 !px-4">${info.icon} ${info.name}</button>`;
                         }).join('')}
                     </div>
                 </div>
@@ -1202,27 +1275,7 @@
             },
 
             renderGuideExampleModal(exerciseType) {
-                const exerciseInfo = {
-                    'MeaningMCQ': { name: 'Meaning MCQ', desc: 'Chọn đúng nghĩa tiếng Việt của từ đã cho.' },
-                    'WordFamilyMCQ': { name: 'Word Family', desc: 'Chọn dạng từ đúng (danh từ, động từ, tính từ...) để hoàn thành câu.' },
-                    'SentenceUnscramble': { name: 'Sentence Unscramble', desc: 'Sắp xếp các từ bị xáo trộn thành một câu hoàn chỉnh.' },
-                    'ErrorCorrection': { name: 'Error Correction', desc: 'Đọc và sửa lại lỗi sai trong câu.' },
-                    'IPAFill': { name: 'IPA Fill', desc: 'Chọn đúng nguyên âm để hoàn thành phiên âm IPA của từ.' },
-                    'BestFitReplacement': { name: 'Best-fit Replacement', desc: 'Chọn từ đồng nghĩa phù hợp nhất để thay thế từ được gạch chân.' },
-                    'InferenceFromScenario': { name: 'Inference from Scenario', desc: 'Đọc một tình huống ngắn và trả lời câu hỏi suy luận về nó.' },
-                    'BestParaphrase': { name: 'Best Paraphrase', desc: 'Chọn câu diễn giải lại đúng nhất ý của câu gốc.' },
-                    'AudioListening': { name: 'Listening & Typing', desc: 'Nghe và gõ lại chính xác từ bạn nghe được.' },
-                    'AntonymMCQ': { name: 'Antonym Challenge', desc: 'Chọn từ có nghĩa trái ngược với từ cho trước.' },
-                    'TripledSentence': { name: 'Tripled Sentence', desc: 'Một từ bị thiếu trong cả ba câu. Hãy tìm ra từ đó.' },
-                    'MainIdea': { name: 'Find the Main Idea', desc: 'Đọc một đoạn văn ngắn và chọn câu diễn đạt đúng nhất ý chính.' },
-                    'ParagraphCompletion': { name: 'Find the Conclusion', desc: 'Chọn câu phù hợp nhất để kết thúc đoạn văn.' },
-                    'ArgumentStrengthening': { name: 'Strengthen the Argument', desc: 'Chọn luận điểm củng cố mạnh nhất cho lập luận của tác giả.' },
-                    'ArgumentWeakening': { name: 'Weaken the Argument', desc: 'Chọn luận điểm làm suy yếu nhất lập luận của tác giả.' },
-                    'TonePurposeAnalysis': { name: 'Tone/Purpose Identification', desc: 'Xác định giọng văn (thái độ) hoặc mục đích viết của tác giả.' },
-                    'SentenceRoleAnalysis': { name: 'Sentence Role Analysis', desc: 'Phân tích và xác định vai trò của một câu được đánh dấu trong lập luận.' },
-                };
-                
-                const info = exerciseInfo[exerciseType];
+                const info = this.EXERCISE_INFO[exerciseType];
                 const suitableItem = this.state.wordList.find(item => this.isTaskAvailable(item, exerciseType));
 
                 if (!suitableItem) {
