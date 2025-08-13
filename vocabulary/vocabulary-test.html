@@ -730,7 +730,6 @@
                 }, null, "Về Bảng điều khiển");
             },
 
-            // --- QUESTION HTML GETTERS (Unchanged) ---
             getMeaningMCQHTML(item, isExample = false) {
                 const tasks = item.generated_tasks.meaning_mcq;
                 if (!tasks || !tasks.distractors_vi || !tasks.distractors_en) { return '<div>Không có đủ dữ liệu cho dạng bài tập này.</div>'; }
@@ -1078,7 +1077,8 @@
                         const issueDoc = await transaction.get(issueRef);
                         const reporterInfo = {
                             studentId: this.state.studentId, studentName: this.state.studentName,
-                            comment: result.comment, category: result.category, reportedAt: serverTimestamp() 
+                            comment: result.comment, category: result.category, 
+                            reportedAt: new Date() // FIX: Use client-side timestamp
                         };
 
                         if (!issueDoc.exists()) {
