@@ -502,6 +502,28 @@
                         }
                     }
                     
+                    // NEW: Dual progress bar logic
+                    let progressBarsHTML = `
+                        <div class="mb-4 space-y-3 text-left text-xs font-medium text-text-secondary">
+                            <div>
+                                <span><i class="fas fa-brain fa-fw mr-1"></i>Kiến thức đã học</span>
+                                <div class="progress-track mt-1"><div class="progress-fill" style="width: ${(percent * 100).toFixed(0)}%;"></div></div>
+                            </div>
+                    `;
+
+                    const testUnlockThreshold = this.CONFIG.RULES.PROFICIENCY_TEST_UNLOCK[levelNum];
+                    if (progress.status === 'unlocked' && testUnlockThreshold) {
+                        const testUnlockProgress = Math.min(100, (percent / testUnlockThreshold * 100));
+                        progressBarsHTML += `
+                            <div>
+                                <span><i class="fas fa-key fa-fw mr-1"></i>Mở khóa Kiểm tra (${(percent * 100).toFixed(0)}% / ${testUnlockThreshold * 100}%)</span>
+                                <div class="progress-track mt-1"><div class="progress-fill !bg-gradient-to-r !from-sky-400 !to-cyan-300" style="width: ${testUnlockProgress.toFixed(0)}%;"></div></div>
+                            </div>
+                        `;
+                    }
+                    progressBarsHTML += `</div>`;
+
+
                     return `
                         <div id="level-card-${levelNum}" class="level-card p-6 rounded-2xl ${statusClass}">
                             <div class="flex justify-between items-start mb-4">
@@ -509,7 +531,7 @@
                                 <i class="fas ${icon} text-2xl"></i>
                             </div>
                             <p class="text-sm text-text-secondary mb-4 text-left">${levelConfig.name}</p>
-                            <div class="progress-track mb-4"><div class="progress-fill" style="width: ${(percent * 100).toFixed(0)}%;"></div></div>
+                            ${progressBarsHTML}
                             <button data-level="${levelNum}" class="cta-btn secondary w-full !rounded-lg" ${buttonDisabled}>${buttonText}</button>
                             ${testButtonHTML}
                         </div>
@@ -801,6 +823,13 @@
                 }, "Luyện tập tiếp", "Về Dashboard");
             },
             
+            // UTILITY to format text with markdown-style bolding
+            formatText(text) {
+                if (!text || typeof text !== 'string') return '';
+                // Replace markdown-style bold (**text**) with HTML strong tag
+                return text.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>');
+            },
+
             getMeaningMCQHTML(item) {
                 const tasks = item.generated_tasks.meaning_mcq;
                 if (!tasks || !tasks.distractors_vi) return '<div>Không có đủ dữ liệu cho dạng bài tập này.</div>';
@@ -815,7 +844,7 @@
                 const tasks = item.generated_tasks.word_family_mcq;
                 if (!tasks || !tasks.sentence) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_answer;
-                const sentence = tasks.sentence.replace(tasks.blank_placeholder, '<span class="font-bold text-primary-accent">[...]</span>');
+                const sentence = this.formatText(tasks.sentence).replace(tasks.blank_placeholder, '<span class="font-bold text-primary-accent">[...]</span>');
                 const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
                 const info = this.EXERCISE_INFO.WordFamilyMCQ;
                 return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
@@ -833,7 +862,7 @@
                 if (!tasks || !tasks.incorrect_sentence) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_sentence;
                 const info = this.EXERCISE_INFO.ErrorCorrection;
-                return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-text-secondary mb-4">Viết lại câu sau cho đúng.</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${tasks.incorrect_sentence}"</p><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Nhập câu đúng tại đây..."><button id="check-btn" class="cta-btn !py-3">Kiểm tra</button></div></div>`;
+                return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-text-secondary mb-4">Viết lại câu sau cho đúng.</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${this.formatText(tasks.incorrect_sentence)}"</p><div class="flex gap-2"><input type="text" id="text-input" class="text-input-styled w-full text-lg" placeholder="Nhập câu đúng tại đây..."><button id="check-btn" class="cta-btn !py-3">Kiểm tra</button></div></div>`;
             },
             getIPAFillHTML(item) {
                 const tasks = item.generated_tasks.ipa_fill;
@@ -847,7 +876,7 @@
                 const tasks = item.generated_tasks.best_fit_replacement;
                 if (!tasks || !tasks.sentence) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_answer;
-                const sentence = tasks.sentence.replace(tasks.word_to_replace, `<span class="font-bold text-primary-accent"><u>${tasks.word_to_replace}</u></span>`);
+                const sentence = this.formatText(tasks.sentence).replace(tasks.word_to_replace, `<span class="font-bold text-primary-accent"><u>${tasks.word_to_replace}</u></span>`);
                 const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
                 const info = this.EXERCISE_INFO.BestFitReplacement;
                 return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
@@ -858,7 +887,7 @@
                 this.state.currentPractice.correctAnswer = tasks.correct_answer;
                 const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
                 const info = this.EXERCISE_INFO.InferenceFromScenario;
-                return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-md font-serif italic text-text-secondary mb-4">"${tasks.scenario}"</p><p class="text-lg font-semibold text-text-light mb-6">${tasks.question}</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-md font-serif italic text-text-secondary mb-4">"${this.formatText(tasks.scenario)}"</p><p class="text-lg font-semibold text-text-light mb-6">${this.formatText(tasks.question)}</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             getBestParaphraseHTML(item) {
                 const tasks = item.generated_tasks.best_paraphrase;
@@ -867,7 +896,7 @@
                 this.state.currentPractice.correctAnswer = correctOption.text;
                 const options = this.shuffleArray(tasks.options.map(opt => opt.text));
                 const info = this.EXERCISE_INFO.BestParaphrase;
-                return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-text-secondary mb-4">Câu gốc:</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${tasks.original_sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-text-secondary mb-4">Câu gốc:</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${this.formatText(tasks.original_sentence)}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             getAudioListeningHTML(item) {
                 this.state.currentPractice.correctAnswer = item.word;
@@ -881,7 +910,7 @@
                 
                 const regex = new RegExp(`\\b(${tasks.keyword})(s|es|ed|ing)?\\b`, 'gi');
                 const sentencesHTML = tasks.examples.map(sentence => {
-                    const replacedSentence = sentence.replace(regex, (match, baseWord, suffix) => {
+                    const replacedSentence = this.formatText(sentence).replace(regex, (match, baseWord, suffix) => {
                         return `[...]${suffix || ''}`;
                     });
                     return `<p class="text-lg font-serif italic text-text-secondary mb-2">"${replacedSentence}"</p>`;
@@ -895,7 +924,7 @@
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_antonym;
                 const options = this.shuffleArray([tasks.correct_antonym, ...tasks.distractors]);
-                const sentence = tasks.sentence_context.replace(tasks.keyword, `<strong class="text-primary-accent">${tasks.keyword}</strong>`);
+                const sentence = this.formatText(tasks.sentence_context).replace(tasks.keyword, `<strong class="text-primary-accent">${tasks.keyword}</strong>`);
                 const info = this.EXERCISE_INFO.AntonymMCQ;
                 return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-text-secondary mb-4">Đâu là từ trái nghĩa với từ được in đậm?</p><p class="text-xl font-serif italic text-text-secondary min-h-[60px] mb-8">"${sentence}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
@@ -905,7 +934,7 @@
                 this.state.currentPractice.correctAnswer = tasks.correct_answer;
                 const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
                 const info = this.EXERCISE_INFO.MainIdea;
-                return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-text-secondary mb-4">Đọc đoạn văn và chọn ý chính.</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-text-secondary mb-4">Đọc đoạn văn và chọn ý chính.</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10 leading-relaxed">${this.formatText(tasks.paragraph)}</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             getParagraphCompletionHTML(item) {
                 const tasks = item.generated_tasks.paragraph_completion;
@@ -913,7 +942,7 @@
                 this.state.currentPractice.correctAnswer = tasks.correct_conclusion;
                 const options = this.shuffleArray([tasks.correct_conclusion, ...tasks.distractors]);
                 const info = this.EXERCISE_INFO.ParagraphCompletion;
-                return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-text-secondary mb-4">Câu nào sau đây kết thúc đoạn văn hợp lý nhất?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph_body}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-text-secondary mb-4">Câu nào sau đây kết thúc đoạn văn hợp lý nhất?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10 leading-relaxed">${this.formatText(tasks.paragraph_body)}</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             getArgumentStrengtheningHTML(item) {
                 const tasks = item.generated_tasks.argument_strengthening;
@@ -921,7 +950,7 @@
                 this.state.currentPractice.correctAnswer = tasks.correct_evidence;
                 const options = this.shuffleArray([tasks.correct_evidence, ...tasks.distractors]);
                 const info = this.EXERCISE_INFO.ArgumentStrengthening;
-                return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-text-secondary mb-4">Luận điểm nào củng cố cho lập luận sau?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.argument_text}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-text-secondary mb-4">Luận điểm nào củng cố cho lập luận sau?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10 leading-relaxed">${this.formatText(tasks.argument_text)}</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             getArgumentWeakeningHTML(item) {
                 const tasks = item.generated_tasks.argument_weakening;
@@ -929,7 +958,7 @@
                 this.state.currentPractice.correctAnswer = tasks.correct_weakener;
                 const options = this.shuffleArray([tasks.correct_weakener, ...tasks.distractors]);
                 const info = this.EXERCISE_INFO.ArgumentWeakening;
-                return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-text-secondary mb-4">Luận điểm nào làm suy yếu lập luận sau?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.argument_text}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-text-secondary mb-4">Luận điểm nào làm suy yếu lập luận sau?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10 leading-relaxed">${this.formatText(tasks.argument_text)}</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             getTonePurposeAnalysisHTML(item) {
                 const tasks = item.generated_tasks.tone_purpose_analysis;
@@ -937,16 +966,20 @@
                 this.state.currentPractice.correctAnswer = tasks.correct_answer;
                 const options = this.shuffleArray([tasks.correct_answer, ...tasks.distractors]);
                 const info = this.EXERCISE_INFO.TonePurposeAnalysis;
-                return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-text-secondary mb-4">${tasks.question}</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${tasks.paragraph}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-text-secondary mb-4">${this.formatText(tasks.question)}</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10 leading-relaxed">${this.formatText(tasks.paragraph)}</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
             getSentenceRoleAnalysisHTML(item) {
                 const tasks = item.generated_tasks.sentence_role_analysis;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_role;
                 const options = this.shuffleArray([tasks.correct_role, ...tasks.distractors]);
-                const paragraphHTML = tasks.paragraph.replace(`[${tasks.highlighted_sentence_index + 1}]`, `<strong class="text-primary-accent">[${tasks.highlighted_sentence_index + 1}]</strong>`);
+                
+                // Regex to find the sentence including its marker, e.g., "[2] The quick brown fox."
+                const sentenceRegex = new RegExp(`(\\[${tasks.highlighted_sentence_index + 1}\\].*?)(?=\\[\\d+\\]|$)`, 'g');
+                const paragraphHTML = this.formatText(tasks.paragraph).replace(sentenceRegex, `<strong class="text-primary-accent">$1</strong>`);
+                
                 const info = this.EXERCISE_INFO.SentenceRoleAnalysis;
-                return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-text-secondary mb-4">Vai trò của câu được in đậm là gì?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10">"${paragraphHTML}"</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-text-secondary mb-4">Vai trò của câu được in đậm là gì?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10 leading-relaxed">${paragraphHTML}</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
 
             attachPracticeEventListeners(item, container, isGuide = false) {
