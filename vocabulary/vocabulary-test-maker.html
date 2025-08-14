@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Thư viện docx.js để xuất file Word - Sử dụng bản ESM để tương thích với module script -->
+    <!-- Thư viện docx.js để xuất file Word -->
     <script type="module">
         import * as docx from 'https://cdn.jsdelivr.net/npm/docx@8.5.0/+esm';
         window.docx = docx; // Gán vào window để truy cập global
@@ -25,7 +25,7 @@
             --text-secondary: #94a3b8; --app-bg-start: #0f172a; --app-bg-end: #1e293b;
         }
         body { font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--app-bg-start); background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%); color: var(--text-primary); transition: background-color 0.3s, color 0.3s; }
-        body.dark h1, body.dark h2, body.dark h3, body.dark label, body.dark p, body.dark input, body.dark textarea, body.dark select, body.dark summary, body.dark th, body.dark button { color: var(--text-primary); }
+        body.dark h1, body.dark h2, body.dark h3, body.dark label, body.dark p, body.dark input, body.dark textarea, body.dark select, body.dark summary, body.dark th, body.dark button, body.dark .tab { color: var(--text-primary); }
         body.dark .text-gray-700 { color: var(--text-primary) !important; }
         body.dark #dark-mode-label .fa-moon { color: var(--primary-accent); } #dark-mode-label .fa-sun { color: #f59e0b; }
         .background-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
@@ -61,6 +61,12 @@
         .task-content .sentence, .task-content .option { background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 6px; margin: 4px 0; color: var(--text-primary); }
         body.dark .task-content .sentence, body.dark .task-content .option { background: rgba(255,255,255,0.08); }
         .correct-answer { border-left: 3px solid #22c55e; }
+        .tab-container { display: flex; border-bottom: 2px solid var(--glass-border-color); margin-bottom: 1.5rem; }
+        .tab { padding: 0.75rem 1.5rem; cursor: pointer; font-weight: 600; position: relative; transition: color 0.3s; }
+        .tab.active { color: var(--primary-accent); }
+        .tab.active::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 2px; background-color: var(--primary-accent); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.5s; }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -197,36 +203,72 @@
 
     <!-- Word Export Modal -->
     <div id="word-export-modal" class="modal">
-        <div class="glass-panel p-8 w-full max-w-2xl">
-            <h2 class="text-2xl font-bold mb-6 text-center">Cấu hình Xuất Đề thi</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                <div>
-                    <h3 class="font-bold mb-2">Thông tin Chung</h3>
-                    <div class="space-y-4">
-                        <div><label for="export-main-title" class="block text-sm font-medium">Tiêu đề chính</label><input type="text" id="export-main-title" class="input-field" value="ĐỀ THI CUỐI KỲ"></div>
-                        <div><label for="export-subtitle" class="block text-sm font-medium">Phụ đề (vd: Thời gian)</label><input type="text" id="export-subtitle" class="input-field" value="Thời gian làm bài: 90 phút"></div>
-                        <div><label for="export-test-code-base" class="block text-sm font-medium">Mã đề gốc</label><input type="text" id="export-test-code-base" class="input-field" value="10"></div>
-                    </div>
-                </div>
-                <div>
-                    <h3 class="font-bold mb-2">Số lượng & Chiến lược</h3>
-                    <div class="space-y-4">
-                        <div><label for="export-total-questions" class="block text-sm font-medium">Tổng số câu hỏi mỗi đề</label><input type="number" id="export-total-questions" class="input-field" value="20"></div>
-                        <div><label for="export-num-versions" class="block text-sm font-medium">Số lượng mã đề</label><input type="number" id="export-num-versions" class="input-field" value="2"></div>
+        <div class="glass-panel p-6 sm:p-8 w-full max-w-4xl max-h-[95vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-3xl font-bold">Tùy chọn Xuất Word</h2>
+                <button id="close-word-export-modal-btn" class="text-2xl hover:text-red-500 transition-colors">&times;</button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tab-container">
+                <div class="tab active" data-tab="random-test-tab">Tạo Đề Thi Ngẫu Nhiên</div>
+                <div class="tab" data-tab="full-export-tab">Xuất Toàn Bộ Câu Hỏi</div>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="flex-grow overflow-y-auto pr-2">
+                <!-- Tab 1: Random Test Generator -->
+                <div id="random-test-tab" class="tab-content active">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                         <div>
-                            <label class="block text-sm font-medium">Tùy chọn</label>
-                            <div class="mt-2 space-y-2">
-                                <div class="flex items-center"><input type="radio" id="strategy-shuffle" name="strategy" value="shuffle" checked class="mr-2"><label for="strategy-shuffle">Trộn lại câu hỏi (hoán vị)</label></div>
-                                <div class="flex items-center"><input type="radio" id="strategy-new" name="strategy" value="new" class="mr-2"><label for="strategy-new">Tạo bộ câu hỏi mới</label></div>
+                            <h3 class="font-bold mb-2">Thông tin Chung</h3>
+                            <div class="space-y-4">
+                                <div><label for="export-main-title" class="block text-sm font-medium">Tiêu đề chính</label><input type="text" id="export-main-title" class="input-field" value="ĐỀ THI CUỐI KỲ"></div>
+                                <div><label for="export-subtitle" class="block text-sm font-medium">Phụ đề (vd: Thời gian)</label><input type="text" id="export-subtitle" class="input-field" value="Thời gian làm bài: 90 phút"></div>
+                                <div><label for="export-test-code-base" class="block text-sm font-medium">Mã đề gốc</label><input type="text" id="export-test-code-base" class="input-field" value="10"></div>
                             </div>
                         </div>
+                        <div>
+                            <h3 class="font-bold mb-2">Số lượng & Chiến lược</h3>
+                            <div class="space-y-4">
+                                <div><label for="export-total-questions" class="block text-sm font-medium">Tổng số câu hỏi mỗi đề</label><input type="number" id="export-total-questions" class="input-field" value="20"></div>
+                                <div><label for="export-num-versions" class="block text-sm font-medium">Số lượng mã đề</label><input type="number" id="export-num-versions" class="input-field" value="2"></div>
+                                <div>
+                                    <label class="block text-sm font-medium">Tùy chọn</label>
+                                    <div class="mt-2 space-y-2">
+                                        <div class="flex items-center"><input type="radio" id="strategy-shuffle" name="strategy" value="shuffle" checked class="mr-2"><label for="strategy-shuffle">Trộn lại câu hỏi (hoán vị)</label></div>
+                                        <div class="flex items-center"><input type="radio" id="strategy-new" name="strategy" value="new" class="mr-2"><label for="strategy-new">Tạo bộ câu hỏi mới</label></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="md:col-span-2">
+                            <h3 class="font-bold mb-2">Chọn Level và Tỷ lệ câu hỏi:</h3>
+                            <div id="export-levels-container" class="grid grid-cols-1 sm:grid-cols-2 gap-x-8"></div>
+                            <div class="mt-2 font-bold">Tổng: <span id="export-total-percentage">0</span>%</div>
+                            <div id="export-validation-message" class="text-red-500 font-semibold h-6 mt-1"></div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-6">
+                        <button id="generate-random-test-btn" class="btn btn-primary">Tạo & Tải xuống Bộ đề thi</button>
                     </div>
                 </div>
-            </div>
-            <div id="export-validation-message" class="text-red-500 font-semibold text-center h-6 mt-4"></div>
-            <div class="flex justify-center gap-4 mt-6">
-                <button id="generate-word-docs-btn" class="btn btn-primary">Tạo & Tải xuống</button>
-                <button id="close-word-export-modal-btn" class="btn btn-danger">Đóng</button>
+
+                <!-- Tab 2: Full Bank Exporter -->
+                <div id="full-export-tab" class="tab-content">
+                    <h3 class="text-xl font-semibold mb-4">Xuất toàn bộ ngân hàng câu hỏi</h3>
+                    <p class="text-secondary mb-6">Chức năng này sẽ xuất TẤT CẢ các câu hỏi đã được AI tạo ra từ bộ từ vựng hiện tại. Lý tưởng để tạo tài liệu ôn tập hoặc lưu trữ.</p>
+                    <div>
+                        <label class="block text-lg font-medium mb-2">Sắp xếp tài liệu theo:</label>
+                        <div class="mt-2 space-y-3">
+                            <div class="flex items-center glass-panel p-4 rounded-lg"><input type="radio" id="sort-by-word" name="sort-order" value="word" checked class="w-5 h-5 mr-3"><label for="sort-by-word" class="w-full"><strong>Theo Từ vựng:</strong> Nhóm tất cả các câu hỏi theo từng từ.</label></div>
+                            <div class="flex items-center glass-panel p-4 rounded-lg"><input type="radio" id="sort-by-level" name="sort-order" value="level" class="w-5 h-5 mr-3"><label for="sort-by-level" class="w-full"><strong>Theo Level:</strong> Nhóm tất cả các câu hỏi theo 4 cấp độ tư duy.</label></div>
+                        </div>
+                    </div>
+                     <div class="text-center mt-8">
+                        <button id="generate-full-export-btn" class="btn btn-primary">Tạo & Tải xuống Tài liệu</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -249,13 +291,43 @@
         };
         const CLOUD_FUNCTION_URL = "https://getoaldaudio-asjwauz37q-uc.a.run.app";
         const AI_BATCH_SIZE = 5;
-        const ALL_TASK_TYPES = [
-            "basic_example", "meaning_mcq", "word_family_mcq", "sentence_unscramble", 
-            "error_correction", "ipa_fill", "collocation_odd_one_out", "best_fit_replacement",
-            "inference_from_scenario", "best_paraphrase", "antonym_mcq", "tripled_sentence",
-            "main_idea", "paragraph_completion", "argument_strengthening", "argument_weakening",
-            "tone_purpose_analysis", "sentence_role_analysis"
-        ];
+        const ALL_TASK_TYPES = {
+            // Level 1: Nền tảng
+            meaning_mcq: { level: 1, title: "Meaning MCQ" },
+            ipa_fill: { level: 1, title: "IPA Fill" },
+            // listening_typing: { level: 1, title: "Listening & Typing" }, // Future task
+            
+            // Level 2: Ngữ pháp & Cấu trúc
+            word_family_mcq: { level: 2, title: "Word Family" },
+            sentence_unscramble: { level: 2, title: "Sentence Unscramble" },
+            error_correction: { level: 2, title: "Error Correction" },
+            tripled_sentence: { level: 2, title: "Tripled Sentence" },
+            
+            // Level 3: Ngữ nghĩa & Ngữ dụng
+            best_fit_replacement: { level: 3, title: "Best-fit Replacement" },
+            best_paraphrase: { level: 3, title: "Best Paraphrase" },
+            antonym_mcq: { level: 3, title: "Antonym Challenge" },
+            collocation_odd_one_out: { level: 3, title: "Collocation Odd One Out" }, // Re-classified to L3
+
+            // Level 4: Tư duy Phản biện
+            inference_from_scenario: { level: 4, title: "Inference from Scenario" },
+            main_idea: { level: 4, title: "Find the Main Idea" },
+            paragraph_completion: { level: 4, title: "Find the Conclusion" },
+            argument_strengthening: { level: 4, title: "Strengthen the Argument" },
+            argument_weakening: { level: 4, title: "Weaken the Argument" },
+            tone_purpose_analysis: { level: 4, title: "Tone/Purpose Identification" },
+            sentence_role_analysis: { level: 4, title: "Sentence Role Analysis" },
+
+            // Basic task, can be considered level 1
+            basic_example: { level: 1, title: "Basic Example" },
+        };
+        const LEVEL_DEFINITIONS = {
+            1: "Level 1: Nền tảng",
+            2: "Level 2: Ngữ pháp & Cấu trúc",
+            3: "Level 3: Ngữ nghĩa & Ngữ dụng",
+            4: "Level 4: Tư duy Phản biện"
+        };
+
 
         // --- INITIALIZATION ---
         const app = initializeApp(firebaseConfig);
@@ -291,8 +363,13 @@
             // Word Export Modal Elements
             wordExportModal: document.getElementById('word-export-modal'),
             closeWordExportModalBtn: document.getElementById('close-word-export-modal-btn'),
-            generateWordDocsBtn: document.getElementById('generate-word-docs-btn'),
             exportValidationMessage: document.getElementById('export-validation-message'),
+            exportLevelsContainer: document.getElementById('export-levels-container'),
+            exportTotalPercentage: document.getElementById('export-total-percentage'),
+            generateRandomTestBtn: document.getElementById('generate-random-test-btn'),
+            generateFullExportBtn: document.getElementById('generate-full-export-btn'),
+            tabs: document.querySelectorAll('.tab'),
+            tabContents: document.querySelectorAll('.tab-content'),
         };
 
         // --- UI & HELPERS ---
@@ -341,6 +418,7 @@
         }
 
         function updateButtonState(button, isLoading, originalHTML, loadingText = 'Đang xử lý...') {
+            if (!button) return;
             button.disabled = isLoading;
             if (isLoading) {
                 button.innerHTML = `<div class="loader"></div><span class="ml-2">${loadingText}</span>`;
@@ -358,8 +436,7 @@
                     return { 
                         id: index + 1, word: columns[0], type: columns[1], 
                         pronunciation: columns[2], meaning: columns[3], 
-                        audioUrl: '', structures: [], generated_tasks: null,
-                        level: 1 // Gán level mặc định, có thể thay đổi sau
+                        audioUrl: '', structures: [], generated_tasks: null
                     };
                 }
                 return null;
@@ -438,26 +515,30 @@
                     const editableSpan = (path, text) => `<span contenteditable="true" data-path="${path}" data-word-index="${wordIndex}">${text}</span>`;
                     const editableList = (basePath, items) => (items || []).map((item, i) => `<li class="option" contenteditable="true" data-path="${basePath}[${i}]" data-word-index="${wordIndex}">${item}</li>`).join('');
 
-                    tasksHTML = [
-                        renderTask(tasks.basic_example, '1. Basic Example', data => `<div class="task-content">${editableP(`generated_tasks.basic_example`, data)}</div>`),
-                        renderTask(tasks.meaning_mcq, '2. Meaning MCQ', data => `<div class="task-content"><b>Distractors (EN):</b> <ul>${editableList(`generated_tasks.meaning_mcq.distractors_en`, data.distractors_en)}</ul><b>Distractors (VI):</b> <ul>${editableList(`generated_tasks.meaning_mcq.distractors_vi`, data.distractors_vi)}</ul></div>`),
-                        renderTask(tasks.word_family_mcq, '3. Word Family MCQ', data => `<div class="task-content"><p class="sentence">${editableSpan(`generated_tasks.word_family_mcq.sentence`, data.sentence || '').replace(data.blank_placeholder, `<b>[____]</b>`)}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.word_family_mcq.correct_answer`, data.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.word_family_mcq.distractors`, data.distractors)}</ul></p></div>`),
-                        renderTask(tasks.sentence_unscramble, '4. Sentence Unscramble', data => `<div class="task-content">${editableP(`generated_tasks.sentence_unscramble.correct_sentence`, data.correct_sentence || '')}</div>`),
-                        renderTask(tasks.error_correction, '5. Error Correction', data => `<div class="task-content"><p><b>Incorrect:</b> ${editableSpan(`generated_tasks.error_correction.incorrect_sentence`, data.incorrect_sentence || '')}</p><p><b>Correct:</b> ${editableSpan(`generated_tasks.error_correction.correct_sentence`, data.correct_sentence || '')}</p></div>`),
-                        renderTask(tasks.ipa_fill, '6. IPA Fill', data => `<div class="task-content"><p><b>Gapped IPA:</b> ${editableSpan(`generated_tasks.ipa_fill.gapped_ipa`, data.gapped_ipa || '')}</p><p><b>Correct Vowel:</b> ${editableSpan(`generated_tasks.ipa_fill.correct_vowel`, data.correct_vowel || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.ipa_fill.distractors`, data.distractors)}</ul></p></div>`),
-                        renderTask(tasks.collocation_odd_one_out, '7. Collocation Odd One Out', data => `<div class="task-content"><p><b>Question:</b> ${editableSpan(`generated_tasks.collocation_odd_one_out.question`, data.question || '')}</p><p><b>Options:</b><ul>${(data.options || []).map((opt, i) => `<li class="option ${opt === data.answer ? 'correct-answer' : ''}" contenteditable="true" data-path="generated_tasks.collocation_odd_one_out.options[${i}]" data-word-index="${wordIndex}">${opt}</li>`).join('')}</ul></p><p><b>Answer:</b> ${editableSpan(`generated_tasks.collocation_odd_one_out.answer`, data.answer || '')}</p></div>`),
-                        renderTask(tasks.best_fit_replacement, '8. Best-fit Replacement', data => `<div class="task-content"><p class="sentence">${editableSpan(`generated_tasks.best_fit_replacement.sentence`, data.sentence || '').replace(data.word_to_replace, `<b><u>${data.word_to_replace}</u></b>`)}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.best_fit_replacement.correct_answer`, data.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.best_fit_replacement.distractors`, data.distractors)}</ul></p></div>`),
-                        renderTask(tasks.inference_from_scenario, '9. Inference', data => `<div class="task-content"><p><b>Scenario:</b> ${editableSpan(`generated_tasks.inference_from_scenario.scenario`, data.scenario || '')}</p><p><b>Question:</b> ${editableSpan(`generated_tasks.inference_from_scenario.question`, data.question || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.inference_from_scenario.correct_answer`, data.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.inference_from_scenario.distractors`, data.distractors)}</ul></p></div>`),
-                        renderTask(tasks.best_paraphrase, '10. Best Paraphrase', data => `<div class="task-content"><p><b>Original:</b> ${editableP(`generated_tasks.best_paraphrase.original_sentence`, data.original_sentence || '')}</p><p><b>Options:</b><ul>${(data.options || []).map((opt, i) => `<li class="option ${opt.is_correct ? 'correct-answer' : ''}" contenteditable="true" data-path="generated_tasks.best_paraphrase.options[${i}].text" data-word-index="${wordIndex}">${opt.text}</li>`).join('')}</ul></p></div>`),
-                        renderTask(tasks.antonym_mcq, '11. Antonym MCQ', data => `<div class="task-content"><p><b>Context:</b> ${editableSpan(`generated_tasks.antonym_mcq.sentence_context`, data.sentence_context || '')}</p><p><b>Keyword:</b> ${editableSpan(`generated_tasks.antonym_mcq.keyword`, data.keyword || '')}</p><p><b>Antonym:</b> ${editableSpan(`generated_tasks.antonym_mcq.correct_antonym`, data.correct_antonym || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.antonym_mcq.distractors`, data.distractors)}</ul></p></div>`),
-                        renderTask(tasks.tripled_sentence, '12. Tripled Sentence', data => `<div class="task-content"><p><b>Keyword:</b> ${editableSpan(`generated_tasks.tripled_sentence.keyword`, data.keyword || '')}</p><b>Examples:</b><ul>${editableList(`generated_tasks.tripled_sentence.examples`, data.examples)}</ul></div>`),
-                        renderTask(tasks.main_idea, '13. Main Idea', data => `<div class="task-content"><p><b>Paragraph:</b> ${editableSpan(`generated_tasks.main_idea.paragraph`, data.paragraph || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.main_idea.correct_answer`, data.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.main_idea.distractors`, data.distractors)}</ul></p></div>`),
-                        renderTask(tasks.paragraph_completion, '14. Paragraph Completion', data => `<div class="task-content"><p><b>Body:</b> ${editableSpan(`generated_tasks.paragraph_completion.paragraph_body`, data.paragraph_body || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.paragraph_completion.correct_conclusion`, data.correct_conclusion || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.paragraph_completion.distractors`, data.distractors)}</ul></p></div>`),
-                        renderTask(tasks.argument_strengthening, '15. Argument Strengthening', data => `<div class="task-content"><p><b>Argument:</b> ${editableSpan(`generated_tasks.argument_strengthening.argument_text`, data.argument_text || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.argument_strengthening.correct_evidence`, data.correct_evidence || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.argument_strengthening.distractors`, data.distractors)}</ul></p></div>`),
-                        renderTask(tasks.argument_weakening, '16. Argument Weakening', data => `<div class="task-content"><p><b>Argument:</b> ${editableSpan(`generated_tasks.argument_weakening.argument_text`, data.argument_text || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.argument_weakening.correct_weakener`, data.correct_weakener || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.argument_weakening.distractors`, data.distractors)}</ul></p></div>`),
-                        renderTask(tasks.tone_purpose_analysis, '17. Tone/Purpose Analysis', data => `<div class="task-content"><p><b>Paragraph:</b> ${editableSpan(`generated_tasks.tone_purpose_analysis.paragraph`, data.paragraph || '')}</p><p><b>Question:</b> ${editableSpan(`generated_tasks.tone_purpose_analysis.question`, data.question || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.tone_purpose_analysis.correct_answer`, data.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.tone_purpose_analysis.distractors`, data.distractors)}</ul></p></div>`),
-                        renderTask(tasks.sentence_role_analysis, '18. Sentence Role Analysis', data => `<div class="task-content"><p><b>Paragraph:</b> ${editableSpan(`generated_tasks.sentence_role_analysis.paragraph`, data.paragraph || '')}</p><p><b>Role of Sentence ${data.highlighted_sentence_index + 1}:</b> ${editableSpan(`generated_tasks.sentence_role_analysis.correct_role`, data.correct_role || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.sentence_role_analysis.distractors`, data.distractors)}</ul></p></div>`),
-                    ].filter(Boolean).join('');
+                    tasksHTML = Object.entries(ALL_TASK_TYPES)
+                        .map(([taskType, taskInfo]) => {
+                            const taskData = tasks[taskType];
+                            if (!taskData) return ''; // Skip if task data doesn't exist
+                            
+                            let contentHTML = '';
+                            // This switch can be expanded for custom rendering of each task type
+                            switch (taskType) {
+                                case 'meaning_mcq':
+                                    contentHTML = `<div class="task-content"><b>Distractors (VI):</b> <ul>${editableList(`generated_tasks.meaning_mcq.distractors_vi`, taskData.distractors_vi)}</ul></div>`;
+                                    break;
+                                case 'word_family_mcq':
+                                    contentHTML = `<div class="task-content"><p class="sentence">${editableSpan(`generated_tasks.word_family_mcq.sentence`, taskData.sentence || '').replace(taskData.blank_placeholder, `<b>[____]</b>`)}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.word_family_mcq.correct_answer`, taskData.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.word_family_mcq.distractors`, taskData.distractors)}</ul></p></div>`;
+                                    break;
+                                case 'best_paraphrase':
+                                     contentHTML = `<div class="task-content"><p><b>Original:</b> ${editableP(`generated_tasks.best_paraphrase.original_sentence`, taskData.original_sentence || '')}</p><p><b>Options:</b><ul>${(taskData.options || []).map((opt, i) => `<li class="option ${opt.is_correct ? 'correct-answer' : ''}" contenteditable="true" data-path="generated_tasks.best_paraphrase.options[${i}].text" data-word-index="${wordIndex}">${opt.text}</li>`).join('')}</ul></p></div>`;
+                                     break;
+                                default:
+                                    // Generic renderer for other tasks
+                                    contentHTML = `<div class="task-content"><pre>${editableSpan(`generated_tasks.${taskType}`, JSON.stringify(taskData, null, 2))}</pre></div>`;
+                            }
+                            return renderTask(taskData, taskInfo.title, () => contentHTML);
+                        })
+                        .filter(Boolean).join('');
                 }
 
                 const aiStatusIcon = tasks ? `<i class="fas fa-check-circle text-2xl text-green-500"></i>` : `<i class="fas fa-times-circle text-2xl text-gray-400"></i>`;
@@ -478,12 +559,26 @@
             for (let i = 0; i < keys.length - 1; i++) {
                 const key = keys[i];
                 if (current[key] === undefined || current[key] === null) { 
-                    console.error(`Path does not exist: ${keys.slice(0, i + 1).join('.')}`); 
-                    return; 
+                    // If path doesn't exist, try to create it.
+                    // This is a simplified version, might need more robust handling.
+                    if (Number.isInteger(parseInt(keys[i+1], 10))) {
+                        current[key] = [];
+                    } else {
+                        current[key] = {};
+                    }
                 }
                 current = current[key];
             }
-            current[keys[keys.length - 1]] = value;
+            // For editable pre tags
+            if (typeof current[keys[keys.length - 1]] === 'object') {
+                 try {
+                    current[keys[keys.length - 1]] = JSON.parse(value);
+                } catch(e) {
+                    console.error("Invalid JSON for update:", e);
+                }
+            } else {
+                current[keys[keys.length - 1]] = value;
+            }
         }
 
         // --- AI & API ---
@@ -491,7 +586,8 @@
         function getPromptForBatch(batch, overwriteAll = false) {
             const cefrLevel = getCefrLevelDescription();
             const batchInput = batch.map(wordData => {
-                const missingTasks = overwriteAll ? ALL_TASK_TYPES : ALL_TASK_TYPES.filter(type => !wordData.generated_tasks || !wordData.generated_tasks[type]);
+                const taskKeys = Object.keys(ALL_TASK_TYPES);
+                const missingTasks = overwriteAll ? taskKeys : taskKeys.filter(type => !wordData.generated_tasks || !wordData.generated_tasks[type]);
                 return {
                     id: wordData.id,
                     word: wordData.word,
@@ -503,6 +599,7 @@
                 };
             });
 
+            // The full, detailed prompt is used here.
             return `
 # MISSION & ROLE
 You are a **Master Instructional Designer** specializing in English Language Testing (ELT). Your mission is to craft high-quality, pedagogically sound assessment items. You are not a mere content generator; you are an expert in cognitive science and language acquisition, creating "cognitive puzzles" that test and reinforce a learner's understanding of vocabulary in a comprehensive, meaningful way.
@@ -644,8 +741,7 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
 **FINAL INSTRUCTIONS**
 - **Proficiency Level**: All generated content must be strictly aligned with the **${cefrLevel}** level.
 - **Format**: Return only a valid JSON array.
-- **Begin!**
-`;
+- **Begin!**`;
         }
 
 
@@ -716,7 +812,6 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
         }
 
         // --- WORD EXPORT FUNCTIONS (NEW & IMPROVED) ---
-
         const NO_BORDER = {
             top: { style: BorderStyle.NONE, size: 0, color: "auto" },
             bottom: { style: BorderStyle.NONE, size: 0, color: "auto" },
@@ -726,28 +821,30 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
             insideVertical: { style: BorderStyle.NONE, size: 0, color: "auto" },
         };
         
-        function renderWordQuestion(docChildren, questionCounter, wordItem) {
-            const { wordData, generated_tasks } = wordItem;
-            let questionParts = [];
+        function renderSingleQuestionForDocx(wordData, taskType, taskData, qCounter) {
+            const taskInfo = ALL_TASK_TYPES[taskType];
+            if (!taskInfo) return null;
 
-            // A helper function to create and add MCQ questions
-            const processMCQ = (taskName, questionText, correctAnswer, distractors) => {
-                if (!correctAnswer || !Array.isArray(distractors) || distractors.length === 0) return null;
+            const docElements = [];
+            let answer = null;
+            const questionPrefix = `Question ${qCounter}:`;
+
+            const createMCQ = (questionText, correctAnswer, distractors) => {
+                if (!correctAnswer || !Array.isArray(distractors) || distractors.length === 0) return;
                 
-                const children = [];
-                children.push(new Paragraph({ children: [new TextRun({ text: `Question ${questionCounter}: `, bold: true }), new TextRun({ text: `[${taskName}] `, italics: true }), new TextRun(questionText)], spacing: { before: 200 } }));
+                docElements.push(new Paragraph({ children: [new TextRun({ text: `${questionPrefix} `, bold: true }), new TextRun({ text: `[${taskInfo.title}] `, italics: true }), new TextRun(questionText)], spacing: { before: 200 } }));
                 
                 const allChoices = [correctAnswer, ...distractors];
                 const shuffledChoices = [...allChoices].sort(() => 0.5 - Math.random());
                 
                 const correctIndex = shuffledChoices.findIndex(c => c === correctAnswer);
-                const correctLabel = ["A", "B", "C", "D"][correctIndex];
+                answer = ["A", "B", "C", "D"][correctIndex];
 
-                const options = shuffledChoices.map((choice, i) => ({ label: `${["A", "B", "C", "D"][i]}. `, text: choice }));
+                const options = shuffledChoices.map((choice, i) => ({ label: `${["A", "B", "C", "D"][i]}. `, text: String(choice) }));
                 
-                if (allChoices.join("").length > 150) { // Use single column for long options
-                    children.push(...options.map(opt => new Paragraph({ children: [new TextRun({ text: opt.label, bold: true }), new TextRun(opt.text)] })));
-                } else { // Use two-column table for short options
+                if (allChoices.join("").length > 150) {
+                    docElements.push(...options.map(opt => new Paragraph({ children: [new TextRun({ text: opt.label, bold: true }), new TextRun(opt.text)] })));
+                } else {
                     const tableRows = [];
                     for (let i = 0; i < options.length; i += 2) {
                         tableRows.push(new TableRow({ children: [
@@ -755,67 +852,92 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                             new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: options[i + 1]?.label || "", bold: true }), new TextRun(options[i + 1]?.text || "")] })], borders: NO_BORDER, width: { size: 50, type: WidthType.PERCENTAGE } })
                         ]}));
                     }
-                    children.push(new Table({ rows: tableRows, width: { size: 100, type: WidthType.PERCENTAGE }, borders: NO_BORDER }));
+                    docElements.push(new Table({ rows: tableRows, width: { size: 100, type: WidthType.PERCENTAGE }, borders: NO_BORDER }));
                 }
-                return { docElements: children, answer: correctLabel };
             };
 
-            // Iterate through available tasks and generate questions
-            for (const taskType in generated_tasks) {
-                const taskData = generated_tasks[taskType];
-                if (!taskData) continue;
+            const createFillInBlank = (questionText, correctAnswerText) => {
+                 docElements.push(new Paragraph({ children: [new TextRun({ text: `${questionPrefix} `, bold: true }), new TextRun({ text: `[${taskInfo.title}] `, italics: true }), new TextRun(questionText)], spacing: { before: 200 } }));
+                 docElements.push(new Paragraph({ text: "Answer: __________________________________________________"}));
+                 answer = correctAnswerText;
+            };
 
-                let result = null;
-                switch (taskType) {
-                    case 'meaning_mcq':
-                        result = processMCQ('Meaning', `What is the meaning of "${wordData.word}"?`, wordData.meaning, taskData.distractors_vi);
-                        break;
-                    case 'word_family_mcq':
-                        result = processMCQ('Word Family', taskData.sentence.replace(taskData.blank_placeholder, '______'), taskData.correct_answer, taskData.distractors);
-                        break;
-                    case 'best_paraphrase':
-                        const correctPara = taskData.options?.find(o => o.is_correct)?.text;
-                        const incorrectPara = taskData.options?.filter(o => !o.is_correct).map(o => o.text);
-                        result = processMCQ('Best Paraphrase', taskData.original_sentence, correctPara, incorrectPara);
-                        break;
-                    case 'main_idea':
-                         result = processMCQ('Main Idea', taskData.paragraph, taskData.correct_answer, taskData.distractors);
-                        break;
-                    case 'antonym_mcq':
-                        result = processMCQ('Antonym', taskData.sentence_context, taskData.correct_antonym, taskData.distractors);
-                        break;
-                    // Add more cases here for other MCQ task types as needed
-                }
-
-                if (result) {
-                    questionParts.push(result);
-                }
+            switch (taskType) {
+                case 'meaning_mcq':
+                    createMCQ(`What is the meaning of "${wordData.word}"?`, wordData.meaning, taskData.distractors_vi);
+                    break;
+                case 'word_family_mcq':
+                    createMCQ((taskData.sentence || '').replace(taskData.blank_placeholder, '______'), taskData.correct_answer, taskData.distractors);
+                    break;
+                case 'best_paraphrase':
+                    const correctPara = taskData.options?.find(o => o.is_correct)?.text;
+                    const incorrectPara = taskData.options?.filter(o => !o.is_correct).map(o => o.text);
+                    createMCQ(taskData.original_sentence, correctPara, incorrectPara);
+                    break;
+                case 'main_idea':
+                     createMCQ(taskData.paragraph, taskData.correct_answer, taskData.distractors);
+                    break;
+                case 'antonym_mcq':
+                    createMCQ(taskData.sentence_context, taskData.correct_antonym, taskData.distractors);
+                    break;
+                case 'error_correction':
+                    createFillInBlank(`Correct the following sentence: ${taskData.incorrect_sentence}`, taskData.correct_sentence);
+                    break;
+                case 'sentence_unscramble':
+                    const scrambled = (taskData.correct_sentence || '').split(' ').sort(() => 0.5 - Math.random()).join(' / ');
+                    createFillInBlank(`Unscramble the words to form a correct sentence: ${scrambled}`, taskData.correct_sentence);
+                    break;
+                // Add more cases for other task types...
             }
             
-            // Select one random question part from the generated ones for this word
-            if (questionParts.length > 0) {
-                const randomPart = questionParts[Math.floor(Math.random() * questionParts.length)];
-                docChildren.push(...randomPart.docElements);
-                return randomPart.answer; // Return the correct answer label for the selected question
-            }
-            return null; // No valid question could be generated
+            return docElements.length > 0 ? { docElements, answer } : null;
         }
 
         function selectQuestionsForTest(totalQuestions) {
-            const allPossibleQuestions = localWordList
-                .filter(wordData => wordData.generated_tasks && Object.keys(wordData.generated_tasks).length > 0)
-                .map(wordData => ({
-                    wordData: wordData,
-                    generated_tasks: wordData.generated_tasks,
-                    level: 1 // Simplified level
-                }));
+            const allPossibleQuestions = [];
+            const levelConfigs = document.querySelectorAll('#export-levels-container .level-config');
 
-            // Shuffle the entire pool and take the required number of questions
-            const shuffledPool = allPossibleQuestions.sort(() => 0.5 - Math.random());
-            return shuffledPool.slice(0, totalQuestions);
+            // Build a pool of all possible questions, annotated with their level
+            localWordList.forEach(wordData => {
+                if (wordData.generated_tasks) {
+                    for (const taskType in wordData.generated_tasks) {
+                        const taskInfo = ALL_TASK_TYPES[taskType];
+                        if (taskInfo) {
+                            allPossibleQuestions.push({
+                                level: taskInfo.level,
+                                wordData: wordData,
+                                taskType: taskType,
+                                taskData: wordData.generated_tasks[taskType]
+                            });
+                        }
+                    }
+                }
+            });
+
+            let selectedQuestions = [];
+            levelConfigs.forEach(config => {
+                const checkbox = config.querySelector('input[type="checkbox"]');
+                if (!checkbox.checked) return;
+
+                const level = Number(checkbox.dataset.level);
+                const percentage = Number(config.querySelector('input[type="number"]').value);
+                const questionsForThisLevel = Math.round(totalQuestions * (percentage / 100));
+                
+                const pool = allPossibleQuestions.filter(q => q.level === level);
+                const shuffledPool = pool.sort(() => 0.5 - Math.random());
+                selectedQuestions.push(...shuffledPool.slice(0, questionsForThisLevel));
+            });
+            
+            // Adjust if rounding leads to incorrect total
+            while (selectedQuestions.length > totalQuestions) {
+                selectedQuestions.pop();
+            }
+            // Could also add logic to add more if total is too low, but this is simpler for now.
+
+            return selectedQuestions.sort(() => 0.5 - Math.random()); // Final shuffle
         }
 
-        async function generateAndDownloadTests() {
+        async function generateAndDownloadRandomTests() {
             const mainTitle = document.getElementById('export-main-title').value;
             const subtitle = document.getElementById('export-subtitle').value;
             const testCodeBase = document.getElementById('export-test-code-base').value;
@@ -824,13 +946,13 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
             const strategy = document.querySelector('input[name="strategy"]:checked').value;
             const validationMsg = DOM.exportValidationMessage;
 
-            if (totalQuestions <= 0 || numVersions <= 0) {
-                validationMsg.textContent = 'Số câu hỏi và số mã đề phải lớn hơn 0.';
+            const totalPercentage = Array.from(document.querySelectorAll('#export-levels-container .level-config input[type="number"]')).reduce((sum, input) => sum + (input.disabled ? 0 : Number(input.value)), 0);
+            if (totalPercentage !== 100) {
+                validationMsg.textContent = 'Tổng tỷ lệ phải bằng 100%.';
                 return;
             }
-            const availableQuestions = localWordList.filter(w => w.generated_tasks).length;
-            if (totalQuestions > availableQuestions) {
-                 validationMsg.textContent = `Không đủ câu hỏi. Chỉ có ${availableQuestions} từ có dữ liệu AI.`;
+            if (totalQuestions <= 0 || numVersions <= 0) {
+                validationMsg.textContent = 'Số câu hỏi và số mã đề phải lớn hơn 0.';
                 return;
             }
             validationMsg.textContent = '';
@@ -867,20 +989,22 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                 const { testCode, questions } = version;
                 const testDocChildren = [];
                 const currentAnswerKey = {};
-                let questionCounter = 1;
-
+                
                 testDocChildren.push(new Paragraph({ children: [new TextRun({ text: mainTitle, bold: true })], heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }));
                 if (subtitle) {
                     testDocChildren.push(new Paragraph({ children: [new TextRun({ text: subtitle, bold: true })], alignment: AlignmentType.CENTER }));
                 }
                 testDocChildren.push(new Paragraph({ text: `MÃ ĐỀ: ${testCode}`, alignment: AlignmentType.CENTER, spacing: { after: 200 } }));
 
-                questions.forEach(questionItem => {
-                    const correctLabel = renderWordQuestion(testDocChildren, questionCounter, questionItem);
-                    if (correctLabel) {
-                        currentAnswerKey[questionCounter] = correctLabel;
+                questions.forEach((questionItem, index) => {
+                    const qCounter = index + 1;
+                    const result = renderSingleQuestionForDocx(questionItem.wordData, questionItem.taskType, questionItem.taskData, qCounter);
+                    if (result && result.docElements) {
+                        testDocChildren.push(...result.docElements);
+                        if (result.answer) {
+                            currentAnswerKey[qCounter] = result.answer;
+                        }
                     }
-                    questionCounter++;
                 });
 
                 allTestSections.push({
@@ -902,17 +1026,80 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                 answerKeyDocChildren.push(new Table({ rows: answerRows, width: { size: 100, type: WidthType.PERCENTAGE }, borders: NO_BORDER }));
             }
 
-            // Generate and download test document
             const testDoc = new Document({ sections: allTestSections });
             const testBlob = await Packer.toBlob(testDoc);
             downloadFile(testBlob, `DeThiTongHop_${DOM.testIdInput.value}.docx`);
 
-            // Generate and download answer key document
             const answerDoc = new Document({ sections: [{ children: answerKeyDocChildren }] });
             const answerBlob = await Packer.toBlob(answerDoc);
             downloadFile(answerBlob, `DapAnTongHop_${DOM.testIdInput.value}.docx`);
             
             showAlert('Đã tạo và tải xuống thành công bộ đề thi và đáp án!', 'success');
+        }
+
+        async function exportAllQuestions() {
+            const sortOrder = document.querySelector('input[name="sort-order"]:checked').value;
+            const docChildren = [];
+            let qCounter = 1;
+
+            docChildren.push(new Paragraph({
+                text: `Ngân hàng câu hỏi: ${DOM.testTitleInput.value}`,
+                heading: HeadingLevel.TITLE,
+                alignment: AlignmentType.CENTER,
+            }));
+
+            if (sortOrder === 'word') {
+                localWordList.forEach(wordData => {
+                    if (!wordData.generated_tasks) return;
+                    docChildren.push(new Paragraph({ text: wordData.word, heading: HeadingLevel.HEADING_1, spacing: { before: 400 } }));
+                    
+                    for (const taskType in wordData.generated_tasks) {
+                        const taskData = wordData.generated_tasks[taskType];
+                        const result = renderSingleQuestionForDocx(wordData, taskType, taskData, qCounter);
+                        if (result && result.docElements) {
+                            docChildren.push(...result.docElements);
+                            qCounter++;
+                        }
+                    }
+                });
+            } else { // sortOrder === 'level'
+                const questionsByLevel = { 1: [], 2: [], 3: [], 4: [] };
+
+                localWordList.forEach(wordData => {
+                    if (wordData.generated_tasks) {
+                        for (const taskType in wordData.generated_tasks) {
+                            const taskInfo = ALL_TASK_TYPES[taskType];
+                            if (taskInfo) {
+                                const result = renderSingleQuestionForDocx(wordData, taskType, wordData.generated_tasks[taskType], 0); // counter is temporary
+                                if (result) {
+                                    questionsByLevel[taskInfo.level].push(result);
+                                }
+                            }
+                        }
+                    }
+                });
+
+                for (const level in questionsByLevel) {
+                    if (questionsByLevel[level].length > 0) {
+                        docChildren.push(new Paragraph({ text: LEVEL_DEFINITIONS[level], heading: HeadingLevel.HEADING_1, spacing: { before: 400 } }));
+                        questionsByLevel[level].forEach(result => {
+                             // Fix question counter
+                            const firstParaChildren = result.docElements[0].options.children;
+                            const qTextRun = firstParaChildren.find(run => run.options.text && run.options.text.startsWith('Question'));
+                            if(qTextRun) qTextRun.options.text = `Question ${qCounter}:`;
+
+                            docChildren.push(...result.docElements);
+                            qCounter++;
+                        });
+                    }
+                }
+            }
+
+            const doc = new Document({ sections: [{ children: docChildren }] });
+            const blob = await Packer.toBlob(doc);
+            downloadFile(blob, `NganHangCauHoi_${DOM.testIdInput.value}.docx`);
+            showAlert('Đã tạo và tải xuống thành công toàn bộ ngân hàng câu hỏi!', 'success');
+            DOM.wordExportModal.classList.remove('is-open');
         }
 
         function downloadFile(blob, filename) {
@@ -924,7 +1111,6 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
         }
 
         // --- FIREBASE & AUTHENTICATION ---
-        
         async function uploadToFirebase() {
             const testId = DOM.testIdInput.value.trim();
             const title = DOM.testTitleInput.value.trim();
@@ -1118,7 +1304,8 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                 }
                 
                 if (!overwriteAll) {
-                    wordsToEnrich = wordsToEnrich.filter(w => ALL_TASK_TYPES.some(type => !w.generated_tasks || !w.generated_tasks[type]));
+                    const taskKeys = Object.keys(ALL_TASK_TYPES);
+                    wordsToEnrich = wordsToEnrich.filter(w => taskKeys.some(type => !w.generated_tasks || !w.generated_tasks[type]));
                      if (wordsToEnrich.length === 0) {
                          return showAlert("Các từ đã chọn đã có đủ dữ liệu. Chọn 'Làm giàu (Ghi đè)' nếu muốn tạo lại.", 'info');
                     }
@@ -1151,7 +1338,8 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                 if (wordsToEnrich.length === 0) return showAlert("Vui lòng chọn ít nhất một từ để làm giàu thủ công.", 'error');
 
                 if (!overwriteAll) {
-                    wordsToEnrich = wordsToEnrich.filter(w => ALL_TASK_TYPES.some(type => !w.generated_tasks || !w.generated_tasks[type]));
+                    const taskKeys = Object.keys(ALL_TASK_TYPES);
+                    wordsToEnrich = wordsToEnrich.filter(w => taskKeys.some(type => !w.generated_tasks || !w.generated_tasks[type]));
                      if (wordsToEnrich.length === 0) {
                          return showAlert("Các từ đã chọn đã có đủ dữ liệu. Chọn 'Làm giàu (Ghi đè)' nếu muốn tạo lại.", 'info');
                     }
@@ -1198,23 +1386,30 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                 }
             });
 
-            // --- NEW WORD EXPORT EVENT LISTENERS ---
+            // --- WORD EXPORT EVENT LISTENERS ---
             DOM.exportWordBtn.addEventListener('click', () => {
                 if (localWordList.length === 0 || localWordList.every(w => !w.generated_tasks)) {
                     return showAlert("Không có dữ liệu bài tập để xuất. Vui lòng làm giàu dữ liệu trước.", 'error');
                 }
                 DOM.wordExportModal.classList.add('is-open');
-                // Pre-fill modal fields
                 document.getElementById('export-main-title').value = DOM.testTitleInput.value || "ĐỀ KIỂM TRA TỪ VỰNG";
                 document.getElementById('export-total-questions').value = Math.min(20, localWordList.filter(w => w.generated_tasks).length);
+                initializeLevelConfig();
             });
 
-            DOM.closeWordExportModalBtn.addEventListener('click', () => {
-                DOM.wordExportModal.classList.remove('is-open');
-            });
-
-            DOM.generateWordDocsBtn.addEventListener('click', generateAndDownloadTests);
+            DOM.closeWordExportModalBtn.addEventListener('click', () => DOM.wordExportModal.classList.remove('is-open'));
+            DOM.generateRandomTestBtn.addEventListener('click', generateAndDownloadRandomTests);
+            DOM.generateFullExportBtn.addEventListener('click', exportAllQuestions);
             
+            DOM.tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    DOM.tabs.forEach(t => t.classList.remove('active'));
+                    DOM.tabContents.forEach(c => c.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(tab.dataset.tab).classList.add('active');
+                });
+            });
+
             DOM.closeManualModalBtn.addEventListener('click', () => DOM.manualPromptModal.classList.remove('is-open'));
             DOM.copyPromptBtn.addEventListener('click', () => {
                 DOM.manualPromptOutput.select();
@@ -1238,7 +1433,7 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                 if (target.hasAttribute('contenteditable')) {
                     const wordIndex = parseInt(target.dataset.wordIndex, 10);
                     const path = target.dataset.path;
-                    const newText = target.textContent;
+                    const newText = target.isContentEditable && (target.tagName === 'PRE' || target.tagName === 'SPAN') ? target.textContent : target.innerHTML;
                     if (isNaN(wordIndex) || !localWordList[wordIndex] || !path) return;
                     updateNestedObject(localWordList[wordIndex], path, newText);
                 }
@@ -1250,6 +1445,44 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
             });
         }
         
+        function initializeLevelConfig() {
+            const container = DOM.exportLevelsContainer;
+            container.innerHTML = ''; // Clear previous
+            Object.keys(LEVEL_DEFINITIONS).forEach(level => {
+                const div = document.createElement('div');
+                div.className = 'level-config flex items-center gap-2';
+                div.innerHTML = `<input type="checkbox" id="export-level-${level}" data-level="${level}" checked class="w-5 h-5"><label for="export-level-${level}" class="font-medium">${LEVEL_DEFINITIONS[level]}</label><input type="number" data-level="${level}" value="25" min="0" max="100" step="5" class="input-field !p-2 !w-20">`;
+                container.appendChild(div);
+            });
+
+            const percentageInputs = container.querySelectorAll('input[type="number"]');
+            const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+            
+            const updateTotal = () => {
+                let total = 0;
+                percentageInputs.forEach(input => { if (!input.disabled) total += Number(input.value); });
+                DOM.exportTotalPercentage.textContent = total;
+                if (total !== 100) {
+                    DOM.exportTotalPercentage.classList.add('text-red-500');
+                    DOM.exportValidationMessage.textContent = 'Tổng tỷ lệ phải bằng 100%.';
+                } else {
+                    DOM.exportTotalPercentage.classList.remove('text-red-500');
+                    DOM.exportValidationMessage.textContent = '';
+                }
+            };
+
+            checkboxes.forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    const level = e.target.dataset.level;
+                    const input = container.querySelector(`input[type="number"][data-level="${level}"]`);
+                    input.disabled = !e.target.checked;
+                    updateTotal();
+                });
+            });
+            percentageInputs.forEach(input => input.addEventListener('input', updateTotal));
+            updateTotal();
+        }
+
         // --- PAGE INITIALIZATION ---
         async function initializePage() {
             const urlParams = new URLSearchParams(window.location.search);
