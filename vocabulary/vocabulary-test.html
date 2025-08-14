@@ -118,7 +118,7 @@
     <script type="module">
         // --- Firebase Imports ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc, runTransaction, arrayUnion, serverTimestamp, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, runTransaction, arrayUnion, serverTimestamp, collection, getDocs, query, where, Timestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
         // --- Background Animation ---
         if (window.OGL) {
@@ -266,7 +266,7 @@
                         finalTestTaken: false,
                         finalTestScore: null,
                     },
-                    currentPractice: { level: null, items: [], index: 0, isTest: false, correctAnswer: null, score: 0, sessionCorrectUIDs: new Set(), sessionIncorrectUIDs: new Set() },
+                    currentPractice: { level: null, items: [], index: 0, isTest: false, correctAnswer: null, score: 0, sessionCorrectUIDs: new Set(), sessionIncorrectUIDs: new Set(), sessionType: 'practice' },
                     currentFlashcard: { items: [], index: 0 }
                 };
             },
@@ -334,6 +334,8 @@
                     }
                     
                     this.state.userProgress.totalCompletedTasks = this.calculateTotalCompletedTasks();
+                    
+                    await this.updateReviewButton();
 
                     this.DOM.loader.classList.add('hidden');
                     this.DOM.container.classList.remove('hidden');
@@ -438,9 +440,11 @@
                             <div class="glass-panel p-6">
                                 <h2 class="text-xl font-bold mb-4">📚 Bắt đầu</h2>
                                 <div class="space-y-3">
+                                    <button id="start-review-btn" class="cta-btn w-full !rounded-lg" disabled>
+                                        <i class="fas fa-calendar-check mr-2"></i>Ôn tập hôm nay (<span id="review-count">0</span>)
+                                    </button>
                                     <button id="show-guide-btn" class="cta-btn secondary w-full !rounded-lg"><i class="fas fa-book-open mr-2"></i>Xem Hướng Dẫn & Quy Tắc</button>
                                     <button data-flashcard-type="word" class="cta-btn secondary w-full !rounded-lg"><i class="fas fa-clone mr-2"></i>Flashcard Từ Vựng</button>
-                                    <button data-flashcard-type="structure" class="cta-btn secondary w-full !rounded-lg" disabled><i class="fas fa-sitemap mr-2"></i>Flashcard Cấu Trúc</button>
                                 </div>
                             </div>
                         </aside>
@@ -456,6 +460,7 @@
                 this.renderLevelCards();
                 this.renderFinalTestSection();
                 
+                document.getElementById('start-review-btn').addEventListener('click', () => this.startReviewSession());
                 document.getElementById('show-guide-btn').addEventListener('click', () => this.renderGuideModal());
                 this.DOM.main.querySelectorAll('button[data-flashcard-type]').forEach(btn => {
                     btn.addEventListener('click', (e) => this.startFlashcardSession(e.currentTarget.dataset.flashcardType));
@@ -502,17 +507,16 @@
                         }
                     }
                     
-                    // NEW: Dual progress bar logic
                     let progressBarsHTML = `
                         <div class="mb-4 space-y-3 text-left text-xs font-medium text-text-secondary">
                             <div>
-                                <span><i class="fas fa-brain fa-fw mr-1"></i>Kiến thức đã học</span>
+                                <span><i class="fas fa-tasks fa-fw mr-1"></i>Hoàn thành bài tập (${progress.completedTasks.size}/${progress.totalTasks})</span>
                                 <div class="progress-track mt-1"><div class="progress-fill" style="width: ${(percent * 100).toFixed(0)}%;"></div></div>
                             </div>
                     `;
 
                     const testUnlockThreshold = this.CONFIG.RULES.PROFICIENCY_TEST_UNLOCK[levelNum];
-                    if (progress.status === 'unlocked' && testUnlockThreshold) {
+                    if (progress.status === 'unlocked' && testUnlockThreshold && levelNum > 1) {
                         const testUnlockProgress = Math.min(100, (percent / testUnlockThreshold * 100));
                         progressBarsHTML += `
                             <div>
@@ -520,6 +524,8 @@
                                 <div class="progress-track mt-1"><div class="progress-fill !bg-gradient-to-r !from-sky-400 !to-cyan-300" style="width: ${testUnlockProgress.toFixed(0)}%;"></div></div>
                             </div>
                         `;
+                    } else {
+                        progressBarsHTML += `<div class="h-8"></div>`; // Placeholder to keep card height consistent
                     }
                     progressBarsHTML += `</div>`;
 
@@ -626,7 +632,8 @@
                     score: 0,
                     correctAnswer: null,
                     sessionCorrectUIDs: new Set(),
-                    sessionIncorrectUIDs: new Set()
+                    sessionIncorrectUIDs: new Set(),
+                    sessionType: 'practice' // Mark as a normal practice session
                 };
                 this.renderPracticeView();
             },
@@ -659,7 +666,8 @@
                     score: 0,
                     correctAnswer: null,
                     sessionCorrectUIDs: new Set(),
-                    sessionIncorrectUIDs: new Set()
+                    sessionIncorrectUIDs: new Set(),
+                    sessionType: 'test' // Mark as a test session
                 };
                 
                 progress.testAttempts++;
@@ -687,20 +695,23 @@
                     score: 0,
                     correctAnswer: null,
                     sessionCorrectUIDs: new Set(),
-                    sessionIncorrectUIDs: new Set()
+                    sessionIncorrectUIDs: new Set(),
+                    sessionType: 'test' // Mark as a test session
                 };
                 this.renderPracticeView();
             },
 
             renderPracticeView() {
-                const { items, index, level, isTest } = this.state.currentPractice;
+                const { items, index, level, isTest, sessionType } = this.state.currentPractice;
                 const total = items.length;
                 
                 if (index >= total) {
-                    if (isTest) {
+                    if (sessionType === 'review') {
+                        this.renderSessionSummary(true); // Special summary for review
+                    } else if (isTest) {
                         level === "Final" ? this.renderFinalTestSummary() : this.renderTestSummary();
                     } else {
-                        this.renderSessionSummary();
+                        this.renderSessionSummary(false);
                     }
                     return;
                 }
@@ -708,7 +719,11 @@
                 const currentItem = items[index];
                 const renderFunction = this[`get${currentItem.exerciseType}HTML`];
                 
-                const title = isTest ? `Kiểm tra ${level === "Final" ? "Cuối kỳ" : `Level ${level}`}` : `Level ${level} - Luyện tập`;
+                let title = 'Luyện tập';
+                if (sessionType === 'review') title = 'Ôn tập kiến thức';
+                else if (isTest) title = `Kiểm tra ${level === "Final" ? "Cuối kỳ" : `Level ${level}`}`;
+                else title = `Level ${level} - Luyện tập`;
+
 
                 this.DOM.main.innerHTML = `
                     <div class="glass-panel p-6 sm:p-8 fade-in">
@@ -796,31 +811,39 @@
                 }, null, "Về Bảng điều khiển");
             },
 
-            async renderSessionSummary() {
+            async renderSessionSummary(isReview = false) {
                 const { level, sessionCorrectUIDs, sessionIncorrectUIDs } = this.state.currentPractice;
                 const correctCount = sessionCorrectUIDs.size;
                 const incorrectCount = sessionIncorrectUIDs.size;
 
+                const title = isReview ? "Tổng kết phiên Ôn tập" : `Tổng kết phiên học Level ${level}`;
                 const message = `
                     <div class="text-left">
-                        <p class="mb-4">Bạn vừa hoàn thành một phiên luyện tập. Dưới đây là kết quả:</p>
+                        <p class="mb-4">Bạn vừa hoàn thành một phiên học. Dưới đây là kết quả:</p>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="bg-bg-dark p-4 rounded-lg border border-glass-border">
                                 <h3 class="font-bold text-green-400 mb-2">Đã trả lời đúng (${correctCount})</h3>
-                                <p class="text-sm text-text-secondary">Tuyệt vời! Những kiến thức này đã được ghi nhận vào tiến trình của bạn.</p>
+                                <p class="text-sm text-text-secondary">Tuyệt vời! Những kiến thức này đã được củng cố.</p>
                             </div>
                             <div class="bg-bg-dark p-4 rounded-lg border border-glass-border">
                                 <h3 class="font-bold text-red-400 mb-2">Cần xem lại (${incorrectCount})</h3>
-                                <p class="text-sm text-text-secondary">Đừng lo, hệ thống sẽ ưu tiên những dạng bài này trong các phiên học tới.</p>
+                                <p class="text-sm text-text-secondary">Đừng lo, hệ thống sẽ lên lịch ôn tập lại những câu này sớm thôi.</p>
                             </div>
                         </div>
                     </div>
                 `;
+                
                 await this.updateFirestoreProgress();
-                this.showModal(`Tổng kết phiên học Level ${level}`, message, true, () => this.startPractice(level), () => {
+                await this.updateReviewButton();
+
+                const onConfirm = isReview ? () => this.startReviewSession() : () => this.startPractice(level);
+                const confirmText = isReview ? (this.state.reviewCount > 0 ? "Ôn tập tiếp" : "Hết bài ôn tập") : "Luyện tập tiếp";
+                const onCancel = () => {
                     this.renderDashboard();
                     this.renderHeader();
-                }, "Luyện tập tiếp", "Về Dashboard");
+                };
+
+                this.showModal(title, message, true, onConfirm, onCancel, confirmText, "Về Dashboard");
             },
             
             // UTILITY to format text with markdown-style bolding
@@ -974,7 +997,6 @@
                 this.state.currentPractice.correctAnswer = tasks.correct_role;
                 const options = this.shuffleArray([tasks.correct_role, ...tasks.distractors]);
                 
-                // Regex to find the sentence including its marker, e.g., "[2] The quick brown fox."
                 const sentenceRegex = new RegExp(`(\\[${tasks.highlighted_sentence_index + 1}\\].*?)(?=\\[\\d+\\]|$)`, 'g');
                 const paragraphHTML = this.formatText(tasks.paragraph).replace(sentenceRegex, `<strong class="text-primary-accent">$1</strong>`);
                 
@@ -1003,30 +1025,38 @@
                 }
             },
 
-            checkAnswer(userAnswer, item, container, selectedElement) {
+            async checkAnswer(userAnswer, item, container, selectedElement) {
                 const correctAnswer = this.state.currentPractice.correctAnswer;
                 const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
                 
                 container.querySelectorAll('button, input').forEach(el => el.disabled = true);
                 
-                const levelProgress = this.state.currentPractice.level !== "Final" && this.state.userProgress.levels[this.state.currentPractice.level];
+                const { sessionType } = this.state.currentPractice;
                 
                 if (isCorrect) {
                     this.state.currentPractice.sessionCorrectUIDs.add(item.taskUID);
-                    if(this.state.currentPractice.isTest) {
+                    if(sessionType === 'test') {
                         this.state.currentPractice.score++;
-                    } else {
+                    } else if (sessionType === 'practice') {
+                        const levelProgress = this.state.userProgress.levels[this.state.currentPractice.level];
                         if (levelProgress && !levelProgress.completedTasks.has(item.taskUID)) {
                             levelProgress.completedTasks.add(item.taskUID);
                         }
+                        // This is where a new SRS item is created for the first time
+                        await this.handleSRSEvent(item, true, true); 
+                    } else if (sessionType === 'review') {
+                        await this.handleSRSEvent(item, true);
                     }
                 } else {
                     this.state.currentPractice.sessionIncorrectUIDs.add(item.taskUID);
+                    if (sessionType === 'review' || sessionType === 'practice') {
+                        await this.handleSRSEvent(item, false);
+                    }
                 }
                 
                 this.showFeedback(isCorrect, correctAnswer, container, selectedElement);
                 
-                if (isCorrect && !this.state.currentPractice.isTest) {
+                if (isCorrect && sessionType === 'practice') {
                     this.checkLevelUp(this.state.currentPractice.level);
                 }
             },
@@ -1372,6 +1402,120 @@
                     });
                 });
                 return allLevelTasks;
+            },
+
+            // --- SRS Functions ---
+            async updateReviewButton() {
+                if (!this.state.submissionId) return;
+                const srsColRef = collection(this.db, 'submissions', this.state.submissionId, 'srs_items');
+                const now = Timestamp.now();
+                const q = query(srsColRef, where("next_review_date", "<=", now));
+                
+                try {
+                    const querySnapshot = await getDocs(q);
+                    const reviewCount = querySnapshot.size;
+                    this.state.reviewCount = reviewCount; // Store for later use
+                    
+                    const countSpan = document.getElementById('review-count');
+                    const reviewBtn = document.getElementById('start-review-btn');
+                    
+                    if(countSpan) countSpan.textContent = reviewCount;
+                    if(reviewBtn) reviewBtn.disabled = reviewCount === 0;
+
+                } catch (error) {
+                    console.error("Error fetching review count:", error);
+                }
+            },
+
+            async startReviewSession() {
+                this.DOM.loader.classList.remove('hidden');
+                const srsColRef = collection(this.db, 'submissions', this.state.submissionId, 'srs_items');
+                const now = Timestamp.now();
+                const q = query(srsColRef, where("next_review_date", "<=", now));
+                
+                const querySnapshot = await getDocs(q);
+                const reviewItems = querySnapshot.docs.map(doc => doc.data());
+
+                if (reviewItems.length === 0) {
+                    this.showModal("Hoàn tất!", "Bạn đã ôn tập hết các mục cho hôm nay. Làm tốt lắm!");
+                    this.DOM.loader.classList.add('hidden');
+                    return;
+                }
+
+                // Map SRS data back to full word data
+                const practiceItems = reviewItems.map(srsItem => {
+                    const wordData = this.state.wordList.find(word => word.id == srsItem.wordId);
+                    return { ...wordData, ...srsItem, exerciseType: srsItem.exerciseType, taskUID: srsItem.taskUID };
+                }).filter(item => item.id); // Filter out any potential mismatches
+
+                this.state.currentPractice = {
+                    level: 'Ôn tập',
+                    items: this.shuffleArray(practiceItems),
+                    index: 0,
+                    isTest: false,
+                    score: 0,
+                    correctAnswer: null,
+                    sessionCorrectUIDs: new Set(),
+                    sessionIncorrectUIDs: new Set(),
+                    sessionType: 'review'
+                };
+
+                this.DOM.loader.classList.add('hidden');
+                this.renderPracticeView();
+            },
+
+            async handleSRSEvent(item, isCorrect, isFirstTime = false) {
+                const srsRef = doc(this.db, 'submissions', this.state.submissionId, 'srs_items', item.taskUID);
+                
+                try {
+                    let srsData;
+                    if (isFirstTime) {
+                        // Create a new SRS item if it's the first time this question is answered correctly
+                        const docSnap = await getDoc(srsRef);
+                        if (docSnap.exists()) return; // Already exists, do nothing
+                        srsData = {
+                            taskUID: item.taskUID,
+                            wordId: item.id,
+                            exerciseType: item.exerciseType,
+                            repetition_n: 0,
+                            easiness_factor_ef: 2.5,
+                            interval_i: 0,
+                        };
+                    } else {
+                        const docSnap = await getDoc(srsRef);
+                        if (!docSnap.exists()) {
+                            console.error("SRS item not found for review:", item.taskUID);
+                            return;
+                        }
+                        srsData = docSnap.data();
+                    }
+
+                    if (isCorrect) {
+                        srsData.repetition_n += 1;
+                        if (srsData.repetition_n === 1) {
+                            srsData.interval_i = 1;
+                        } else if (srsData.repetition_n === 2) {
+                            srsData.interval_i = 6;
+                        } else {
+                            srsData.interval_i = Math.ceil(srsData.interval_i * srsData.easiness_factor_ef);
+                        }
+                    } else {
+                        srsData.repetition_n = 0;
+                        srsData.interval_i = 1;
+                    }
+
+                    // Cap the interval to avoid extremely long waits
+                    srsData.interval_i = Math.min(srsData.interval_i, 365); 
+
+                    const today = new Date();
+                    today.setDate(today.getDate() + srsData.interval_i);
+                    srsData.next_review_date = Timestamp.fromDate(today);
+
+                    await setDoc(srsRef, srsData, { merge: true });
+
+                } catch (error) {
+                    console.error("Error updating SRS item:", error);
+                }
             }
         };
 
