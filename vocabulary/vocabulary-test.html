@@ -256,10 +256,10 @@
                     isSubmitting: false,
                     userProgress: {
                         levels: {
-                            1: { status: 'locked', completedTasks: new Set(), totalTasks: 0, testAttempts: 0 },
-                            2: { status: 'locked', completedTasks: new Set(), totalTasks: 0, testAttempts: 0 },
-                            3: { status: 'locked', completedTasks: new Set(), totalTasks: 0, testAttempts: 0 },
-                            4: { status: 'locked', completedTasks: new Set(), totalTasks: 0, testAttempts: 0 },
+                            1: { status: 'locked', completedTasks: new Set(), learnedWords: new Set(), totalTasks: 0, totalUniqueWords: 0, testAttempts: 0 },
+                            2: { status: 'locked', completedTasks: new Set(), learnedWords: new Set(), totalTasks: 0, totalUniqueWords: 0, testAttempts: 0 },
+                            3: { status: 'locked', completedTasks: new Set(), learnedWords: new Set(), totalTasks: 0, totalUniqueWords: 0, testAttempts: 0 },
+                            4: { status: 'locked', completedTasks: new Set(), learnedWords: new Set(), totalTasks: 0, totalUniqueWords: 0, testAttempts: 0 },
                         },
                         totalCompletedTasks: 0,
                         totalTasksInTest: 0,
@@ -301,21 +301,28 @@
                     const userDoc = await getDoc(doc(this.db, "users", this.state.studentId));
                     this.state.studentName = userDoc.exists() ? userDoc.data().displayName : "Không rõ";
 
-                    let totalTasks = 0;
+                    // Calculate total tasks and unique words per level
                     Object.keys(this.CONFIG.LEVELS).forEach(level => {
                         const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
-                        let count = 0;
+                        const uniqueWordsInLevel = new Set();
+                        let taskCount = 0;
                         this.state.wordList.forEach(word => {
-                            if (word.generated_tasks) {
-                                tasksForLevel.forEach(taskType => {
-                                    if (this.isTaskAvailable(word, taskType)) count++;
-                                });
+                            let wordHasTaskInLevel = false;
+                            tasksForLevel.forEach(taskType => {
+                                if (this.isTaskAvailable(word, taskType)) {
+                                    taskCount++;
+                                    wordHasTaskInLevel = true;
+                                }
+                            });
+                            if (wordHasTaskInLevel) {
+                                uniqueWordsInLevel.add(word.id);
                             }
                         });
-                        this.state.userProgress.levels[level].totalTasks = count;
-                        totalTasks += count;
+                        this.state.userProgress.levels[level].totalTasks = taskCount;
+                        this.state.userProgress.levels[level].totalUniqueWords = uniqueWordsInLevel.size;
                     });
-                    this.state.userProgress.totalTasksInTest = totalTasks;
+                    this.state.userProgress.totalTasksInTest = Object.values(this.state.userProgress.levels).reduce((sum, level) => sum + level.totalTasks, 0);
+
 
                     if (submissionData.adaptiveProgressV2) {
                         const progress = submissionData.adaptiveProgressV2;
@@ -326,7 +333,10 @@
                                 progress.levels[level] = this.state.userProgress.levels[level];
                             }
                             progress.levels[level].completedTasks = new Set(progress.levels[level].completedTasks || []);
+                            progress.levels[level].learnedWords = new Set(progress.levels[level].learnedWords || []); // Hydrate learned words
+                            // Recalculate totals from fresh data to ensure consistency
                             progress.levels[level].totalTasks = this.state.userProgress.levels[level].totalTasks;
+                            progress.levels[level].totalUniqueWords = this.state.userProgress.levels[level].totalUniqueWords;
                         });
                         this.state.userProgress = { ...this.state.userProgress, ...progress };
                     } else {
@@ -382,6 +392,9 @@
                     if (progressToSave.levels[level]?.completedTasks) {
                         progressToSave.levels[level].completedTasks = Array.from(this.state.userProgress.levels[level].completedTasks);
                     }
+                    if (progressToSave.levels[level]?.learnedWords) {
+                        progressToSave.levels[level].learnedWords = Array.from(this.state.userProgress.levels[level].learnedWords);
+                    }
                 });
                 try {
                     const submissionRef = doc(this.db, 'submissions', this.state.submissionId);
@@ -394,9 +407,7 @@
             calculateTotalCompletedTasks() {
                 let count = 0;
                 Object.values(this.state.userProgress.levels).forEach(levelData => {
-                    if (levelData.status === 'passed') {
-                        count += levelData.totalTasks;
-                    } else if (levelData.completedTasks) {
+                    if (levelData.completedTasks) {
                         count += levelData.completedTasks.size;
                     }
                 });
@@ -481,7 +492,8 @@
                     let icon = 'fa-lock';
                     let testButtonHTML = '';
                     
-                    const percent = progress.totalTasks > 0 ? (progress.completedTasks.size / progress.totalTasks) : 0;
+                    const completedTasksPercent = progress.totalTasks > 0 ? (progress.completedTasks.size / progress.totalTasks) : 0;
+                    const learnedWordsPercent = progress.totalUniqueWords > 0 ? (progress.learnedWords.size / progress.totalUniqueWords) : 0;
 
                     if (progress.status === 'passed') {
                         buttonText = 'Đã qua';
@@ -498,7 +510,7 @@
                         let canTakeTest = false;
                         if (levelNum === 1) {
                             canTakeTest = true;
-                        } else if (testUnlockThreshold && percent >= testUnlockThreshold) {
+                        } else if (testUnlockThreshold && completedTasksPercent >= testUnlockThreshold) {
                             canTakeTest = true;
                         }
 
@@ -510,24 +522,14 @@
                     let progressBarsHTML = `
                         <div class="mb-4 space-y-3 text-left text-xs font-medium text-text-secondary">
                             <div>
-                                <span><i class="fas fa-tasks fa-fw mr-1"></i>Hoàn thành bài tập (${progress.completedTasks.size}/${progress.totalTasks})</span>
-                                <div class="progress-track mt-1"><div class="progress-fill" style="width: ${(percent * 100).toFixed(0)}%;"></div></div>
+                                <span><i class="fas fa-brain fa-fw mr-1"></i>Kiến thức đã học (${progress.learnedWords.size}/${progress.totalUniqueWords})</span>
+                                <div class="progress-track mt-1"><div class="progress-fill" style="width: ${(learnedWordsPercent * 100).toFixed(0)}%;"></div></div>
                             </div>
-                    `;
-
-                    const testUnlockThreshold = this.CONFIG.RULES.PROFICIENCY_TEST_UNLOCK[levelNum];
-                    if (progress.status === 'unlocked' && testUnlockThreshold && levelNum > 1) {
-                        const testUnlockProgress = Math.min(100, (percent / testUnlockThreshold * 100));
-                        progressBarsHTML += `
                             <div>
-                                <span><i class="fas fa-key fa-fw mr-1"></i>Mở khóa Kiểm tra (${(percent * 100).toFixed(0)}% / ${testUnlockThreshold * 100}%)</span>
-                                <div class="progress-track mt-1"><div class="progress-fill !bg-gradient-to-r !from-sky-400 !to-cyan-300" style="width: ${testUnlockProgress.toFixed(0)}%;"></div></div>
+                                <span><i class="fas fa-tasks fa-fw mr-1"></i>Bài tập đã hoàn thành (${progress.completedTasks.size}/${progress.totalTasks})</span>
+                                <div class="progress-track mt-1"><div class="progress-fill !bg-gradient-to-r !from-sky-400 !to-cyan-300" style="width: ${(completedTasksPercent * 100).toFixed(0)}%;"></div></div>
                             </div>
-                        `;
-                    } else {
-                        progressBarsHTML += `<div class="h-8"></div>`; // Placeholder to keep card height consistent
-                    }
-                    progressBarsHTML += `</div>`;
+                        </div>`;
 
 
                     return `
@@ -586,9 +588,9 @@
 
                 if (!nextLevelProgress || nextLevelProgress.status !== 'locked') return;
 
-                const percent = progress.totalTasks > 0 ? (progress.completedTasks.size / progress.totalTasks) : 0;
+                const completedTasksPercent = progress.totalTasks > 0 ? (progress.completedTasks.size / progress.totalTasks) : 0;
 
-                if (percent >= this.CONFIG.RULES.UNLOCK_THRESHOLD) {
+                if (completedTasksPercent >= this.CONFIG.RULES.UNLOCK_THRESHOLD) {
                     nextLevelProgress.status = 'unlocked';
                     await this.updateFirestoreProgress();
                     this.showModal(`🎉 Mở khóa Level ${nextLevelKey}!`, `Chúc mừng! Bạn đã hoàn thành đủ bài tập để mở khóa level tiếp theo.`, false, () => {
@@ -775,7 +777,10 @@
                     levelProgress.status = 'passed';
                     
                     const tasksForLevel = this.getAllTasksForLevel(level);
-                    tasksForLevel.forEach(task => levelProgress.completedTasks.add(task.taskUID));
+                    tasksForLevel.forEach(task => {
+                        levelProgress.completedTasks.add(task.taskUID);
+                        levelProgress.learnedWords.add(task.id);
+                    });
 
                     const nextLevel = level + 1;
                     if (this.CONFIG.LEVELS[nextLevel]) {
@@ -846,10 +851,8 @@
                 this.showModal(title, message, true, onConfirm, onCancel, confirmText, "Về Dashboard");
             },
             
-            // UTILITY to format text with markdown-style bolding
             formatText(text) {
                 if (!text || typeof text !== 'string') return '';
-                // Replace markdown-style bold (**text**) with HTML strong tag
                 return text.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>');
             },
 
@@ -1039,10 +1042,12 @@
                         this.state.currentPractice.score++;
                     } else if (sessionType === 'practice') {
                         const levelProgress = this.state.userProgress.levels[this.state.currentPractice.level];
-                        if (levelProgress && !levelProgress.completedTasks.has(item.taskUID)) {
-                            levelProgress.completedTasks.add(item.taskUID);
+                        if (levelProgress) {
+                            if (!levelProgress.completedTasks.has(item.taskUID)) {
+                                levelProgress.completedTasks.add(item.taskUID);
+                            }
+                            levelProgress.learnedWords.add(item.id);
                         }
-                        // This is where a new SRS item is created for the first time
                         await this.handleSRSEvent(item, true, true); 
                     } else if (sessionType === 'review') {
                         await this.handleSRSEvent(item, true);
@@ -1470,7 +1475,6 @@
                 try {
                     let srsData;
                     if (isFirstTime) {
-                        // Create a new SRS item if it's the first time this question is answered correctly
                         const docSnap = await getDoc(srsRef);
                         if (docSnap.exists()) return; // Already exists, do nothing
                         srsData = {
@@ -1504,7 +1508,6 @@
                         srsData.interval_i = 1;
                     }
 
-                    // Cap the interval to avoid extremely long waits
                     srsData.interval_i = Math.min(srsData.interval_i, 365); 
 
                     const today = new Date();
