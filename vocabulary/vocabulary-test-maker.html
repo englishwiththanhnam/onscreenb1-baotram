@@ -193,8 +193,9 @@
     </div>
 
     <script type="module">
+        // --- Firebase Imports (UPDATED) ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, serverTimestamp, writeBatch, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
         // --- CONFIGURATION ---
@@ -634,7 +635,7 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
             const failedWords = [];
 
             if (!Array.isArray(aiDataArray)) {
-                showAlert("Lỗi nghiêm trọng", "Kết quả AI trả về không phải là một mảng. Vui lòng kiểm tra lại output từ Gemini.", JSON.stringify(aiDataArray, null, 2));
+                showAlert("Lỗi nghiêm trọng", "error", "Kết quả AI trả về không phải là một mảng. Vui lòng kiểm tra lại output từ Gemini.", JSON.stringify(aiDataArray, null, 2));
                 return;
             }
             
@@ -668,45 +669,111 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
             }
         }
 
-        // --- FIREBASE & AUTHENTICATION ---
+        // --- FIREBASE & AUTHENTICATION (REWRITTEN) ---
+        
+        /**
+         * Saves the current vocabulary set to Firestore using the new sub-collection structure.
+         */
         async function uploadToFirebase() {
             const testId = DOM.testIdInput.value.trim();
             const title = DOM.testTitleInput.value.trim();
             if (!testId || !title || localWordList.length === 0) {
                 return showAlert("Vui lòng nhập ID, Tiêu đề và xử lý dữ liệu.", 'error');
             }
-            DOM.uploadBtn.disabled = true;
-            DOM.uploadLog.textContent = 'Đang lưu...';
+            
+            const button = DOM.uploadBtn;
+            const originalHTML = button.innerHTML;
+            updateButtonState(button, true, '', 'Đang lưu...');
+            DOM.uploadLog.textContent = 'Đang chuẩn bị dữ liệu...';
+
             try {
-                await setDoc(doc(db, "vocab_sets", testId), { 
-                    title, 
-                    wordList: localWordList, 
-                    updatedAt: serverTimestamp() 
-                }, { merge: true });
+                // Use writeBatch for atomic and efficient writes
+                const batch = writeBatch(db);
+
+                // 1. Reference the main document (for metadata)
+                const vocabSetRef = doc(db, "vocab_sets", testId);
+                
+                // 2. Add the metadata write operation to the batch
+                // Note: We no longer save 'wordList' here.
+                // 'wordCount' is added for easier management.
+                batch.set(vocabSetRef, {
+                    title: title,
+                    wordCount: localWordList.length,
+                    level: getCefrLevelDescription(), // Add CEFR level to metadata
+                    updatedAt: serverTimestamp()
+                }, { merge: true }); // Use merge to avoid overwriting other fields if they exist
+
+                // 3. Loop through each word in localWordList and add it to the batch
+                const wordsCollectionRef = collection(db, "vocab_sets", testId, "words");
+                
+                localWordList.forEach((wordData) => {
+                    // Create a new document in the "words" sub-collection
+                    // Use wordData.id as the document ID for easy reference
+                    const wordDocRef = doc(wordsCollectionRef, String(wordData.id));
+                    batch.set(wordDocRef, wordData);
+                });
+
+                // 4. Commit all write operations in the batch
+                DOM.uploadLog.textContent = `Đang lưu ${localWordList.length} từ vựng...`;
+                await batch.commit();
+
                 DOM.uploadLog.textContent = 'Lưu THÀNH CÔNG!';
-                setTimeout(() => { DOM.uploadLog.textContent = ''; }, 3000);
+                showAlert(`Đã lưu thành công bộ từ vựng "${title}"!`, 'success');
+                setTimeout(() => { DOM.uploadLog.textContent = ''; }, 5000);
+
             } catch (error) {
+                console.error("Error uploading to Firebase:", error);
                 DOM.uploadLog.textContent = `LỖI: ${error.message}`;
+                showAlert("Lỗi khi lưu dữ liệu", 'error', error.message);
             } finally {
-                DOM.uploadBtn.disabled = false;
+                updateButtonState(button, false, originalHTML);
             }
         }
 
+        /**
+         * Loads test data from Firestore, supporting both the new sub-collection structure
+         * and the old array structure for backward compatibility.
+         */
         async function loadAndPopulateTestData(testId) {
-            showAlert("Đang tải dữ liệu đề thi...");
+            showAlert("Đang tải dữ liệu bộ từ vựng...");
             const docRef = doc(db, "vocab_sets", testId);
+
             try {
                 const docSnap = await getDoc(docRef);
+
                 if (docSnap.exists()) {
                     const testData = docSnap.data();
                     
+                    // Always get metadata from the main document
                     DOM.pageTitle.textContent = "Chỉnh sửa Bộ từ vựng";
                     DOM.testIdInput.value = testId;
                     DOM.testIdInput.disabled = true;
                     DOM.testTitleInput.value = testData.title || "";
+
+                    // --- DUAL-READ LOGIC ---
+                    // 1. Try reading the NEW structure (sub-collection) first
+                    const wordsColRef = collection(db, "vocab_sets", testId, "words");
+                    const wordsSnapshot = await getDocs(wordsColRef);
                     
-                    localWordList = testData.wordList || [];
+                    if (!wordsSnapshot.empty) {
+                        // NEW DATA FOUND: Load from sub-collection
+                        console.log(`Found ${wordsSnapshot.size} words in sub-collection (new structure).`);
+                        localWordList = wordsSnapshot.docs.map(doc => doc.data());
+                    } else if (testData.wordList && Array.isArray(testData.wordList)) {
+                        // NEW DATA NOT FOUND: Fallback to OLD structure
+                        console.warn(`'words' sub-collection not found. Falling back to 'wordList' field (old structure). Consider migrating this data.`);
+                        localWordList = testData.wordList;
+                        showAlert("Cảnh báo: Dữ liệu cũ", 'info', 'Bộ từ vựng này đang dùng cấu trúc dữ liệu cũ. Sau khi bấm "Cập nhật", nó sẽ được tự động chuyển sang cấu trúc mới, hiệu quả hơn.');
+                    } else {
+                        // No data found in either structure
+                        console.log("No vocabulary data found.");
+                        localWordList = [];
+                    }
                     
+                    // Sort the list by ID to ensure consistent order
+                    localWordList.sort((a, b) => (a.id || 0) - (b.id || 0));
+
+                    // Post-processing (same as old code)
                     localWordList.forEach(word => {
                         if (!word.generated_tasks) word.generated_tasks = null;
                         if (!word.structures) word.structures = [];
@@ -714,21 +781,22 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
 
                     renderTable();
                     DOM.dataReviewSection.classList.remove('hidden');
-                    
                     DOM.uploadBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Cập nhật Bộ Từ Vựng';
                     
+                    // Disable CSV import section
                     const uploadSection = DOM.processFilesBtn.closest('.glass-panel');
                     uploadSection.style.opacity = '0.5';
                     uploadSection.style.pointerEvents = 'none';
                     uploadSection.title = 'Không thể nhập file CSV khi đang chỉnh sửa.';
 
+                    // Close the "loading..." modal
                     DOM.modalContainer.querySelector('.modal.is-open')?.remove();
 
                 } else {
                     showAlert(`Lỗi: Không tìm thấy bộ từ vựng với ID: ${testId}`, 'error');
                 }
             } catch (error) {
-                showAlert(`Lỗi khi tải dữ liệu: ${error.message}`, 'error');
+                showAlert(`Lỗi khi tải dữ liệu: ${error.message}`, 'error', error.stack);
                 console.error("Error loading test data:", error);
             }
         }
@@ -908,7 +976,7 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                 if (!overwriteAll) {
                     wordsToEnrich = wordsToEnrich.filter(w => ALL_TASK_TYPES.some(type => !w.generated_tasks || !w.generated_tasks[type]));
                      if (wordsToEnrich.length === 0) {
-                        return showAlert("Các từ đã chọn đã có đủ dữ liệu. Chọn 'Làm giàu (Ghi đè)' nếu muốn tạo lại.", 'info');
+                         return showAlert("Các từ đã chọn đã có đủ dữ liệu. Chọn 'Làm giàu (Ghi đè)' nếu muốn tạo lại.", 'info');
                     }
                 }
 
@@ -941,7 +1009,7 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                 if (!overwriteAll) {
                     wordsToEnrich = wordsToEnrich.filter(w => ALL_TASK_TYPES.some(type => !w.generated_tasks || !w.generated_tasks[type]));
                      if (wordsToEnrich.length === 0) {
-                        return showAlert("Các từ đã chọn đã có đủ dữ liệu. Chọn 'Làm giàu (Ghi đè)' nếu muốn tạo lại.", 'info');
+                         return showAlert("Các từ đã chọn đã có đủ dữ liệu. Chọn 'Làm giàu (Ghi đè)' nếu muốn tạo lại.", 'info');
                     }
                 }
                 
