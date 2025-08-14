@@ -107,6 +107,12 @@
             background: #334155 !important;
             border-bottom-color: var(--glass-border) !important;
         }
+        .apexcharts-legend-text {
+            color: var(--text-secondary) !important;
+        }
+        .apexcharts-text {
+            fill: var(--text-secondary);
+        }
     </style>
 </head>
 <body>
@@ -280,8 +286,8 @@
                     },
                     currentPractice: { level: null, items: [], index: 0, isTest: false, correctAnswer: null, score: 0, sessionCorrectUIDs: new Set(), sessionIncorrectUIDs: new Set(), sessionType: 'practice' },
                     currentFlashcard: { items: [], index: 0 },
-                    srsItems: [], // NEW: Cache for SRS data
-                    activityLog: new Map() // NEW: Cache for activity data
+                    srsItems: [],
+                    activityLog: new Map()
                 };
             },
 
@@ -298,14 +304,12 @@
                     this.state.studentId = submissionData.studentId;
                     this.state.testData = submissionData.testSnapshot || {};
 
-                    // Fetch all data concurrently
                     const [wordsSnapshot, srsSnapshot, activitySnapshot] = await Promise.all([
                         getDocs(collection(this.db, "vocab_sets", testId, "words")),
                         getDocs(collection(this.db, 'submissions', submissionId, 'srs_items')),
                         getDocs(collection(this.db, 'submissions', submissionId, 'activity_log'))
                     ]);
 
-                    // Process words
                     if (!wordsSnapshot.empty) {
                         this.state.wordList = wordsSnapshot.docs.map(doc => doc.data());
                     } else if (this.state.testData.wordList && Array.isArray(this.state.testData.wordList)) {
@@ -316,14 +320,12 @@
                     }
                     this.state.wordList.sort((a, b) => (a.id || 0) - (b.id || 0));
 
-                    // Process SRS and Activity data
                     this.state.srsItems = srsSnapshot.docs.map(doc => doc.data());
                     activitySnapshot.docs.forEach(doc => this.state.activityLog.set(doc.id, doc.data().count));
 
                     const userDoc = await getDoc(doc(this.db, "users", this.state.studentId));
                     this.state.studentName = userDoc.exists() ? userDoc.data().displayName : "Không rõ";
 
-                    // Calculate total tasks and unique words per level
                     Object.keys(this.CONFIG.LEVELS).forEach(level => {
                         const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
                         const uniqueWordsInLevel = new Set();
@@ -355,7 +357,7 @@
                                 progress.levels[level] = this.state.userProgress.levels[level];
                             }
                             progress.levels[level].completedTasks = new Set(progress.levels[level].completedTasks || []);
-                            progress.levels[level].learnedWords = new Set(progress.levels[level].learnedWords || []); // Hydrate learned words
+                            progress.levels[level].learnedWords = new Set(progress.levels[level].learnedWords || []);
                             progress.levels[level].totalTasks = this.state.userProgress.levels[level].totalTasks;
                             progress.levels[level].totalUniqueWords = this.state.userProgress.levels[level].totalUniqueWords;
                         });
@@ -884,10 +886,8 @@
                 this.showModal(title, message, true, onConfirm, onCancel, confirmText, "Về Dashboard");
             },
             
-            // UTILITY to format text with markdown-style bolding
             formatText(text) {
                 if (!text || typeof text !== 'string') return '';
-                // Replace markdown-style bold (**text**) with HTML strong tag
                 return text.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>');
             },
 
@@ -1035,7 +1035,6 @@
                 this.state.currentPractice.correctAnswer = tasks.correct_role;
                 const options = this.shuffleArray([tasks.correct_role, ...tasks.distractors]);
                 
-                // Regex to find the sentence including its marker, e.g., "[2] The quick brown fox."
                 const sentenceRegex = new RegExp(`(\\[${tasks.highlighted_sentence_index + 1}\\].*?)(?=\\[\\d+\\]|$)`, 'g');
                 const paragraphHTML = this.formatText(tasks.paragraph).replace(sentenceRegex, `<strong class="text-primary-accent">$1</strong>`);
                 
@@ -1444,6 +1443,127 @@
                 });
                 return allLevelTasks;
             },
+
+            // --- SRS Functions ---
+            async updateReviewButton() {
+                if (!this.state.submissionId) return;
+                const srsColRef = collection(this.db, 'submissions', this.state.submissionId, 'srs_items');
+                const now = Timestamp.now();
+                const q = query(srsColRef, where("next_review_date", "<=", now));
+                
+                try {
+                    const querySnapshot = await getDocs(q);
+                    const reviewCount = querySnapshot.size;
+                    this.state.reviewCount = reviewCount; // Store for later use
+                    
+                    const countSpan = document.getElementById('review-count');
+                    const reviewBtn = document.getElementById('start-review-btn');
+                    
+                    if(countSpan) countSpan.textContent = reviewCount;
+                    if(reviewBtn) reviewBtn.disabled = reviewCount === 0;
+
+                } catch (error) {
+                    console.error("Error fetching review count:", error);
+                }
+            },
+
+            async startReviewSession() {
+                this.DOM.loader.classList.remove('hidden');
+                const srsColRef = collection(this.db, 'submissions', this.state.submissionId, 'srs_items');
+                const now = Timestamp.now();
+                const q = query(srsColRef, where("next_review_date", "<=", now));
+                
+                const querySnapshot = await getDocs(q);
+                const reviewItems = querySnapshot.docs.map(doc => doc.data());
+
+                if (reviewItems.length === 0) {
+                    this.showModal("Hoàn tất!", "Bạn đã ôn tập hết các mục cho hôm nay. Làm tốt lắm!");
+                    this.DOM.loader.classList.add('hidden');
+                    return;
+                }
+
+                // Map SRS data back to full word data
+                const practiceItems = reviewItems.map(srsItem => {
+                    const wordData = this.state.wordList.find(word => word.id == srsItem.wordId);
+                    return { ...wordData, ...srsItem, exerciseType: srsItem.exerciseType, taskUID: srsItem.taskUID };
+                }).filter(item => item.id); // Filter out any potential mismatches
+
+                this.state.currentPractice = {
+                    level: 'Ôn tập',
+                    items: this.shuffleArray(practiceItems),
+                    index: 0,
+                    isTest: false,
+                    score: 0,
+                    correctAnswer: null,
+                    sessionCorrectUIDs: new Set(),
+                    sessionIncorrectUIDs: new Set(),
+                    sessionType: 'review'
+                };
+
+                this.DOM.loader.classList.add('hidden');
+                this.renderPracticeView();
+            },
+
+            async handleSRSEvent(item, isCorrect, isFirstTime = false) {
+                const srsRef = doc(this.db, 'submissions', this.state.submissionId, 'srs_items', item.taskUID);
+                
+                try {
+                    let srsData;
+                    if (isFirstTime) {
+                        const docSnap = await getDoc(srsRef);
+                        if (docSnap.exists()) return; 
+                        srsData = {
+                            taskUID: item.taskUID,
+                            wordId: item.id,
+                            exerciseType: item.exerciseType,
+                            repetition_n: 0,
+                            easiness_factor_ef: 2.5,
+                            interval_i: 0,
+                        };
+                    } else {
+                        const docSnap = await getDoc(srsRef);
+                        if (!docSnap.exists()) {
+                            console.error("SRS item not found for review:", item.taskUID);
+                            return;
+                        }
+                        srsData = docSnap.data();
+                    }
+
+                    if (isCorrect) {
+                        srsData.repetition_n += 1;
+                        if (srsData.repetition_n === 1) {
+                            srsData.interval_i = 1;
+                        } else if (srsData.repetition_n === 2) {
+                            srsData.interval_i = 6;
+                        } else {
+                            srsData.interval_i = Math.ceil(srsData.interval_i * srsData.easiness_factor_ef);
+                        }
+                    } else {
+                        srsData.repetition_n = 0;
+                        srsData.interval_i = 1;
+                        // Adjust easiness factor down, but not below 1.3
+                        srsData.easiness_factor_ef = Math.max(1.3, srsData.easiness_factor_ef - 0.2);
+                    }
+
+                    srsData.interval_i = Math.min(srsData.interval_i, 365); 
+
+                    const today = new Date();
+                    today.setHours(5, 0, 0, 0); // Set to 5 AM to ensure reviews are for the next day
+                    today.setDate(today.getDate() + srsData.interval_i);
+                    srsData.next_review_date = Timestamp.fromDate(today);
+
+                    await setDoc(srsRef, srsData, { merge: true });
+                    
+                    // Log activity
+                    const todayStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+                    const activityRef = doc(this.db, 'submissions', this.state.submissionId, 'activity_log', todayStr);
+                    await setDoc(activityRef, { count: increment(1) }, { merge: true });
+
+
+                } catch (error) {
+                    console.error("Error updating SRS item:", error);
+                }
+            },
             
             // --- Analytics Widget Functions ---
             renderAnalyticsWidgets() {
@@ -1454,27 +1574,133 @@
             },
 
             renderSunburstWidget() {
+                // This widget is complex and requires significant data processing.
+                // For this version, we will show a placeholder.
                 const container = document.getElementById('sunburst-widget-container');
-                container.innerHTML = `<h3 class="text-xl font-bold mb-4">Tổng quan Năng lực</h3><div id="sunburst-chart"></div>`;
-                // Sunburst chart rendering logic will go here using ApexCharts
+                container.innerHTML = `<h3 class="text-xl font-bold mb-4">Tổng quan Năng lực</h3><p class="text-text-secondary">Chức năng phân tích chi tiết theo kỹ năng sẽ sớm được cập nhật.</p>`;
             },
 
             renderForecastWidget() {
                 const container = document.getElementById('forecast-widget-container');
                 container.innerHTML = `<h3 class="text-xl font-bold mb-4">Lịch trình Ôn tập</h3><div id="forecast-chart"></div>`;
-                // Forecast chart rendering logic will go here using ApexCharts
+                
+                const forecast = Array(7).fill(0);
+                const today = new Date();
+                today.setHours(0,0,0,0);
+
+                this.state.srsItems.forEach(item => {
+                    const reviewDate = item.next_review_date.toDate();
+                    const diffTime = reviewDate - today;
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    if (diffDays >= 0 && diffDays < 7) {
+                        forecast[diffDays]++;
+                    }
+                });
+
+                const categories = [...Array(7).keys()].map(i => {
+                    const date = new Date();
+                    date.setDate(today.getDate() + i);
+                    return i === 0 ? 'Hôm nay' : date.toLocaleDateString('vi-VN', { weekday: 'short' });
+                });
+
+                var options = {
+                    series: [{ name: 'Bài ôn tập', data: forecast }],
+                    chart: { type: 'bar', height: 250, toolbar: { show: false } },
+                    plotOptions: { bar: { borderRadius: 4, horizontal: false, columnWidth: '50%' } },
+                    dataLabels: { enabled: false },
+                    stroke: { show: true, width: 2, colors: ['transparent'] },
+                    xaxis: { categories: categories, labels: { style: { colors: 'var(--text-secondary)' } } },
+                    yaxis: { labels: { style: { colors: 'var(--text-secondary)' } } },
+                    fill: { opacity: 1 },
+                    tooltip: { theme: 'dark' },
+                    grid: { borderColor: 'rgba(255,255,255,0.1)' }
+                };
+
+                var chart = new ApexCharts(document.querySelector("#forecast-chart"), options);
+                chart.render();
             },
             
             renderHeatmapWidget() {
                 const container = document.getElementById('heatmap-widget-container');
                 container.innerHTML = `<h3 class="text-xl font-bold mb-4">Lịch sử Hoạt động</h3><div id="heatmap-chart"></div>`;
-                // Heatmap chart rendering logic will go here using ApexCharts
+
+                const seriesData = [];
+                const today = new Date();
+                const startDate = new Date();
+                startDate.setDate(today.getDate() - 118); // Approx 4 months
+
+                for (let d = startDate; d <= today; d.setDate(d.getDate() + 1)) {
+                    const dateStr = d.toISOString().slice(0, 10);
+                    seriesData.push({
+                        x: d.toLocaleDateString('en-US', { weekday: 'short' }),
+                        y: this.state.activityLog.get(dateStr) || 0
+                    });
+                }
+                
+                // This is a simplified version. A true heatmap needs grouping by week.
+                // For now, we'll use a bar chart to represent activity over time.
+                const last30Days = [];
+                const last30DaysData = [];
+                for(let i=29; i>=0; i--) {
+                    const d = new Date();
+                    d.setDate(d.getDate() - i);
+                    const dateStr = d.toISOString().slice(0,10);
+                    last30Days.push(d.toLocaleDateString('vi-VN', {day: '2-digit', month: '2-digit'}));
+                    last30DaysData.push(this.state.activityLog.get(dateStr) || 0);
+                }
+
+
+                var options = {
+                    series: [{ name: 'Hoạt động', data: last30DaysData }],
+                    chart: { type: 'area', height: 150, sparkline: { enabled: true } },
+                    stroke: { curve: 'smooth' },
+                    fill: {
+                        type: "gradient",
+                        gradient: { shade: 'dark', type: "vertical", shadeIntensity: 0.5, gradientToColors: [ '#8b5cf6' ], inverseColors: true, opacityFrom: 0.8, opacityTo: 0.2, stops: [0, 90, 100] }
+                    },
+                    colors: ['#a855f7'],
+                    tooltip: {
+                        theme: 'dark',
+                        x: {
+                            formatter: function (val, { series, seriesIndex, dataPointIndex, w }) {
+                                return last30Days[dataPointIndex];
+                            }
+                        }
+                    },
+                };
+
+                var chart = new ApexCharts(document.querySelector("#heatmap-chart"), options);
+                chart.render();
             },
 
             renderLeechWidget() {
                 const container = document.getElementById('leech-widget-container');
-                container.innerHTML = `<h3 class="text-xl font-bold mb-4">Kiến thức "Khó nhằn"</h3><div id="leech-list"></div>`;
-                // Leech list rendering logic will go here
+                const leeches = this.state.srsItems
+                    .filter(item => item.repetition_n > 0) // Only count items that have been reviewed
+                    .sort((a, b) => a.easiness_factor_ef - b.easiness_factor_ef)
+                    .slice(0, 5);
+
+                if (leeches.length === 0) {
+                    container.innerHTML = `<h3 class="text-xl font-bold mb-4">Kiến thức "Khó nhằn"</h3><p class="text-text-secondary text-sm">Chưa có dữ liệu. Hãy bắt đầu luyện tập để hệ thống xác định các điểm yếu của bạn!</p>`;
+                    return;
+                }
+
+                let listHTML = leeches.map(leech => {
+                    const word = this.state.wordList.find(w => w.id === leech.wordId);
+                    if (!word) return '';
+                    const exerciseInfo = this.EXERCISE_INFO[leech.exerciseType];
+                    return `
+                        <div class="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">
+                            <div>
+                                <p class="font-semibold">${word.word}</p>
+                                <p class="text-xs text-text-secondary">${exerciseInfo.name}</p>
+                            </div>
+                            <span class="text-xs font-mono px-2 py-1 bg-red-500/20 text-red-300 rounded">Độ khó: ${leech.easiness_factor_ef.toFixed(2)}</span>
+                        </div>
+                    `;
+                }).join('');
+
+                container.innerHTML = `<h3 class="text-xl font-bold mb-4">Kiến thức "Khó nhằn"</h3><div class="space-y-2">${listHTML}</div>`;
             }
 
         };
