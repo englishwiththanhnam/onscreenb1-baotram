@@ -1069,6 +1069,7 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
         async function exportAllQuestions() {
             const sortOrder = document.querySelector('input[name="sort-order"]:checked').value;
             const docChildren = [];
+            const fullExportAnswers = {}; // New: Store answers here
             let qCounter = 1;
 
             docChildren.push(new Paragraph({ text: `Ngân hàng câu hỏi: ${DOM.testTitleInput.value}`, heading: HeadingLevel.TITLE, alignment: AlignmentType.CENTER }));
@@ -1078,17 +1079,20 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                     if (!wordData.generated_tasks) return;
                     docChildren.push(new Paragraph({ text: wordData.word, heading: HeadingLevel.HEADING_1, spacing: { before: 400 } }));
                     
-                    for (const taskType in wordData.generated_tasks) {
+                    const taskTypes = Object.keys(wordData.generated_tasks);
+                    taskTypes.forEach(taskType => {
                         const taskData = wordData.generated_tasks[taskType];
                         const result = renderSingleQuestionForDocx(wordData, taskType, taskData, qCounter);
                         if (result && result.docElements) {
                             docChildren.push(...result.docElements);
+                            if (result.answer) {
+                                fullExportAnswers[qCounter] = result.answer;
+                            }
                             qCounter++;
                         }
-                    }
+                    });
                 });
             } else { // sortOrder === 'level'
-                // FIX: Group data first, then render with correct counter
                 const questionsByLevel = { 1: [], 2: [], 3: [], 4: [] };
                 localWordList.forEach(wordData => {
                     if (wordData.generated_tasks) {
@@ -1108,6 +1112,9 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                             const result = renderSingleQuestionForDocx(qItem.wordData, qItem.taskType, qItem.taskData, qCounter);
                             if (result && result.docElements) {
                                 docChildren.push(...result.docElements);
+                                if (result.answer) {
+                                    fullExportAnswers[qCounter] = result.answer;
+                                }
                                 qCounter++;
                             }
                         });
@@ -1115,10 +1122,28 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                 }
             }
 
+            // --- Generate Main Document ---
             const doc = new Document({ sections: [{ children: docChildren }] });
             const blob = await Packer.toBlob(doc);
             downloadFile(blob, `NganHangCauHoi_${DOM.testIdInput.value}.docx`);
-            showAlert('Đã tạo và tải xuống thành công toàn bộ ngân hàng câu hỏi!', 'success');
+
+            // --- Generate Answer Key Document ---
+            const answerKeyDocChildren = [new Paragraph({ children: [new TextRun({ text: `ĐÁP ÁN - NGÂN HÀNG CÂU HỎI: ${DOM.testTitleInput.value}`, bold: true })], heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER })];
+            const answerRows = [];
+            const questionNumbers = Object.keys(fullExportAnswers).sort((a,b) => Number(a) - Number(b));
+            for (let i = 0; i < questionNumbers.length; i += 5) {
+                const chunk = questionNumbers.slice(i, i + 5);
+                answerRows.push(new TableRow({
+                    children: chunk.map(qNum => new TableCell({ children: [new Paragraph(`${qNum}. ${fullExportAnswers[qNum]}`)], borders: NO_BORDER }))
+                }));
+            }
+            answerKeyDocChildren.push(new Table({ rows: answerRows, width: { size: 100, type: WidthType.PERCENTAGE }, borders: NO_BORDER }));
+            
+            const answerDoc = new Document({ sections: [{ children: answerKeyDocChildren }] });
+            const answerBlob = await Packer.toBlob(answerDoc);
+            downloadFile(answerBlob, `DapAn_NganHangCauHoi_${DOM.testIdInput.value}.docx`);
+
+            showAlert('Đã tạo và tải xuống thành công Ngân hàng câu hỏi và file Đáp án!', 'success');
             DOM.wordExportModal.classList.remove('is-open');
         }
 
