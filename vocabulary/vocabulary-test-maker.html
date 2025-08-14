@@ -295,6 +295,7 @@
             // Level 1: Nền tảng
             meaning_mcq: { level: 1, title: "Meaning MCQ" },
             ipa_fill: { level: 1, title: "IPA Fill" },
+            basic_example: { level: 1, title: "Basic Example" },
             // listening_typing: { level: 1, title: "Listening & Typing" }, // Future task
             
             // Level 2: Ngữ pháp & Cấu trúc
@@ -307,7 +308,7 @@
             best_fit_replacement: { level: 3, title: "Best-fit Replacement" },
             best_paraphrase: { level: 3, title: "Best Paraphrase" },
             antonym_mcq: { level: 3, title: "Antonym Challenge" },
-            collocation_odd_one_out: { level: 3, title: "Collocation Odd One Out" }, // Re-classified to L3
+            collocation_odd_one_out: { level: 3, title: "Collocation Odd One Out" },
 
             // Level 4: Tư duy Phản biện
             inference_from_scenario: { level: 4, title: "Inference from Scenario" },
@@ -317,9 +318,6 @@
             argument_weakening: { level: 4, title: "Weaken the Argument" },
             tone_purpose_analysis: { level: 4, title: "Tone/Purpose Identification" },
             sentence_role_analysis: { level: 4, title: "Sentence Role Analysis" },
-
-            // Basic task, can be considered level 1
-            basic_example: { level: 1, title: "Basic Example" },
         };
         const LEVEL_DEFINITIONS = {
             1: "Level 1: Nền tảng",
@@ -502,8 +500,9 @@
                 if (tasks) {
                     const renderTask = (taskData, title, contentRenderer) => {
                         if (!taskData) return `<details class="mt-2"><summary class="task-summary text-red-500">${title} (còn thiếu)</summary></details>`;
+                        // REMOVED 'open' attribute to make it collapsed by default
                         return `
-                            <details class="mt-2" open>
+                            <details class="mt-2">
                                 <summary class="task-summary">${title}</summary>
                                 <div class="task-details">
                                     ${contentRenderer(taskData)}
@@ -511,30 +510,72 @@
                             </details>`;
                     };
 
-                    const editableP = (path, text) => `<p class="sentence" contenteditable="true" data-path="${path}" data-word-index="${wordIndex}">${text}</p>`;
-                    const editableSpan = (path, text) => `<span contenteditable="true" data-path="${path}" data-word-index="${wordIndex}">${text}</span>`;
+                    const editableP = (path, text) => `<p class="sentence" contenteditable="true" data-path="${path}" data-word-index="${wordIndex}">${text || ''}</p>`;
+                    const editableSpan = (path, text) => `<span contenteditable="true" data-path="${path}" data-word-index="${wordIndex}">${text || ''}</span>`;
                     const editableList = (basePath, items) => (items || []).map((item, i) => `<li class="option" contenteditable="true" data-path="${basePath}[${i}]" data-word-index="${wordIndex}">${item}</li>`).join('');
 
+                    // REWRITTEN to render all tasks with details, not as JSON
                     tasksHTML = Object.entries(ALL_TASK_TYPES)
                         .map(([taskType, taskInfo]) => {
                             const taskData = tasks[taskType];
-                            if (!taskData) return ''; // Skip if task data doesn't exist
+                            if (!taskData) return ''; 
                             
                             let contentHTML = '';
-                            // This switch can be expanded for custom rendering of each task type
                             switch (taskType) {
+                                case 'basic_example':
+                                    contentHTML = `<div class="task-content">${editableP(`generated_tasks.basic_example`, taskData)}</div>`;
+                                    break;
                                 case 'meaning_mcq':
                                     contentHTML = `<div class="task-content"><b>Distractors (VI):</b> <ul>${editableList(`generated_tasks.meaning_mcq.distractors_vi`, taskData.distractors_vi)}</ul></div>`;
                                     break;
                                 case 'word_family_mcq':
                                     contentHTML = `<div class="task-content"><p class="sentence">${editableSpan(`generated_tasks.word_family_mcq.sentence`, taskData.sentence || '').replace(taskData.blank_placeholder, `<b>[____]</b>`)}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.word_family_mcq.correct_answer`, taskData.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.word_family_mcq.distractors`, taskData.distractors)}</ul></p></div>`;
                                     break;
+                                case 'sentence_unscramble':
+                                    contentHTML = `<div class="task-content">${editableP(`generated_tasks.sentence_unscramble.correct_sentence`, taskData.correct_sentence || '')}</div>`;
+                                    break;
+                                case 'error_correction':
+                                    contentHTML = `<div class="task-content"><p><b>Incorrect:</b> ${editableSpan(`generated_tasks.error_correction.incorrect_sentence`, taskData.incorrect_sentence || '')}</p><p><b>Correct:</b> ${editableSpan(`generated_tasks.error_correction.correct_sentence`, taskData.correct_sentence || '')}</p></div>`;
+                                    break;
+                                case 'ipa_fill':
+                                    contentHTML = `<div class="task-content"><p><b>Gapped IPA:</b> ${editableSpan(`generated_tasks.ipa_fill.gapped_ipa`, taskData.gapped_ipa || '')}</p><p><b>Correct Vowel:</b> ${editableSpan(`generated_tasks.ipa_fill.correct_vowel`, taskData.correct_vowel || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.ipa_fill.distractors`, taskData.distractors)}</ul></p></div>`;
+                                    break;
+                                case 'collocation_odd_one_out':
+                                    contentHTML = `<div class="task-content"><p><b>Question:</b> ${editableSpan(`generated_tasks.collocation_odd_one_out.question`, taskData.question || '')}</p><p><b>Options:</b><ul>${(taskData.options || []).map((opt, i) => `<li class="option ${opt === taskData.answer ? 'correct-answer' : ''}" contenteditable="true" data-path="generated_tasks.collocation_odd_one_out.options[${i}]" data-word-index="${wordIndex}">${opt}</li>`).join('')}</ul></p><p><b>Answer:</b> ${editableSpan(`generated_tasks.collocation_odd_one_out.answer`, taskData.answer || '')}</p></div>`;
+                                    break;
+                                case 'best_fit_replacement':
+                                    contentHTML = `<div class="task-content"><p class="sentence">${editableSpan(`generated_tasks.best_fit_replacement.sentence`, taskData.sentence || '').replace(taskData.word_to_replace, `<b><u>${taskData.word_to_replace}</u></b>`)}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.best_fit_replacement.correct_answer`, taskData.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.best_fit_replacement.distractors`, taskData.distractors)}</ul></p></div>`;
+                                    break;
+                                case 'inference_from_scenario':
+                                    contentHTML = `<div class="task-content"><p><b>Scenario:</b> ${editableSpan(`generated_tasks.inference_from_scenario.scenario`, taskData.scenario || '')}</p><p><b>Question:</b> ${editableSpan(`generated_tasks.inference_from_scenario.question`, taskData.question || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.inference_from_scenario.correct_answer`, taskData.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.inference_from_scenario.distractors`, taskData.distractors)}</ul></p></div>`;
+                                    break;
                                 case 'best_paraphrase':
                                      contentHTML = `<div class="task-content"><p><b>Original:</b> ${editableP(`generated_tasks.best_paraphrase.original_sentence`, taskData.original_sentence || '')}</p><p><b>Options:</b><ul>${(taskData.options || []).map((opt, i) => `<li class="option ${opt.is_correct ? 'correct-answer' : ''}" contenteditable="true" data-path="generated_tasks.best_paraphrase.options[${i}].text" data-word-index="${wordIndex}">${opt.text}</li>`).join('')}</ul></p></div>`;
                                      break;
-                                default:
-                                    // Generic renderer for other tasks
-                                    contentHTML = `<div class="task-content"><pre>${editableSpan(`generated_tasks.${taskType}`, JSON.stringify(taskData, null, 2))}</pre></div>`;
+                                case 'antonym_mcq':
+                                    contentHTML = `<div class="task-content"><p><b>Context:</b> ${editableSpan(`generated_tasks.antonym_mcq.sentence_context`, taskData.sentence_context || '')}</p><p><b>Keyword:</b> ${editableSpan(`generated_tasks.antonym_mcq.keyword`, taskData.keyword || '')}</p><p><b>Antonym:</b> ${editableSpan(`generated_tasks.antonym_mcq.correct_antonym`, taskData.correct_antonym || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.antonym_mcq.distractors`, taskData.distractors)}</ul></p></div>`;
+                                    break;
+                                case 'tripled_sentence':
+                                    contentHTML = `<div class="task-content"><p><b>Keyword:</b> ${editableSpan(`generated_tasks.tripled_sentence.keyword`, taskData.keyword || '')}</p><b>Examples:</b><ul>${editableList(`generated_tasks.tripled_sentence.examples`, taskData.examples)}</ul></div>`;
+                                    break;
+                                case 'main_idea':
+                                    contentHTML = `<div class="task-content"><p><b>Paragraph:</b> ${editableSpan(`generated_tasks.main_idea.paragraph`, taskData.paragraph || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.main_idea.correct_answer`, taskData.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.main_idea.distractors`, taskData.distractors)}</ul></p></div>`;
+                                    break;
+                                case 'paragraph_completion':
+                                    contentHTML = `<div class="task-content"><p><b>Body:</b> ${editableSpan(`generated_tasks.paragraph_completion.paragraph_body`, taskData.paragraph_body || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.paragraph_completion.correct_conclusion`, taskData.correct_conclusion || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.paragraph_completion.distractors`, taskData.distractors)}</ul></p></div>`;
+                                    break;
+                                case 'argument_strengthening':
+                                    contentHTML = `<div class="task-content"><p><b>Argument:</b> ${editableSpan(`generated_tasks.argument_strengthening.argument_text`, taskData.argument_text || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.argument_strengthening.correct_evidence`, taskData.correct_evidence || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.argument_strengthening.distractors`, taskData.distractors)}</ul></p></div>`;
+                                    break;
+                                case 'argument_weakening':
+                                    contentHTML = `<div class="task-content"><p><b>Argument:</b> ${editableSpan(`generated_tasks.argument_weakening.argument_text`, taskData.argument_text || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.argument_weakening.correct_weakener`, taskData.correct_weakener || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.argument_weakening.distractors`, taskData.distractors)}</ul></p></div>`;
+                                    break;
+                                case 'tone_purpose_analysis':
+                                    contentHTML = `<div class="task-content"><p><b>Paragraph:</b> ${editableSpan(`generated_tasks.tone_purpose_analysis.paragraph`, taskData.paragraph || '')}</p><p><b>Question:</b> ${editableSpan(`generated_tasks.tone_purpose_analysis.question`, taskData.question || '')}</p><p><b>Answer:</b> ${editableSpan(`generated_tasks.tone_purpose_analysis.correct_answer`, taskData.correct_answer || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.tone_purpose_analysis.distractors`, taskData.distractors)}</ul></p></div>`;
+                                    break;
+                                case 'sentence_role_analysis':
+                                    contentHTML = `<div class="task-content"><p><b>Paragraph:</b> ${editableSpan(`generated_tasks.sentence_role_analysis.paragraph`, taskData.paragraph || '')}</p><p><b>Role of Sentence ${taskData.highlighted_sentence_index + 1}:</b> ${editableSpan(`generated_tasks.sentence_role_analysis.correct_role`, taskData.correct_role || '')}</p><p><b>Distractors:</b> <ul>${editableList(`generated_tasks.sentence_role_analysis.distractors`, taskData.distractors)}</ul></p></div>`;
+                                    break;
                             }
                             return renderTask(taskData, taskInfo.title, () => contentHTML);
                         })
@@ -559,8 +600,6 @@
             for (let i = 0; i < keys.length - 1; i++) {
                 const key = keys[i];
                 if (current[key] === undefined || current[key] === null) { 
-                    // If path doesn't exist, try to create it.
-                    // This is a simplified version, might need more robust handling.
                     if (Number.isInteger(parseInt(keys[i+1], 10))) {
                         current[key] = [];
                     } else {
@@ -569,16 +608,7 @@
                 }
                 current = current[key];
             }
-            // For editable pre tags
-            if (typeof current[keys[keys.length - 1]] === 'object') {
-                 try {
-                    current[keys[keys.length - 1]] = JSON.parse(value);
-                } catch(e) {
-                    console.error("Invalid JSON for update:", e);
-                }
-            } else {
-                current[keys[keys.length - 1]] = value;
-            }
+            current[keys[keys.length - 1]] = value;
         }
 
         // --- AI & API ---
@@ -599,7 +629,6 @@
                 };
             });
 
-            // The full, detailed prompt is used here.
             return `
 # MISSION & ROLE
 You are a **Master Instructional Designer** specializing in English Language Testing (ELT). Your mission is to craft high-quality, pedagogically sound assessment items. You are not a mere content generator; you are an expert in cognitive science and language acquisition, creating "cognitive puzzles" that test and reinforce a learner's understanding of vocabulary in a comprehensive, meaningful way.
@@ -811,7 +840,7 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
             }
         }
 
-        // --- WORD EXPORT FUNCTIONS (NEW & IMPROVED) ---
+        // --- WORD EXPORT FUNCTIONS (REWRITTEN & FIXED) ---
         const NO_BORDER = {
             top: { style: BorderStyle.NONE, size: 0, color: "auto" },
             bottom: { style: BorderStyle.NONE, size: 0, color: "auto" },
@@ -823,7 +852,7 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
         
         function renderSingleQuestionForDocx(wordData, taskType, taskData, qCounter) {
             const taskInfo = ALL_TASK_TYPES[taskType];
-            if (!taskInfo) return null;
+            if (!taskData || !taskInfo) return null;
 
             const docElements = [];
             let answer = null;
@@ -831,17 +860,12 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
 
             const createMCQ = (questionText, correctAnswer, distractors) => {
                 if (!correctAnswer || !Array.isArray(distractors) || distractors.length === 0) return;
-                
                 docElements.push(new Paragraph({ children: [new TextRun({ text: `${questionPrefix} `, bold: true }), new TextRun({ text: `[${taskInfo.title}] `, italics: true }), new TextRun(questionText)], spacing: { before: 200 } }));
-                
                 const allChoices = [correctAnswer, ...distractors];
                 const shuffledChoices = [...allChoices].sort(() => 0.5 - Math.random());
-                
                 const correctIndex = shuffledChoices.findIndex(c => c === correctAnswer);
                 answer = ["A", "B", "C", "D"][correctIndex];
-
                 const options = shuffledChoices.map((choice, i) => ({ label: `${["A", "B", "C", "D"][i]}. `, text: String(choice) }));
-                
                 if (allChoices.join("").length > 150) {
                     docElements.push(...options.map(opt => new Paragraph({ children: [new TextRun({ text: opt.label, bold: true }), new TextRun(opt.text)] })));
                 } else {
@@ -858,36 +882,46 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
 
             const createFillInBlank = (questionText, correctAnswerText) => {
                  docElements.push(new Paragraph({ children: [new TextRun({ text: `${questionPrefix} `, bold: true }), new TextRun({ text: `[${taskInfo.title}] `, italics: true }), new TextRun(questionText)], spacing: { before: 200 } }));
-                 docElements.push(new Paragraph({ text: "Answer: __________________________________________________"}));
+                 docElements.push(new Paragraph("Answer: __________________________________________________"));
                  answer = correctAnswerText;
+            };
+            
+            const createSimpleText = (title, content) => {
+                docElements.push(new Paragraph({ children: [new TextRun({ text: `${questionPrefix} `, bold: true }), new TextRun({ text: `[${taskInfo.title}] `, italics: true }), new TextRun(title)], spacing: { before: 200 } }));
+                if(Array.isArray(content)) {
+                    content.forEach(item => docElements.push(new Paragraph({ text: `- ${item}`, bullet: { level: 0 } })));
+                } else {
+                    docElements.push(new Paragraph(content));
+                }
+                answer = "Tự luận";
             };
 
             switch (taskType) {
-                case 'meaning_mcq':
-                    createMCQ(`What is the meaning of "${wordData.word}"?`, wordData.meaning, taskData.distractors_vi);
-                    break;
-                case 'word_family_mcq':
-                    createMCQ((taskData.sentence || '').replace(taskData.blank_placeholder, '______'), taskData.correct_answer, taskData.distractors);
-                    break;
+                case 'meaning_mcq': createMCQ(`What is the meaning of "${wordData.word}"?`, wordData.meaning, taskData.distractors_vi); break;
+                case 'word_family_mcq': createMCQ((taskData.sentence || '').replace(taskData.blank_placeholder, '______'), taskData.correct_answer, taskData.distractors); break;
                 case 'best_paraphrase':
                     const correctPara = taskData.options?.find(o => o.is_correct)?.text;
                     const incorrectPara = taskData.options?.filter(o => !o.is_correct).map(o => o.text);
                     createMCQ(taskData.original_sentence, correctPara, incorrectPara);
                     break;
-                case 'main_idea':
-                     createMCQ(taskData.paragraph, taskData.correct_answer, taskData.distractors);
-                    break;
-                case 'antonym_mcq':
-                    createMCQ(taskData.sentence_context, taskData.correct_antonym, taskData.distractors);
-                    break;
-                case 'error_correction':
-                    createFillInBlank(`Correct the following sentence: ${taskData.incorrect_sentence}`, taskData.correct_sentence);
-                    break;
+                case 'main_idea': createMCQ(taskData.paragraph, taskData.correct_answer, taskData.distractors); break;
+                case 'antonym_mcq': createMCQ(taskData.sentence_context, taskData.correct_antonym, taskData.distractors); break;
+                case 'error_correction': createFillInBlank(`Correct the following sentence: ${taskData.incorrect_sentence}`, taskData.correct_sentence); break;
                 case 'sentence_unscramble':
                     const scrambled = (taskData.correct_sentence || '').split(' ').sort(() => 0.5 - Math.random()).join(' / ');
                     createFillInBlank(`Unscramble the words to form a correct sentence: ${scrambled}`, taskData.correct_sentence);
                     break;
-                // Add more cases for other task types...
+                case 'ipa_fill': createMCQ(`Fill in the blank for /${wordData.word}/: ${taskData.gapped_ipa}`, taskData.correct_vowel, taskData.distractors); break;
+                case 'collocation_odd_one_out': createMCQ(taskData.question, taskData.answer, taskData.options.filter(o => o !== taskData.answer)); break;
+                case 'best_fit_replacement': createMCQ(taskData.sentence.replace(taskData.word_to_replace, `__${taskData.word_to_replace}__`), taskData.correct_answer, taskData.distractors); break;
+                case 'inference_from_scenario': createMCQ(taskData.scenario, taskData.correct_answer, taskData.distractors); break;
+                case 'paragraph_completion': createMCQ(taskData.paragraph_body, taskData.correct_conclusion, taskData.distractors); break;
+                case 'argument_strengthening': createMCQ(taskData.argument_text, taskData.correct_evidence, taskData.distractors); break;
+                case 'argument_weakening': createMCQ(taskData.argument_text, taskData.correct_weakener, taskData.distractors); break;
+                case 'tone_purpose_analysis': createMCQ(taskData.paragraph, taskData.correct_answer, taskData.distractors); break;
+                case 'sentence_role_analysis': createMCQ(taskData.paragraph, taskData.correct_role, taskData.distractors); break;
+                case 'basic_example': createSimpleText('Write a sentence using this word.', taskData); break;
+                case 'tripled_sentence': createSimpleText(`Examples for "${taskData.keyword}":`, taskData.examples); break;
             }
             
             return docElements.length > 0 ? { docElements, answer } : null;
@@ -897,7 +931,6 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
             const allPossibleQuestions = [];
             const levelConfigs = document.querySelectorAll('#export-levels-container .level-config');
 
-            // Build a pool of all possible questions, annotated with their level
             localWordList.forEach(wordData => {
                 if (wordData.generated_tasks) {
                     for (const taskType in wordData.generated_tasks) {
@@ -915,6 +948,7 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
             });
 
             let selectedQuestions = [];
+            let totalAdded = 0;
             levelConfigs.forEach(config => {
                 const checkbox = config.querySelector('input[type="checkbox"]');
                 if (!checkbox.checked) return;
@@ -926,15 +960,17 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                 const pool = allPossibleQuestions.filter(q => q.level === level);
                 const shuffledPool = pool.sort(() => 0.5 - Math.random());
                 selectedQuestions.push(...shuffledPool.slice(0, questionsForThisLevel));
+                totalAdded += questionsForThisLevel;
             });
             
-            // Adjust if rounding leads to incorrect total
-            while (selectedQuestions.length > totalQuestions) {
-                selectedQuestions.pop();
+            while (selectedQuestions.length > totalQuestions) { selectedQuestions.pop(); }
+            while (selectedQuestions.length < totalQuestions && selectedQuestions.length < allPossibleQuestions.length) {
+                const remaining = allPossibleQuestions.filter(p => !selectedQuestions.includes(p));
+                if(remaining.length === 0) break;
+                selectedQuestions.push(remaining[0]);
             }
-            // Could also add logic to add more if total is too low, but this is simpler for now.
 
-            return selectedQuestions.sort(() => 0.5 - Math.random()); // Final shuffle
+            return selectedQuestions.sort(() => 0.5 - Math.random());
         }
 
         async function generateAndDownloadRandomTests() {
@@ -948,12 +984,10 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
 
             const totalPercentage = Array.from(document.querySelectorAll('#export-levels-container .level-config input[type="number"]')).reduce((sum, input) => sum + (input.disabled ? 0 : Number(input.value)), 0);
             if (totalPercentage !== 100) {
-                validationMsg.textContent = 'Tổng tỷ lệ phải bằng 100%.';
-                return;
+                validationMsg.textContent = 'Tổng tỷ lệ phải bằng 100%.'; return;
             }
             if (totalQuestions <= 0 || numVersions <= 0) {
-                validationMsg.textContent = 'Số câu hỏi và số mã đề phải lớn hơn 0.';
-                return;
+                validationMsg.textContent = 'Số câu hỏi và số mã đề phải lớn hơn 0.'; return;
             }
             validationMsg.textContent = '';
 
@@ -967,14 +1001,11 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                     currentQuestionSet = baseQuestionSet;
                 } else if (strategy === 'shuffle') {
                     currentQuestionSet = [...baseQuestionSet].sort(() => 0.5 - Math.random());
-                } else { // 'new' strategy
+                } else {
                     currentQuestionSet = selectQuestionsForTest(totalQuestions);
                 }
                 
-                allTestVersions.push({
-                    testCode: `${testCodeBase}${i + 1}`,
-                    questions: currentQuestionSet
-                });
+                allTestVersions.push({ testCode: `${testCodeBase}${i + 1}`, questions: currentQuestionSet });
             }
 
             await exportTestsAndAnswerKeys(allTestVersions, mainTitle, subtitle);
@@ -991,11 +1022,10 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                 const currentAnswerKey = {};
                 
                 testDocChildren.push(new Paragraph({ children: [new TextRun({ text: mainTitle, bold: true })], heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }));
-                if (subtitle) {
-                    testDocChildren.push(new Paragraph({ children: [new TextRun({ text: subtitle, bold: true })], alignment: AlignmentType.CENTER }));
-                }
+                if (subtitle) testDocChildren.push(new Paragraph({ children: [new TextRun({ text: subtitle, bold: true })], alignment: AlignmentType.CENTER }));
                 testDocChildren.push(new Paragraph({ text: `MÃ ĐỀ: ${testCode}`, alignment: AlignmentType.CENTER, spacing: { after: 200 } }));
 
+                // FIX: Use index from forEach for sequential numbering
                 questions.forEach((questionItem, index) => {
                     const qCounter = index + 1;
                     const result = renderSingleQuestionForDocx(questionItem.wordData, questionItem.taskType, questionItem.taskData, qCounter);
@@ -1013,7 +1043,6 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                     children: testDocChildren,
                 });
 
-                // Build answer key section
                 answerKeyDocChildren.push(new Paragraph({ children: [new TextRun({ text: `MÃ ĐỀ ${testCode}`, bold: true })], heading: HeadingLevel.HEADING_2, spacing: { before: 400 } }));
                 const answerRows = [];
                 const questionNumbers = Object.keys(currentAnswerKey).sort((a,b) => Number(a) - Number(b));
@@ -1042,11 +1071,7 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
             const docChildren = [];
             let qCounter = 1;
 
-            docChildren.push(new Paragraph({
-                text: `Ngân hàng câu hỏi: ${DOM.testTitleInput.value}`,
-                heading: HeadingLevel.TITLE,
-                alignment: AlignmentType.CENTER,
-            }));
+            docChildren.push(new Paragraph({ text: `Ngân hàng câu hỏi: ${DOM.testTitleInput.value}`, heading: HeadingLevel.TITLE, alignment: AlignmentType.CENTER }));
 
             if (sortOrder === 'word') {
                 localWordList.forEach(wordData => {
@@ -1063,17 +1088,14 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                     }
                 });
             } else { // sortOrder === 'level'
+                // FIX: Group data first, then render with correct counter
                 const questionsByLevel = { 1: [], 2: [], 3: [], 4: [] };
-
                 localWordList.forEach(wordData => {
                     if (wordData.generated_tasks) {
                         for (const taskType in wordData.generated_tasks) {
                             const taskInfo = ALL_TASK_TYPES[taskType];
-                            if (taskInfo) {
-                                const result = renderSingleQuestionForDocx(wordData, taskType, wordData.generated_tasks[taskType], 0); // counter is temporary
-                                if (result) {
-                                    questionsByLevel[taskInfo.level].push(result);
-                                }
+                            if (taskInfo && questionsByLevel[taskInfo.level]) {
+                                questionsByLevel[taskInfo.level].push({ wordData, taskType, taskData: wordData.generated_tasks[taskType] });
                             }
                         }
                     }
@@ -1082,14 +1104,12 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                 for (const level in questionsByLevel) {
                     if (questionsByLevel[level].length > 0) {
                         docChildren.push(new Paragraph({ text: LEVEL_DEFINITIONS[level], heading: HeadingLevel.HEADING_1, spacing: { before: 400 } }));
-                        questionsByLevel[level].forEach(result => {
-                             // Fix question counter
-                            const firstParaChildren = result.docElements[0].options.children;
-                            const qTextRun = firstParaChildren.find(run => run.options.text && run.options.text.startsWith('Question'));
-                            if(qTextRun) qTextRun.options.text = `Question ${qCounter}:`;
-
-                            docChildren.push(...result.docElements);
-                            qCounter++;
+                        questionsByLevel[level].forEach(qItem => {
+                            const result = renderSingleQuestionForDocx(qItem.wordData, qItem.taskType, qItem.taskData, qCounter);
+                            if (result && result.docElements) {
+                                docChildren.push(...result.docElements);
+                                qCounter++;
+                            }
                         });
                     }
                 }
@@ -1433,7 +1453,7 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                 if (target.hasAttribute('contenteditable')) {
                     const wordIndex = parseInt(target.dataset.wordIndex, 10);
                     const path = target.dataset.path;
-                    const newText = target.isContentEditable && (target.tagName === 'PRE' || target.tagName === 'SPAN') ? target.textContent : target.innerHTML;
+                    const newText = target.textContent;
                     if (isNaN(wordIndex) || !localWordList[wordIndex] || !path) return;
                     updateNestedObject(localWordList[wordIndex], path, newText);
                 }
