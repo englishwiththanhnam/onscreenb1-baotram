@@ -7,8 +7,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Thư viện docx.js để xuất file Word -->
-    <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+    <!-- Thư viện docx.js để xuất file Word - Sử dụng bản ESM để tương thích với module script -->
+    <script type="module">
+        import * as docx from 'https://cdn.jsdelivr.net/npm/docx@8.5.0/+esm';
+        window.docx = docx; // Gán vào window để truy cập global
+    </script>
     <style>
         :root {
             --blur-intensity: 12px; --saturation-intensity: 150%; --glass-bg-color: rgba(255, 255, 255, 0.45);
@@ -22,7 +25,7 @@
             --text-secondary: #94a3b8; --app-bg-start: #0f172a; --app-bg-end: #1e293b;
         }
         body { font-family: 'Be Vietnam Pro', sans-serif; background-color: var(--app-bg-start); background-image: linear-gradient(135deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%); color: var(--text-primary); transition: background-color 0.3s, color 0.3s; }
-        body.dark h1, body.dark h2, body.dark label, body.dark p, body.dark input, body.dark textarea, body.dark select, body.dark summary, body.dark th { color: var(--text-primary); }
+        body.dark h1, body.dark h2, body.dark h3, body.dark label, body.dark p, body.dark input, body.dark textarea, body.dark select, body.dark summary, body.dark th, body.dark button { color: var(--text-primary); }
         body.dark .text-gray-700 { color: var(--text-primary) !important; }
         body.dark #dark-mode-label .fa-moon { color: var(--primary-accent); } #dark-mode-label .fa-sun { color: #f59e0b; }
         .background-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
@@ -68,8 +71,8 @@
         <div class="glass-panel p-8 rounded-2xl shadow-xl text-center w-full max-w-sm">
             <h2 class="text-2xl font-bold mb-6">Đăng nhập</h2>
             <div class="space-y-4 text-left">
-                <div><label for="email-input" class="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" id="email-input" class="input-field"></div>
-                <div><label for="password-input" class="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label><input type="password" id="password-input" class="input-field"></div>
+                <div><label for="email-input" class="block text-sm font-medium mb-1">Email</label><input type="email" id="email-input" class="input-field"></div>
+                <div><label for="password-input" class="block text-sm font-medium mb-1">Mật khẩu</label><input type="password" id="password-input" class="input-field"></div>
             </div>
             <button id="login-btn" class="btn btn-primary w-full mt-6">Đăng nhập</button>
             <p id="login-error" class="text-red-500 mt-2 h-5"></p>
@@ -98,26 +101,26 @@
             <!-- Left Panel: Controls -->
             <aside class="lg:col-span-2 space-y-8">
                 <div class="glass-panel p-6">
-                    <h2 class="text-2xl font-bold text-gray-700 mb-4">1. Thông tin chung</h2>
+                    <h2 class="text-2xl font-bold mb-4">1. Thông tin chung</h2>
                     <div class="space-y-4">
                         <div><label for="test-id" class="block text-sm font-medium">Mã định danh (ID)</label><input type="text" id="test-id" class="input-field" placeholder="vd: unit_1_family"></div>
                         <div><label for="test-title" class="block text-sm font-medium">Tiêu đề bộ từ vựng</label><input type="text" id="test-title" class="input-field" placeholder="vd: Unit 1: Family Life"></div>
                     </div>
                 </div>
                  <div class="glass-panel p-6">
-                    <h2 class="text-2xl font-bold text-gray-700 mb-4">2. Nhập liệu & Cài đặt</h2>
+                    <h2 class="text-2xl font-bold mb-4">2. Nhập liệu & Cài đặt</h2>
                      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                          <div>
                              <label class="block text-sm font-medium mb-1">File Từ vựng (.csv)</label>
                              <label for="vocab-csv-upload" class="btn btn-secondary w-full"><i class="fas fa-upload mr-2"></i>Tải lên</label>
                              <input type="file" id="vocab-csv-upload" class="hidden" accept=".csv">
-                             <p id="vocab-file-name" class="text-gray-600 mt-2 text-sm text-center truncate"></p>
+                             <p id="vocab-file-name" class="mt-2 text-sm text-center truncate"></p>
                          </div>
                          <div>
                              <label class="block text-sm font-medium mb-1">File Cấu trúc (.csv)</label>
                              <label for="structures-csv-upload" class="btn btn-secondary w-full"><i class="fas fa-upload mr-2"></i>Tải lên</label>
                              <input type="file" id="structures-csv-upload" class="hidden" accept=".csv">
-                             <p id="structures-file-name" class="text-gray-600 mt-2 text-sm text-center truncate"></p>
+                             <p id="structures-file-name" class="mt-2 text-sm text-center truncate"></p>
                          </div>
                      </div>
                     <div class="mt-6">
@@ -129,11 +132,11 @@
                     <div class="text-center mt-6"><button id="process-files-btn" class="btn btn-primary">Xử lý Dữ liệu</button></div>
                 </div>
                  <div class="glass-panel p-6">
-                    <h2 class="text-2xl font-bold text-gray-700 mb-4">3. Cấu hình AI</h2>
+                    <h2 class="text-2xl font-bold mb-4">3. Cấu hình AI</h2>
                     <div class="space-y-4">
                         <div><label for="gemini-api-key" class="block text-sm font-medium">Google Gemini API Key</label><input type="password" id="gemini-api-key" class="input-field" placeholder="Dán API Key của bạn..."></div>
                         <div>
-                            <label for="ai-model-select" class="block text-sm font-medium text-gray-700 mb-1">Mô hình Gemini</label>
+                            <label for="ai-model-select" class="block text-sm font-medium mb-1">Mô hình Gemini</label>
                             <select id="ai-model-select" class="input-field w-full">
                                 <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Nhanh & Tiết kiệm)</option>
                                 <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro (Chất lượng cao)</option>
@@ -146,7 +149,7 @@
             <!-- Right Panel: Data and Actions -->
             <main class="lg:col-span-3 space-y-8">
                 <div id="data-review-section" class="glass-panel p-6 hidden">
-                     <h2 class="text-2xl font-bold text-gray-700 mb-4">4. Dữ liệu Khảo thí</h2>
+                     <h2 class="text-2xl font-bold mb-4">4. Dữ liệu Khảo thí</h2>
                     <div id="table-container" class="max-h-[80vh] overflow-auto rounded-lg border border-white/50">
                         <table id="data-table" class="w-full text-sm">
                             <thead>
@@ -175,7 +178,7 @@
     <div id="modal-container"></div>
     <div id="manual-prompt-modal" class="modal">
         <div class="glass-panel p-8 w-full max-w-4xl max-h-[90vh] flex flex-col">
-            <h2 class="text-2xl font-bold text-gray-700 mb-4">Làm giàu dữ liệu thủ công</h2>
+            <h2 class="text-2xl font-bold mb-4">Làm giàu dữ liệu thủ công</h2>
             <div class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-6 overflow-hidden">
                 <div class="flex flex-col h-full">
                     <label class="font-medium mb-2">Bước 1: Sao chép Prompt này</label>
@@ -192,8 +195,44 @@
         </div>
     </div>
 
+    <!-- Word Export Modal -->
+    <div id="word-export-modal" class="modal">
+        <div class="glass-panel p-8 w-full max-w-2xl">
+            <h2 class="text-2xl font-bold mb-6 text-center">Cấu hình Xuất Đề thi</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                <div>
+                    <h3 class="font-bold mb-2">Thông tin Chung</h3>
+                    <div class="space-y-4">
+                        <div><label for="export-main-title" class="block text-sm font-medium">Tiêu đề chính</label><input type="text" id="export-main-title" class="input-field" value="ĐỀ THI CUỐI KỲ"></div>
+                        <div><label for="export-subtitle" class="block text-sm font-medium">Phụ đề (vd: Thời gian)</label><input type="text" id="export-subtitle" class="input-field" value="Thời gian làm bài: 90 phút"></div>
+                        <div><label for="export-test-code-base" class="block text-sm font-medium">Mã đề gốc</label><input type="text" id="export-test-code-base" class="input-field" value="10"></div>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="font-bold mb-2">Số lượng & Chiến lược</h3>
+                    <div class="space-y-4">
+                        <div><label for="export-total-questions" class="block text-sm font-medium">Tổng số câu hỏi mỗi đề</label><input type="number" id="export-total-questions" class="input-field" value="20"></div>
+                        <div><label for="export-num-versions" class="block text-sm font-medium">Số lượng mã đề</label><input type="number" id="export-num-versions" class="input-field" value="2"></div>
+                        <div>
+                            <label class="block text-sm font-medium">Tùy chọn</label>
+                            <div class="mt-2 space-y-2">
+                                <div class="flex items-center"><input type="radio" id="strategy-shuffle" name="strategy" value="shuffle" checked class="mr-2"><label for="strategy-shuffle">Trộn lại câu hỏi (hoán vị)</label></div>
+                                <div class="flex items-center"><input type="radio" id="strategy-new" name="strategy" value="new" class="mr-2"><label for="strategy-new">Tạo bộ câu hỏi mới</label></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="export-validation-message" class="text-red-500 font-semibold text-center h-6 mt-4"></div>
+            <div class="flex justify-center gap-4 mt-6">
+                <button id="generate-word-docs-btn" class="btn btn-primary">Tạo & Tải xuống</button>
+                <button id="close-word-export-modal-btn" class="btn btn-danger">Đóng</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
-        // --- Firebase Imports (UPDATED) ---
+        // --- Firebase Imports ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, serverTimestamp, writeBatch, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
@@ -224,6 +263,9 @@
         const auth = getAuth(app);
         let localWordList = [], vocabCsvText = '', structuresCsvText = '';
 
+        // --- DOCX.JS DESTRUCTURING ---
+        const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableCell, TableRow, WidthType, BorderStyle, PageBreak, Footer, PageNumber, SectionType } = window.docx;
+
         // --- DOM ELEMENTS ---
         const DOM = {
             loginScreen: document.getElementById('login-screen'), mainContent: document.getElementById('main-content'),
@@ -246,6 +288,11 @@
             pageTitle: document.getElementById('page-title'),
             exportWordBtn: document.getElementById('export-word-btn'),
             selectAllCheckbox: document.getElementById('select-all-checkbox'),
+            // Word Export Modal Elements
+            wordExportModal: document.getElementById('word-export-modal'),
+            closeWordExportModalBtn: document.getElementById('close-word-export-modal-btn'),
+            generateWordDocsBtn: document.getElementById('generate-word-docs-btn'),
+            exportValidationMessage: document.getElementById('export-validation-message'),
         };
 
         // --- UI & HELPERS ---
@@ -272,8 +319,8 @@
                 modal.className = 'modal is-open';
                 const buttonsHTML = choices.map(choice => `<button class="btn btn-secondary" data-resolve="${choice.value}">${choice.label}</button>`).join('');
                 modal.innerHTML = `<div class="modal-content glass-panel text-center p-8 w-full max-w-sm">
-                    <h3 class="text-xl font-bold text-gray-900 mb-4">${title}</h3>
-                    <p class="text-gray-600 mb-6">${message}</p>
+                    <h3 class="text-xl font-bold mb-4">${title}</h3>
+                    <p class="text-secondary mb-6">${message}</p>
                     <div class="flex gap-4 justify-center">${buttonsHTML}<button class="btn btn-danger" data-resolve="cancel">Hủy</button></div>
                 </div>`;
                 
@@ -311,7 +358,8 @@
                     return { 
                         id: index + 1, word: columns[0], type: columns[1], 
                         pronunciation: columns[2], meaning: columns[3], 
-                        audioUrl: '', structures: [], generated_tasks: null
+                        audioUrl: '', structures: [], generated_tasks: null,
+                        level: 1 // Gán level mặc định, có thể thay đổi sau
                     };
                 }
                 return null;
@@ -647,11 +695,9 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
 
                 const wordToUpdate = localWordList.find(w => w.id === enrichedData.id);
                 if (wordToUpdate) {
-                    // Initialize if it doesn't exist
                     if (!wordToUpdate.generated_tasks) {
                         wordToUpdate.generated_tasks = {};
                     }
-                    // Merge new tasks
                     Object.assign(wordToUpdate.generated_tasks, enrichedData.generated_tasks);
                     successfulWords.push(wordToUpdate.word);
                 } else {
@@ -669,11 +715,216 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
             }
         }
 
-        // --- FIREBASE & AUTHENTICATION (REWRITTEN) ---
+        // --- WORD EXPORT FUNCTIONS (NEW & IMPROVED) ---
+
+        const NO_BORDER = {
+            top: { style: BorderStyle.NONE, size: 0, color: "auto" },
+            bottom: { style: BorderStyle.NONE, size: 0, color: "auto" },
+            left: { style: BorderStyle.NONE, size: 0, color: "auto" },
+            right: { style: BorderStyle.NONE, size: 0, color: "auto" },
+            insideHorizontal: { style: BorderStyle.NONE, size: 0, color: "auto" },
+            insideVertical: { style: BorderStyle.NONE, size: 0, color: "auto" },
+        };
         
-        /**
-         * Saves the current vocabulary set to Firestore using the new sub-collection structure.
-         */
+        function renderWordQuestion(docChildren, questionCounter, wordItem) {
+            const { wordData, generated_tasks } = wordItem;
+            let questionParts = [];
+
+            // A helper function to create and add MCQ questions
+            const processMCQ = (taskName, questionText, correctAnswer, distractors) => {
+                if (!correctAnswer || !Array.isArray(distractors) || distractors.length === 0) return null;
+                
+                const children = [];
+                children.push(new Paragraph({ children: [new TextRun({ text: `Question ${questionCounter}: `, bold: true }), new TextRun({ text: `[${taskName}] `, italics: true }), new TextRun(questionText)], spacing: { before: 200 } }));
+                
+                const allChoices = [correctAnswer, ...distractors];
+                const shuffledChoices = [...allChoices].sort(() => 0.5 - Math.random());
+                
+                const correctIndex = shuffledChoices.findIndex(c => c === correctAnswer);
+                const correctLabel = ["A", "B", "C", "D"][correctIndex];
+
+                const options = shuffledChoices.map((choice, i) => ({ label: `${["A", "B", "C", "D"][i]}. `, text: choice }));
+                
+                if (allChoices.join("").length > 150) { // Use single column for long options
+                    children.push(...options.map(opt => new Paragraph({ children: [new TextRun({ text: opt.label, bold: true }), new TextRun(opt.text)] })));
+                } else { // Use two-column table for short options
+                    const tableRows = [];
+                    for (let i = 0; i < options.length; i += 2) {
+                        tableRows.push(new TableRow({ children: [
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: options[i]?.label || "", bold: true }), new TextRun(options[i]?.text || "")] })], borders: NO_BORDER, width: { size: 50, type: WidthType.PERCENTAGE } }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: options[i + 1]?.label || "", bold: true }), new TextRun(options[i + 1]?.text || "")] })], borders: NO_BORDER, width: { size: 50, type: WidthType.PERCENTAGE } })
+                        ]}));
+                    }
+                    children.push(new Table({ rows: tableRows, width: { size: 100, type: WidthType.PERCENTAGE }, borders: NO_BORDER }));
+                }
+                return { docElements: children, answer: correctLabel };
+            };
+
+            // Iterate through available tasks and generate questions
+            for (const taskType in generated_tasks) {
+                const taskData = generated_tasks[taskType];
+                if (!taskData) continue;
+
+                let result = null;
+                switch (taskType) {
+                    case 'meaning_mcq':
+                        result = processMCQ('Meaning', `What is the meaning of "${wordData.word}"?`, wordData.meaning, taskData.distractors_vi);
+                        break;
+                    case 'word_family_mcq':
+                        result = processMCQ('Word Family', taskData.sentence.replace(taskData.blank_placeholder, '______'), taskData.correct_answer, taskData.distractors);
+                        break;
+                    case 'best_paraphrase':
+                        const correctPara = taskData.options?.find(o => o.is_correct)?.text;
+                        const incorrectPara = taskData.options?.filter(o => !o.is_correct).map(o => o.text);
+                        result = processMCQ('Best Paraphrase', taskData.original_sentence, correctPara, incorrectPara);
+                        break;
+                    case 'main_idea':
+                         result = processMCQ('Main Idea', taskData.paragraph, taskData.correct_answer, taskData.distractors);
+                        break;
+                    case 'antonym_mcq':
+                        result = processMCQ('Antonym', taskData.sentence_context, taskData.correct_antonym, taskData.distractors);
+                        break;
+                    // Add more cases here for other MCQ task types as needed
+                }
+
+                if (result) {
+                    questionParts.push(result);
+                }
+            }
+            
+            // Select one random question part from the generated ones for this word
+            if (questionParts.length > 0) {
+                const randomPart = questionParts[Math.floor(Math.random() * questionParts.length)];
+                docChildren.push(...randomPart.docElements);
+                return randomPart.answer; // Return the correct answer label for the selected question
+            }
+            return null; // No valid question could be generated
+        }
+
+        function selectQuestionsForTest(totalQuestions) {
+            const allPossibleQuestions = localWordList
+                .filter(wordData => wordData.generated_tasks && Object.keys(wordData.generated_tasks).length > 0)
+                .map(wordData => ({
+                    wordData: wordData,
+                    generated_tasks: wordData.generated_tasks,
+                    level: 1 // Simplified level
+                }));
+
+            // Shuffle the entire pool and take the required number of questions
+            const shuffledPool = allPossibleQuestions.sort(() => 0.5 - Math.random());
+            return shuffledPool.slice(0, totalQuestions);
+        }
+
+        async function generateAndDownloadTests() {
+            const mainTitle = document.getElementById('export-main-title').value;
+            const subtitle = document.getElementById('export-subtitle').value;
+            const testCodeBase = document.getElementById('export-test-code-base').value;
+            const totalQuestions = Number(document.getElementById('export-total-questions').value);
+            const numVersions = Number(document.getElementById('export-num-versions').value);
+            const strategy = document.querySelector('input[name="strategy"]:checked').value;
+            const validationMsg = DOM.exportValidationMessage;
+
+            if (totalQuestions <= 0 || numVersions <= 0) {
+                validationMsg.textContent = 'Số câu hỏi và số mã đề phải lớn hơn 0.';
+                return;
+            }
+            const availableQuestions = localWordList.filter(w => w.generated_tasks).length;
+            if (totalQuestions > availableQuestions) {
+                 validationMsg.textContent = `Không đủ câu hỏi. Chỉ có ${availableQuestions} từ có dữ liệu AI.`;
+                return;
+            }
+            validationMsg.textContent = '';
+
+            const allTestVersions = [];
+            let baseQuestionSet = null;
+
+            for (let i = 0; i < numVersions; i++) {
+                let currentQuestionSet;
+                if (strategy === 'shuffle' && i === 0) {
+                    baseQuestionSet = selectQuestionsForTest(totalQuestions);
+                    currentQuestionSet = baseQuestionSet;
+                } else if (strategy === 'shuffle') {
+                    currentQuestionSet = [...baseQuestionSet].sort(() => 0.5 - Math.random());
+                } else { // 'new' strategy
+                    currentQuestionSet = selectQuestionsForTest(totalQuestions);
+                }
+                
+                allTestVersions.push({
+                    testCode: `${testCodeBase}${i + 1}`,
+                    questions: currentQuestionSet
+                });
+            }
+
+            await exportTestsAndAnswerKeys(allTestVersions, mainTitle, subtitle);
+            DOM.wordExportModal.classList.remove('is-open');
+        }
+
+        async function exportTestsAndAnswerKeys(allTestVersions, mainTitle, subtitle) {
+            const allTestSections = [];
+            const answerKeyDocChildren = [new Paragraph({ children: [new TextRun({ text: "ĐÁP ÁN TỔNG HỢP", bold: true })], heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER })];
+
+            for (const version of allTestVersions) {
+                const { testCode, questions } = version;
+                const testDocChildren = [];
+                const currentAnswerKey = {};
+                let questionCounter = 1;
+
+                testDocChildren.push(new Paragraph({ children: [new TextRun({ text: mainTitle, bold: true })], heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }));
+                if (subtitle) {
+                    testDocChildren.push(new Paragraph({ children: [new TextRun({ text: subtitle, bold: true })], alignment: AlignmentType.CENTER }));
+                }
+                testDocChildren.push(new Paragraph({ text: `MÃ ĐỀ: ${testCode}`, alignment: AlignmentType.CENTER, spacing: { after: 200 } }));
+
+                questions.forEach(questionItem => {
+                    const correctLabel = renderWordQuestion(testDocChildren, questionCounter, questionItem);
+                    if (correctLabel) {
+                        currentAnswerKey[questionCounter] = correctLabel;
+                    }
+                    questionCounter++;
+                });
+
+                allTestSections.push({
+                    properties: { type: SectionType.NEXT_PAGE, page: { pageNumbers: { start: 1 } } },
+                    footers: { default: new Footer({ children: [ new Paragraph({ alignment: AlignmentType.CENTER, children: [ new TextRun(`Mã đề ${testCode} - Trang `), new TextRun({ children: [PageNumber.CURRENT] }), new TextRun("/"), new TextRun({ children: [PageNumber.TOTAL_PAGES_IN_SECTION] }) ] }) ] }) },
+                    children: testDocChildren,
+                });
+
+                // Build answer key section
+                answerKeyDocChildren.push(new Paragraph({ children: [new TextRun({ text: `MÃ ĐỀ ${testCode}`, bold: true })], heading: HeadingLevel.HEADING_2, spacing: { before: 400 } }));
+                const answerRows = [];
+                const questionNumbers = Object.keys(currentAnswerKey).sort((a,b) => Number(a) - Number(b));
+                for (let i = 0; i < questionNumbers.length; i += 5) {
+                    const chunk = questionNumbers.slice(i, i + 5);
+                    answerRows.push(new TableRow({
+                        children: chunk.map(qNum => new TableCell({ children: [new Paragraph(`${qNum}. ${currentAnswerKey[qNum]}`)], borders: NO_BORDER }))
+                    }));
+                }
+                answerKeyDocChildren.push(new Table({ rows: answerRows, width: { size: 100, type: WidthType.PERCENTAGE }, borders: NO_BORDER }));
+            }
+
+            // Generate and download test document
+            const testDoc = new Document({ sections: allTestSections });
+            const testBlob = await Packer.toBlob(testDoc);
+            downloadFile(testBlob, `DeThiTongHop_${DOM.testIdInput.value}.docx`);
+
+            // Generate and download answer key document
+            const answerDoc = new Document({ sections: [{ children: answerKeyDocChildren }] });
+            const answerBlob = await Packer.toBlob(answerDoc);
+            downloadFile(answerBlob, `DapAnTongHop_${DOM.testIdInput.value}.docx`);
+            
+            showAlert('Đã tạo và tải xuống thành công bộ đề thi và đáp án!', 'success');
+        }
+
+        function downloadFile(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a); URL.revokeObjectURL(url);
+        }
+
+        // --- FIREBASE & AUTHENTICATION ---
+        
         async function uploadToFirebase() {
             const testId = DOM.testIdInput.value.trim();
             const title = DOM.testTitleInput.value.trim();
@@ -687,33 +938,23 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
             DOM.uploadLog.textContent = 'Đang chuẩn bị dữ liệu...';
 
             try {
-                // Use writeBatch for atomic and efficient writes
                 const batch = writeBatch(db);
-
-                // 1. Reference the main document (for metadata)
                 const vocabSetRef = doc(db, "vocab_sets", testId);
                 
-                // 2. Add the metadata write operation to the batch
-                // Note: We no longer save 'wordList' here.
-                // 'wordCount' is added for easier management.
                 batch.set(vocabSetRef, {
                     title: title,
                     wordCount: localWordList.length,
-                    level: getCefrLevelDescription(), // Add CEFR level to metadata
+                    level: getCefrLevelDescription(),
                     updatedAt: serverTimestamp()
-                }, { merge: true }); // Use merge to avoid overwriting other fields if they exist
+                }, { merge: true });
 
-                // 3. Loop through each word in localWordList and add it to the batch
                 const wordsCollectionRef = collection(db, "vocab_sets", testId, "words");
                 
                 localWordList.forEach((wordData) => {
-                    // Create a new document in the "words" sub-collection
-                    // Use wordData.id as the document ID for easy reference
                     const wordDocRef = doc(wordsCollectionRef, String(wordData.id));
                     batch.set(wordDocRef, wordData);
                 });
 
-                // 4. Commit all write operations in the batch
                 DOM.uploadLog.textContent = `Đang lưu ${localWordList.length} từ vựng...`;
                 await batch.commit();
 
@@ -730,10 +971,6 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
             }
         }
 
-        /**
-         * Loads test data from Firestore, supporting both the new sub-collection structure
-         * and the old array structure for backward compatibility.
-         */
         async function loadAndPopulateTestData(testId) {
             showAlert("Đang tải dữ liệu bộ từ vựng...");
             const docRef = doc(db, "vocab_sets", testId);
@@ -744,36 +981,28 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                 if (docSnap.exists()) {
                     const testData = docSnap.data();
                     
-                    // Always get metadata from the main document
                     DOM.pageTitle.textContent = "Chỉnh sửa Bộ từ vựng";
                     DOM.testIdInput.value = testId;
                     DOM.testIdInput.disabled = true;
                     DOM.testTitleInput.value = testData.title || "";
 
-                    // --- DUAL-READ LOGIC ---
-                    // 1. Try reading the NEW structure (sub-collection) first
                     const wordsColRef = collection(db, "vocab_sets", testId, "words");
                     const wordsSnapshot = await getDocs(wordsColRef);
                     
                     if (!wordsSnapshot.empty) {
-                        // NEW DATA FOUND: Load from sub-collection
                         console.log(`Found ${wordsSnapshot.size} words in sub-collection (new structure).`);
                         localWordList = wordsSnapshot.docs.map(doc => doc.data());
                     } else if (testData.wordList && Array.isArray(testData.wordList)) {
-                        // NEW DATA NOT FOUND: Fallback to OLD structure
                         console.warn(`'words' sub-collection not found. Falling back to 'wordList' field (old structure). Consider migrating this data.`);
                         localWordList = testData.wordList;
                         showAlert("Cảnh báo: Dữ liệu cũ", 'info', 'Bộ từ vựng này đang dùng cấu trúc dữ liệu cũ. Sau khi bấm "Cập nhật", nó sẽ được tự động chuyển sang cấu trúc mới, hiệu quả hơn.');
                     } else {
-                        // No data found in either structure
                         console.log("No vocabulary data found.");
                         localWordList = [];
                     }
                     
-                    // Sort the list by ID to ensure consistent order
                     localWordList.sort((a, b) => (a.id || 0) - (b.id || 0));
 
-                    // Post-processing (same as old code)
                     localWordList.forEach(word => {
                         if (!word.generated_tasks) word.generated_tasks = null;
                         if (!word.structures) word.structures = [];
@@ -783,13 +1012,11 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                     DOM.dataReviewSection.classList.remove('hidden');
                     DOM.uploadBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Cập nhật Bộ Từ Vựng';
                     
-                    // Disable CSV import section
                     const uploadSection = DOM.processFilesBtn.closest('.glass-panel');
                     uploadSection.style.opacity = '0.5';
                     uploadSection.style.pointerEvents = 'none';
                     uploadSection.title = 'Không thể nhập file CSV khi đang chỉnh sửa.';
 
-                    // Close the "loading..." modal
                     DOM.modalContainer.querySelector('.modal.is-open')?.remove();
 
                 } else {
@@ -801,89 +1028,6 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
             }
         }
         
-        function exportToWord() {
-            if (localWordList.length === 0) {
-                return showAlert("Không có dữ liệu để xuất.", 'error');
-            }
-
-            const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = docx;
-            const docChildren = [];
-            const charOpts = ['A', 'B', 'C', 'D', 'E', 'F'];
-
-            docChildren.push(new Paragraph({
-                text: DOM.testTitleInput.value || "Vocabulary Test",
-                heading: HeadingLevel.TITLE,
-                alignment: AlignmentType.CENTER,
-            }));
-
-            localWordList.forEach((wordData, index) => {
-                if (!wordData.generated_tasks) return;
-
-                docChildren.push(new Paragraph({
-                    children: [
-                        new TextRun({ text: `${index + 1}. ${wordData.word}`, bold: true, size: 28 }),
-                        new TextRun({ text: `    ${wordData.pronunciation}`, italics: true, size: 24 })
-                    ],
-                    spacing: { before: 400, after: 200 },
-                }));
-
-                const tasks = wordData.generated_tasks;
-                
-                const createMCQ = (title, question, correctAnswer, distractors) => {
-                    if(!question || !correctAnswer || !Array.isArray(distractors)) return;
-                    
-                    docChildren.push(new Paragraph({ text: title, bold: true, spacing: { before: 200 } }));
-                    docChildren.push(new Paragraph({ text: question, italics: true }));
-                    const options = [correctAnswer, ...distractors].sort(() => Math.random() - 0.5);
-                    options.forEach((opt, i) => {
-                        docChildren.push(new Paragraph({ text: `${charOpts[i]}. ${opt}` }));
-                    });
-                    docChildren.push(new Paragraph({ text: " " })); // Spacer
-                };
-                
-                const createTextInput = (title, question) => {
-                    if(!question) return;
-                    docChildren.push(new Paragraph({ text: title, bold: true, spacing: { before: 200 } }));
-                    docChildren.push(new Paragraph({ text: question, italics: true }));
-                    docChildren.push(new Paragraph("Answer: __________________________________________________"));
-                    docChildren.push(new Paragraph({ text: " " })); // Spacer
-                };
-                
-                if(tasks.meaning_mcq) createMCQ('Meaning MCQ (English)', `What is the meaning of "${wordData.word}"?`, wordData.meaning, tasks.meaning_mcq.distractors_vi || []);
-                if(tasks.word_family_mcq) createMCQ('Word Family', (tasks.word_family_mcq.sentence || '').replace(tasks.word_family_mcq.blank_placeholder || '[BLANK]', '______'), tasks.word_family_mcq.correct_answer, tasks.word_family_mcq.distractors || []);
-                if(tasks.antonym_mcq) createMCQ('Antonym', tasks.antonym_mcq.sentence_context, tasks.antonym_mcq.correct_antonym, tasks.antonym_mcq.distractors || []);
-                if(tasks.error_correction) createTextInput('Error Correction', `Correct the sentence: "${tasks.error_correction.incorrect_sentence || ''}"`);
-                if(tasks.sentence_unscramble) createTextInput('Sentence Unscramble', `Unscramble the words to form a correct sentence: "${(tasks.sentence_unscramble.correct_sentence || '').split(' ').sort(() => Math.random() - 0.5).join(' / ')}"`);
-                if(tasks.best_fit_replacement) createMCQ('Best-fit Replacement', tasks.best_fit_replacement.sentence, tasks.best_fit_replacement.correct_answer, tasks.best_fit_replacement.distractors || []);
-                if(tasks.main_idea) createMCQ(`Main Idea of the Passage`, tasks.main_idea.paragraph, tasks.main_idea.correct_answer, tasks.main_idea.distractors || []);
-                if(tasks.paragraph_completion) createMCQ(`Find the Conclusion`, tasks.paragraph_completion.paragraph_body, tasks.paragraph_completion.correct_conclusion, tasks.paragraph_completion.distractors || []);
-                if(tasks.argument_strengthening) createMCQ(`Strengthen the Argument`, tasks.argument_strengthening.argument_text, tasks.argument_strengthening.correct_evidence, tasks.argument_strengthening.distractors || []);
-                if(tasks.argument_weakening) createMCQ(`Weaken the Argument`, tasks.argument_weakening.argument_text, tasks.argument_weakening.correct_weakener, tasks.argument_weakening.distractors || []);
-                if(tasks.tone_purpose_analysis) createMCQ(tasks.tone_purpose_analysis.question, tasks.tone_purpose_analysis.paragraph, tasks.tone_purpose_analysis.correct_answer, tasks.tone_purpose_analysis.distractors || []);
-                if(tasks.collocation_odd_one_out) createMCQ('Collocation Odd One Out', tasks.collocation_odd_one_out.question, `(The odd one out is: ${tasks.collocation_odd_one_out.answer})`, tasks.collocation_odd_one_out.options || []);
-
-            });
-
-            const doc = new Document({
-                sections: [{ properties: {}, children: docChildren }],
-            });
-
-            Packer.toBlob(doc).then(blob => {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `${DOM.testIdInput.value || 'vocabulary-test'}.docx`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                showAlert("File Word đã được tạo và tải xuống!", 'success');
-            }).catch(err => {
-                console.error("Error exporting to Word:", err);
-                showAlert("Đã xảy ra lỗi khi xuất file Word.", 'error');
-            });
-        }
-
         // --- EVENT LISTENERS ---
         function setupEventListeners() {
             onAuthStateChanged(auth, user => {
@@ -1054,8 +1198,22 @@ You **MUST** return **ONLY** a single, valid JSON array. Do **NOT** include any 
                 }
             });
 
+            // --- NEW WORD EXPORT EVENT LISTENERS ---
+            DOM.exportWordBtn.addEventListener('click', () => {
+                if (localWordList.length === 0 || localWordList.every(w => !w.generated_tasks)) {
+                    return showAlert("Không có dữ liệu bài tập để xuất. Vui lòng làm giàu dữ liệu trước.", 'error');
+                }
+                DOM.wordExportModal.classList.add('is-open');
+                // Pre-fill modal fields
+                document.getElementById('export-main-title').value = DOM.testTitleInput.value || "ĐỀ KIỂM TRA TỪ VỰNG";
+                document.getElementById('export-total-questions').value = Math.min(20, localWordList.filter(w => w.generated_tasks).length);
+            });
 
-            DOM.exportWordBtn.addEventListener('click', exportToWord);
+            DOM.closeWordExportModalBtn.addEventListener('click', () => {
+                DOM.wordExportModal.classList.remove('is-open');
+            });
+
+            DOM.generateWordDocsBtn.addEventListener('click', generateAndDownloadTests);
             
             DOM.closeManualModalBtn.addEventListener('click', () => DOM.manualPromptModal.classList.remove('is-open'));
             DOM.copyPromptBtn.addEventListener('click', () => {
