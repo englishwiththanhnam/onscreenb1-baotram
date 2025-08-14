@@ -116,8 +116,9 @@
     </div>
 
     <script type="module">
+        // --- Firebase Imports (UPDATED) ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc, runTransaction, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, runTransaction, arrayUnion, serverTimestamp, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
         // Background Animation
         if (window.OGL) {
@@ -271,20 +272,45 @@
                 };
             },
 
+            // --- DATA LOADING (REWRITTEN FOR NEW STRUCTURE) ---
             async loadData(submissionId) {
                 try {
+                    // 1. Fetch the submission document first
                     const submissionRef = doc(this.db, 'submissions', submissionId);
                     const submissionSnap = await getDoc(submissionRef);
                     if (!submissionSnap.exists()) throw new Error("Mã bài làm không hợp lệ.");
 
-                    let submissionData = submissionSnap.data();
-                    this.state.studentId = submissionData.studentId;
-                    this.state.testData = submissionData.testSnapshot;
-                    this.state.wordList = this.state.testData.wordList || [];
+                    const submissionData = submissionSnap.data();
+                    const testId = submissionData.testId; // Assumes submission doc has a 'testId' field
+                    if (!testId) throw new Error("Bài làm không liên kết với bộ từ vựng nào (thiếu testId).");
 
+                    this.state.studentId = submissionData.studentId;
+                    this.state.testData = submissionData.testSnapshot || {}; // Keep snapshot for metadata like title
+
+                    // --- DUAL-READ LOGIC FOR WORD LIST ---
+                    // 2. Try fetching from the new sub-collection structure
+                    const wordsColRef = collection(this.db, "vocab_sets", testId, "words");
+                    const wordsSnapshot = await getDocs(wordsColRef);
+
+                    if (!wordsSnapshot.empty) {
+                        console.log(`Loaded ${wordsSnapshot.size} words from new structure (sub-collection).`);
+                        this.state.wordList = wordsSnapshot.docs.map(doc => doc.data());
+                    } else if (this.state.testData.wordList && Array.isArray(this.state.testData.wordList)) {
+                        // 3. Fallback to the old array structure if sub-collection is empty
+                        console.warn(`'words' sub-collection is empty. Falling back to old 'wordList' array from snapshot.`);
+                        this.state.wordList = this.state.testData.wordList;
+                    } else {
+                        throw new Error("Không tìm thấy dữ liệu từ vựng cho bài làm này.");
+                    }
+                    
+                    // Sort words by ID to ensure consistent order
+                    this.state.wordList.sort((a, b) => (a.id || 0) - (b.id || 0));
+
+                    // 4. Fetch student name
                     const userDoc = await getDoc(doc(this.db, "users", this.state.studentId));
                     this.state.studentName = userDoc.exists() ? userDoc.data().displayName : "Không rõ";
 
+                    // 5. Calculate total tasks and initialize progress (this logic remains the same)
                     let totalTasks = 0;
                     Object.keys(this.CONFIG.LEVELS).forEach(level => {
                         const tasksForLevel = this.CONFIG.LEVELS[level].tasks;
@@ -301,6 +327,7 @@
                     });
                     this.state.userProgress.totalTasksInTest = totalTasks;
 
+                    // 6. Load saved progress
                     if (submissionData.adaptiveProgressV2) {
                         const progress = submissionData.adaptiveProgressV2;
                         if (!progress.levels) progress.levels = this.state.userProgress.levels;
@@ -319,6 +346,7 @@
                     
                     this.state.userProgress.totalCompletedTasks = this.calculateTotalCompletedTasks();
 
+                    // 7. Render the app
                     this.DOM.loader.classList.add('hidden');
                     this.DOM.container.classList.remove('hidden');
                     
