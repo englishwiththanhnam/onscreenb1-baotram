@@ -140,9 +140,9 @@
     </div>
 
     <script type="module">
-        // --- Firebase Imports ---
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, runTransaction, arrayUnion, serverTimestamp, collection, getDocs, query, where, Timestamp, increment } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        // --- Firebase Imports (Updated Version) ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, runTransaction, arrayUnion, serverTimestamp, collection, getDocs, query, where, Timestamp, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Background Animation ---
         if (window.OGL) {
@@ -1496,6 +1496,87 @@
                     });
                 });
                 return allLevelTasks;
+            },
+
+            // --- NEWLY ADDED FUNCTION ---
+            renderStreakPanel() {
+                const container = document.getElementById('streak-panel-container');
+                if (!container) return;
+
+                const { streak, powerCells, dailySessionsCompleted } = this.state.userData;
+                const targetSessions = this.CONFIG.RULES.STREAK_TARGET_SESSIONS;
+
+                // Power Cells Display
+                let powerCellsHTML = Array(3).fill(0).map((_, i) => {
+                    return i < powerCells
+                        ? `<div class="power-cell-container"><i class="fas fa-shield-alt power-cell"></i></div>`
+                        : `<div class="power-cell-container placeholder"></div>`;
+                }).join('');
+
+                // Daily Progress Battery
+                let segmentsHTML = Array(targetSessions).fill(0).map((_, i) => {
+                    if (i < dailySessionsCompleted) {
+                        const streakColor = this.getStreakColor(streak % 7);
+                        return `<div class="progress-segment" style="background: ${streakColor.color}; --glow-color: ${streakColor.glow};"></div>`;
+                    }
+                    return `<div class="progress-segment-placeholder"></div>`;
+                }).join('');
+
+                // Weekly Streak Display
+                const currentDayInWeek = streak % 7;
+                const dayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S']; // Sun, Mon, Tue, Wed, Thu, Fri, Sat
+                let weeklyStreakHTML = dayLetters.map((letter, i) => {
+                    let classes = "w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ";
+                    if (i < currentDayInWeek) {
+                        const colorInfo = this.getStreakColor(i);
+                        classes += `text-slate-900`;
+                        return `<div class="${classes}" style="background-color:${colorInfo.color}; box-shadow: 0 0 8px ${colorInfo.glow};">${letter}</div>`;
+                    } else if (i === currentDayInWeek && dailySessionsCompleted >= targetSessions) {
+                        const colorInfo = this.getStreakColor(i);
+                        classes += `text-slate-900`;
+                        return `<div class="${classes}" style="background-color:${colorInfo.color}; box-shadow: 0 0 8px ${colorInfo.glow};">${letter}</div>`;
+                    } else if (i === currentDayInWeek) {
+                        const colorInfo = this.getStreakColor(i);
+                        classes += `ring-2 ring-offset-2 ring-offset-slate-800`;
+                        return `<div class="${classes}" style="border-color:${colorInfo.color}; color:${colorInfo.color}; background-color: transparent;">${letter}</div>`;
+                    } else {
+                        classes += "bg-slate-700 text-slate-400";
+                        return `<div class="${classes}">${letter}</div>`;
+                    }
+                }).join('');
+
+                container.innerHTML = `
+                    <div class="glass-panel p-6 space-y-6">
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="font-bold text-lg">Năng lượng hôm nay</h3>
+                                <span class="font-mono text-sm font-semibold text-primary-accent">${dailySessionsCompleted}/${targetSessions}</span>
+                            </div>
+                            <div class="battery-container">
+                                ${segmentsHTML}
+                            </div>
+                            <p class="text-xs text-text-secondary mt-2">Hoàn thành ${targetSessions} phiên học để duy trì chuỗi.</p>
+                        </div>
+                        <div class="border-t border-glass-border my-4"></div>
+                        <div>
+                             <h3 class="font-bold text-lg mb-3">Chuỗi học tập: ${streak} ngày</h3>
+                             <div class="flex justify-between items-center gap-2">
+                                ${weeklyStreakHTML}
+                             </div>
+                        </div>
+                         <div class="border-t border-glass-border my-4"></div>
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="font-bold text-lg">Pin Dự Trữ</h3>
+                                <span class="font-mono text-sm font-semibold text-protected-color">${powerCells}/3</span>
+                            </div>
+                            <div class="power-cell-display">
+                                ${powerCellsHTML}
+                            </div>
+                            <p class="text-xs text-text-secondary mt-2">Mỗi 7 ngày chuỗi sẽ tạo 1 Pin. Dùng để bảo vệ chuỗi khi bạn lỡ 1 ngày.</p>
+                        </div>
+                    </div>
+                `;
             },
 
             // --- SRS & Streak Functions ---
