@@ -26,6 +26,8 @@
             --primary-accent-glow: rgba(139, 92, 246, 0.5);
             --correct-color: #22c55e;
             --incorrect-color: #ef4444;
+            --protected-color: #22d3ee;
+            --protected-glow: rgba(34, 211, 238, 0.6);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html { scroll-behavior: smooth; }
@@ -95,6 +97,28 @@
         .guide-section h3 { font-family: 'Be Vietnam Pro', sans-serif; font-size: 1.5rem; font-weight: 700; color: var(--primary-accent); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary-accent); }
         .guide-rule { background: rgba(255, 255, 255, 0.05); padding: 1rem; border-radius: 12px; border-left: 4px solid var(--primary-accent); }
         .task-example-card { background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 16px; padding: 1.5rem; }
+
+        /* --- STREAK SYSTEM STYLES --- */
+        .power-cell-display { display: flex; gap: 0.5rem; align-items: center; justify-content: center; }
+        .power-cell-container { width: 40px; height: 40px; position: relative; display: flex; align-items: center; justify-content: center; }
+        .power-cell-container.placeholder { border: 2px dashed #475569; border-radius: 50%; background: transparent; }
+        .power-cell { font-size: 28px; color: var(--protected-color); filter: drop-shadow(0 0 6px var(--protected-glow)); animation: streak-glow-pulse 3s infinite ease-in-out; }
+        .power-cell.newly-formed { animation: power-cell-appear 0.8s ease-out forwards; }
+        @keyframes streak-glow-pulse { 50% { transform: scale(1.05); filter: drop-shadow(0 0 10px var(--protected-glow)); } }
+        @keyframes power-cell-appear { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
+        .battery-container { width: 100%; height: 32px; background: rgba(15, 23, 42, 0.5); border-radius: 12px; padding: 4px; display: flex; align-items: center; gap: 4px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.4); position: relative; }
+        .battery-container::after { content: ''; position: absolute; right: -6px; top: 50%; transform: translateY(-50%); width: 4px; height: 16px; background: #475569; border-radius: 0 3px 3px 0; }
+        .progress-segment, .progress-segment-placeholder { flex: 1; height: 100%; border-radius: 6px; transition: all 0.5s ease; }
+        .progress-segment { box-shadow: 0 0 10px 1px var(--glow-color, transparent); transition: background 0.5s ease, opacity 0.5s ease, transform 0.5s ease; }
+        .progress-segment.newly-added { animation: segment-appear 0.6s ease-out; }
+        .progress-segment.draining { animation: segment-drain 0.5s ease-in forwards; }
+        .progress-segment.depleting { animation: segment-deplete 0.5s ease-out forwards; }
+        .progress-segment-placeholder { background: transparent; border: 2px dashed #475569; }
+        @keyframes segment-appear { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
+        @keyframes segment-drain { to { opacity: 0; transform: scaleY(0); } }
+        @keyframes segment-deplete { to { opacity: 0; background: transparent !important; } }
+        .power-cell-used { animation: power-cell-used-anim 1s ease-in-out forwards; }
+        @keyframes power-cell-used-anim { 50% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(0); opacity: 0; } }
     </style>
 </head>
 <body>
@@ -186,7 +210,7 @@
                     FINAL_TEST_UNLOCK_THRESHOLD: 0.8,
                     FINAL_TEST_DURATION_MINUTES: 60,
                     PRACTICE_SESSION_LENGTH: 10,
-                    STREAK_TARGET: 10, // 10 actions to maintain streak
+                    STREAK_TARGET_SESSIONS: 5, // 5 sessions to maintain streak
                 }
             },
             
@@ -258,7 +282,15 @@
                 this.state = {
                     submissionId: null, studentId: '', studentName: '', testData: {}, wordList: [],
                     isSubmitting: false,
-                    userData: { streak: 0, lastActivityDate: null, streakFreezes: 0 },
+                    userData: {
+                        streak: 0,
+                        lastStreakDate: null, // Date string 'YYYY-MM-DD' of last granted streak
+                        powerCells: 0,
+                        dailySessionsCompleted: 0,
+                        lastActivityDate: null, // Date string 'YYYY-MM-DD' of last session
+                        isProtected: false,
+                        protectedStreakCount: 0,
+                    },
                     userProgress: {
                         levels: {
                             1: { status: 'locked', completedTasks: new Set(), learnedWords: new Set(), totalTasks: 0, totalUniqueWords: 0, testAttempts: 0 },
@@ -295,10 +327,9 @@
                     this.state.studentId = studentId;
                     this.state.testData = submissionData.testSnapshot || {};
 
-                    const [wordsSnapshot, srsSnapshot, activitySnapshot, userSnap] = await Promise.all([
+                    const [wordsSnapshot, srsSnapshot, userSnap] = await Promise.all([
                         getDocs(collection(this.db, "vocab_sets", testId, "words")),
                         getDocs(collection(this.db, 'submissions', submissionId, 'srs_items')),
-                        getDocs(collection(this.db, 'users', studentId, 'activity_log')),
                         getDoc(doc(this.db, "users", studentId))
                     ]);
 
@@ -312,15 +343,19 @@
                     this.state.wordList.sort((a, b) => (a.id || 0) - (b.id || 0));
 
                     this.state.srsItems = srsSnapshot.docs.map(doc => doc.data());
-                    activitySnapshot.docs.forEach(doc => this.state.activityLog.set(doc.id, doc.data().count));
 
                     if (userSnap.exists()) {
                         const userData = userSnap.data();
                         this.state.studentName = userData.displayName || "Không rõ";
+                        // Load streak data, providing defaults
                         this.state.userData = {
                             streak: userData.streak || 0,
+                            lastStreakDate: userData.lastStreakDate || null,
+                            powerCells: userData.powerCells || 0,
+                            dailySessionsCompleted: userData.dailySessionsCompleted || 0,
                             lastActivityDate: userData.lastActivityDate || null,
-                            streakFreezes: userData.streakFreezes || 0
+                            isProtected: userData.isProtected || false,
+                            protectedStreakCount: userData.protectedStreakCount || 0,
                         };
                     }
 
@@ -365,6 +400,8 @@
                     
                     this.state.userProgress.totalCompletedTasks = this.calculateTotalCompletedTasks();
                     
+                    await this.checkStreakOnLoad(); // Check for missed days on load
+
                     this.DOM.loader.classList.add('hidden');
                     this.DOM.container.classList.remove('hidden');
                     
@@ -404,7 +441,9 @@
             },
 
             async updateFirestoreProgress() {
-                if (!this.state.submissionId) return;
+                if (!this.state.submissionId || !this.state.studentId) return;
+                
+                // Update submission-specific progress
                 const progressToSave = JSON.parse(JSON.stringify(this.state.userProgress));
                 Object.keys(progressToSave.levels).forEach(level => {
                     if (progressToSave.levels[level]?.completedTasks) {
@@ -418,7 +457,15 @@
                     const submissionRef = doc(this.db, 'submissions', this.state.submissionId);
                     await updateDoc(submissionRef, { adaptiveProgressV2: progressToSave });
                 } catch (error) {
-                    console.error("Lỗi khi đồng bộ tiến trình:", error);
+                    console.error("Lỗi khi đồng bộ tiến trình bài làm:", error);
+                }
+
+                // Update user-specific data (like streak)
+                try {
+                    const userRef = doc(this.db, 'users', this.state.studentId);
+                    await setDoc(userRef, this.state.userData, { merge: true });
+                } catch (error) {
+                    console.error("Lỗi khi đồng bộ dữ liệu người dùng:", error);
                 }
             },
 
@@ -433,8 +480,6 @@
             },
 
             renderHeader(inPracticeSession = false) {
-                const { streak, streakFreezes } = this.state.userData;
-
                 const backButtonHTML = inPracticeSession 
                     ? `<button id="exit-practice-btn" class="cta-btn secondary !py-2 !px-4"><i class="fas fa-times mr-2"></i>Thoát</button>`
                     : `<a href="https://englishwiththanhnam.github.io/onscreenb1-baotram/student-dashboard.html" class="cta-btn secondary !py-2 !px-4"><i class="fas fa-arrow-left mr-2"></i> Dashboard chính</a>`;
@@ -446,10 +491,6 @@
                             <p class="text-sm text-text-secondary">Học sinh: <span class="font-medium text-text-light">${this.state.studentName}</span></p>
                         </div>
                         <div class="flex items-center gap-6">
-                            <div class="flex items-center gap-4 text-lg font-semibold">
-                                <span title="Chuỗi ngày học liên tiếp">🔥 ${streak}</span>
-                                <span title="Bảo vệ chuỗi học">🛡️ ${streakFreezes}</span>
-                            </div>
                             ${backButtonHTML}
                         </div>
                     </div>`;
@@ -458,7 +499,7 @@
                     document.getElementById('exit-practice-btn').addEventListener('click', async () => {
                         await this.updateFirestoreProgress();
                         this.renderDashboard();
-                        this.renderHeader(false); // Render header for dashboard view
+                        this.renderHeader(false);
                     });
                 }
             },
@@ -467,6 +508,7 @@
                 this.DOM.main.innerHTML = `
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 fade-in">
                         <aside class="lg:col-span-1 space-y-6">
+                            <div id="streak-panel-container"></div>
                             <div class="glass-panel p-6">
                                 <h2 class="text-xl font-bold mb-4">📚 Bắt đầu</h2>
                                 <div class="space-y-3">
@@ -480,14 +522,15 @@
                         </aside>
                         <main class="lg:col-span-2 space-y-6">
                              <div class="glass-panel p-6 sm:p-8">
-                                <h2 class="text-2xl font-bold mb-6">🏋️‍♀️ Lộ Trình Luyện Tập</h2>
-                                <div id="levels-container" class="grid grid-cols-1 sm:grid-cols-2 gap-6"></div>
+                                 <h2 class="text-2xl font-bold mb-6">🏋️‍♀️ Lộ Trình Luyện Tập</h2>
+                                 <div id="levels-container" class="grid grid-cols-1 sm:grid-cols-2 gap-6"></div>
                             </div>
                         </main>
                     </div>
                     <div id="final-test-container" class="glass-panel p-8 text-center mt-8"></div>
                 `;
                 
+                this.renderStreakPanel();
                 this.renderLevelCards();
                 this.renderFinalTestSection();
                 this.updateReviewButton();
@@ -896,6 +939,8 @@
                 };
 
                 this.showModal(title, message, true, onConfirm, onCancel, confirmText, "Về Dashboard");
+                
+                await this.logSessionAndCheckStreak();
             },
             
             formatText(text) {
@@ -1541,43 +1586,8 @@
                 srsData.next_review_date = Timestamp.fromDate(reviewDate);
 
                 await setDoc(srsRef, srsData, { merge: true });
-                await this.updateStreak();
             },
 
-            async updateStreak() {
-                const userRef = doc(this.db, 'users', this.state.studentId);
-                const today = new Date();
-                const todayStr = today.toISOString().slice(0, 10);
-                const yesterday = new Date(today);
-                yesterday.setDate(today.getDate() - 1);
-                const yesterdayStr = yesterday.toISOString().slice(0, 10);
-                
-                let { streak, lastActivityDate, streakFreezes } = this.state.userData;
-
-                if (lastActivityDate !== todayStr) {
-                    if (lastActivityDate === yesterdayStr) {
-                        streak++;
-                        if (streak > 0 && streak % 7 === 0) {
-                            streakFreezes = Math.min(2, streakFreezes + 1);
-                        }
-                    } else if (lastActivityDate) { // Missed one or more days
-                        if (streakFreezes > 0) {
-                            streakFreezes--;
-                        } else {
-                            streak = 1; // Reset streak but count today's activity
-                        }
-                    } else { // First ever activity
-                        streak = 1;
-                    }
-                    lastActivityDate = todayStr;
-                }
-
-                this.state.userData = { streak, lastActivityDate, streakFreezes };
-                await updateDoc(userRef, this.state.userData);
-                this.renderHeader(true); // Update header with new streak info
-            },
-
-            // --- Final Test Functions ---
             startTestTimer() {
                 if (this.finalTestTimer) clearInterval(this.finalTestTimer);
 
