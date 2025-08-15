@@ -1083,17 +1083,34 @@
                 const info = this.EXERCISE_INFO.TonePurposeAnalysis;
                 return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-text-secondary mb-4">${this.formatText(tasks.question)}</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10 leading-relaxed">${this.formatText(tasks.paragraph)}</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
             },
+            // --- FUNCTION UPDATED ---
             getSentenceRoleAnalysisHTML(item) {
                 const tasks = item.generated_tasks.sentence_role_analysis;
                 if (!tasks) return this.getMeaningMCQHTML(item);
                 this.state.currentPractice.correctAnswer = tasks.correct_role;
                 const options = this.shuffleArray([tasks.correct_role, ...tasks.distractors]);
                 
-                const sentenceRegex = new RegExp(`(\\[${tasks.highlighted_sentence_index + 1}\\].*?)(?=\\[\\d+\\]|$)`, 'g');
-                const paragraphHTML = this.formatText(tasks.paragraph).replace(sentenceRegex, `<strong class="text-primary-accent">$1</strong>`);
+                // Get the sentence number to ask about.
+                const sentenceNumber = tasks.highlighted_sentence_index + 1;
+
+                // Use the paragraph text directly, as it already contains numbers like [1], [2].
+                // No need to try and add bold formatting which was failing.
+                const paragraphHTML = this.formatText(tasks.paragraph); 
                 
                 const info = this.EXERCISE_INFO.SentenceRoleAnalysis;
-                return `<div class="question-block"><h2 class="text-xl font-bold text-text-light mb-4 flex items-center"><i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i><span>${info.name}</span></h2><p class="text-text-secondary mb-4">Vai trò của câu được in đậm là gì?</p><p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10 leading-relaxed">${paragraphHTML}</p><div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div></div>`;
+                
+                // Create the new, clearer question.
+                const newQuestion = `Vai trò của câu <strong>[${sentenceNumber}]</strong> trong đoạn văn là gì?`;
+
+                return `<div class="question-block">
+                    <h2 class="text-xl font-bold text-text-light mb-4 flex items-center">
+                        <i class="${info.icon} mr-3 text-primary-accent w-6 text-center"></i>
+                        <span>${info.name}</span>
+                    </h2>
+                    <p class="text-text-secondary mb-4">${newQuestion}</p> 
+                    <p class="text-md font-serif italic text-text-secondary mb-6 p-4 border border-glass-border rounded-lg bg-black/10 leading-relaxed">${paragraphHTML}</p>
+                    <div id="answer-options" class="space-y-3">${options.map(opt => `<button class="answer-option" data-answer="${opt}">${opt}</button>`).join('')}</div>
+                </div>`;
             },
 
             attachPracticeEventListeners(item, container, isGuide = false) {
