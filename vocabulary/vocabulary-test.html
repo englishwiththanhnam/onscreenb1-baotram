@@ -347,7 +347,6 @@
                     if (userSnap.exists()) {
                         const userData = userSnap.data();
                         this.state.studentName = userData.displayName || "Không rõ";
-                        // Load streak data, providing defaults
                         this.state.userData = {
                             streak: userData.streak || 0,
                             lastStreakDate: userData.lastStreakDate || null,
@@ -1600,7 +1599,6 @@
                         this.state.userData.powerCells--;
                         this.state.userData.isProtected = true;
                         this.state.userData.protectedStreakCount = streak;
-                        // We don't reset the lastStreakDate, so it looks like they continued
                         this.showModal("Chuỗi được bảo vệ!", `Bạn đã bỏ lỡ một ngày, nhưng Pin Dự Trữ đã được sử dụng để bảo vệ chuỗi ${streak} ngày của bạn.`, false, null, null, "Tuyệt vời!");
                     } else {
                         this.state.userData.streak = 0;
