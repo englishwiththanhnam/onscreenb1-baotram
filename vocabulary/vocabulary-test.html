@@ -400,7 +400,7 @@
                     
                     this.state.userProgress.totalCompletedTasks = this.calculateTotalCompletedTasks();
                     
-                    await this.checkStreakOnLoad(); // Check for missed days on load
+                    await this.checkStreakOnLoad();
 
                     this.DOM.loader.classList.add('hidden');
                     this.DOM.container.classList.remove('hidden');
@@ -443,7 +443,6 @@
             async updateFirestoreProgress() {
                 if (!this.state.submissionId || !this.state.studentId) return;
                 
-                // Update submission-specific progress
                 const progressToSave = JSON.parse(JSON.stringify(this.state.userProgress));
                 Object.keys(progressToSave.levels).forEach(level => {
                     if (progressToSave.levels[level]?.completedTasks) {
@@ -460,7 +459,6 @@
                     console.error("Lỗi khi đồng bộ tiến trình bài làm:", error);
                 }
 
-                // Update user-specific data (like streak)
                 try {
                     const userRef = doc(this.db, 'users', this.state.studentId);
                     await setDoc(userRef, this.state.userData, { merge: true });
@@ -1586,6 +1584,103 @@
                 srsData.next_review_date = Timestamp.fromDate(reviewDate);
 
                 await setDoc(srsRef, srsData, { merge: true });
+            },
+
+            async checkStreakOnLoad() {
+                const today = new Date();
+                const todayStr = today.toISOString().slice(0, 10);
+                const yesterday = new Date(today);
+                yesterday.setDate(today.getDate() - 1);
+                const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+                let { lastStreakDate, streak, powerCells } = this.state.userData;
+
+                if (lastStreakDate && lastStreakDate !== todayStr && lastStreakDate !== yesterdayStr) {
+                    if (powerCells > 0) {
+                        this.state.userData.powerCells--;
+                        this.state.userData.isProtected = true;
+                        this.state.userData.protectedStreakCount = streak;
+                        // We don't reset the lastStreakDate, so it looks like they continued
+                        this.showModal("Chuỗi được bảo vệ!", `Bạn đã bỏ lỡ một ngày, nhưng Pin Dự Trữ đã được sử dụng để bảo vệ chuỗi ${streak} ngày của bạn.`, false, null, null, "Tuyệt vời!");
+                    } else {
+                        this.state.userData.streak = 0;
+                        this.state.userData.isProtected = false;
+                        this.state.userData.protectedStreakCount = 0;
+                    }
+                }
+                
+                if (this.state.userData.lastActivityDate !== todayStr) {
+                    this.state.userData.dailySessionsCompleted = 0;
+                }
+                
+                await this.updateFirestoreProgress();
+            },
+            
+            async logSessionAndCheckStreak() {
+                const todayStr = new Date().toISOString().slice(0, 10);
+                
+                if (this.state.userData.lastActivityDate !== todayStr) {
+                    this.state.userData.dailySessionsCompleted = 0;
+                }
+
+                this.state.userData.dailySessionsCompleted++;
+                this.state.userData.lastActivityDate = todayStr;
+
+                if (this.state.userData.dailySessionsCompleted === this.CONFIG.RULES.STREAK_TARGET_SESSIONS) {
+                    await this.grantDailyStreak();
+                }
+                
+                await this.updateFirestoreProgress();
+                this.renderStreakPanel();
+            },
+
+            async grantDailyStreak() {
+                const todayStr = new Date().toISOString().slice(0, 10);
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+                if (this.state.userData.lastStreakDate === todayStr) return;
+
+                if (this.state.userData.isProtected) {
+                    this.state.userData.isProtected = false; 
+                } else if (this.state.userData.lastStreakDate === yesterdayStr) {
+                    this.state.userData.streak++;
+                } else {
+                    this.state.userData.streak = 1;
+                }
+                
+                this.state.userData.lastStreakDate = todayStr;
+
+                if (this.state.userData.streak > 0 && this.state.userData.streak % 7 === 0) {
+                    this.formPowerCell();
+                }
+            },
+
+            formPowerCell() {
+                if (this.state.userData.powerCells >= 3) {
+                    this.showModal("Đã đầy Pin Dự Trữ", "Năng lượng được chuyển hóa, nhưng bạn đã có tối đa 3 Pin.", false, null, null, "OK");
+                } else {
+                    this.state.userData.powerCells++;
+                    this.showModal("Tạo thành công!", "Chuỗi 7 ngày đã chuyển hóa năng lượng thành một Pin Dự Trữ!", false, null, null, "Tuyệt vời!");
+                }
+                
+                this.state.userData.streak = 0;
+                this.state.userData.isProtected = false;
+                this.state.userData.protectedStreakCount = 0;
+            },
+            
+            getStreakColor(index) {
+                const colors = [
+                    { color: '#fde047', glow: 'rgba(253, 224, 71, 0.5)' },
+                    { color: '#fb923c', glow: 'rgba(251, 146, 60, 0.5)' },
+                    { color: '#f43f5e', glow: 'rgba(244, 63, 94, 0.5)' },
+                    { color: '#d946ef', glow: 'rgba(217, 70, 239, 0.5)' },
+                    { color: '#8b5cf6', glow: 'rgba(139, 92, 246, 0.5)' },
+                    { color: '#38bdf8', glow: 'rgba(56, 189, 248, 0.5)' },
+                    { color: '#2dd4bf', glow: 'rgba(45, 212, 191, 0.5)' }
+                ];
+                return colors[index % colors.length];
             },
 
             startTestTimer() {
